@@ -1,0 +1,24 @@
+# Changelog
+
+This file contains all changes made to the source code for each release.
+
+## 2.0.2.1
+
+##### Added:
+- Host side support for SVM
+
+## 2.0.2
+
+#### Changed:
+- OpenMP pragmas from single to master with explicit barriers
+
+## 2.0.1
+
+#### Added:
+- Unit tests for result validation and kernel execution
+- Add new boolean parameter `COMBINE_LOOPS` that allows to combine the address calculation and loading of the data into a single loop instead of two separate loops. This can improve the performance if the loops are executed sequentially because the outer loop can not be pipelined.
+
+## 2.0
+
+#### Added:
+- Replace Makefile with CMake as a build system

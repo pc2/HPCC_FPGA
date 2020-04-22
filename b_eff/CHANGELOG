@@ -1,0 +1,24 @@
+# Changelog
+
+This file contains all changes made to the source code for each release.
+
+## 1.1
+
+#### Fixes:
+- Simplify communication kernels to always send over all channels independent of the message size
+- Reorder channel reads and writes in communication kernels
+- Fix calculation of the aggregated bandwidth in host code
+
+#### Added:
+- A new git submodule for hlslib to utilize the CMake module files included
+- Measurement results for the current version in the performance section
+
+#### Removed:
+- "cmake" folder in root directory since it is not needed anymore
+
+## 1.0
+
+#### Added:
+- Host code and OpenCL kernel
+- First performance model for the OpenCL kernel targeting the Bittware 520N board equipped with Stratix 10
+- Basic MPI support in the host code

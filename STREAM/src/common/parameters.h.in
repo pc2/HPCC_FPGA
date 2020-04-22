@@ -1,0 +1,37 @@
+#ifndef SRC_COMMON_PARAMETERS_H_
+#define SRC_COMMON_PARAMETERS_H_
+
+/**
+ * Host specific parameters
+ */
+#define VERSION "@PROJECT_VERSION@"
+#define DEFAULT_REPETITIONS @DEFAULT_REPETITIONS@
+#define DEFAULT_ARRAY_LENGTH @DEFAULT_ARRAY_LENGTH@
+#define DEFAULT_PLATFORM @DEFAULT_PLATFORM@
+#define DEFAULT_DEVICE @DEFAULT_DEVICE@
+#define HOST_DATA_TYPE @HOST_DATA_TYPE@
+#define NUM_KERNEL_REPLICATIONS @NUM_REPLICATIONS@
+
+/**
+ * Device specific parameters
+ */
+#define DEVICE_ARRAY_DATA_TYPE @DEVICE_DATA_TYPE@
+#define DEVICE_SCALAR_DATA_TYPE @DATA_TYPE@
+#define VECTOR_COUNT @VECTOR_COUNT@
+#define UNROLL_COUNT @GLOBAL_MEM_UNROLL@
+#define BUFFER_SIZE @DEVICE_BUFFER_SIZE@
+#cmakedefine INNER_LOOP_BUFFERS
+#cmakedefine USE_SVM
+
+/**
+Output separator
+*/
+#define HLINE "-------------------------------------------------------------\n"
+
+#define COPY_KERNEL_TYPE 0
+#define SCALE_KERNEL_TYPE 1
+#define ADD_KERNEL_TYPE 2
+#define TRIAD_KERNEL_TYPE 3
+
+
+#endif // SRC_COMMON_PARAMETERS_H_

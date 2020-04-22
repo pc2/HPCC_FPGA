@@ -1,0 +1,506 @@
+This file contains execution results for multiple systems administrated by the Paderborn Center for Parallel Computing (PC2) (https://pc2.upb.de).
+Frequencies are given in MHz. fMax are retrieved from the AOC report.
+
+Results for Single Precision
+=============================
+Executed using arrays with 100000000 elements.
+The following environment variables where set for the kernel file:
+UNROLL_COUNT=16 
+
+1.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA card:  Bittware 520N (Intel Stratix 10 GX2800)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 18.0.1
+
+    Interleaved Memory:
+    fMax=276.77
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           35130.7     0.022776     0.022772     0.022782
+    Scale:          35138.5     0.022771     0.022767     0.022776
+    Add:            52705.5     0.022772     0.022768     0.022777
+    Triad:          48802.2     0.024593     0.024589     0.024598
+    PCI Write:       6303.5     0.190460     0.190369     0.190521
+    PCI Read:        3673.8     0.326716     0.326636     0.326799
+
+    Non-Interleaved:
+    fMax=372.16
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           31992.3     0.025015     0.025006     0.025025
+    Scale:          32020.6     0.024990     0.024984     0.024997
+    Add:            48009.4     0.025003     0.024995     0.025012
+    Triad:          48005.8     0.025003     0.024997     0.025007
+    PCI Write:       6303.9     0.190423     0.190359     0.190566
+    PCI Read:        3771.6     0.318213     0.318168     0.318284
+
+
+
+2.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA card:  Bittware 520N (Intel Stratix 10 GX2800)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 18.1.1
+
+    Interleaved Memory:
+    fMax=242.18
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           30875.9     0.025914     0.025910     0.025919
+    Scale:          30885.6     0.025905     0.025902     0.025911
+    Add:            46289.2     0.025928     0.025924     0.025935
+    Triad:          45613.4     0.026310     0.026308     0.026312
+    PCI Write:       6324.0     0.189800     0.189753     0.189862
+    PCI Read:        5587.3     0.214869     0.214773     0.214943
+
+    Non-Interleaved:
+    fMax=328.125
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           31767.5     0.025188     0.025183     0.025196
+    Scale:          31777.7     0.025177     0.025175     0.025181
+    Add:            47672.0     0.025174     0.025172     0.025177
+    Triad:          47559.0     0.025236     0.025232     0.025246
+    PCI Write:       6316.0     0.190029     0.189994     0.190060
+    PCI Read:        5728.0     0.209528     0.209497     0.209626
+
+
+
+3.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA card:  Bittware 520N (Intel Stratix 10 GX2800)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 19.1
+
+    Interleaved Memory:
+    fMax=255.68
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           32597.4     0.024545     0.024542     0.024548
+    Scale:          32602.8     0.024539     0.024538     0.024541
+    Add:            48572.8     0.024708     0.024705     0.024711
+    Triad:          47423.6     0.025308     0.025304     0.025313
+    PCI Write:       6330.3     0.189646     0.189563     0.189759
+    PCI Read:        6315.9     0.190041     0.189998     0.190126
+
+    Non-Interleaved:
+    fMax=342.93
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           32642.4     0.024513     0.024508     0.024525
+    Scale:          32659.9     0.024499     0.024495     0.024501
+    Add:            48979.8     0.024502     0.024500     0.024504
+    Triad:          48973.6     0.024504     0.024503     0.024506
+    PCI Write:       6318.7     0.189960     0.189912     0.190026
+    PCI Read:        6413.0     0.187184     0.187119     0.187271
+
+
+
+4.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA card:  Bittware 520N (Intel Stratix 10 GX2800)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 19.2.0_hpc
+
+    Interleaved Memory:
+    fMax=269.68
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           34349.6     0.023293     0.023290     0.023298
+    Scale:          34358.1     0.023286     0.023284     0.023288
+    Add:            50335.7     0.023842     0.023840     0.023843
+    Triad:          48650.3     0.024668     0.024666     0.024671
+    PCI Write:       6310.6     0.190267     0.190155     0.190397
+    PCI Read:        6306.2     0.190343     0.190289     0.190388
+
+    Non-Interleaved:
+    fMax=378.64
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           35187.9     0.022747     0.022735     0.022761
+    Scale:          35172.7     0.022754     0.022745     0.022769
+    Add:            52800.6     0.022739     0.022727     0.022749
+    Triad:          52763.5     0.022753     0.022743     0.022765
+    PCI Write:       6321.3     0.189897     0.189834     0.189961
+    PCI Read:        6405.2     0.187370     0.187347     0.187391
+
+
+
+5.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA card:  Bittware 520N (Intel Stratix 10 GX2800)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 19.3.0
+    BSP Version:19.2.0_hpc
+
+    Interleaved Memory:
+    fMax=265.81
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           33953.0     0.023564     0.023562     0.023567
+    Scale:          33958.5     0.023560     0.023558     0.023562
+    Add:            49403.4     0.024293     0.024290     0.024296
+    Triad:          48575.2     0.024707     0.024704     0.024709
+    PCI Write:       6319.5     0.189961     0.189889     0.190036
+    PCI Read:        6293.0     0.190761     0.190688     0.190918
+
+    Non-Interleaved:
+    fMax=307.78
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           33555.4     0.023847     0.023841     0.023855
+    Scale:          33581.3     0.023836     0.023823     0.023844
+    Add:            50362.9     0.023838     0.023827     0.023845
+    Triad:          50333.7     0.023842     0.023841     0.023844
+    PCI Write:       6307.8     0.190291     0.190242     0.190335
+    PCI Read:        6405.3     0.187365     0.187346     0.187387
+
+
+
+6.  System:     FPGA Research Clusters
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/fpga-research-clusters/
+    FPGA:       Bittware 385A (Intel Arria 10 GX1150)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 17.1.2
+
+    Interleaved Memory:
+    fMax=341.06
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           26767.5     0.029892     0.029887     0.029901
+    Scale:          27112.3     0.029562     0.029507     0.029594
+    Add:            28839.9     0.041659     0.041609     0.041704
+    Triad:          28848.8     0.041656     0.041596     0.041725
+    PCI Write:       6419.2     0.187463     0.186940     0.187959
+    PCI Read:        6356.5     0.192998     0.188783     0.196114
+
+    Non-Interleaved:
+    fMax=342.93
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           15553.6     0.051469     0.051435     0.051553
+    Scale:          32581.2     0.024617     0.024554     0.024661
+    Add:            23444.7     0.051247     0.051184     0.051280
+    Triad:          23370.0     0.051414     0.051348     0.051455
+    PCI Write:       6415.0     0.187305     0.187060     0.187613
+    PCI Read:        6478.7     0.189044     0.185221     0.193868
+
+
+
+7.  System:     HARP2
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/fpga-research-clusters/
+    FPGA:       Intel BDW+FPGA hybrid CPU/FPGA Arria 10 GX1150
+    Compiler:   Altera SDK for OpenCL, 64-Bit Offline Compiler, Version 16.0.2 Build 222
+
+    Interleaved Memory:
+    fMax=252.9
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           15416.1     0.051917     0.051894     0.051965
+    Scale:          15674.0     0.051056     0.051040     0.051066
+    Add:            20816.4     0.057661     0.057647     0.057676
+    Triad:          20543.0     0.058422     0.058414     0.058438
+    PCI Write:   74017129.4     0.000031     0.000016     0.000045
+    PCI Read:    75121862.7     0.000028     0.000016     0.000041
+
+    !!!!
+    !! NOTE: The data buffers are not copied and mapping/unmapping them introduces a 
+    !!       constant overhead. The PCI rows in this result measure this overhead and 
+    !!       no PCI communication!
+    !!!!
+
+
+
+8.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA:       Intel FPGA PAC D5005
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 19.3.0
+    BSP Version:18.1.2
+
+    Interleaved Memory:
+    fMax=244.37
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           31109.0     0.025743     0.025716     0.025781
+    Scale:          31144.2     0.025715     0.025687     0.025756
+    Add:            46705.4     0.025717     0.025693     0.025775
+    Triad:          46696.3     0.025720     0.025698     0.025758
+    PCI Write:       8863.4     0.135605     0.135388     0.135980
+    PCI Read:        7491.7     0.160535     0.160178     0.160861
+
+    Non-Interleaved:
+    fMax=313.28
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           29244.1     0.027398     0.027356     0.027434
+    Scale:          28044.5     0.028559     0.028526     0.028595
+    Add:            42087.5     0.028547     0.028512     0.028603
+    Triad:          41905.0     0.028712     0.028636     0.028804
+    PCI Write:       8678.2     0.155757     0.138277     0.183577
+    PCI Read:        7365.4     0.179162     0.162925     0.210698
+
+
+
+9.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA:       Intel FPGA PAC D5005 using SVM
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 19.4.0
+    BSP Version:18.1.2_svm
+
+    Interleaved Memory:
+    fMax=296.12
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           19255.3     0.041615     0.041547     0.041697
+    Scale:          20487.6     0.039103     0.039048     0.039184
+    Add:            14709.2     0.081682     0.081582     0.081774
+    Triad:          14676.7     0.081817     0.081762     0.081857
+    PCI Write:  419430400.0     0.000003     0.000003     0.000004
+    PCI Read:   419430400.0     0.000003     0.000003     0.000006
+
+    Non-Interleaved:
+    fMax=296.12
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           19234.5     0.041710     0.041592     0.041775
+    Scale:          20179.1     0.039771     0.039645     0.039899
+    Add:            14677.2     0.081870     0.081759     0.081907
+    Triad:          14670.8     0.081833     0.081795     0.081899
+    PCI Write:  387166523.1     0.000004     0.000003     0.000004
+    PCI Read:   419430400.0     0.000003     0.000003     0.000004
+
+    !!!!
+    !! NOTE: The data buffers are not copied and mapping/unmapping them introduces a 
+    !!       constant overhead. The PCI rows in this result measure this overhead and 
+    !!       no PCI communication!
+    !!!!
+
+
+
+Results for Double Precision
+=============================
+Executed using arrays with 50000000 elements.
+UNROLL_COUNT=8 for all kernels
+
+1.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA card:  Bittware 520N (Intel Stratix 10 GX2800)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 18.0.1
+
+    Interleaved Memory:
+    fMax=251.06
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           31938.7     0.025057     0.025048     0.025069
+    Scale:          31946.3     0.025047     0.025042     0.025058
+    Add:            47921.2     0.025044     0.025041     0.025052
+    Triad:          47923.0     0.025044     0.025040     0.025049
+    PCI Write:       6324.1     0.189882     0.189750     0.190120
+    PCI Read:        3531.8     0.339810     0.339775     0.339877
+
+    Non-Interleaved:
+    fMax=348.79
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           31119.9     0.025712     0.025707     0.025716
+    Scale:          31213.4     0.025640     0.025630     0.025652
+    Add:            46707.2     0.025705     0.025692     0.025718
+    Triad:          46831.0     0.025634     0.025624     0.025645
+    PCI Write:       6322.6     0.189834     0.189796     0.189907
+    PCI Read:        3771.0     0.318305     0.318222     0.318372
+
+
+
+2.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA card:  Bittware 520N (Intel Stratix 10 GX2800)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 18.1.1
+
+    Interleaved Memory:
+    fMax=260.82
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           33218.3     0.024086     0.024083     0.024092
+    Scale:          33226.8     0.024080     0.024077     0.024085
+    Add:            49249.2     0.024374     0.024366     0.024380
+    Triad:          48108.1     0.024952     0.024944     0.024959
+    PCI Write:       6326.8     0.189740     0.189670     0.189814
+    PCI Read:        5397.1     0.222387     0.222343     0.222454
+
+    Non-Interleaved:
+    fMax=338.63
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           32108.0     0.024926     0.024916     0.024937
+    Scale:          32122.1     0.024912     0.024905     0.024925
+    Add:            48175.3     0.024913     0.024909     0.024920
+    Triad:          48220.1     0.024897     0.024886     0.024906
+    PCI Write:       6326.2     0.189774     0.189687     0.189906
+    PCI Read:        5730.6     0.209460     0.209402     0.209591
+
+
+
+3.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA card:  Bittware 520N (Intel Stratix 10 GX2800)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 19.1
+
+    Interleaved Memory:
+    fMax=266.8
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           34084.4     0.023472     0.023471     0.023474
+    Scale:          34092.1     0.023467     0.023466     0.023468
+    Add:            50331.1     0.023843     0.023842     0.023847
+    Triad:          48379.1     0.024808     0.024804     0.024810
+    PCI Write:       6320.5     0.189925     0.189860     0.190030
+    PCI Read:        6308.9     0.190234     0.190206     0.190309
+
+    Non-Interleaved:
+    fMax=372.02
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           32682.5     0.024480     0.024478     0.024483
+    Scale:          32694.6     0.024470     0.024469     0.024470
+    Add:            49043.3     0.024470     0.024468     0.024470
+    Triad:          49028.0     0.024477     0.024476     0.024479
+    PCI Write:       6320.8     0.189931     0.189848     0.189990
+    PCI Read:        6412.5     0.187189     0.187134     0.187254
+
+
+
+4.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA card:  Bittware 520N (Intel Stratix 10 GX2800)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 19.2.0_hpc
+
+    Interleaved Memory:
+    fMax=243.96
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           31162.4     0.025674     0.025672     0.025677
+    Scale:          31166.2     0.025670     0.025669     0.025672
+    Add:            46740.1     0.025675     0.025674     0.025679
+    Triad:          46708.9     0.025693     0.025691     0.025695
+    PCI Write:       6319.6     0.189941     0.189884     0.189996
+    PCI Read:        6302.0     0.190504     0.190416     0.190622
+
+    Non-Interleaved:
+    fMax=362.58
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           33162.1     0.024133     0.024124     0.024139
+    Scale:          33111.4     0.024171     0.024161     0.024176
+    Add:            49757.4     0.024126     0.024117     0.024132
+    Triad:          49472.3     0.024263     0.024256     0.024268
+    PCI Write:       6319.0     0.189989     0.189902     0.190059
+    PCI Read:        6405.0     0.187421     0.187355     0.187522
+
+
+
+5.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA card:  Bittware 520N (Intel Stratix 10 GX2800)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 19.3.0
+    BSP Version:19.2.0_hpc
+
+    Interleaved Memory:
+    fMax=254.0
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           32468.7     0.024642     0.024639     0.024646
+    Scale:          32472.8     0.024639     0.024636     0.024642
+    Add:            48589.2     0.024700     0.024697     0.024704
+    Triad:          48217.8     0.024893     0.024887     0.024896
+    PCI Write:       6319.2     0.190012     0.189897     0.190127
+    PCI Read:        6385.8     0.187974     0.187918     0.188051
+
+    Non-Interleaved:
+    fMax=320.92
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           32614.5     0.024545     0.024529     0.024562
+    Scale:          32626.5     0.024532     0.024520     0.024548
+    Add:            48941.2     0.024530     0.024519     0.024545
+    Triad:          48861.9     0.024574     0.024559     0.024586
+    PCI Write:       6317.5     0.190006     0.189948     0.190101
+    PCI Read:        6397.4     0.187635     0.187575     0.187734
+
+
+
+6.  System:     FPGA Research Clusters
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/fpga-research-clusters/
+    FPGA:       Bittware 385A (Intel Arria 10 GX1150)
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 17.1.2
+
+    Interleaved Memory:
+    fMax=315.85
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           26711.3     0.029969     0.029950     0.030000
+    Scale:          26987.8     0.029729     0.029643     0.029777
+    Add:            28662.2     0.041928     0.041867     0.041976
+    Triad:          28633.5     0.041938     0.041909     0.041968
+    PCI Write:       6405.3     0.190147     0.187346     0.192743
+    PCI Read:        6391.9     0.192733     0.187739     0.196223
+
+    Non-Interleaved:
+    fMax=318.16
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           15612.5     0.051260     0.051241     0.051291
+    Scale:          32520.3     0.024654     0.024600     0.024689
+    Add:            23581.6     0.051006     0.050887     0.051087
+    Triad:          23516.1     0.051060     0.051029     0.051139
+    PCI Write:       6408.7     0.188771     0.187246     0.191645
+    PCI Read:        6373.6     0.191591     0.188277     0.195962
+
+
+
+7.  System:     HARP2
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/fpga-research-clusters/
+    FPGA:       Intel BDW+FPGA hybrid CPU/FPGA Arria 10 GX1150
+    Compiler:   Altera SDK for OpenCL, 64-Bit Offline Compiler, Version 16.0.2 Build 222
+
+    Interleaved Memory:
+    fMax=195.23
+    Copy:           14735.5     0.054322     0.054291     0.054338
+    Scale:          15410.1     0.051922     0.051914     0.051927
+    Add:            18619.1     0.064461     0.064450     0.064471
+    Triad:          18651.5     0.064355     0.064338     0.064367
+    PCI Write:   79891504.8     0.000031     0.000015     0.000046
+    PCI Read:    75121862.7     0.000027     0.000016     0.000041
+
+    !!!!
+    !! NOTE: The data buffers are not copied and mapping/unmapping them introduces a 
+    !!       constant overhead. The PCI rows in this result measure this overhead and 
+    !!       no PCI communication!
+    !!!!
+
+
+
+8.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA:       Intel FPGA PAC D5005
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 19.3.0
+    BSP Version:18.1.2
+
+    Interleaved Memory:
+    fMax=254.0
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           31692.2     0.025302     0.025243     0.025351
+    Scale:          31694.3     0.025305     0.025241     0.025341
+    Add:            47543.7     0.025298     0.025240     0.025338
+    Triad:          47532.5     0.025305     0.025246     0.025347
+    PCI Write:       8931.8     0.134656     0.134352     0.134971
+    PCI Read:        7535.7     0.159409     0.159241     0.159720
+
+    Non-Interleaved:
+    fMax=320.92
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           29106.6     0.027511     0.027485     0.027536
+    Scale:          28046.6     0.028585     0.028524     0.028629
+    Add:            42072.8     0.028547     0.028522     0.028612
+    Triad:          42047.8     0.028587     0.028539     0.028631
+    PCI Write:       8638.0     0.167112     0.138921     0.208923
+    PCI Read:        7285.5     0.193966     0.164710     0.241611
+
+
+
+9.  System:     Noctua
+    Url:        https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/
+    FPGA:       Intel FPGA PAC D5005 using SVM
+    Compiler:   Intel(R) FPGA SDK for OpenCL(TM), 64-Bit Offline Compiler, Version: 19.4.0
+    BSP Version:18.1.2_svm
+
+    Interleaved Memory:
+    fMax=326.58
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           19237.7     0.041656     0.041585     0.041723
+    Scale:          20886.7     0.038456     0.038302     0.038566
+    Add:            14575.5     0.082394     0.082330     0.082478
+    Triad:          14578.3     0.082346     0.082314     0.082383
+    PCI Write:  419430400.0     0.000004     0.000003     0.000004
+    PCI Read:   419430400.0     0.000004     0.000003     0.000006
+
+    Non-Interleaved:
+    fMax=326.58
+    Function    Best Rate MB/s  Avg time     Min time     Max time
+    Copy:           19186.0     0.041747     0.041697     0.041840
+    Scale:          20561.3     0.038969     0.038908     0.039044
+    Add:            14574.8     0.082398     0.082334     0.082447
+    Triad:          14581.7     0.082371     0.082295     0.082418
+    PCI Write:  419430400.0     0.000003     0.000003     0.000004
+    PCI Read:   419430400.0     0.000003     0.000003     0.000004
+
+    !!!!
+    !! NOTE: The data buffers are not copied and mapping/unmapping them introduces a 
+    !!       constant overhead. The PCI rows in this result measure this overhead and 
+    !!       no PCI communication!
+    !!!!

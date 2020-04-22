@@ -1,0 +1,35 @@
+#ifndef SRC_COMMON_PARAMETERS_H_
+#define SRC_COMMON_PARAMETERS_H_
+
+/**
+ * Host specific parameters
+ */
+#define VERSION "@PROJECT_VERSION@"
+#define DEFAULT_ARRAY_LENGTH @DEFAULT_ARRAY_LENGTH@
+#define DEFAULT_PLATFORM @DEFAULT_PLATFORM@
+#define DEFAULT_DEVICE @DEFAULT_DEVICE@
+#define HOST_DATA_TYPE @HOST_DATA_TYPE@
+#define HOST_DATA_TYPE_SIGNED @HOST_DATA_TYPE_SIGNED@
+#define NUM_KERNEL_REPLICATIONS @NUM_REPLICATIONS@
+#define DEFAULT_REPETITIONS @DEFAULT_REPETITIONS@
+
+/**
+ * Device specific parameters
+ */
+#define DEVICE_DATA_TYPE @DEVICE_DATA_TYPE@
+#define DEVICE_DATA_TYPE_UNSIGNED @DEVICE_DATA_TYPE_UNSIGNED@
+#define UNROLL_COUNT @PARALLEL_MEM_ACCESSES@
+#define BUFFER_SIZE @DEVICE_BUFFER_SIZE@
+#cmakedefine SINGLE_KERNEL
+// Combine address calculation and data read loop to a single loop
+#cmakedefine COMBINE_LOOPS
+#cmakedefine USE_SVM
+
+/**
+Output separator
+*/
+#define HLINE "-------------------------------------------------------------\n"
+
+
+
+#endif // SRC_COMMON_PARAMETERS_H_

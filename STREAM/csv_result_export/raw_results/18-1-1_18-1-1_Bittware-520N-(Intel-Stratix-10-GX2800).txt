@@ -1,0 +1,52 @@
+-------------------------------------------------------------
+STREAM FPGA based in STREAM version $Revision: 5.10 $
+-------------------------------------------------------------
+This system uses 4 bytes per array element.
+-------------------------------------------------------------
+Array size = 100000000 (elements), Offset = 0 (elements)
+Memory per array = 381.5 MiB (= 0.4 GiB).
+Total memory required = 1144.4 MiB (= 1.1 GiB).
+Each kernel will be executed 10 times.
+ The *best* time for each kernel (excluding the first iteration)
+ will be used to compute the reported bandwidth.
+-------------------------------------------------------------
+Platform Name: Intel(R) FPGA SDK for OpenCL(TM)
+Device Name:   p520_hpc_sg280l : nalla_pcie (aclnalla_pcie0)
+Using kernel given as argument
+Kernel:        bin/stream_kernels_18.1.1_hpc.aocx
+-------------------------------------------------------------
+MMD INFO : Disabling SmartVID (fix) polling
+MMD INFO : Enabling SmartVID (fix) polling
+Prepared FPGA successfully!
+-------------------------------------------------------------
+Your clock granularity/precision appears to be 1 microseconds.
+Each test below will take on the order of 25948 microseconds.
+   (= 25948 clock ticks)
+Increase the size of the arrays if this shows that
+you are not getting at least 20 clock ticks per test.
+-------------------------------------------------------------
+WARNING -- The above is only a rough guideline.
+For best results, please be sure you know the
+precision of your system timer.
+-------------------------------------------------------------
+Execute iteration 1 of 10
+Execute iteration 2 of 10
+Execute iteration 3 of 10
+Execute iteration 4 of 10
+Execute iteration 5 of 10
+Execute iteration 6 of 10
+Execute iteration 7 of 10
+Execute iteration 8 of 10
+Execute iteration 9 of 10
+Execute iteration 10 of 10
+fMax=242.18
+Function    Best Rate MB/s  Avg time     Min time     Max time
+Copy:           30875.9     0.025914     0.025910     0.025919
+Scale:          30885.6     0.025905     0.025902     0.025911
+Add:            46289.2     0.025928     0.025924     0.025935
+Triad:          45613.4     0.026310     0.026308     0.026312
+PCI Write:       6324.0     0.189800     0.189753     0.189862
+PCI Read:        5587.3     0.214869     0.214773     0.214943
+-------------------------------------------------------------
+Solution Validates: avg error less than 1.000000e-06 on all three arrays
+-------------------------------------------------------------

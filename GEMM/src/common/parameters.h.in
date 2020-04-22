@@ -1,0 +1,26 @@
+#ifndef SRC_COMMON_PARAMETERS_H_
+#define SRC_COMMON_PARAMETERS_H_
+
+#define VERSION @VERSION@
+#define KERNEL_NAME "@KERNEL_NAME@"
+#define DEFAULT_REPETITIONS @DEFAULT_REPETITIONS@
+#define DEFAULT_MATRIX_SIZE @DEFAULT_MATRIX_SIZE@
+#define DEFAULT_PLATFORM @DEFAULT_PLATFORM@
+#define DEFAULT_DEVICE @DEFAULT_DEVICE@
+
+/**
+ * Kernel Parameters
+ */
+#define BLOCK_SIZE @BLOCK_SIZE@
+#define GEMM_BLOCK @GEMM_BLOCK@
+#define GLOBAL_MEM_UNROLL @GLOBAL_MEM_UNROLL@
+
+#define HOST_DATA_TYPE @HOST_DATA_TYPE@
+#define DEVICE_DATA_TYPE @DEVICE_DATA_TYPE@
+
+/**
+Output separator
+*/
+#define HLINE "-------------------------------------------------------------\n"
+
+#endif // SRC_COMMON_PARAMETERS_H_

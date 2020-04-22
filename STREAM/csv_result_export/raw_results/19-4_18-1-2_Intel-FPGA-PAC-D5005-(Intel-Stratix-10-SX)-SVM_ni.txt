@@ -1,0 +1,61 @@
+-------------------------------------------------------------
+STREAM FPGA based in STREAM version $Revision: 5.10 $
+-------------------------------------------------------------
+This system uses 4 bytes per array element.
+-------------------------------------------------------------
+Array size = 100000000 (elements), Offset = 0 (elements)
+Memory per array = 381.5 MiB (= 0.4 GiB).
+Total memory required = 1144.4 MiB (= 1.1 GiB).
+Each kernel will be executed 10 times.
+ The *best* time for each kernel (excluding the first iteration)
+ will be used to compute the reported bandwidth.
+-------------------------------------------------------------
+XRT build version: 2.3.1301
+Build hash: 192e706aea53163a04c574f9b3fe9ed76b6ca471
+Build date: 2019-10-25 03:04:42
+Git branch: 2019.2
+PID: 254432
+UID: 18577
+[Wed Jan 22 16:22:06 2020]
+HOST: fpga-0010
+EXE: /upb/scratch/departments/pc2/groups/pc2-mitarbeiter/mariusme/noctua/stream_measure_svm/bin/stream_fpga_sp_no_interleaving
+[XRT] ERROR: XILINX_XRT must be set
+Platform Name: Intel(R) FPGA SDK for OpenCL(TM)
+Initialized BSP
+Device Name:   pac_s10_dc : Intel PAC Platform (pac_e600000)
+Using kernel given as argument
+Kernel:        stream_kernels_19.1.0_sp_no_interleaving.aocx
+-------------------------------------------------------------
+Prepared FPGA successfully!
+-------------------------------------------------------------
+Your clock granularity/precision appears to be 1 microseconds.
+Each test below will take on the order of 34569 microseconds.
+   (= 34569 clock ticks)
+Increase the size of the arrays if this shows that
+you are not getting at least 20 clock ticks per test.
+-------------------------------------------------------------
+WARNING -- The above is only a rough guideline.
+For best results, please be sure you know the
+precision of your system timer.
+-------------------------------------------------------------
+Execute iteration 1 of 10
+Execute iteration 2 of 10
+Execute iteration 3 of 10
+Execute iteration 4 of 10
+Execute iteration 5 of 10
+Execute iteration 6 of 10
+Execute iteration 7 of 10
+Execute iteration 8 of 10
+Execute iteration 9 of 10
+Execute iteration 10 of 10
+fMax=296.12
+Function    Best Rate MB/s  Avg time     Min time     Max time
+Copy:           19234.5     0.041710     0.041592     0.041775
+Scale:          20179.1     0.039771     0.039645     0.039899
+Add:            14677.2     0.081870     0.081759     0.081907
+Triad:          14670.8     0.081833     0.081795     0.081899
+PCI Write:  387166523.1     0.000004     0.000003     0.000004
+PCI Read:   419430400.0     0.000003     0.000003     0.000004
+-------------------------------------------------------------
+Solution Validates: avg error less than 1.000000e-06 on all three arrays
+-------------------------------------------------------------

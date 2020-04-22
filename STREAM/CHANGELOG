@@ -1,0 +1,45 @@
+# Changelog
+
+This file contains all changes made to the source code for each release.
+
+## 2.1.4.1
+
+#### Added:
+- Support for SVM in host code
+
+## 2.1.4
+
+#### Modified:
+- Reduce BRAM usage of kernels by combining two local memory buffers to one. This allows larger sizes of the local memory buffer with the same resurce usage.
+
+
+## 2.1.3
+
+#### Modified:
+- Optimize kernels for Xilinx toolchain
+- Remove volatile keyword of kernel parameters to enable bursts on Xilinx boards
+- Change buffer placement on memory banks for Intel FPGAs
+
+## 2.1.2
+
+#### Added:
+- Optimize build system for Xilinx boards
+
+## 2.1.1
+
+#### Added:
+- Add support for kernel replication for Intel devices and host code
+- Add single kernel with operation switch
+
+## 2.1
+
+#### Added:
+- Add basic support for Xilinx boards
+
+#### Modified:
+- Change from CMake 2.8 to CMake 3.1 as build system
+
+## 2.0
+
+#### Added:
+- Replace Makefile with CMake as a build system

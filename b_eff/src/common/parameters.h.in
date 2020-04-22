@@ -1,0 +1,24 @@
+#ifndef SRC_COMMON_PARAMETERS_H_
+#define SRC_COMMON_PARAMETERS_H_
+
+#define VERSION "@VERSION@"
+#define SEND_KERNEL_NAME "@SEND_KERNEL_NAME@"
+#define RECV_KERNEL_NAME "@RECV_KERNEL_NAME@"
+#define DEFAULT_REPETITIONS @DEFAULT_REPETITIONS@
+#define DEFAULT_PLATFORM @DEFAULT_PLATFORM@
+#define DEFAULT_DEVICE @DEFAULT_DEVICE@
+
+/**
+ * Kernel Parameters
+ */
+#define CHANNEL_WIDTH @CHANNEL_WIDTH@
+
+#define HOST_DATA_TYPE @HOST_DATA_TYPE@
+#define DEVICE_DATA_TYPE @DEVICE_DATA_TYPE@
+
+/**
+Output separator
+*/
+#define HLINE "-------------------------------------------------------------\n"
+
+#endif // SRC_COMMON_PARAMETERS_H_

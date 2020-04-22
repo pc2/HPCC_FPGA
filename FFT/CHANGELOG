@@ -1,0 +1,9 @@
+# Changelog
+
+This file contains all changes made to the source code for each release.
+
+## 1.0
+
+#### Added:
+- Host code and OpenCL kernel from Intel FPGA SDK AOC examples
+- Execution result for the Bittware 520N board with brief performance model

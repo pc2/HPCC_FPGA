@@ -1,0 +1,7 @@
+*/.DS_Store
+.DS_Store
+cmake-*
+.vscode
+*._*
+build-*
+.idea

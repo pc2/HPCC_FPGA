@@ -1,0 +1,117 @@
+# GEMM Benchmark for FPGA
+
+This repository contains the GEMM Benchmark for FPGA and its OpenCL kernels.
+Currently only the  Intel FPGA SDK for OpenCL utility is supported.
+
+It is a modified implementation of the
+[GEMM Benchmark](http://www.netlib.org/parkbench/html/matrix-kernels.html)
+provided in the [HPC Challenge Benchmark](https://icl.utk.edu/hpcc/) suite.
+The implementation follows the Python reference implementation given in  
+_Introduction to the HPCChallenge Benchmark Suite_ available
+[here](http://icl.cs.utk.edu/news_pub/submissions/hpcc-challenge-intro.pdf).
+
+## Dependencies
+
+The benchmark comes with the following requirements for building and running:
+
+- CMake 2.8
+- GCC 4.9
+- Intel OpenCL FPGA SDK 19.3
+
+It also contains submodules that will be automatically updated when running cmake:
+
+- cxxopts: A header only library to parse command line parameters
+- googletest: A C++ test framework
+
+## Build
+
+CMake is used as the build system.
+The targets below can be used to build the benchmark and its kernels:
+
+ |  Target  | Description                                    |
+ | -------- | ---------------------------------------------- |
+ | fgemm    | Builds the host application                    |
+ | Google_Tests_run| Compile the tests and its dependencies  |
+ 
+ More over the are additional targets to generate kernel reports and bitstreams.
+ They are generated for every kernel code in the `src/device` folder:
+ 
+  |  Target  | Description                                    |
+  | -------- | ---------------------------------------------- |
+  | KERNEL_FILE_NAME          | Synthesizes the kernel (takes several hours!)  |
+  | KERNEL_FILE_NAME_report   | Create an HTML report for the kernel    |
+  | KERNEL_FILE_NAME_emulate  | Create a n emulation kernel             |
+  
+The currently supported values for KERNEL_FILE_NAME are:
+
+- gemm_cannon
+ 
+ You can build for example the host application by running
+ 
+    mkdir build && cd build
+    cmake ..
+    make fgemm
+
+You will find all executables and kernel files in the `bin`
+folder of your build directory.
+You should always specify a target with make to reduce the build time!
+You might want to specify predefined parameters before build:
+
+Name             | Default     | Description                          |
+---------------- |-------------|--------------------------------------|
+ `DATA_TYPE`     | float       | Data type used for calculation       |
+`DEFAULT_DEVICE` | -1          | Index of the default device (-1 = ask) |
+`DEFAULT_PLATFORM`| -1          | Index of the default platform (-1 = ask) |
+`DEFAULT_REPETITIONS`| 10          | Number of times the kernel will be executed |
+`KERNEL_NAME`| gemm | Name of the kernel (only needed for own implementations) |
+`FPGA_BOARD_NAME`| p520_hpc_sg280l | Name of the target board |
+`BLOCK_SIZE`    | 512          | Block size used by the kernel to transpose the matrix |
+`GEMM_SIZE`    | 8             | Block size of the fully unrolled cannon block if cannon kernel is used |
+`GLOBAL_MEM_UNROLL`| 16        | Unrolling factor for the global memory access |
+`AOC_FLAGS`| `-fpc -fp-relaxed` | Additional AOC compiler flags that are used for kernel compilation |
+
+Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
+of the Intel FPGA SDK installation.
+
+Additionally it is possible to set the used compiler and other build tools 
+in the `CMakeCache.txt` located in the build directory after running cmake.
+
+
+## Execution
+
+For execution of the benchmark run:
+
+    ./fgemm -f path_to_kernel.aocx
+    
+For more information on available input parameters run
+
+    ./fgemm -h
+    
+To execute the unit and integration tests run
+
+    ./Google_Tests_run
+    
+in the `bin` folder within the build directory.
+It will run an emulation of the kernel and execute some functionality tests.
+
+## Output Interpretation
+
+An example output from an emulation is given below:
+
+    norm. resid        resid       machep
+    1.45417e-05  4.76837e-05  1.19209e-07
+           best         mean       GFLOPS
+    6.89168e-03  6.89168e-03  1.03868e+02
+
+The first two rows give information about the calculation error.
+
+- `norm. resid`: The normalized residual error based on the used matrix size and used values
+- `resid`: The maximum residual error of the calculation
+- `machep`: The machine epsilon
+
+The last two columns contain the time measurements and based on that the achieved FLOPS
+of the calculation.
+
+- `best`: The shortest execution time in all runs
+- `mean`: Arithmetic mean of all execution times
+- `GFLOPS`: GFLOPS calculated from the shortest execution time

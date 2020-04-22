@@ -1,0 +1,28 @@
+#ifndef SRC_COMMON_PARAMETERS_H_
+#define SRC_COMMON_PARAMETERS_H_
+
+/**
+ * Host specific parameters
+ */
+#define VERSION "@PROJECT_VERSION@"
+#define DEFAULT_REPETITIONS @DEFAULT_REPETITIONS@
+#define DEFAULT_PLATFORM @DEFAULT_PLATFORM@
+#define DEFAULT_DEVICE @DEFAULT_DEVICE@
+#define HOST_DATA_TYPE @HOST_DATA_TYPE@
+#define DEFAULT_MATRIX_SIZE @DEFAULT_MATRIX_SIZE@
+#cmakedefine _DP @_DP@
+
+/**
+ * Device specific parameters
+ */
+#define DEVICE_DATA_TYPE @DEVICE_DATA_TYPE@
+#define UNROLL_COUNT @GLOBAL_MEM_UNROLL@
+#define LOCAL_MEM_BLOCK_LOG @LOCAL_MEM_BLOCK_LOG@
+#define REGISTER_BLOCK_LOG @REGISTER_BLOCK_LOG@
+/**
+Output separator
+*/
+#define HLINE "-------------------------------------------------------------\n"
+
+
+#endif // SRC_COMMON_PARAMETERS_H_

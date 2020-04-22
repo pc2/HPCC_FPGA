@@ -1,0 +1,27 @@
+#ifndef SRC_COMMON_PARAMETERS_H_
+#define SRC_COMMON_PARAMETERS_H_
+
+/**
+ * Host specific parameters
+ */
+#define VERSION "@VERSION@"
+#define DEFAULT_REPETITIONS @DEFAULT_REPETITIONS@
+#define DEFAULT_ITERATIONS @DEFAULT_ITERATIONS@
+#define DEFAULT_PLATFORM @DEFAULT_PLATFORM@
+#define DEFAULT_DEVICE @DEFAULT_DEVICE@
+#define HOST_DATA_TYPE @HOST_DATA_TYPE@
+#define FFT_KERNEL_NAME "@FFT_KERNEL_NAME@"
+#define FETCH_KERNEL_NAME "@FETCH_KERNEL_NAME@"
+
+/**
+ * Kernel Parameters
+ */
+#define LOG_FFT_SIZE @LOG_FFT_SIZE@
+#define FFT_UNROLL @FFT_UNROLL@
+
+/**
+Output separator
+*/
+#define HLINE "-------------------------------------------------------------\n"
+
+#endif // SRC_COMMON_PARAMETERS_H_
