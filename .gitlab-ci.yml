@@ -5,6 +5,7 @@ stages:
 build:STREAM:
   stage: build
   script:
+    - git submodule update --init --recursive
     - rm -rf build
     - mkdir -p build
     - cd build
@@ -21,6 +22,7 @@ build:STREAM:
 build:RandomAccess:
   stage: build
   script:
+    - git submodule update --init --recursive
     - rm -rf build
     - mkdir -p build
     - cd build
@@ -38,7 +40,7 @@ test:STREAM:
   script:
     - cd build
     - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - env CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 make test
+    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:STREAM
     
@@ -47,7 +49,7 @@ test:RandomAccess:
   script:
     - cd build
     - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - env CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 make test
+    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:RandomAccess
 
