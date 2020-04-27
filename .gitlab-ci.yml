@@ -1,0 +1,54 @@
+stages:
+    - build
+    - test
+
+build:STREAM:
+  stage: build
+  script:
+    - rm -r build
+    - mkdir -p build
+    - cd build
+    - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make all
+  artifacts:
+    paths:
+      - build/bin/stream_kernels_single_emulate.aocx
+      - build/bin/stream_kernels_emulate.aocx
+      - build/bin/STREAM_FPGA_intel
+      - build/bin/Test_intel
+      
+      
+build:RandomAccess:
+  stage: build
+  script:
+    - rm -r build
+    - mkdir -p build
+    - cd build
+    - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make all
+  artifacts:
+    paths:
+      - build/bin/random_access_kernels_single_emulate.aocx
+      - build/bin/RandomAccess_intel
+      - build/bin/Test_intel
+
+
+test:STREAM:
+  stage: test
+  script:
+    - cd build
+    - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - env CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 make test
+  dependencies:
+    - build:STREAM
+    
+test:RandomAccess:
+  stage: test
+  script:
+    - cd build
+    - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - env CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 make test
+  dependencies:
+    - build:RandomAccess
+
+
