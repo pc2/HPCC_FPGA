@@ -96,6 +96,6 @@ endfunction()
 
 if (INTELFPGAOPENCL_FOUND)
     generate_kernel_targets_intel(lu_blocked_pvt lu_blocked_pvt_test)
-    add_test(NAME test_emulation_intel COMMAND STREAM_FPGA_intel -f stream_kernels_emulate.aocx)
+    add_test(NAME test_emulation_intel COMMAND LINPACK_intel -f lu_blocked_pvt_emulate.aocx WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 endif()
 

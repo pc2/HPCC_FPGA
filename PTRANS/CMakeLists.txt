@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.1)
-project(fTrans VERSION 1.0.0)
+project(PTRANS VERSION 1.0.0)
+
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CTest)
+endif()
 
 set(KERNEL_NAME transpose CACHE STRING "Name of the OpenCL kernel")
 set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
@@ -31,5 +35,7 @@ find_package(IntelFPGAOpenCL REQUIRED)
 
 add_subdirectory(src/device)
 add_subdirectory(src/host)
-add_subdirectory(tests)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 

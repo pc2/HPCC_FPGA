@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.1)
-project(fGEMM VERSION 0.1 )
+project(GEMM VERSION 0.1 )
+
+set (CMAKE_CXX_STANDARD 11)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CTest)
+endif()
 
 set(KERNEL_NAME gemm CACHE STRING "Name of the OpenCL kernel")
 set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
@@ -33,5 +38,7 @@ find_package(IntelFPGAOpenCL REQUIRED)
 
 add_subdirectory(src/device)
 add_subdirectory(src/host)
-add_subdirectory(tests)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 

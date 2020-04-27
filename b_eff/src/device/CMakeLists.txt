@@ -33,3 +33,5 @@ function(generate_kernel_targets)
 endfunction()
 
 generate_kernel_targets(communication_bw520n communication_bw520n_disable_pipelining communication_bw520n_combined_loops)
+add_test(NAME test_emulation_intel COMMAND ./fnet -f communication_bw520n_emulate.aocx
+        WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})

@@ -2,6 +2,12 @@ stages:
     - build
     - test
 
+###
+#
+# Build all benchmarks
+#
+###
+
 build:STREAM:
   stage: build
   script:
@@ -35,6 +41,87 @@ build:RandomAccess:
       - build/bin/Test_intel
 
 
+build:PTRANS:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make all
+  artifacts:
+    paths:
+      - build/bin/transpose_optimized_emulate.aocx
+      - build/bin/fTrans
+      - build/bin/Google_Tests_run
+
+build:LINPACK:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make all
+  artifacts:
+    paths:
+      - build/bin/lu_blocked_pvt_emulate.aocx
+      - build/bin/LINPACK_intel
+      - build/bin/Test_intel
+
+build:GEMM:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make all
+  artifacts:
+    paths:
+      - build/bin/gemm_cannon_emulate.aocx
+      - build/bin/fgemm
+      - build/bin/Test_intel
+
+build:FFT:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make all
+  artifacts:
+    paths:
+      - build/bin/fft1d_float_8_emulate.aocx
+      - build/bin/fFFT
+      - build/bin/Google_Tests_run
+
+build:b_eff:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../b_eff -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make all
+  artifacts:
+    paths:
+      - build/bin/communication_520n_emulate.aocx
+      - build/bin/fnet
+      - build/bin/Google_Tests_run
+
+###
+#
+# Execute tests for all benchmarks
+#
+###
+
 test:STREAM:
   stage: test
   script:
@@ -52,5 +139,50 @@ test:RandomAccess:
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:RandomAccess
+
+test:PTRANS:
+  stage: test
+  script:
+    - cd build
+    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:PTRANS
+
+test:LINPACK:
+  stage: test
+  script:
+    - cd build
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:LINPACK
+
+test:GEMM:
+  stage: test
+  script:
+    - cd build
+    - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:GEMM
+
+test:FFT:
+  stage: test
+  script:
+    - cd build
+    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:FFT
+
+test:b_eff:
+  stage: test
+  script:
+    - cd build
+    - cmake ../b_eff -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:b_eff
 
 

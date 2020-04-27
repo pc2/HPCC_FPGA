@@ -33,3 +33,5 @@ function(generate_kernel_targets)
 endfunction()
 
 generate_kernel_targets(fft1d_float_8)
+add_test(NAME test_emulation_intel COMMAND ./fFFT -f fft1d_float_8_emulate.aocx -i 1
+        WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
