@@ -2,7 +2,7 @@
 add_compile_options(--std=c++11)
 # 'lib' is the folder with Google Test sources
 add_subdirectory(../../extern/googletest ${CMAKE_CURRENT_BINARY_DIR}/lib)
-include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+include_directories(${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include)
 include_directories(${CMAKE_BINARY_DIR}/src/common ../../extern/cxxopts/include)
 include_directories(SYSTEM ${IntelFPGAOpenCL_INCLUDE_DIRS})
 
