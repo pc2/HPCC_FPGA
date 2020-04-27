@@ -1,7 +1,6 @@
-cmake_minimum_required(VERSION 2.8.4)
-project(fGEMM)
+cmake_minimum_required(VERSION 3.1)
+project(fGEMM VERSION 0.1 )
 
-set(VERSION 0.1)
 set(KERNEL_NAME gemm CACHE STRING "Name of the OpenCL kernel")
 set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
 set(DEFAULT_MATRIX_SIZE 4096 CACHE STRING "Default size of the used matrices")

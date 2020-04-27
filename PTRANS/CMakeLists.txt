@@ -1,7 +1,6 @@
-cmake_minimum_required(VERSION 2.8.4)
-project(fTrans)
+cmake_minimum_required(VERSION 3.1)
+project(fTrans VERSION 1.0.0)
 
-set(VERSION 1.0.0)
 set(KERNEL_NAME transpose CACHE STRING "Name of the OpenCL kernel")
 set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
 set(DEFAULT_MATRIX_SIZE 4096 CACHE STRING "Default size of the used matrices")

@@ -10,18 +10,9 @@ The implementation follows the Python reference implementation given in
 _Introduction to the HPCChallenge Benchmark Suite_ available
 [here](http://icl.cs.utk.edu/news_pub/submissions/hpcc-challenge-intro.pdf).
 
-## Dependencies
+## Additional Dependencies
 
-The benchmark comes with the following requirements for building and running:
-
-- CMake 2.8
-- GCC 4.9
-- Intel OpenCL FPGA SDK 19.3
-
-It also contains submodules that will be automatically updated when running cmake:
-
-- cxxopts: A header only library to parse command line parameters
-- googletest: A C++ test framework
+The benchmark needs no additional dependencies than the ones given in the main [README](../README.md).
 
 ## Build
 
@@ -38,13 +29,9 @@ The targets below can be used to build the benchmark and its kernels:
  
   |  Target  | Description                                    |
   | -------- | ---------------------------------------------- |
-  | KERNEL_FILE_NAME          | Synthesizes the kernel (takes several hours!)  |
-  | KERNEL_FILE_NAME_report   | Create an HTML report for the kernel    |
-  | KERNEL_FILE_NAME_emulate  | Create a n emulation kernel             |
-  
-The currently supported values for KERNEL_FILE_NAME are:
-
-- gemm_cannon
+  | gemm_cannon          | Synthesizes the kernel (takes several hours!)  |
+  | gemm_cannon_report   | Create an HTML report for the kernel    |
+  | gemm_cannon_emulate  | Create a n emulation kernel             |
  
  You can build for example the host application by running
  
@@ -63,6 +50,7 @@ Name             | Default     | Description                          |
 `DEFAULT_DEVICE` | -1          | Index of the default device (-1 = ask) |
 `DEFAULT_PLATFORM`| -1          | Index of the default platform (-1 = ask) |
 `DEFAULT_REPETITIONS`| 10          | Number of times the kernel will be executed |
+`DEFAULT_MATRIX_SIZE` | 4096      | The default size of the quadratic matrices |
 `KERNEL_NAME`| gemm | Name of the kernel (only needed for own implementations) |
 `FPGA_BOARD_NAME`| p520_hpc_sg280l | Name of the target board |
 `BLOCK_SIZE`    | 512          | Block size used by the kernel to transpose the matrix |
@@ -73,10 +61,6 @@ Name             | Default     | Description                          |
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.
 
-Additionally it is possible to set the used compiler and other build tools 
-in the `CMakeCache.txt` located in the build directory after running cmake.
-
-
 ## Execution
 
 For execution of the benchmark run:
@@ -86,6 +70,23 @@ For execution of the benchmark run:
 For more information on available input parameters run
 
     ./fgemm -h
+    
+    Implementation of the GEMM benchmark proposed in the HPCC benchmark adapted for FPGA
+    Usage:
+      ./fgemm [OPTION...]
+    
+      -f, --file arg        Kernel file name
+      -n, arg               Number of repetitions (default: 10)
+      -m, arg               Matrix size (default: 4096)
+          --kernel arg      Name of the kernel (default: gemm)
+      -i, --nointerleaving  Disable memory interleaving
+          --device arg      Index of the device that has to be used. If not given
+                            you will be asked which device to use if there are
+                            multiple devices available. (default: -1)
+          --platform arg    Index of the platform that has to be used. If not
+                            given you will be asked which platform to use if there
+                            are multiple platforms available. (default: -1)
+      -h, --help            Print this help
     
 To execute the unit and integration tests run
 

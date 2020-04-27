@@ -10,18 +10,9 @@ The implementation follows the Python reference implementation given in
 _Introduction to the HPCChallenge Benchmark Suite_ available
 [here](http://icl.cs.utk.edu/news_pub/submissions/hpcc-challenge-intro.pdf).
 
-## Dependencies
+## Additional Dependencies
 
-The benchmark comes with the following requirements for building and running:
-
-- CMake 2.8
-- GCC 4.9
-- Intel OpenCL FPGA SDK 19.3
-
-It also contains submodules that will be automatically updated when running cmake:
-
-- cxxopts: A header only library to parse command line parameters
-- googletest: A C++ test framework
+The benchmark needs no additional dependencies than the ones given in the main [README](../README.md).
 
 ## Build
 
@@ -42,7 +33,7 @@ The targets below can be used to build the benchmark and its kernels:
   | KERNEL_FILE_NAME_report   | Create an HTML report for the kernel    |
   | KERNEL_FILE_NAME_emulate  | Create a n emulation kernel             |
   
-The currently supported values for KERNEL_FILE_NAME are:
+The currently supported values for KERNEL_FILE_NAME are listed below where `transpose_optimized` is set to be the default for the ase run:
 
 - transpose_default
 - transpose_optimized
@@ -72,10 +63,6 @@ Name             | Default     | Description                          |
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.
 
-Additionally it is possible to set the used compiler and other build tools 
-in the `CMakeCache.txt` located in the build directory after running cmake.
-
-
 ## Execution
 
 For execution of the benchmark run:
@@ -85,6 +72,26 @@ For execution of the benchmark run:
 For more information on available input parameters run
 
     ./fTrans -h
+    
+    Implementation of the matrix transposition benchmark proposed in the HPCC benchmark suite for FPGA.
+    Version: 0.1.2
+    Usage:
+      ./fTrans [OPTION...]
+    
+      -f, --file arg        Kernel file name
+      -n, arg               Number of repetitions (default: 10)
+      -m, arg               Matrix size (default: 4096)
+          --kernel arg      Name of the kernel (default: transpose)
+      -i, --nointerleaving  Disable memory interleaving
+          --device arg      Index of the device that has to be used. If not given
+                            you will be asked which device to use if there are
+                            multiple devices available. (default: -1)
+          --platform arg    Index of the platform that has to be used. If not
+                            given you will be asked which platform to use if there
+                            are multiple platforms available. (default: -1)
+      -h, --help            Print this help
+    
+
     
 To execute the unit and integration tests run
 

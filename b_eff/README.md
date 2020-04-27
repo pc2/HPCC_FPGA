@@ -11,24 +11,15 @@ A performance model for the benchmark is given in the subfolder [performance](pe
 
 Have a look into the [Changelog](CHANGELOG) to see recent changes in the recent version.
 
-## Dependencies
+## Additional Dependencies
 
-The benchmark comes with the following requirements for building and running:
+The benchmark comes next to the dependencies described in the main project with the following additional requirements for building and running:
 
-- CMake 2.8
-- GCC 4.9
 - MPI (tested with OpenMPI 3.1.4)
-- Intel OpenCL FPGA SDK 19.3
-
-It also contains submodules that will be automatically updated when running cmake:
-
-- cxxopts: A header only library to parse command line parameters
-- googletest: A C++ test framework
-- hlslib: CMake support and helper functions for the work with HLS tools for FPGA
+- Intel OpenCL FPGA SDK 19.3  with support for external channels
 
 ## Build
 
-CMake is used as the build system.
 The targets below can be used to build the benchmark and its kernels:
 
  |  Target  | Description                                    |
@@ -74,18 +65,33 @@ Name             | Default     | Description                          |
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.
 
-Additionally it is possible to set the used compiler and other build tools 
-in the `CMakeCache.txt` located in the build directory after running cmake.
-
 ## Execution
 
+All binaries and FPGA bitstreams can be found in the `bin` directory with in the build directory.
 For execution of the benchmark run:
 
     ./fnet -f path_to_kernel.aocx
     
 For more information on available input parameters run
 
-    ./fnet -h
+    $./fnet -h
+    
+    Implementation of the effective bandwidth benchmark proposed in the HPCC benchmark suite for FPGA.
+    Version: "1.1"
+    Usage:
+      ./fnet [OPTION...]
+    
+      -f, --file arg      Kernel file name
+      -n, arg             Number of repetitions (default: 10)
+      -l, arg             Inital looplength of Kernel (default: 32768)
+          --device arg    Index of the device that has to be used. If not given
+                          you will be asked which device to use if there are
+                          multiple devices available. (default: -1)
+          --platform arg  Index of the platform that has to be used. If not given
+                          you will be asked which platform to use if there are
+                          multiple platforms available. (default: -1)
+      -h, --help          Print this help
+
     
 To execute the unit and integration tests run
 
@@ -124,7 +130,7 @@ This might still lead to inaccuracies in the time measurements depending on the 
 The benchmark will output a result table to the standard output after execution.
 This is an example output using a single rank in emulation:
 
-            MSize      looplength            time            GB/s
+            MSize      looplength            time            B/s
                 1           16384     5.46779e-02     5.99292e+05
                 2            8192     5.19651e-02     6.30578e+05
                 4            4096     2.58565e-02     1.26730e+06
@@ -147,7 +153,7 @@ This is an example output using a single rank in emulation:
           1048576               1     1.21861e-01     1.72094e+07
           2097152               1     4.20120e-01     9.98360e+06
     
-    b_eff = 9.58731e+06 GB/s
+    b_eff = 9.58731e+06 B/s
 
 The table contains the measurements for all tested message sizes.
 It is split into the following four columns:

@@ -32,7 +32,7 @@ Every benchmark comes with a separate CMake project with host and device code.
 
 All benchmarks come with the following build dependencies:
 
-- CMake (Version 2.8/3.1 depending on the benchmark)
+- CMake >= 3.1
 - C++ compiler with C++11 support
 - Intel OpenCL FPGA SDK or Xilinx Vitis
 
