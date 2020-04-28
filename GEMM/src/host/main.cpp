@@ -33,6 +33,13 @@ int main(int argc, char * argv[]) {
               << std::endl
               << "Device:              "
               << usedDevice[0].getInfo<CL_DEVICE_NAME>() << std::endl
+              << "Verification:        "
+              #ifdef _USE_BLAS_
+              << "external library"
+              #else
+              << "internal ref. implementation"
+              #endif
+              << std::endl 
               << HLINE
               << "Start benchmark using the given configuration." << std::endl
               << HLINE;

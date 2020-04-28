@@ -12,7 +12,14 @@ _Introduction to the HPCChallenge Benchmark Suite_ available
 
 ## Additional Dependencies
 
-The benchmark needs no additional dependencies than the ones given in the main [README](../README.md).
+The benchmark *optionally* depends on a library implementing the BLAS linear-algebra interface like:
+
+- OpenBLAS
+- Intel MKL
+
+If available, the benchmark will use `sgemm_` to validate the calculation instead of a slow reference implementation.
+For matrix sizes above 1000x1000 we recommend using such a library to speed up the benchmark execution. 
+Using such a library will not change the performance result of the benchmark but might affect the reported error of the calculation.
 
 ## Build
 

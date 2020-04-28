@@ -10,15 +10,13 @@
 #include "../src/host/setup/fpga_setup.hpp"
 
 void
-ref_matmul(HOST_DATA_TYPE const* A, HOST_DATA_TYPE const* B, HOST_DATA_TYPE* C, uint size) {
+ref_matmul(HOST_DATA_TYPE* A, HOST_DATA_TYPE* B, HOST_DATA_TYPE* C, int size) {
     for (int i=0; i< size; i++) {
         for (int j=0; j< size; j++) {
             C[i * size + j] = 0;
-            for (int k = 0; k < size; k++) {
-                C[i * size + j] += A[i * size + k] * B[k * size + j];
-            }
         }
     }
+    gemm_ref(A,B,C,size,1.0,0.0);
 }
 
 
@@ -193,7 +191,12 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectCplusA) {
 TEST_P(DifferentOpenCLKernelTest, FPGACorrectbetaCplusalphaAB) {
     HOST_DATA_TYPE c_ref_out[matrix_size * matrix_size];
     auto result = bm_execution::calculate(config, A, B, C, C_out,0.5, 2.0);
-    gemm_ref(A,B,C,c_ref_out,matrix_size,0.5,2.0);
+    for (int i = 0; i < matrix_size; i++) {
+        for (int j = 0; j < matrix_size; j++) {
+           c_ref_out[i * matrix_size + j] = C[i * matrix_size + j];
+        }
+    }
+    gemm_ref(A,B,c_ref_out,matrix_size,0.5,2.0);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             EXPECT_NEAR(C_out[i * matrix_size + j], c_ref_out[i * matrix_size + j], 0.001);

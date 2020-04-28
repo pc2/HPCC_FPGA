@@ -152,21 +152,28 @@ void matgen(HOST_DATA_TYPE* a, int seed, cl_int lda, cl_int n,
     }
 }
 
-void gemm_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c_in, HOST_DATA_TYPE* c_out,
+void gemm_ref(HOST_DATA_TYPE* a,HOST_DATA_TYPE* b, HOST_DATA_TYPE* c,
                                 int n, HOST_DATA_TYPE alpha, HOST_DATA_TYPE beta) {
+#ifdef _USE_BLAS_
+    char ta = 'N';
+    char tb = 'N';
+    
+    sgemm_(&ta, &tb, &n, &n, &n, &alpha, b, &n, a, &n, &beta, c, &n);
+#else
     for (int i=0; i < n; i++) {
         for (int j=0; j < n; j++) {
-            c_out[i * n + j] = beta * c_in[i*n + j];
+            c[i * n + j] = beta * c[i*n + j];
         }
     }
 
     for (int i=0; i < n; i++) {
         for (int j=0; j < n; j++) {
             for (int k=0; k < n; k++) {
-                c_out[i*n + j] += alpha * a[i*n + k] * b[k*n + j];
+                c[i*n + j] += alpha * a[i*n + k] * b[k*n + j];
             }
         }
     }
+#endif
 }
 
 double
@@ -182,7 +189,9 @@ checkGEMMresults(HOST_DATA_TYPE* c_res, cl_int lda, cl_int n) {
     matgen(a, 1, lda, n, &totalnorm);
     matgen(b, 2, lda, n, &totalnorm);
     matgen(c, 3, lda, n, &totalnorm);
-    gemm_ref(a, b, c, c, n, 0.5, 2.0);
+
+    gemm_ref(a, b, c, n, 0.5, 2.0);
+
     HOST_DATA_TYPE resid = 0.0;
     HOST_DATA_TYPE normx = 0.0;
 
@@ -219,9 +228,4 @@ HOST_DATA_TYPE epslon(HOST_DATA_TYPE x) {
     return (eps*fabs(static_cast<double>(x)));
 }
 
-
-/**
-The program entry point.
-Prepares the FPGA and executes the kernels on the device.
-*/
 
