@@ -10,6 +10,10 @@ find_package(OpenMP)
 find_package(IntelFPGAOpenCL)
 find_package(Vitis)
 
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CTest)
+endif()
+
 set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
 set(DEFAULT_ARRAY_LENGTH 536870912 CACHE STRING "Default size of the data arrays")
 set(DEFAULT_DEVICE -1 CACHE STRING "Index of the default device to use")
@@ -51,4 +55,6 @@ include_directories(${CMAKE_BINARY_DIR}/src/common)
 
 add_subdirectory(src/device)
 add_subdirectory(src/host)
-add_subdirectory(tests)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+    add_subdirectory(tests)
+endif()

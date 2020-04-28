@@ -52,32 +52,38 @@ More information on that can be found in the README located in the subfolder for
 One key feature of all benchmarks of this suite is that they come with individual **configuration options**.
 They can be used to adjust the OpenCL base implementations of a benchmark for a specific FPGA architecture and optimize the performance and resource usage.
 
-#### Build Example: STREAM
+#### Build and Test Example: STREAM
 
 As an example to configure and build the kernels of the STREAM benchmark you can follow the steps below.
+The steps are very similar for all benchmarks of the suite.
 
 Create a build directory to store the build configuration and intermediate files:
-```    
+```bash
 mkdir -p build/build-stream
 cd build/build-stream
 ``` 
 
 Configure the build using CMake and set the STREAM specific configuration options to match the target FPGA:
-```
+```bash
 cmake ../../STREAM -DDEVICE_BUFFER_SIZE=8192 -DFPGA_BOARD_NAME=p520_hpc_sg280l \
     -DUSE_SVM=No -DNUM_REPLICATIONS=4
 ``` 
 
 The created build configuration can then be used to build and execute the tests and create a report for the OpenCL kernel:
-```
-make Test_intel stream_kernels_single_report_intel
-cd bin
-CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 ./Test_intel 
+```bash
+# Build the tests, host code and emulation kernels
+make all
+
+# Create a report for the OpenCL kernel
+make stream_kernels_single_report_intel
+
+# Execute the tests
+make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 test
 ```
 The report can be found within the build directory of the project e.g. under `bin/stream_kernels_single/reports`.
 
 If the tests with the selected configuration succeed and the report shows no anormalies, the kernel can be synthesized with:
-```
+```bash
 # Synthesize the kernel
 make stream_kernels_single
 

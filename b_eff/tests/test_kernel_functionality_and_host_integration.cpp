@@ -11,7 +11,6 @@
 #include "mpi.h"
 #include <fstream>
 
-
 struct OpenCLKernelTest : testing::Test {
     std::string kernelFileName = "communication_bw520n_emulate.aocx";
     std::shared_ptr<bm_execution::ExecutionConfiguration> config;
@@ -53,7 +52,6 @@ struct OpenCLKernelTest : testing::Test {
  */
 struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface<std::tuple<std::string, unsigned, std::string, std::string>> {
     DifferentOpenCLKernelTest() {
-        MPI_Init(NULL, NULL);
         auto params = GetParam();
         kernelFileName = std::get<0>(params);
         numberOfChannels = std::get<1>(params);
@@ -63,7 +61,6 @@ struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface
     }
 
     ~DifferentOpenCLKernelTest() {
-        MPI_Finalize();
     }
 };
 
@@ -178,6 +175,4 @@ TEST_P(DifferentOpenCLKernelTest, CorrectDataIsWrittenToChannel) {
 
 
 INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-        testing::Values(std::make_tuple("communication_bw520n_emulate.aocx", 4, "kernel_output_ch", "kernel_input_ch"),
-                        std::make_tuple("communication_bw520n_combined_loops_emulate.aocx", 4, "kernel_output_ch", "kernel_input_ch"),
-                        std::make_tuple("communication_bw520n_disable_pipelining_emulate.aocx", 4, "kernel_output_ch", "kernel_input_ch")));
+        testing::Values(std::make_tuple("communication_bw520n_emulate.aocx", 4, "kernel_output_ch", "kernel_input_ch")));

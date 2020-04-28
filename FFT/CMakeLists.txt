@@ -1,5 +1,10 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.1)
 project(FFT VERSION 1.0)
+
+set (CMAKE_CXX_STANDARD 11)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CTest)
+endif()
 
 set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
 set(DEFAULT_ITERATIONS 100 CACHE STRING "Default number of iterations that is done with a single kernel execution")
@@ -31,5 +36,7 @@ find_package(IntelFPGAOpenCL REQUIRED)
 
 add_subdirectory(src/device)
 add_subdirectory(src/host)
-add_subdirectory(tests)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 

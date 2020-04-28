@@ -53,6 +53,6 @@ main(int argc, char *argv[]) {
 
     printResults(timing, programSettings->matrixSize);
 
-    return error < 1 ? 0 : 1;
+    return error < 100 ? 0 : 1;
 }
 

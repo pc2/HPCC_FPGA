@@ -33,3 +33,5 @@ function(generate_kernel_targets)
 endfunction()
 
 generate_kernel_targets(gemm_cannon)
+add_test(NAME test_emulation_intel COMMAND ./fgemm -f gemm_cannon_emulate.aocx -m ${BLOCK_SIZE}
+        WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})

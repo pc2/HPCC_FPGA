@@ -11,5 +11,5 @@ set(TEST_SOURCES test_fpga_setup.cpp "test_fft_functionality.cpp" test_execution
 
 add_executable(Google_Tests_run ${TEST_SOURCES} ${PROJECT_SOURCES})
 target_link_libraries(Google_Tests_run gtest gmock gtest_main ${IntelFPGAOpenCL_LIBRARIES})
-add_dependencies(Google_Tests_run ${CMAKE_BINARY_DIR}/src/common/parameters.h)
 add_dependencies(Google_Tests_run fft1d_float_8_emulate)
+add_test(NAME test_intel_unit COMMAND $<TARGET_FILE:Google_Tests_run> WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})

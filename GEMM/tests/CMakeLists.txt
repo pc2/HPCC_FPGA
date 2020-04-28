@@ -1,5 +1,4 @@
 
-add_compile_options(--std=c++11)
 # 'lib' is the folder with Google Test sources
 add_subdirectory(../../extern/googletest ${CMAKE_CURRENT_BINARY_DIR}/lib)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
@@ -11,5 +10,5 @@ set(TEST_SOURCES test_fpga_setup.cpp test_kernel_functionality_and_host_integrat
 
 add_executable(Google_Tests_run ${TEST_SOURCES} ${PROJECT_SOURCES})
 target_link_libraries(Google_Tests_run gtest gmock gtest_main ${IntelFPGAOpenCL_LIBRARIES})
-add_dependencies(Google_Tests_run ${CMAKE_BINARY_DIR}/src/common/parameters.h)
 add_dependencies(Google_Tests_run gemm_cannon_emulate)
+add_test(NAME test_intel_unit COMMAND $<TARGET_FILE:Google_Tests_run> WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})

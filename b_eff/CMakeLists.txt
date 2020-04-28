@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.1)
 project(b_eff VERSION 1.1)
 
+set (CMAKE_CXX_STANDARD 11)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CTest)
+endif()
+
 # Include CMake module files provided by hlslib
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/../extern/hlslib/cmake)
 
@@ -28,27 +33,12 @@ configure_file(
 
 include_directories(${CMAKE_BINARY_DIR}/src/common)
 
-# Update git submodules
-
-find_package(Git QUIET)
-if (GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-    # Update submodules as needed
-    option(GIT_SUBMODULE "Check submodules during build" ON)
-    if (GIT_SUBMODULE)
-        message(STATUS "Submodule update")
-        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                RESULT_VARIABLE GIT_SUBMOD_RESULT)
-        if (NOT GIT_SUBMOD_RESULT EQUAL "0")
-            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
-        endif ()
-    endif ()
-endif ()
-
 find_package(IntelFPGAOpenCL REQUIRED)
 find_package(MPI REQUIRED)
 
 add_subdirectory(src/device)
 add_subdirectory(src/host)
-add_subdirectory(tests)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 

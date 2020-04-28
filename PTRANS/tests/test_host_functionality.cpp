@@ -5,7 +5,7 @@
 #include "parameters.h"
 #include "CL/cl.hpp"
 #include "../src/host/transpose_functionality.hpp"
-#include "../extern/googletest/googlemock/include/gmock/gmock-matchers.h"
+#include "gmock/gmock-matchers.h"
 
 /**
  * Check correctness of reference matrix transposition implementation for 2x2
