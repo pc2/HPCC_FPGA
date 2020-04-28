@@ -7,6 +7,12 @@ The implementation is currently work in progess and is not feature complete.
 Read the section **Implementation Details** for more information.
 
 
+## Additional Dependencies
+
+Additional libraries are needed to build the unit test binary:
+
+- Intel MKL
+
 ## Build
 
 CMake is used as the build system.
@@ -76,6 +82,22 @@ For execution of the benchmark run:
 For more information on available input parameters run
 
     ./LINPACK_intel -h
+    
+    Implementation of the LINPACK benchmark proposed in the HPCC benchmark suite for FPGA.
+    Usage:
+      ./LINPACK_intel [OPTION...]
+    
+      -f, --file arg      Kernel file name
+      -n, arg             Number of repetitions (default: 10)
+      -s, arg             Size of the data arrays (default: 1024)
+          --device arg    Index of the device that has to be used. If not given
+                          you will be asked which device to use if there are
+                          multiple devices available. (default: -1)
+          --platform arg  Index of the platform that has to be used. If not given
+                          you will be asked which platform to use if there are
+                          multiple platforms available. (default: -1)
+      -h, --help          Print this help
+
     
 To execute the unit and integration tests for Intel devices run
 

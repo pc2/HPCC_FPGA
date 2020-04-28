@@ -28,9 +28,11 @@ The targets below can be used to build the benchmark and its kernels:
   | ------------------------------ | ---------------------------------------------- |
   | stream_kernels_`VENDOR`                | Synthesizes the kernel (takes several hours!)  |
   | stream_kernels_report_intel          | Create an HTML report for the kernel           |
+  | stream_kernels_compile_xilinx          | Just compile kernel and create logs and reports |
   | stream_kernels_emulate_`VENDOR`          | Create a n emulation kernel                    |
   | stream_kernels_single_`VENDOR`                | Synthesizes the kernel (takes several hours!)  |
   | stream_kernels_single_report_intel          | Create an HTML report for the kernel           |
+  | stream_kernels_single_compile_xilinx          | Just compile kernel and create logs and reports |
   | stream_kernels_single_emulate_`VENDOR`          | Create a n emulation kernel                    |
   
 For the host code as well as the kernels `VENDOR` can be `intel` or `xilinx`.

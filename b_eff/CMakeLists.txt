@@ -1,10 +1,9 @@
-cmake_minimum_required(VERSION 2.8.12)
-project(fNet)
+cmake_minimum_required(VERSION 3.1)
+project(b_eff VERSION 1.1)
 
 # Include CMake module files provided by hlslib
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/../extern/hlslib/cmake)
 
-set(VERSION 1.1)
 set(SEND_KERNEL_NAME send)
 set(RECV_KERNEL_NAME recv)
 set(DEFAULT_PLATFORM -1 CACHE STRING "Default platform index that is used by all ranks. (-1: manual selection)")
