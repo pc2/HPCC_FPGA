@@ -11,7 +11,6 @@
 #include "mpi.h"
 #include <fstream>
 
-
 struct OpenCLKernelTest : testing::Test {
     std::string kernelFileName = "communication_bw520n_emulate.aocx";
     std::shared_ptr<bm_execution::ExecutionConfiguration> config;
@@ -62,7 +61,6 @@ struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface
     }
 
     ~DifferentOpenCLKernelTest() {
-        MPI_Finalize();
     }
 };
 

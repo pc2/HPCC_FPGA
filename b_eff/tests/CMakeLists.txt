@@ -7,7 +7,7 @@ include_directories(SYSTEM ${IntelFPGAOpenCL_INCLUDE_DIRS})
 include_directories(${MPI_CXX_INCLUDE_PATH})
 
 set(PROJECT_SOURCES ../src/host/setup/fpga_setup.cpp ../src/host/execution_default.cpp)
-set(TEST_SOURCES test_fpga_setup.cpp test_kernel_functionality_and_host_integration.cpp)
+set(TEST_SOURCES test_fpga_setup.cpp test_kernel_functionality_and_host_integration.cpp setup_mpi.cpp)
 
 add_executable(Google_Tests_run ${TEST_SOURCES} ${PROJECT_SOURCES})
 target_link_libraries(Google_Tests_run gtest gmock gtest_main ${IntelFPGAOpenCL_LIBRARIES} ${MPI_LIBRARIES})

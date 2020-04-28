@@ -160,24 +160,24 @@ void printFinalConfiguration(const std::shared_ptr<ProgramSettings> &programSett
 
 
 void generateInputData(HOST_DATA_TYPE* A, HOST_DATA_TYPE* b, cl_int* ipvt, unsigned matrix_size, HOST_DATA_TYPE* norma) {
-    int init = 1325;
+    std::mt19937 gen(7);
+    std::uniform_real_distribution<> dis(-1.0, 1.0);
     *norma = 0.0;
-    for (int i=0; i< matrix_size; i++) {
-        for (int j=0; j< matrix_size; j++) {
-            init = 3125 * init % 65536;
-            A[matrix_size*j+i] = (init - 32768.0) / 16384.0;
-            *norma = (fabs(A[matrix_size*j+i]) > *norma) ? fabs(A[matrix_size*j+i]) : *norma;
+    for (int j = 0; j < matrix_size; j++) {
+        for (int i = 0; i < matrix_size; i++) {
+            A[matrix_size*i+j] = dis(gen);
+            *norma = (A[matrix_size*i+j] > *norma) ? A[matrix_size*i+j] : *norma;
         }
     }
     for (int i = 0; i < matrix_size; i++) {
         b[i] = 0.0;
-        ipvt[i] = i;
     }
     for (int j = 0; j < matrix_size; j++) {
         for (int i = 0; i < matrix_size; i++) {
             b[j] += A[matrix_size*j+i];
         }
     }
+
 }
 
 double
