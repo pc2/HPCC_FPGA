@@ -11,6 +11,6 @@ set(TEST_SOURCES ../../shared/setup/test_fpga_setup.cpp test_kernel_functionalit
 
 add_executable(Google_Tests_run ${TEST_SOURCES} ${PROJECT_SOURCES})
 target_link_libraries(Google_Tests_run gtest gmock gtest_main ${IntelFPGAOpenCL_LIBRARIES} ${MPI_LIBRARIES})
-add_dependencies(Google_Tests_run communication_bw520n_emulate)
+add_dependencies(Google_Tests_run communication_bw520n_emulate_intel)
 target_compile_options(Google_Tests_run PRIVATE -D_USE_MPI_)
 add_test(NAME test_intel_unit COMMAND $<TARGET_FILE:Google_Tests_run> WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})

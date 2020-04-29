@@ -10,5 +10,5 @@ set(TEST_SOURCES test_host_functionality.cpp test_kernel_functionality_and_host_
 
 add_executable(Google_Tests_run ${TEST_SOURCES} ${PROJECT_SOURCES})
 target_link_libraries(Google_Tests_run gtest gmock gtest_main ${IntelFPGAOpenCL_LIBRARIES})
-add_dependencies(Google_Tests_run transpose_default_emulate transpose_optimized_emulate)
+add_dependencies(Google_Tests_run transpose_default_emulate_intel transpose_optimized_emulate_intel)
 add_test(NAME test_intel_unit COMMAND $<TARGET_FILE:Google_Tests_run> WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
