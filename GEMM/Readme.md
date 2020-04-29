@@ -36,9 +36,9 @@ The targets below can be used to build the benchmark and its kernels:
  
   |  Target  | Description                                    |
   | -------- | ---------------------------------------------- |
-  | gemm_cannon          | Synthesizes the kernel (takes several hours!)  |
-  | gemm_cannon_report   | Create an HTML report for the kernel    |
-  | gemm_cannon_emulate  | Create a n emulation kernel             |
+  | gemm_cannon_intel          | Synthesizes the kernel (takes several hours!)  |
+  | gemm_cannon_report_intel   | Create an HTML report for the kernel    |
+  | gemm_cannon_emulate_intel  | Create a n emulation kernel             |
  
  You can build for example the host application by running
  

@@ -26,9 +26,9 @@ The targets below can be used to build the benchmark and its kernels:
  
   |  Target  | Description                                    |
   | -------- | ---------------------------------------------- |
-  | fft1d_float_8          | Synthesizes the kernel (takes several hours!)  |
-  | fft1d_float_8_report   | Create an HTML report for the kernel    |
-  | fft1d_float_8_emulate  | Create a n emulation kernel             |
+  | fft1d_float_8_intel          | Synthesizes the kernel (takes several hours!)  |
+  | fft1d_float_8_report_intel   | Create an HTML report for the kernel    |
+  | fft1d_float_8_emulate_intel  | Create a n emulation kernel             |
   
  
  You can build for example the host application by running

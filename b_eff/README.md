@@ -37,9 +37,9 @@ The targets below can be used to build the benchmark and its kernels:
  
   |  Target                        | Description                                    |
   | ------------------------------ | ---------------------------------------------- |
-  | communication_bw520n           | Synthesizes the kernel (takes several hours!)  |
-  | communication_bw520n_report    | Create an HTML report for the kernel           |
-  | communication_bw520n_emulate   | Create a n emulation kernel                    |
+  | communication_bw520n_intel           | Synthesizes the kernel (takes several hours!)  |
+  | communication_bw520n_report_intel    | Create an HTML report for the kernel           |
+  | communication_bw520n_emulate_intel   | Create a n emulation kernel                    |
   
 
  You can build for example the host application by running

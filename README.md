@@ -97,6 +97,13 @@ make STREAM_FPGA_intel
 
 All artifacts can be found in the `bin` folder located in the current build directory.
 
+#### Basic Functionality Testing
+
+The subfolder `scripts` contains helper scripts that are used during the build and test process or for evaluation.
+When major changes are made on the code the functionality should be checked by running all tests in the suite.
+To simplify this process the script `test_all.sh` can be used to build all benchmarks with the default configuration
+and run all tests.
+
 ## Publications
 
 If you are using one of the benchmarks contained in the HPCC FPGA benchmark suite consider citing us.
