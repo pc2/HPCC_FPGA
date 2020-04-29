@@ -13,8 +13,6 @@ endif()
 
 if (VITIS_FOUND)
     generate_kernel_targets_xilinx(stream_kernels stream_kernels_single)
-    add_test(NAME test_emulation_xilinx COMMAND STREAM_FPGA_xilinx -f stream_kernels_emulate.xclbin -n 1
-            WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
     add_test(NAME test_single_emulation_xilinx COMMAND STREAM_FPGA_xilinx -f stream_kernels_single_emulate.xclbin --single-kernel -n 1
             WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 endif()
