@@ -76,17 +76,17 @@ parseProgramParameters(int argc, char * argv[]) {
         ("h,help", "Print this help");
     cxxopts::ParseResult result = options.parse(argc, argv);
 
+    if (result.count("h")) {
+        // Just print help when argument is given
+        std::cout << options.help() << std::endl;
+        exit(0);
+    }
     // Check parsed options and handle special cases
     if (result.count("f") <= 0) {
         // Path to the kernel file is mandatory - exit if not given!
         std::cerr << "Kernel file must be given! Aborting" << std::endl;
         std::cout << options.help() << std::endl;
         exit(1);
-    }
-    if (result.count("h")) {
-        // Just print help when argument is given
-        std::cout << options.help() << std::endl;
-        exit(0);
     }
 
     // Create program settings from program arguments
