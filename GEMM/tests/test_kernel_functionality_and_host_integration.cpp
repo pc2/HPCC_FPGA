@@ -7,7 +7,7 @@
 #include "../src/host/execution.h"
 #include "../src/host/gemm_functionality.hpp"
 #include "parameters.h"
-#include "../src/host/setup/fpga_setup.hpp"
+#include "setup/fpga_setup.hpp"
 
 void
 ref_matmul(HOST_DATA_TYPE* A, HOST_DATA_TYPE* B, HOST_DATA_TYPE* C, int size) {

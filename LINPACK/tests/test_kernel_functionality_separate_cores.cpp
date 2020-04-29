@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 #include "parameters.h"
 #include "../src/host/execution.h"
-#include "../src/host/setup/fpga_setup.hpp"
+#include "setup/fpga_setup.hpp"
 #include "../src/host/linpack_functionality.hpp"
 #include <algorithm>
 #ifdef _INTEL_MKL_

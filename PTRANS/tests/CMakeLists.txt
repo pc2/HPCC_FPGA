@@ -1,13 +1,12 @@
 
-add_compile_options(--std=c++11)
 # 'lib' is the folder with Google Test sources
 add_subdirectory(../../extern/googletest ${CMAKE_CURRENT_BINARY_DIR}/lib)
 include_directories(${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include)
-include_directories(${CMAKE_BINARY_DIR}/src/common ../../extern/cxxopts/include)
+include_directories(${CMAKE_BINARY_DIR}/src/common ../../extern/cxxopts/include ../../shared)
 include_directories(SYSTEM ${IntelFPGAOpenCL_INCLUDE_DIRS})
 
-set(PROJECT_SOURCES ../src/host/setup/fpga_setup.cpp ../src/host/execution_default.cpp ../src/host/transpose_functionality.cpp)
-set(TEST_SOURCES test_host_functionality.cpp test_kernel_functionality_and_host_integration.cpp test_fpga_setup.cpp)
+set(PROJECT_SOURCES ../../shared/setup/fpga_setup.cpp ../src/host/execution_default.cpp ../src/host/transpose_functionality.cpp)
+set(TEST_SOURCES test_host_functionality.cpp test_kernel_functionality_and_host_integration.cpp ../../shared/setup/test_fpga_setup.cpp)
 
 add_executable(Google_Tests_run ${TEST_SOURCES} ${PROJECT_SOURCES})
 target_link_libraries(Google_Tests_run gtest gmock gtest_main ${IntelFPGAOpenCL_LIBRARIES})
