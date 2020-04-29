@@ -6,8 +6,7 @@
 # To start a clean build, just delete the folder an re-run the script.
 # The run is successfull, if the script returns with an error code of 0.
 # If an error occured during build or test, the script will stop immediately.
-# The script uses a reduced -DBLOCK_SIZE=32 to speed up the tests for LINPACK
-# and GEMM.
+# The script uses a reduced -DBLOCK_SIZE=32 to speed up the tests for GEMM.
 # Additional build configurations can be given as command line option:
 # i.e.:
 #     ./test_all.sh -DFPGA_BOARD_NAME=other_board
