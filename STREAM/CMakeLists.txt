@@ -45,9 +45,17 @@ configure_file(
 )
 include_directories(${CMAKE_BINARY_DIR}/src/common)
 
-find_package(OpenMP)
+set(USE_OPENMP No CACHE BOOL "Use OpenMP in the host code")
+
+if (USE_OPENMP)
+    find_package(OpenMP)
+endif()
 find_package(IntelFPGAOpenCL)
 find_package(Vitis)
+
+if (NOT VITIS_FOUND AND NOT INTELFPGAOPENCL_FOUND)
+    message(ERROR "Xilinx Vitis or Intel FPGA OpenCL SDK required!")
+endif()
 
 add_subdirectory(src/device)
 add_subdirectory(src/host)

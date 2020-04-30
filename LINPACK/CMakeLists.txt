@@ -7,6 +7,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     include(CTest)
 endif()
 
+set(USE_OPENMP Yes CACHE BOOL "Use OpenMP in the host code")
 set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
 set(DATA_TYPE float)
 set(DEFAULT_MATRIX_SIZE 1024 CACHE STRING "Default matrix size")
@@ -45,9 +46,11 @@ configure_file(
 include_directories(${CMAKE_BINARY_DIR}/src/common)
 
 
-find_package(OpenMP)
-find_package(IntelFPGAOpenCL)
-find_package(Vitis)
+
+if (USE_OPENMP)
+    find_package(OpenMP)
+endif()
+find_package(IntelFPGAOpenCL REQUIRED)
 
 add_subdirectory(src/device)
 add_subdirectory(src/host)

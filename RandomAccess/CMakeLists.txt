@@ -6,9 +6,17 @@ set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/../extern/hlslib/cmake)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
-find_package(OpenMP)
+set(USE_OPENMP No CACHE BOOL "Use OpenMP in the host code")
+
+if (USE_OPENMP)
+    find_package(OpenMP)
+endif()
 find_package(IntelFPGAOpenCL)
 find_package(Vitis)
+
+if (NOT VITIS_FOUND AND NOT INTELFPGAOPENCL_FOUND)
+    message(ERROR "Xilinx Vitis or Intel FPGA OpenCL SDK required!")
+endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     include(CTest)
