@@ -60,6 +60,12 @@ struct ProgramSettings {
     std::string kernelName;
 };
 
+#ifdef _USE_BLAS_
+
+extern "C" void sgemm_(char*, char*, int*, int*,int*, float*, float*, int*, float*, int*, float*, float*, int*);
+
+#endif
+
 double
 checkGEMMresults(HOST_DATA_TYPE* c_res, cl_int lda, cl_int n);
 
@@ -103,9 +109,16 @@ void matgen(HOST_DATA_TYPE* a, int seed, cl_int lda, cl_int n, HOST_DATA_TYPE* n
 /**
 Multiply matrix with a vector and add it to another vector.
 
-// TODO add docs
+C = alpha * A * B + beta * C
+
+@param a matrix A
+@param b matrix B
+@param c matrix C that will also be the result matrix
+@param n size of all quadratic matrices
+@param alpha scalar value used to scale A * B
+@param beta scalar value used to scale C
 */
-void gemm_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c_in, HOST_DATA_TYPE* c_out,
+void gemm_ref( HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c,
                                 int n, HOST_DATA_TYPE alpha, HOST_DATA_TYPE beta);
 
 double checkLINPACKresults (HOST_DATA_TYPE* b_res, cl_int lda, cl_int n);
