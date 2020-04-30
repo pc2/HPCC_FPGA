@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 #include "../src/host/execution.h"
 #include "parameters.h"
-#include "../src/host/setup/fpga_setup.hpp"
+#include "setup/fpga_setup.hpp"
 #include "unistd.h"
 #include "mpi.h"
 #include <fstream>

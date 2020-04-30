@@ -1,14 +1,13 @@
 
-include_directories(../../../extern/cxxopts/include)
+include_directories(../../../extern/cxxopts/include ../../../shared/)
 include_directories(${IntelFPGAOpenCL_INCLUDE_DIRS})
 include_directories(${CMAKE_BINARY_DIR}/src/common)
 
-set(HEADER_FILES execution.h setup/fpga_setup.hpp gemm_functionality.hpp)
-set(HOST_SOURCE execution_cannon.cpp main.cpp setup/fpga_setup.cpp gemm_functionality.cpp)
+set(HOST_SOURCE execution_cannon.cpp main.cpp ../../../shared/setup/fpga_setup.cpp gemm_functionality.cpp)
 
 find_package(BLAS)
 
-add_executable(fgemm ${HOST_SOURCE} ${HEADER_FILES})
+add_executable(fgemm ${HOST_SOURCE})
 target_link_libraries(fgemm ${IntelFPGAOpenCL_LIBRARIES})
 
 if (BLAS_FOUND)

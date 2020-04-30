@@ -41,7 +41,7 @@ Moreover the version and build time is also compiled into the description.
 
 #define PROGRAM_DESCRIPTION "Implementation of the matrix transposition benchmark"\
                             " proposed in the HPCC benchmark suite for FPGA.\n"\
-                            "Version: " VERSION
+                            "Version: " VERSION "\n"
 
 struct ProgramSettings {
     uint numRepetitions;

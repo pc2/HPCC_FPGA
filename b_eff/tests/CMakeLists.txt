@@ -2,14 +2,15 @@
 # 'lib' is the folder with Google Test sources
 add_subdirectory(../../extern/googletest ${CMAKE_CURRENT_BINARY_DIR}/lib)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-include_directories(${CMAKE_BINARY_DIR}/src/common ../../extern/cxxopts/include)
+include_directories(${CMAKE_BINARY_DIR}/src/common ../../extern/cxxopts/include ../../shared)
 include_directories(SYSTEM ${IntelFPGAOpenCL_INCLUDE_DIRS})
 include_directories(${MPI_CXX_INCLUDE_PATH})
 
-set(PROJECT_SOURCES ../src/host/setup/fpga_setup.cpp ../src/host/execution_default.cpp)
-set(TEST_SOURCES test_fpga_setup.cpp test_kernel_functionality_and_host_integration.cpp setup_mpi.cpp)
+set(PROJECT_SOURCES ../../shared/setup/fpga_setup.cpp ../src/host/execution_default.cpp)
+set(TEST_SOURCES ../../shared/setup/test_fpga_setup.cpp test_kernel_functionality_and_host_integration.cpp setup_mpi.cpp)
 
 add_executable(Google_Tests_run ${TEST_SOURCES} ${PROJECT_SOURCES})
 target_link_libraries(Google_Tests_run gtest gmock gtest_main ${IntelFPGAOpenCL_LIBRARIES} ${MPI_LIBRARIES})
-add_dependencies(Google_Tests_run communication_bw520n_emulate)
+add_dependencies(Google_Tests_run communication_bw520n_emulate_intel)
+target_compile_options(Google_Tests_run PRIVATE -D_USE_MPI_)
 add_test(NAME test_intel_unit COMMAND $<TARGET_FILE:Google_Tests_run> WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})

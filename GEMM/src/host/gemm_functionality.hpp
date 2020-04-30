@@ -27,12 +27,14 @@ SOFTWARE.
 
 /* Project's headers */
 #include "execution.h"
+#include "parameters.h"
 
 /*
 Short description of the program
 */
 #define PROGRAM_DESCRIPTION "Implementation of the GEMM benchmark"\
-                            " proposed in the HPCC benchmark adapted for FPGA"
+                            " proposed in the HPCC benchmark adapted for FPGA\n"\
+                            "Version: " VERSION "\n"
 
 /*
 Number of times the execution of the benchmark will be repeated.

@@ -79,7 +79,24 @@ For execution of the benchmark run:
     
 For more information on available input parameters run
 
-    ./STREAM_FPGA_intel -h
+    $./STREAM_FPGA_intel -h
+    Implementation of the STREAM benchmark proposed in the HPCC benchmark suite for FPGA.
+    Usage:
+    ./STREAM_FPGA_xilinx [OPTION...]
+
+    -f, --file arg       Kernel file name
+    -n, arg              Number of repetitions (default: 10)
+    -s, arg              Size of the data arrays (default: 134217728)
+    -r, arg              Number of kernel replications used (default: 1)
+        --single-kernel  Use the single kernel implementation
+        --device arg     Index of the device that has to be used. If not given
+                        you will be asked which device to use if there are
+                        multiple devices available. (default: -1)
+        --platform arg   Index of the platform that has to be used. If not
+                        given you will be asked which platform to use if there are
+                        multiple platforms available. (default: -1)
+    -h, --help           Print this help
+
     
 To execute the unit and integration tests for Intel devices run
 

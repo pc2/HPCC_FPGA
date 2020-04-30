@@ -40,7 +40,8 @@ Moreover the version and build time is also compiled into the description.
 #define STR(tok) STR_EXPAND(tok)
 
 #define PROGRAM_DESCRIPTION "Implementation of the LINPACK benchmark"\
-                            " proposed in the HPCC benchmark suite for FPGA."\
+                            " proposed in the HPCC benchmark suite for FPGA.\n"\
+                            "Version: " VERSION "\n"
 
 #define ENTRY_SPACE 15
 

@@ -1,11 +1,11 @@
 # 'lib' is the folder with Google Test sources
 add_subdirectory(../../extern/googletest ${CMAKE_CURRENT_BINARY_DIR}/lib)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-include_directories(${CMAKE_BINARY_DIR}/src/common ../../extern/cxxopts/include)
+include_directories(${CMAKE_BINARY_DIR}/src/common ../../extern/cxxopts/include ../../shared/)
 
 
-set(PROJECT_SOURCES ../src/host/setup/fpga_setup.cpp ../src/host/execution_blocked_pvt.cpp ../src/host/linpack_functionality.cpp)
-set(TEST_SOURCES test_fpga_setup.cpp test_kernel_functionality_and_host_integration.cpp test_kernel_functionality_separate_cores.cpp)
+set(PROJECT_SOURCES ../../shared/setup/fpga_setup.cpp ../src/host/execution_blocked_pvt.cpp ../src/host/linpack_functionality.cpp)
+set(TEST_SOURCES ../../shared/setup/test_fpga_setup.cpp test_kernel_functionality_and_host_integration.cpp test_kernel_functionality_separate_cores.cpp)
 
 set(BLA_VENDOR Intel10_64lp)
 find_package(LAPACK)

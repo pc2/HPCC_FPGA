@@ -29,9 +29,9 @@ The targets below can be used to build the benchmark and its kernels:
  
   |  Target  | Description                                    |
   | -------- | ---------------------------------------------- |
-  | KERNEL_FILE_NAME          | Synthesizes the kernel (takes several hours!)  |
-  | KERNEL_FILE_NAME_report   | Create an HTML report for the kernel    |
-  | KERNEL_FILE_NAME_emulate  | Create a n emulation kernel             |
+  | KERNEL_FILE_NAME_intel          | Synthesizes the kernel (takes several hours!)  |
+  | KERNEL_FILE_NAME_report_intel   | Create an HTML report for the kernel    |
+  | KERNEL_FILE_NAME_emulate_intel  | Create a n emulation kernel             |
   
 The currently supported values for KERNEL_FILE_NAME are listed below where `transpose_optimized` is set to be the default for the ase run:
 

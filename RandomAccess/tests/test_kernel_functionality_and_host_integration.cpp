@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 #include "parameters.h"
 #include "../src/host/execution.h"
-#include "../src/host/setup/fpga_setup.hpp"
+#include "setup/fpga_setup.hpp"
 #include "../src/host/random_access_functionality.hpp"
 
 

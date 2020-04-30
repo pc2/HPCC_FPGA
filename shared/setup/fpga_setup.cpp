@@ -14,9 +14,13 @@
 /* External libraries */
 #include "parameters.h"
 
+#ifdef _USE_MPI_
+#include "mpi.h"
+#endif
+
 namespace fpga_setup {
 
-    /**
+/**
 Converts the reveived OpenCL error to a string
 
 @param err The OpenCL error code
@@ -121,9 +125,18 @@ Sets up the given FPGA with the kernel in the provided file.
     fpgaSetup(const cl::Context *context, std::vector<cl::Device> deviceList,
               const std::string *usedKernelFile) {
         int err;
+        int world_rank = 0;
+        int world_size = 0;
 
-        std::cout << HLINE;
-        std::cout << "FPGA Setup:" << usedKernelFile->c_str() << std::endl;
+#ifdef _USE_MPI_
+        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+#endif
+
+        if (world_rank == 0) {
+            std::cout << HLINE;
+            std::cout << "FPGA Setup:" << usedKernelFile->c_str() << std::endl;
+        }
 
         // Open file stream if possible
         std::ifstream aocxStream(usedKernelFile->c_str(), std::ifstream::binary);
@@ -146,9 +159,11 @@ Sets up the given FPGA with the kernel in the provided file.
         // Create the Program from the AOCX file.
         cl::Program program(*context, deviceList, mybinaries, NULL, &err);
         ASSERT_CL(err);
-        std::cout << "Prepared FPGA successfully for global Execution!" <<
-                  std::endl;
-        std::cout << HLINE;
+        if (world_rank == 0) {
+            std::cout << "Prepared FPGA successfully for global Execution!" <<
+                      std::endl;
+            std::cout << HLINE;
+        }
         return program;
     }
 
@@ -194,6 +209,14 @@ choose a device.
         // Integer used to store return codes of OpenCL library calls
         int err;
 
+        int world_rank = 0;
+        int world_size = 0;
+        
+#ifdef _USE_MPI_
+        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+#endif
+
         std::vector<cl::Platform> platformList;
         err = cl::Platform::get(&platformList);
         ASSERT_CL(err);
@@ -209,7 +232,7 @@ choose a device.
                           << platformList.size() << std::endl;
                 exit(1);
             }
-        } else if (platformList.size() > 1) {
+        } else if (platformList.size() > 1 && world_size == 1) {
             std::cout <<
                       "Multiple platforms have been found. Select the platform by"\
             " typing a number:" << std::endl;
@@ -224,9 +247,10 @@ choose a device.
             std::cin >> chosenPlatformId;
         }
         cl::Platform platform = platformList[chosenPlatformId];
-        std::cout << "Selected Platform: "
-                  << platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
-
+        if (world_rank == 0) {
+            std::cout << "Selected Platform: "
+                      << platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
+        }
         std::vector<cl::Device> deviceList;
         err = platform.getDevices(CL_DEVICE_TYPE_ACCELERATOR, &deviceList);
         ASSERT_CL(err);
@@ -243,29 +267,36 @@ choose a device.
                 exit(1);
             }
         } else if (deviceList.size() > 1) {
-            std::cout <<
-                      "Multiple devices have been found. Select the platform by"\
-            " typing a number:" << std::endl;
-            for (int deviceId = 0;
-                 deviceId < deviceList.size(); deviceId++) {
-                std::cout << deviceId << ") " <<
-                          deviceList[deviceId].getInfo<CL_DEVICE_NAME>() <<
-                          std::endl;
+            if (world_size == 1) {
+                    std::cout <<
+                              "Multiple devices have been found. Select the platform by"\
+                            " typing a number:" << std::endl;
+
+                for (int deviceId = 0;
+                     deviceId < deviceList.size(); deviceId++) {
+                    std::cout << deviceId << ") " <<
+                              deviceList[deviceId].getInfo<CL_DEVICE_NAME>() <<
+                              std::endl;
+                }
+                std::cout << "Enter device id [0-" << deviceList.size() - 1 << "]:";
+                std::cin >> chosenDeviceId;
+            } else {
+                chosenDeviceId = static_cast<int>(world_rank % deviceList.size());
             }
-            std::cout << "Enter device id [0-" << deviceList.size() - 1 << "]:";
-            std::cin >> chosenDeviceId;
         }
         std::vector<cl::Device> chosenDeviceList;
         chosenDeviceList.push_back(deviceList[chosenDeviceId]);
 
-        // Give selection summary
-        std::cout << HLINE;
-        std::cout << "Selection summary:" << std::endl;
-        std::cout << "Platform Name: " <<
-                  platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
-        std::cout << "Device Name:   " <<
-                  chosenDeviceList[0].getInfo<CL_DEVICE_NAME>() << std::endl;
-        std::cout << HLINE;
+        if (world_rank == 0) {
+            // Give selection summary
+            std::cout << HLINE;
+            std::cout << "Selection summary:" << std::endl;
+            std::cout << "Platform Name: " <<
+                      platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
+            std::cout << "Device Name:   " <<
+                      chosenDeviceList[0].getInfo<CL_DEVICE_NAME>() << std::endl;
+            std::cout << HLINE;
+        }
 
         return chosenDeviceList;
     }
