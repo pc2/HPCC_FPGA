@@ -24,6 +24,9 @@ TEST_LOG_FILE=${TEST_DIR}/lasttests.log
 
 BENCHMARKS=("b_eff" "FFT" "GEMM" "LINPACK" "PTRANS" "RandomAccess" "STREAM")
 
+# Xilinx benchmarks:
+#BENCHMARKS=("RandomAccess" "STREAM")
+
 mkdir -p $TEST_DIR
 rm -f $BUILD_LOG_FILE
 rm -f $TEST_LOG_FILE
@@ -45,7 +48,7 @@ for bm in ${BENCHMARKS[@]}; do
     cd $bm
     cmake ${PROJECT_ROOT}/$bm -DDEFAULT_DEVICE=0 -DDEFAULT_PLATFORM=0 -DBLOCK_SIZE=32 $@ &>> $BUILD_LOG_FILE
     ret=$(($ret + $?))
-    make all &>> $BUILD_LOG_FILE
+    make VERBOSE=1 all &>> $BUILD_LOG_FILE
     ret=$(($ret + $?))
     if [ $ret -ne 0 ]; then
         echo "Failed building $bm"
@@ -72,7 +75,7 @@ for bm in ${BENCHMARKS[@]}; do
         ln -s kernel_output_ch3 kernel_input_ch2
         cd ..
     fi
-    make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test &>> $TEST_LOG_FILE
+    make XCL_EMULATION_MODE=sw_emu CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test &>> $TEST_LOG_FILE
     ret=$(($ret + $?))
     if [ $ret -ne 0 ]; then
         echo "Failed testing $bm"
