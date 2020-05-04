@@ -19,7 +19,7 @@ else()
     set(DEVICE_DATA_TYPE ${DATA_TYPE})
 endif()
 
-set(XILINX_LINK_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.stream_kernels_single.generator.ini)
+set(XILINX_LINK_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.stream_kernels_single.hbm.generator.ini)
 
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
 

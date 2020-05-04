@@ -50,17 +50,11 @@ The targets below can be used to build the benchmark and its kernels:
 
 You will find all executables and kernel files in the `bin`
 folder of your build directory.
-You should always specify a target with make to reduce the build time!
-You might want to specify predefined parameters before build:
+Next to the common configuration options given in the [README](../README.md) of the benchmark suite you might want to specify the following additional options before build:
 
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
-`DEFAULT_DEVICE` | -1          | Index of the default device (-1 = ask) |
-`DEFAULT_PLATFORM`| -1          | Index of the default platform (-1 = ask) |
-`DEFAULT_REPETITIONS`| 10          | Number of times the kernel will be executed |
-`FPGA_BOARD_NAME`| p520_max_sg280l | Name of the target board |
 `CHANNEL_WIDTH`  | 32          | The width of a single channel in bytes. |
-`AOC_FLAGS`| `-fpc -fp-relaxed` | Additional AOC compiler flags that are used for kernel compilation |
 
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.

@@ -39,7 +39,7 @@ All benchmarks come with the following build dependencies:
 - CMake >= 3.1
 - C++ compiler with C++11 support
 - Intel OpenCL FPGA SDK or Xilinx Vitis
-- Python 3 (for the evaluation scripts)
+- Python 3 with [pandas](https://pandas.pydata.org) installed (for the evaluation scripts)
 
 Moreover the host code and the build system use additional libraries included as git submodules:
 
@@ -57,7 +57,71 @@ More information on that can be found in the README located in the subfolder for
 One key feature of all benchmarks of this suite is that they come with individual **configuration options**.
 They can be used to adjust the OpenCL base implementations of a benchmark for a specific FPGA architecture and optimize the performance and resource usage.
 
-#### Build and Test Example: STREAM
+#### Configuration of a Benchmark
+
+The **configuration options** are implemented as CMake build parameters and can be set when creating a new CMake build directory.
+We recommend to create a new build directory for a benchmark in a folder `build` in the root direcotry of the project.
+You may want to create a folder hierarchy in there e.g. to build the STREAM benchmark create a folder `build/STREAM` and change into that new folder.
+Initialize a new CMake build direcotry by calling
+
+    cmake PATH_TO_SOURCE_DIR
+
+where `PATH_TO_SOURCE_DIR` would be `../../STREAM` in case of stream (the relative path to the source direcotry of the target benchmark).
+Some of the configuration options are the same for each benchmark and are given in the Table below. 
+Especially the `FPGA_BOARD_NAME` is important to set, since it will specify the target board.
+The `DEFAULT_*` options are used by the host code and can also be changed later at runtime.
+The given default values will be set if no other values are given during configuration.
+
+
+Name             | Default     | Description                          |
+---------------- |-------------|--------------------------------------|
+`DEFAULT_DEVICE` | -1          | Index of the default device (-1 = ask) |
+`DEFAULT_PLATFORM`| -1          | Index of the default platform (-1 = ask) |
+`DEFAULT_REPETITIONS`| 10          | Number of times the kernel will be executed |
+`FPGA_BOARD_NAME`| p520_hpc_sg280l | Name of the target board |
+
+Additionally the compile options for the Intel or Xilinx compiler have to be specified. 
+For the Intel compiler these are:
+
+Name             | Default     | Description                          |
+---------------- |-------------|--------------------------------------|
+`AOC_FLAGS`| `-fpc -fp-relaxed -no-interleaving=default` | Additional Intel AOC compiler flags that are used for kernel compilation |
+
+For the Xilinx compiler it is also necessary to set settings files for the compile and link step of the compiler.
+The available options are given in the following table:
+
+Name             | Default     | Description                          |
+---------------- |-------------|--------------------------------------|
+`XILINX_COMPILE_FLAGS` | `-j 40` | Set special compiler flags like the number of used threads for compilation. |
+`XILINX_COMPILE_SETTINGS_FILE` | First `settings.compile.xilinx.*.ini` file found in the `settings` folder of the benchmark | Path to the file containing compile time settings like the target clock frequuency |
+`XILINX_LINK_SETTINGS_FILE` | First `settings.link.xilinx.*.ini` file found in the `settings` folder of the benchmark | Path to the file containing link settings like the mapping of the memory banks to the kernel parameters |
+`XILINX_GENERATE_LINK_SETTINGS` | `Yes` if the link settings file ends on `.generator.ini`, `No` otherwise | Boolean flag indicating if the link settings file will be used as a source to generate a link settings file e.g. for a given number of kernel replications |
+
+Currently the following benchmarks support the build with Xilinx:
+
+- STREAM
+- RandomAccess
+
+For the other benchmarks, the Xilinx configuration options will have no effect.
+When building a benchmark for Xilinx FPGAs double check the path to the settings files and if they match to the target board.
+The settings files follow the name convention:
+
+    settings.[compile|link].xilinx.KERNEL_NAME.[hbm|ddr](?.generator).ini
+
+where `KERNEL_NAME` is the name of the target OpenCL kernel file.
+`hbm` or `ddr` is the type of used global memory.
+
+All the given options can be given to CMake over the `-D` flag.
+
+    cmake ../../RandomAccess -DFPGA_BOARD_NAME=my_board -D...
+
+or after configuration using the UI with
+
+    ccmake ../../RandomAccess
+
+In the following the configuration and build steps are shown with a more specific example.
+
+#### Build and Test Example: STREAM for Intel OpenCL FPGA SDK and the Nallatech 520N
 
 As an example to configure and build the kernels of the STREAM benchmark you can follow the steps below.
 The steps are very similar for all benchmarks of the suite.
@@ -73,17 +137,20 @@ Configure the build using CMake and set the STREAM specific configuration option
 cmake ../../STREAM -DDEVICE_BUFFER_SIZE=8192 -DFPGA_BOARD_NAME=p520_hpc_sg280l \
     -DUSE_SVM=No -DNUM_REPLICATIONS=4
 ``` 
+In this example, `DEVICE_BUFFER_SIZE`, `USE_SVM` and `NUM_REPLICATIONS` are configuration options specific to STREAM.
+Additional options can be found in the [README](STREAM/README.md) for every benchmark.
+
 
 The created build configuration can then be used to build and execute the tests and create a report for the OpenCL kernel:
 ```bash
 # Build the tests, host code and emulation kernels
 make all
 
-# Create a report for the OpenCL kernel
-make stream_kernels_single_report_intel
-
 # Execute the tests
 make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 test
+
+# Create a report for the OpenCL kernel
+make stream_kernels_single_report_intel
 ```
 The report can be found within the build directory of the project e.g. under `bin/stream_kernels_single/reports`.
 
