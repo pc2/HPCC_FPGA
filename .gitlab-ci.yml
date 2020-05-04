@@ -54,8 +54,8 @@ build:PTRANS:
     paths:
       - build/bin/transpose_optimized_emulate.aocx
       - build/bin/transpose_default_emulate.aocx
-      - build/bin/fTrans
-      - build/bin/Google_Tests_run
+      - build/bin/trans_intel
+      - build/bin/Test_intel
 
 build:LINPACK:
   stage: build

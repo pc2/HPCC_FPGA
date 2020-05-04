@@ -29,7 +29,8 @@ function(generate_kernel_targets_xilinx)
         endif()
         set(xilinx_report_folder "--report_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_reports")
         file(MAKE_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports)
-        list(APPEND CLFLAGS ${xilinx_report_folder} --log_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile)
+        set(local_CLFLAGS ${CLFLAGS})
+        list(APPEND local_CLFLAGS ${xilinx_report_folder} --log_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile)
 
         # build emulation config for device
         add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/emconfig.json
@@ -48,20 +49,20 @@ function(generate_kernel_targets_xilinx)
                 )
 
         add_custom_command(OUTPUT ${bitstream_compile_emulate}
-                COMMAND ${Vitis_COMPILER} ${CLFLAGS} -t sw_emu ${COMPILER_INCLUDES} -f ${FPGA_BOARD_NAME} -g -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile_emulate} ${source_f}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t sw_emu ${COMPILER_INCLUDES} -f ${FPGA_BOARD_NAME} -g -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile_emulate} ${source_f}
                 MAIN_DEPENDENCY ${source_f}
                 )
         add_custom_command(OUTPUT ${bitstream_emulate_f}
-            COMMAND ${Vitis_COMPILER} ${CL_FLAGS} -t sw_emu ${COMPILER_INCLUDES} -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
+            COMMAND ${Vitis_COMPILER} ${local_CL_FLAGS} -t sw_emu ${COMPILER_INCLUDES} -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
                 MAIN_DEPENDENCY ${bitstream_compile_emulate}
                 DEPENDS ${xilinx_link_settings}
                 )
         add_custom_command(OUTPUT ${bitstream_compile}
-                COMMAND ${Vitis_COMPILER} ${CLFLAGS} -t hw ${COMPILER_INCLUDES} --platform ${FPGA_BOARD_NAME} -R2 -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile} ${source_f}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t hw ${COMPILER_INCLUDES} --platform ${FPGA_BOARD_NAME} -R2 -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile} ${source_f}
                 MAIN_DEPENDENCY ${source_f}
                 )
         add_custom_command(OUTPUT ${bitstream_f}
-                COMMAND ${Vitis_COMPILER} ${CLFLAGS} -t hw ${COMPILER_INCLUDES} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t hw ${COMPILER_INCLUDES} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile}
                 MAIN_DEPENDENCY ${bitstream_compile}
                 DEPENDS ${xilinx_link_settings}
                 )

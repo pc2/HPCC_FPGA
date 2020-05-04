@@ -21,17 +21,20 @@ The targets below can be used to build the benchmark and its kernels:
 
  |  Target  | Description                                    |
  | -------- | ---------------------------------------------- |
- | fTrans   | Builds the host application                    |
- | Google_Tests_run| Compile the tests and its dependencies  |
+ | trans_VENDOR   | Builds the host application                    |
+ | Test_VENDOR    | Compile the tests and its dependencies  |
+
+ `VENDOR` can be `intel` or `xilinx`.
  
  More over the are additional targets to generate kernel reports and bitstreams.
  They are generated for every kernel code in the `src/device` folder:
  
   |  Target  | Description                                    |
   | -------- | ---------------------------------------------- |
-  | KERNEL_FILE_NAME_intel          | Synthesizes the kernel (takes several hours!)  |
-  | KERNEL_FILE_NAME_report_intel   | Create an HTML report for the kernel    |
-  | KERNEL_FILE_NAME_emulate_intel  | Create a n emulation kernel             |
+  | KERNEL_FILE_NAME_VENDOR          | Synthesizes the kernel (takes several hours!)  |
+  | KERNEL_FILE_NAME_report_intel  | Create an HTML report for the kernel    |
+  | KERNEL_FILE_NAME_emulate_VENDOR  | Create a n emulation kernel             |
+| KERNEL_FILE_NAME_compile_xilinx          | Just compile kernel and create logs and reports |
   
 The currently supported values for KERNEL_FILE_NAME are listed below where `transpose_optimized` is set to be the default for the ase run:
 
@@ -42,7 +45,7 @@ The currently supported values for KERNEL_FILE_NAME are listed below where `tran
  
     mkdir build && cd build
     cmake ..
-    make fTrans
+    make trans_intel
 
 You will find all executables and kernel files in the `bin`
 folder of your build directory.
@@ -62,16 +65,16 @@ of the Intel FPGA SDK installation.
 
 For execution of the benchmark run:
 
-    ./fTrans -f path_to_kernel.aocx
+    ./trans_intel -f path_to_kernel.aocx
     
 For more information on available input parameters run
 
-    ./fTrans -h
+    ./trans_intel -h
     
     Implementation of the matrix transposition benchmark proposed in the HPCC benchmark suite for FPGA.
     Version: 0.1.2
     Usage:
-      ./fTrans [OPTION...]
+      ./trans_intel [OPTION...]
     
       -f, --file arg        Kernel file name
       -n, arg               Number of repetitions (default: 10)
@@ -90,7 +93,7 @@ For more information on available input parameters run
     
 To execute the unit and integration tests run
 
-    ./Google_Tests_run
+    ./Test_intel
     
 in the `bin` folder within the build directory.
 It will run an emulation of the kernel and execute some functionality tests.
