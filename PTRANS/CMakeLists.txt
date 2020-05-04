@@ -7,7 +7,3 @@ set(BLOCK_SIZE 512 CACHE STRING "Block size used in the FPGA kernel")
 set(GLOBAL_MEM_UNROLL 16 CACHE STRING "Unrolling factor used to stream data")
 
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
-
-if (NOT INTELFPGAOPENCL_FOUND)
-    message(ERROR "Benchmark does only support the Intel OpenCL SDK")
-endif()

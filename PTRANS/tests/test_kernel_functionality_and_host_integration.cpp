@@ -16,6 +16,7 @@ struct OpenCLKernelTest : testing::Test {
     HOST_DATA_TYPE *A_out;
     std::shared_ptr<bm_execution::ExecutionConfiguration> config;
     cl_uint matrix_size;
+    cl::Program program;
 
     OpenCLKernelTest() {
         kernelFileName = "transpose_default_emulate.aocx";
@@ -38,7 +39,13 @@ struct OpenCLKernelTest : testing::Test {
     void setupFPGA() {
         std::vector<cl::Device> device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
         cl::Context context(device[0]);
-        cl::Program program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
+
+        if (!config.get()) {
+            // TODO: Workaround. File bug report to XRT?
+            // This is done because of a bug in Xilix XRT that does not allow
+            // to reprogram an FPGA twice which will crash with CL_OUT_OF_RESOURCES
+            program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
+        }
         config = std::make_shared<bm_execution::ExecutionConfiguration>(
                 bm_execution::ExecutionConfiguration{
                         context, device[0], program,
@@ -105,7 +112,6 @@ TEST_P(DifferentOpenCLKernelTest, FPGAABlockIsTransposed) {
  * Tests if A will be transposed when it is bigger than one block
  */
 TEST_P(DifferentOpenCLKernelTest, FPGAAIsTransposed) {
-
     // delete memory allocated in constructor
     free(A);
     free(B);
@@ -171,11 +177,17 @@ TEST_P(DifferentOpenCLKernelTest, FPGATimingsMeasuredForEveryIteration) {
     }
 }
 
+#ifdef INTEL_FPGA
 INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
                         testing::Values(
-                                "transpose_optimized_emulate.aocx",
-                                "transpose_default_emulate.aocx"
+                                "transpose_optimized_emulate.aocx"
                         ));
+#else
+INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
+                        testing::Values(
+                                "transpose_optimized_emulate.xclbin"
+                        ));
+#endif
 
 /**
  * Check if the generated input data is in the specified range

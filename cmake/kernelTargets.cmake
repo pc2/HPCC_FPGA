@@ -15,8 +15,8 @@ function(generate_kernel_targets_xilinx)
         else()
             set(source_f ${base_file})
         endif()
-        set(bitstream_compile ${EXECUTABLE_OUTPUT_PATH}/tmp_compile/${kernel_file_name}.xo)
-        set(bitstream_compile_emulate ${EXECUTABLE_OUTPUT_PATH}/tmp_compile/${kernel_file_name}_emulate.xo)
+        set(bitstream_compile ${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile/${kernel_file_name}.xo)
+        set(bitstream_compile_emulate ${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile/${kernel_file_name}_emulate.xo)
         set(bitstream_emulate_f
             ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.xclbin)
         set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.xclbin)
@@ -27,6 +27,9 @@ function(generate_kernel_targets_xilinx)
             set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
             set(xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
         endif()
+        set(xilinx_report_folder "--report_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_reports")
+        file(MAKE_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports)
+        list(APPEND CLFLAGS ${xilinx_report_folder} --log_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile)
 
         # build emulation config for device
         add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/emconfig.json
@@ -49,7 +52,7 @@ function(generate_kernel_targets_xilinx)
                 MAIN_DEPENDENCY ${source_f}
                 )
         add_custom_command(OUTPUT ${bitstream_emulate_f}
-            COMMAND ${Vitis_COMPILER} -t sw_emu ${COMPILER_INCLUDES} -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
+            COMMAND ${Vitis_COMPILER} ${CL_FLAGS} -t sw_emu ${COMPILER_INCLUDES} -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
                 MAIN_DEPENDENCY ${bitstream_compile_emulate}
                 DEPENDS ${xilinx_link_settings}
                 )
