@@ -46,17 +46,12 @@ The currently supported values for KERNEL_FILE_NAME are listed below where `tran
 
 You will find all executables and kernel files in the `bin`
 folder of your build directory.
-You should always specify a target with make to reduce the build time!
-You might want to specify predefined parameters before build:
+Next to the common configuration options given in the [README](../README.md) of the benchmark suite you might want to specify the following additional options before build:
 
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
  `DATA_TYPE`     | float       | Data type used for calculation       |
-`DEFAULT_DEVICE` | -1          | Index of the default device (-1 = ask) |
-`DEFAULT_PLATFORM`| -1          | Index of the default platform (-1 = ask) |
-`DEFAULT_REPETITIONS`| 10          | Number of times the kernel will be executed |
 `KERNEL_NAME`| transpose | Name of the kernel (only needed for own implementations) |
-`FPGA_BOARD_NAME`| p520_hpc_sg280l | Name of the target board |
 `BLOCK_SIZE`    | 512          | Block size used by the kernel to transpose the matrix |
 `GLOBAL_MEM_UNROLL`| 16        | Unrolling factor for the global memory access |
 

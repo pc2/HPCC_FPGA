@@ -50,18 +50,12 @@ The report target for Xilinx is missing but reports will be generated when the k
 
 You will find all executables and kernel files in the `bin`
 folder of your build directory.
-You should always specify a target with make to reduce the build time!
-You might want to specify predefined parameters before build:
+Next to the common configuration options given in the [README](../README.md) of the benchmark suite you might want to specify the following additional options before build:
 
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
-`DEFAULT_DEVICE` | -1          | Index of the default device (-1 = ask) |
-`DEFAULT_PLATFORM`| -1          | Index of the default platform (-1 = ask) |
-`DEFAULT_REPETITIONS`| 10          | Number of times the kernel will be executed |
-`FPGA_BOARD_NAME`| p520_hpc_sg280l | Name of the target board |
 `DEFAULT_ARRAY_LENGTH`| 536870912 | Length of each input array (4GB) |
 `GLOBAL_MEM_UNROLL`| 1        | Loop unrolling factor for all loops in the device code |
-`AOC_FLAGS`| `-fpc -fp-relaxed -no-interleaving=default` | Additional Intel AOC compiler flags that are used for kernel compilation |
 `NUM_REPLICATIONS`| 4        | Replicates the kernels the given number of times |
 `DEVICE_BUFFER_SIZE`| 1       | Number of values that are stored in the local memory in the single kernel approach |
 

@@ -1,6 +1,6 @@
 
 set(COMPILER_INCLUDES "-I${CMAKE_CURRENT_BINARY_DIR}/../common")
-set(CLFLAGS --config ${XILINX_COMPILE_SETTINGS})
+set(CLFLAGS --config ${XILINX_COMPILE_SETTINGS_FILE})
 
 set(Vitis_EMULATION_CONFIG_UTIL $ENV{XILINX_VITIS}/bin/emconfigutil)
 
@@ -21,7 +21,7 @@ function(generate_kernel_targets_xilinx)
             ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.xclbin)
         set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.xclbin)
         if (XILINX_GENERATE_LINK_SETTINGS)
-            set(gen_xilinx_link_settings ${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.${kernel_file_name}.generator.ini)
+		set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
             set(xilinx_link_settings ${CMAKE_BINARY_DIR}/settings/settings.link.xilinx.${kernel_file_name}.ini)
         else()
             set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
@@ -33,7 +33,7 @@ function(generate_kernel_targets_xilinx)
         COMMAND ${Vitis_EMULATION_CONFIG_UTIL} -f ${FPGA_BOARD_NAME} --od ${EXECUTABLE_OUTPUT_PATH}
         )
         if (XILINX_GENERATE_LINK_SETTINGS)
-            add_custom_command(OUTPUT ${xilinx_link_settings}ic
+            add_custom_command(OUTPUT ${xilinx_link_settings}
                     COMMAND ${CMAKE_COMMAND} -Dsettings_f=${xilinx_link_settings} -Dbase_file=${gen_xilinx_link_settings} -DNUM_REPLICATIONS=${NUM_REPLICATIONS} -P "${CMAKE_SOURCE_DIR}/../cmake/generateXilinxSettings.cmake"
                     MAIN_DEPENDENCY ${gen_xilinx_link_settings}
                     )
