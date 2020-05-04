@@ -149,15 +149,15 @@ void printFinalConfiguration(const std::shared_ptr<ProgramSettings> &programSett
               << "Array Size:          "
               << static_cast<double>(programSettings->streamArraySize * sizeof(HOST_DATA_TYPE)) << " Byte"
               << std::endl
-              << "Data Type            " << STR(HOST_DATA_TYPE)
+              << "Data Type:            " << STR(HOST_DATA_TYPE)
               << std::endl
               << "Repetitions:         " << programSettings->numRepetitions
               << std::endl
-              << "Kernel replications: " << programSettings->kernelReplications
+              << "Kernel Replications: " << programSettings->kernelReplications
               << std::endl
-              << "Kernel type:         " << (programSettings->useSingleKernel ? "Single" : "Separate")
+              << "Kernel Type:         " << (programSettings->useSingleKernel ? "Single" : "Separate")
               << std::endl
-              << "Kernel file:         " << programSettings->kernelFileName
+              << "Kernel File:         " << programSettings->kernelFileName
               << std::endl;
     std::cout << "Device:              "
               << device.getInfo<CL_DEVICE_NAME>() << std::endl;

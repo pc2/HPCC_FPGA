@@ -22,6 +22,7 @@ int main(int argc, char * argv[]) {
                                                 &programSettings->kernelFileName);
 
     // Give setup summary
+    std::cout << PROGRAM_DESCRIPTION << std::endl << HLINE;
     std::cout << "Summary:" << std::endl
               << "Kernel Repetitions:  " << programSettings->numRepetitions
               << std::endl

@@ -138,14 +138,13 @@ printResults(std::shared_ptr<bm_execution::ExecutionTimings> results, unsigned m
  */
 void printFinalConfiguration(const std::shared_ptr<ProgramSettings> &programSettings,
                              const cl::Device &device) {// Give setup summary
-    std::cout << PROGRAM_DESCRIPTION << std::endl;
-    std::cout << "Version: " << VERSION << std::endl << HLINE;
+    std::cout << PROGRAM_DESCRIPTION << HLINE;
     std::cout << "Summary:" << std::endl
               << "Matrix Size:         " << programSettings->matrixSize
               << std::endl
               << "Block Size:          " << (1 << LOCAL_MEM_BLOCK_LOG)
               << std::endl
-              << "Data Type            " << STR(HOST_DATA_TYPE)
+              << "Data Type:            " << STR(HOST_DATA_TYPE)
               << std::endl
               << "Repetitions:         " << programSettings->numRepetitions
               << std::endl
