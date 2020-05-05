@@ -21,8 +21,8 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
 
  |  Target               | Description                                    |
  | --------------------- | ---------------------------------------------- |
- | LINPACK_VENDOR      | Builds the host application linking with the Intel SDK|
- | Test_VENDOR          | Compile the tests and its dependencies linking with the Intel SDK  |
+ | LINPACK_`VENDOR`      | Builds the host application linking with the Intel SDK|
+ | Test_`VENDOR`          | Compile the tests and its dependencies linking with the Intel SDK  |
  
  More over there are additional targets to generate kernel reports and bitstreams.
  The provided kernel is optimized for the Bittware 520N board equipped with Stratix 10.
@@ -32,10 +32,10 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
  
   |  Target                        | Description                                    |
   | ------------------------------ | ---------------------------------------------- |
-  | lu_blocked_pvt_VENDOR                | Synthesizes the kernel (takes several hours!)  |
+  | lu_blocked_pvt_`VENDOR`                | Synthesizes the kernel (takes several hours!)  |
   | lu_blocked_pvt_report_intel          | Create an HTML report for the kernel           |
     | lu_blocked_pvt_compile_xilinx         | Just compile kernel and create reports         |
-  | lu_blocked_pvt_emulate_VENDOR          | Create a n emulation kernel                    |
+  | lu_blocked_pvt_emulate_`VENDOR`          | Create a n emulation kernel                    |
 
  You can build for example the host application by running
  
