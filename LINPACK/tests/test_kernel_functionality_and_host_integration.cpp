@@ -189,6 +189,6 @@ INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
 
 #ifdef XILINX_FPGA
 INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-                        testing::Values("lu_blocked_pvt_emulate.xclbin")
+        testing::Values("lu_blocked_pvt_emulate.xclbin")
 );
 #endif
