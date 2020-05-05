@@ -17,6 +17,8 @@ struct OpenCLKernelTest : testing::Test {
     std::shared_ptr<bm_execution::ExecutionConfiguration> config;
     cl_uint matrix_size;
     cl::Program program;
+    cl::Context context;
+    std::vector<cl::Device> device;
 
     OpenCLKernelTest() {
         kernelFileName = "transpose_default_emulate.aocx";
@@ -37,15 +39,15 @@ struct OpenCLKernelTest : testing::Test {
     }
 
     void setupFPGA() {
-        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
-        cl::Context context(device[0]);
-
         if (!config.get()) {
             // TODO: Workaround. File bug report to XRT?
             // This is done because of a bug in Xilix XRT that does not allow
             // to reprogram an FPGA twice which will crash with CL_OUT_OF_RESOURCES
+            device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
+            context = cl::Context(device[0]);
             program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
         }
+
         config = std::make_shared<bm_execution::ExecutionConfiguration>(
                 bm_execution::ExecutionConfiguration{
                         context, device[0], program,
