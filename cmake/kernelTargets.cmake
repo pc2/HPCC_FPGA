@@ -49,20 +49,20 @@ function(generate_kernel_targets_xilinx)
                 )
 
         add_custom_command(OUTPUT ${bitstream_compile_emulate}
-                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t sw_emu ${COMPILER_INCLUDES} -f ${FPGA_BOARD_NAME} -g -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile_emulate} ${source_f}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_COMPILE_FLAGS} -f ${FPGA_BOARD_NAME} -g -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile_emulate} ${source_f}
                 MAIN_DEPENDENCY ${source_f}
                 )
         add_custom_command(OUTPUT ${bitstream_emulate_f}
-            COMMAND ${Vitis_COMPILER} ${local_CL_FLAGS} -t sw_emu ${COMPILER_INCLUDES} -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
+            COMMAND ${Vitis_COMPILER} ${local_CL_FLAGS} -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS}   -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
                 MAIN_DEPENDENCY ${bitstream_compile_emulate}
                 DEPENDS ${xilinx_link_settings}
                 )
         add_custom_command(OUTPUT ${bitstream_compile}
-                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t hw ${COMPILER_INCLUDES} --platform ${FPGA_BOARD_NAME} -R2 -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile} ${source_f}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t hw ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_COMPILE_FLAGS}  --platform ${FPGA_BOARD_NAME} -R2 -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile} ${source_f}
                 MAIN_DEPENDENCY ${source_f}
                 )
         add_custom_command(OUTPUT ${bitstream_f}
-                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t hw ${COMPILER_INCLUDES} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t hw ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile}
                 MAIN_DEPENDENCY ${bitstream_compile}
                 DEPENDS ${xilinx_link_settings}
                 )
