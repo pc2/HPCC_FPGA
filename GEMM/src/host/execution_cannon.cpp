@@ -31,8 +31,9 @@ SOFTWARE.
 
 /* External library headers */
 #include "CL/cl.hpp"
+#ifdef INTEL_FPGA
 #include "CL/cl_ext_intelfpga.h"
-
+#endif
 
 /* Project's headers */
 #include "setup/fpga_setup.hpp"
@@ -53,7 +54,7 @@ calculate(std::shared_ptr<ExecutionConfiguration> config, HOST_DATA_TYPE* a, HOS
 
     // Create Command queue
     cl::CommandQueue compute_queue(config->context, config->device);
-
+#ifdef INTEL_FPGA
     cl::Buffer Buffer_a(config->context, CL_MEM_READ_WRITE | (config->useMemInterleaving ? 0 :CL_CHANNEL_1_INTELFPGA),
                         sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize);
     cl::Buffer Buffer_b(config->context, CL_MEM_READ_WRITE | (config->useMemInterleaving ? 0 :CL_CHANNEL_2_INTELFPGA),
@@ -62,6 +63,16 @@ calculate(std::shared_ptr<ExecutionConfiguration> config, HOST_DATA_TYPE* a, HOS
                            sizeof(cl_int)*config->matrixSize*config->matrixSize);
     cl::Buffer Buffer_c_out(config->context, CL_MEM_READ_WRITE | (config->useMemInterleaving ? 0 :CL_CHANNEL_4_INTELFPGA),
                             sizeof(cl_int)*config->matrixSize*config->matrixSize);
+#else
+    cl::Buffer Buffer_a(config->context, CL_MEM_READ_WRITE,
+                        sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize);
+    cl::Buffer Buffer_b(config->context, CL_MEM_READ_WRITE,
+                        sizeof(cl_int)*config->matrixSize*config->matrixSize);
+    cl::Buffer Buffer_c_in(config->context, CL_MEM_READ_WRITE,
+                           sizeof(cl_int)*config->matrixSize*config->matrixSize);
+    cl::Buffer Buffer_c_out(config->context, CL_MEM_READ_WRITE,
+                            sizeof(cl_int)*config->matrixSize*config->matrixSize);
+#endif
 
 
     // create the kernels

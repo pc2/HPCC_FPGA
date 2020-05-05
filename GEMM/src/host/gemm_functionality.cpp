@@ -69,7 +69,9 @@ parseProgramParameters(int argc, char * argv[]) {
              cxxopts::value<cl_uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
             ("kernel", "Name of the kernel",
              cxxopts::value<std::string>()->default_value(KERNEL_NAME))
-            ("i,nointerleaving", "Disable memory interleaving")
+#ifdef INTEL_FPGA
+            ("i,interleaving", "Use memory interleaving on the FPGA")
+#endif
             ("device", "Index of the device that has to be used. If not given you "\
         "will be asked which device to use if there are multiple devices "\
         "available.", cxxopts::value<int>()->default_value(std::to_string(DEFAULT_DEVICE)))
@@ -99,7 +101,11 @@ parseProgramParameters(int argc, char * argv[]) {
                                 result["m"].as<cl_uint>(),
                                 result["platform"].as<int>(),
                                 result["device"].as<int>(),
-                                static_cast<bool>(result.count("i") <= 0),
+#ifdef INTEL_FPGA
+                                static_cast<bool>(result.count("i") > 0),
+#else
+                                false,
+#endif
                                 result["f"].as<std::string>(),
                                 result["kernel"].as<std::string>()});
     return sharedSettings;

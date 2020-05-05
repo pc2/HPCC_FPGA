@@ -204,7 +204,14 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectbetaCplusalphaAB) {
     }
 }
 
-
+#ifdef INTEL_FPGA
 INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
         testing::Combine(testing::Values("gemm_cannon_emulate.aocx"), testing::Values(1,2)
                         ));
+#endif
+
+#ifdef XILINXL_FPGA
+INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
+        testing::Combine(testing::Values("gemm_cannon_emulate.xclbin"), testing::Values(1,2)
+                        ));
+#endif

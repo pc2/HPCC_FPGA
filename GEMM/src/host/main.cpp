@@ -29,7 +29,7 @@ int main(int argc, char * argv[]) {
               << "Total matrix size:   " << programSettings->matrixSize
               << std::endl
               << "Memory Interleaving: " << programSettings->useMemInterleaving
-              << std::endl
+              << " (Intel only)" << std::endl
               << "Kernel file:         " << programSettings->kernelFileName
               << std::endl
               << "Device:              "
