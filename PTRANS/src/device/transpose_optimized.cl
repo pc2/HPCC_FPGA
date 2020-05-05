@@ -24,8 +24,8 @@
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose(__global DEVICE_DATA_TYPE volatile *restrict A,
-        __global DEVICE_DATA_TYPE volatile *restrict B,
+void transpose(__global DEVICE_DATA_TYPE *restrict A,
+        __global DEVICE_DATA_TYPE *restrict B,
 __global DEVICE_DATA_TYPE *restrict A_out,
         uint matrixSize) {
 
@@ -48,7 +48,7 @@ __global DEVICE_DATA_TYPE *restrict A_out,
 
                     DEVICE_DATA_TYPE rotate_in[GLOBAL_MEM_UNROLL];
 
-#pragma unroll
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (unsigned unroll_count = 0; unroll_count < GLOBAL_MEM_UNROLL; unroll_count++) {
                         rotate_in[unroll_count] = A[block_col * BLOCK_SIZE + col * GLOBAL_MEM_UNROLL + unroll_count +
                                                                                 (block_row * BLOCK_SIZE + row) * matrixSize];
@@ -57,7 +57,7 @@ __global DEVICE_DATA_TYPE *restrict A_out,
                     unsigned rot = row & (GLOBAL_MEM_UNROLL - 1);
 
                     // rotate temporary buffer to store data into local buffer
-#pragma unroll
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (unsigned unroll_count = 0; unroll_count < GLOBAL_MEM_UNROLL; unroll_count++) {
                         // every block of (N / GLOBAL_MEM_UNROLL), rotates the index by 1
                         a_block[local_mem_converted_row][unroll_count] = rotate_in[(unroll_count + GLOBAL_MEM_UNROLL - rot)
@@ -77,7 +77,7 @@ __global DEVICE_DATA_TYPE *restrict A_out,
                     unsigned offset = row / GLOBAL_MEM_UNROLL;
 
 
-#pragma unroll
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (unsigned unroll_count = 0; unroll_count < GLOBAL_MEM_UNROLL; unroll_count++) {
                         unsigned rot = ((GLOBAL_MEM_UNROLL + unroll_count - row) * (BLOCK_SIZE / GLOBAL_MEM_UNROLL)) &
                                                                                                     (BLOCK_SIZE - 1);
@@ -87,7 +87,7 @@ __global DEVICE_DATA_TYPE *restrict A_out,
 
                     unsigned rot_out = row & (GLOBAL_MEM_UNROLL - 1);
                     // rotate temporary buffer to store data into local buffer
-#pragma unroll
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (unsigned unroll_count = 0; unroll_count < GLOBAL_MEM_UNROLL; unroll_count++) {
 
                         A_out[(block_col * BLOCK_SIZE + row) * matrixSize +
