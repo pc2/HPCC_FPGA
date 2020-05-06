@@ -172,6 +172,25 @@ When major changes are made on the code the functionality should be checked by r
 To simplify this process the script `test_all.sh` can be used to build all benchmarks with the default configuration
 and run all tests.
 
+
+## Notes on Xilinx Vitis Compatibility
+
+Currently not all benchmarks fully support the Xilinx Vitis toolchain.
+In this section the limitations of the benchmarks with regards to Xilinx Vitis are listed to give an overview:
+
+- **Full Support:** STREAM, RandomAccess
+- **Not optimized:** PTRANS, LINPACK, GEMM, FFT
+- **No or limited testing and emulation:** LINPACK, FFT
+- **Not compatible:** b_eff
+
+*Full Support* means that the benchmarks work for the toolchain as expected.
+*Not optimized* inidcates, that build, emulation and testing works, but the kernels are not optimized for the toolchain which might lead to poor performnce.
+*No or limited testing and emulation* means that there are problems with the creation of the emulation kernels.
+Thus the tests can not be executed for the benchmarks.
+Compilation and synthesis of the kernels works for these benchmarks.
+The benchmarks listed under *Not compatible* are not compatible with the Xilinx toolchain.
+
+
 ## Publications
 
 If you are using one of the benchmarks contained in the HPCC FPGA benchmark suite consider citing us.
