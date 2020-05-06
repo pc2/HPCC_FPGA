@@ -47,7 +47,9 @@
 #include "fft_8.cl"
 #include "parameters.h"
 
+#ifdef INTEL_FPGA
 #pragma OPENCL EXTENSION cl_intel_channels : enable
+#endif
 
 #define min(a,b) (a<b?a:b)
 
@@ -66,11 +68,16 @@
 #define CONT_FACTOR            (1 << LOG_CONT_FACTOR)
 
 // Need some depth to our channels to accommodate their bursty filling.
+#ifdef INTEL_FPGA
 channel float2 chanin[POINTS] __attribute__((depth(CONT_FACTOR*POINTS)));
+#endif
+#ifdef XILINX_FPGA
+pipe float2x8 chanin __attribute__((xcl_reqd_pipe_depth(CONT_FACTOR*POINTS)));
+#endif
 
 uint bit_reversed(uint x, uint bits) {
   uint y = 0;
-  #pragma unroll 
+__attribute__((opencl_unroll_hint()))
   for (uint i = 0; i < bits; i++) {
     y <<= 1;
     y |= x & 1;
@@ -158,18 +165,38 @@ kernel void fetch (global float2 * restrict src) {
   uint lid = get_local_id(0);
   uint local_addr = lid << LOGPOINTS;
 
-  #pragma unroll
+__attribute__((opencl_unroll_hint(POINTS)))
   for (uint k = 0; k < POINTS; k++) {
     buf[local_addr + k] = src[global_addr + k];
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
 
-  #pragma unroll
+#ifdef XILINX_FPGA
+  float2 buf2[POINTS];
+  float2x8 buf2x8;
+#endif
+
+__attribute__((opencl_unroll_hint(POINTS)))
   for (uint k = 0; k < POINTS; k++) {
     uint buf_addr = bit_reversed(k,LOGPOINTS) * CONT_FACTOR * POINTS + lid;
+    #ifdef INTEL_FPGA
     write_channel_intel (chanin[k], buf[buf_addr]);
+    #else
+    buf2[k] = buf[buf_addr];
+    #endif
   }
+  #ifdef XILINX_FPGA
+  buf2x8.i0 = buf2[0];
+  buf2x8.i1 = buf2[1];
+  buf2x8.i2 = buf2[2];
+  buf2x8.i3 = buf2[3];
+  buf2x8.i4 = buf2[4];
+  buf2x8.i5 = buf2[5];
+  buf2x8.i6 = buf2[6];
+  buf2x8.i7 = buf2[7];
+  write_pipe_block(chanin, &buf2x8);
+  #endif
 }
 
 
@@ -220,6 +247,7 @@ kernel void fft1d(global float2 * restrict dest,
     float2x8 data;
     // Perform memory transfers only when reading data in range
     if (i < count * (N / POINTS)) {
+      #ifdef INTEL_FPGA
       data.i0 = read_channel_intel(chanin[0]);
       data.i1 = read_channel_intel(chanin[1]);
       data.i2 = read_channel_intel(chanin[2]);
@@ -228,6 +256,9 @@ kernel void fft1d(global float2 * restrict dest,
       data.i5 = read_channel_intel(chanin[5]);
       data.i6 = read_channel_intel(chanin[6]);
       data.i7 = read_channel_intel(chanin[7]);
+      #else
+      read_pipe_block(chanin, &data);
+      #endif
     } else {
       data.i0 = data.i1 = data.i2 = data.i3 = 
                 data.i4 = data.i5 = data.i6 = data.i7 = 0;

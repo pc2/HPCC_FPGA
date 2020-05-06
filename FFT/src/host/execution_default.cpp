@@ -30,7 +30,6 @@ SOFTWARE.
 
 /* External library headers */
 #include "CL/cl.hpp"
-#include "CL/cl_ext_intelfpga.h"
 
 /* Project's headers */
 

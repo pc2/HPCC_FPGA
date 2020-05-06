@@ -1,10 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(FFT VERSION 1.0)
-
-set (CMAKE_CXX_STANDARD 11)
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    include(CTest)
-endif()
+project(FFT VERSION 1.0.1)
 
 set(DEFAULT_ITERATIONS 100 CACHE STRING "Default number of iterations that is done with a single kernel execution")
 set(HOST_DATA_TYPE cl_float CACHE STRING "Data type used by the host code. Should match the data type of the used FFT")
@@ -18,6 +13,4 @@ set(DATA_TYPE float)
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
 
 unset(DATA_TYPE CACHE)
-if (NOT INTELFPGAOPENCL_FOUND)
-    message(ERROR "Benchmark does only support the Intel OpenCL SDK")
-endif()
+

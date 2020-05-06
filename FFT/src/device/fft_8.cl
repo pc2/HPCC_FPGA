@@ -292,7 +292,7 @@ float2x8 fft_step(float2x8 data, int step, float2 *fft_delay_elements,
     // the loop to increase the  amount of pipeline parallelism and allow feed 
     // forward execution
 
-    #pragma unroll
+__attribute__((opencl_unroll_hint()))
     for (int stage = 2; stage < logN - 1; stage++) {
         bool complex_stage = stage & 1; // stages 3, 5, ...
 
@@ -333,7 +333,7 @@ float2x8 fft_step(float2x8 data, int step, float2 *fft_delay_elements,
     // shifting the entire contents in parallel if the loop is unrolled. More
     // important, when unrolling this loop each transfer maps to a trivial 
     // loop-carried dependency
-    #pragma unroll
+__attribute__((opencl_unroll_hint()))
     for (int ii = 0; ii < size + 8 * (logN - 2) - 1; ii++) {
         fft_delay_elements[ii] = fft_delay_elements[ii + 1];
     }
