@@ -97,10 +97,7 @@ Name             | Default     | Description                          |
 `XILINX_LINK_SETTINGS_FILE` | First `settings.link.xilinx.*.ini` file found in the `settings` folder of the benchmark | Path to the file containing link settings like the mapping of the memory banks to the kernel parameters |
 `XILINX_GENERATE_LINK_SETTINGS` | `Yes` if the link settings file ends on `.generator.ini`, `No` otherwise | Boolean flag indicating if the link settings file will be used as a source to generate a link settings file e.g. for a given number of kernel replications |
 
-Currently the following benchmarks support the build with Xilinx:
-
-- STREAM
-- RandomAccess
+For an overview of the current limitations of the benchmarks with regards to the Xilinx Vitis toolchain refer to the subsection [Notes on Xilinx Vitis Compatibility](#notes-on-xilinx-vitis-compatibility).
 
 For the other benchmarks, the Xilinx configuration options will have no effect.
 When building a benchmark for Xilinx FPGAs double check the path to the settings files and if they match to the target board.
