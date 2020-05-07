@@ -39,6 +39,7 @@ For the host code as well as the kernels `VENDOR` can be `intel` or `xilinx`.
 The report target for xilinx is missing but reports will be generated when the kernel is synthesized.
 The `stream_kernels_single` targets build a single kernel for all four vector operations.
 In that case the operation will be defined by an additional operation type input parameter.
+To use this kernel, run the host code with the parameter `--single-kernel`.
 
  You can build for example the host application by running
  
