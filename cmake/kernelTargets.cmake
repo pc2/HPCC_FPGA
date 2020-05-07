@@ -13,7 +13,7 @@ function(generate_kernel_targets_xilinx)
         if (KERNEL_REPLICATION_ENABLED)
             set(source_f "${CMAKE_BINARY_DIR}/src/device/replicated_${kernel_file_name}_xilinx.cl")
         else()
-            set(source_f ${base_file})
+            set(source_f "${CMAKE_BINARY_DIR}/src/device/copied_${kernel_file_name}_xilinx.cl")
         endif()
         set(bitstream_compile ${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile/${kernel_file_name}.xo)
         set(bitstream_compile_emulate ${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile/${kernel_file_name}_emulate.xo)
@@ -21,7 +21,7 @@ function(generate_kernel_targets_xilinx)
             ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.xclbin)
         set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.xclbin)
         if (XILINX_GENERATE_LINK_SETTINGS)
-		set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
+	    set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
             set(xilinx_link_settings ${CMAKE_BINARY_DIR}/settings/settings.link.xilinx.${kernel_file_name}.ini)
         else()
             set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
@@ -43,10 +43,17 @@ function(generate_kernel_targets_xilinx)
                     )
         endif()
 
-        add_custom_command(OUTPUT ${source_f}
-                COMMAND ${CMAKE_COMMAND} -Dsource_f=${source_f} -Dbase_file=${base_file} -DNUM_REPLICATIONS=1 -P "${CMAKE_SOURCE_DIR}/../cmake/generateKernels.cmake"
-                MAIN_DEPENDENCY ${base_file}
+        if (KERNEL_REPLICATION_ENABLED)
+                add_custom_command(OUTPUT ${source_f}
+                        COMMAND ${CMAKE_COMMAND} -Dsource_f=${source_f} -Dbase_file=${base_file} -DNUM_REPLICATIONS=1 -P "${CMAKE_SOURCE_DIR}/../cmake/generateKernels.cmake"
+                        MAIN_DEPENDENCY ${base_file}
                 )
+        else()
+                add_custom_command(OUTPUT ${source_f}
+                        COMMAND cp ${base_file} ${source_f}
+                        MAIN_DEPENDENCY ${base_file}
+                )
+        endif()
 
         add_custom_command(OUTPUT ${bitstream_compile_emulate}
                 COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_COMPILE_FLAGS} -f ${FPGA_BOARD_NAME} -g -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile_emulate} ${source_f}
