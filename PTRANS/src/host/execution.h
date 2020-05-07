@@ -40,6 +40,7 @@ namespace bm_execution {
         std::string kernelName;
         uint repetitons;
         cl_uint matrixSize;
+        cl_uint blockSize;
         bool useMemInterleaving;
     };
 

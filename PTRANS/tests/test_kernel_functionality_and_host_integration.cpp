@@ -54,6 +54,7 @@ struct OpenCLKernelTest : testing::Test {
                         KERNEL_NAME,
                         1,
                         matrix_size,
+                        BLOCK_SIZE,
                         false
                 });
         generateInputData(matrix_size, A, B);

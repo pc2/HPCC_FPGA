@@ -56,8 +56,10 @@ parseProgramParameters(int argc, char *argv[]) {
             ("f,file", "Kernel file name", cxxopts::value<std::string>())
             ("n", "Number of repetitions",
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_REPETITIONS)))
-            ("m", "Matrix size",
+            ("m", "Matrix size in number of blocks in one dimension",
              cxxopts::value<cl_uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
+            ("b", "Block size in number of values in one dimension",
+             cxxopts::value<cl_uint>()->default_value(std::to_string(BLOCK_SIZE)))
             ("kernel", "Name of the kernel",
              cxxopts::value<std::string>()->default_value(KERNEL_NAME))
             ("i,nointerleaving", "Disable memory interleaving")
@@ -88,6 +90,7 @@ parseProgramParameters(int argc, char *argv[]) {
     std::shared_ptr<ProgramSettings> sharedSettings(
             new ProgramSettings{result["n"].as<uint>(),
                                 result["m"].as<cl_uint>(),
+                                result["b"].as<cl_uint>(),
                                 result["platform"].as<int>(),
                                 result["device"].as<int>(),
                                 static_cast<bool>(result.count("i") <= 0),
@@ -178,8 +181,7 @@ void printFinalConfiguration(const std::shared_ptr<ProgramSettings> &programSett
     std::cout << "Summary:" << std::endl
               << "Repetitions:         " << programSettings->numRepetitions
               << std::endl
-              << "Matrix Size:         " << programSettings->matrixSize
-              << "x" << programSettings->matrixSize
+              << "Matrix Size:         " << programSettings->matrixSize * programSettings->blockSize
               << std::endl
               << "Memory Interleaving: " << (programSettings->useMemInterleaving ? "Yes" : "No")
               << std::endl

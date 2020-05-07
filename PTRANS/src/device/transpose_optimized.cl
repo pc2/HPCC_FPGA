@@ -25,11 +25,11 @@
 __attribute__((max_global_work_dim(0)))
 __kernel
 void transpose(__global DEVICE_DATA_TYPE *restrict A,
-        __global DEVICE_DATA_TYPE *restrict B,
-__global DEVICE_DATA_TYPE *restrict A_out,
-        uint matrixSize) {
+            __global DEVICE_DATA_TYPE *restrict B,
+            __global DEVICE_DATA_TYPE *restrict A_out,
+            const uint number_of_blocks) {
 
-    const unsigned number_of_blocks = matrixSize / BLOCK_SIZE;
+    const unsigned matrixSize = number_of_blocks * BLOCK_SIZE;
 
     // transpose the matrix block-wise from global memory
 #pragma loop_coalesce 2
@@ -37,7 +37,7 @@ __global DEVICE_DATA_TYPE *restrict A_out,
         for (int block_col = 0; block_col < number_of_blocks; block_col++) {
 
             // local memory buffer for a matrix block
-            DEVICE_DATA_TYPE a_block[BLOCK_SIZE * BLOCK_SIZE / GLOBAL_MEM_UNROLL][GLOBAL_MEM_UNROLL];
+            DEVICE_DATA_TYPE a_block[BLOCK_SIZE * BLOCK_SIZE / GLOBAL_MEM_UNROLL][GLOBAL_MEM_UNROLL] __attribute__((xcl_array_partition(cyclic, GLOBAL_MEM_UNROLL,1))) __attribute__((xcl_array_partition(cyclic, GLOBAL_MEM_UNROLL,2)));
 
             // read in block from global memory and store it in a memory efficient manner
 #pragma loop_coalesce 2
