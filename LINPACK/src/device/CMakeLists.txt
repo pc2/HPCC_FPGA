@@ -9,3 +9,11 @@ if (INTELFPGAOPENCL_FOUND)
             WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 endif()
 
+if (VITIS_FOUND)
+    generate_kernel_targets_xilinx(lu_blocked_pvt)
+    add_test(NAME test_emulation_xilinx COMMAND LINPACK_xilinx -f lu_blocked_pvt_emulate.xclbin -s 128 -n 1 
+            WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+    add_test(NAME test_output_parsing_xilinx COMMAND ${CMAKE_SOURCE_DIR}/../scripts/evaluation/execute_and_parse.sh ./LINPACK_xilinx -f lu_blocked_pvt_emulate.xclbin -s 128 -n 1 
+            WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+endif()
+

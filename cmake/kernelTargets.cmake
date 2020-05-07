@@ -13,7 +13,7 @@ function(generate_kernel_targets_xilinx)
         if (KERNEL_REPLICATION_ENABLED)
             set(source_f "${CMAKE_BINARY_DIR}/src/device/replicated_${kernel_file_name}_xilinx.cl")
         else()
-            set(source_f ${base_file})
+            set(source_f "${CMAKE_BINARY_DIR}/src/device/copied_${kernel_file_name}_xilinx.cl")
         endif()
         set(bitstream_compile ${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile/${kernel_file_name}.xo)
         set(bitstream_compile_emulate ${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile/${kernel_file_name}_emulate.xo)
@@ -21,7 +21,7 @@ function(generate_kernel_targets_xilinx)
             ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.xclbin)
         set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.xclbin)
         if (XILINX_GENERATE_LINK_SETTINGS)
-		set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
+	    set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
             set(xilinx_link_settings ${CMAKE_BINARY_DIR}/settings/settings.link.xilinx.${kernel_file_name}.ini)
         else()
             set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
@@ -29,7 +29,7 @@ function(generate_kernel_targets_xilinx)
         endif()
         set(xilinx_report_folder "--report_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_reports")
         file(MAKE_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports)
-        set(local_CLFLAGS ${CLFLAGS})
+        set(local_CLFLAGS ${CLFLAGS} -DXILINX_FPGA)
         list(APPEND local_CLFLAGS ${xilinx_report_folder} --log_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile)
 
         # build emulation config for device
@@ -43,26 +43,35 @@ function(generate_kernel_targets_xilinx)
                     )
         endif()
 
-        add_custom_command(OUTPUT ${source_f}
-                COMMAND ${CMAKE_COMMAND} -Dsource_f=${source_f} -Dbase_file=${base_file} -DNUM_REPLICATIONS=1 -P "${CMAKE_SOURCE_DIR}/../cmake/generateKernels.cmake"
-                MAIN_DEPENDENCY ${base_file}
+        if (KERNEL_REPLICATION_ENABLED)
+                add_custom_command(OUTPUT ${source_f}
+                        COMMAND ${CMAKE_COMMAND} -Dsource_f=${source_f} -Dbase_file=${base_file} -DNUM_REPLICATIONS=1 -P "${CMAKE_SOURCE_DIR}/../cmake/generateKernels.cmake"
+                        MAIN_DEPENDENCY ${base_file}
                 )
+        else()
+                add_custom_command(OUTPUT ${source_f}
+                        COMMAND cp ${base_file} ${source_f}
+                        MAIN_DEPENDENCY ${base_file}
+                )
+        endif()
 
         add_custom_command(OUTPUT ${bitstream_compile_emulate}
-                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t sw_emu ${COMPILER_INCLUDES} -f ${FPGA_BOARD_NAME} -g -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile_emulate} ${source_f}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_COMPILE_FLAGS} -f ${FPGA_BOARD_NAME} -g -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile_emulate} ${source_f}
                 MAIN_DEPENDENCY ${source_f}
+                DEPENDS ${XILINX_COMPILE_SETTINGS_FILE}
                 )
         add_custom_command(OUTPUT ${bitstream_emulate_f}
-            COMMAND ${Vitis_COMPILER} ${local_CL_FLAGS} -t sw_emu ${COMPILER_INCLUDES} -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
+            COMMAND ${Vitis_COMPILER} ${local_CL_FLAGS} -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
                 MAIN_DEPENDENCY ${bitstream_compile_emulate}
                 DEPENDS ${xilinx_link_settings}
                 )
         add_custom_command(OUTPUT ${bitstream_compile}
-                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t hw ${COMPILER_INCLUDES} --platform ${FPGA_BOARD_NAME} -R2 -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile} ${source_f}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t hw ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_COMPILE_FLAGS}  --platform ${FPGA_BOARD_NAME} -R2 -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile} ${source_f}
                 MAIN_DEPENDENCY ${source_f}
+                DEPENDS ${XILINX_COMPILE_SETTINGS_FILE}
                 )
         add_custom_command(OUTPUT ${bitstream_f}
-                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t hw ${COMPILER_INCLUDES} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t hw ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile}
                 MAIN_DEPENDENCY ${bitstream_compile}
                 DEPENDS ${xilinx_link_settings}
                 )
@@ -99,17 +108,17 @@ function(generate_kernel_targets_intel)
                 MAIN_DEPENDENCY ${base_file}
                 )
         add_custom_command(OUTPUT ${bitstream_emulate_f}
-                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} ${COMPILER_INCLUDES} ${AOC_FLAGS} -legacy-emulator -march=emulator
+                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -legacy-emulator -march=emulator
                 -o ${bitstream_emulate_f}
                 MAIN_DEPENDENCY ${source_f}
                 )
         add_custom_command(OUTPUT ${bitstream_f}
-                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} ${COMPILER_INCLUDES} ${AOC_FLAGS} -board=${FPGA_BOARD_NAME}
+                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -board=${FPGA_BOARD_NAME}
                 -o ${bitstream_f}
                 MAIN_DEPENDENCY ${source_f}
                 )
         add_custom_command(OUTPUT ${report_f}
-                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} ${COMPILER_INCLUDES} ${AOC_FLAGS} -rtl -report -board=${FPGA_BOARD_NAME}
+                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -rtl -report -board=${FPGA_BOARD_NAME}
                 -o ${report_f}
                 MAIN_DEPENDENCY ${source_f}
                 )

@@ -13,12 +13,13 @@ The benchmark needs no additional dependencies than the ones given in the main [
 ## Build
 
 CMake is used as the build system.
-The targets below can be used to build the benchmark and its kernels:
+The targets below can be used to build the benchmark and its kernels, where `VENDOR` can be
+`intel` or `xilinx`:
 
  |  Target  | Description                                    |
  | -------- | ---------------------------------------------- |
- | fFFT     | Builds the host application                    |
- | Google_Tests_run| Compile the tests and its dependencies  |
+ | FFT_`VENDOR`     | Builds the host application                    |
+ | Test_`VENDOR`    | Compile the tests and its dependencies  |
  
  More over the are additional targets to generate kernel reports and bitstreams.
  The provided kernel is optimized for Stratix 10 with 512bit LSUs.
@@ -26,9 +27,10 @@ The targets below can be used to build the benchmark and its kernels:
  
   |  Target  | Description                                    |
   | -------- | ---------------------------------------------- |
-  | fft1d_float_8_intel          | Synthesizes the kernel (takes several hours!)  |
+  | fft1d_float_8_`VENDOR`         | Synthesizes the kernel (takes several hours!)  |
   | fft1d_float_8_report_intel   | Create an HTML report for the kernel    |
-  | fft1d_float_8_emulate_intel  | Create a n emulation kernel             |
+  | fft1d_float_8_compile_xilinx   | Create a report for the kernel    |
+  | fft1d_float_8_emulate_`VENDOR`  | Create a n emulation kernel             |
   
  
  You can build for example the host application by running
@@ -53,16 +55,16 @@ of the Intel FPGA SDK installation.
 
 For execution of the benchmark run:
 
-    ./fFFT -f path_to_kernel.aocx
+    ./FFT_intel -f path_to_kernel.aocx
     
 For more information on available input parameters run
 
-    $./fFFT -h
+    $./FFT_intel -h
     
     Implementation of the FFT benchmark proposed in the HPCC benchmark suite for FPGA.
     Version: "1.0"
     Usage:
-      ./fFFT [OPTION...]
+      ./FFT_intel [OPTION...]
     
       -f, --file arg      Kernel file name
       -n, arg             Number of repetitions (default: 10)
@@ -79,7 +81,7 @@ For more information on available input parameters run
     
 To execute the unit and integration tests run
 
-    ./Google_Tests_run
+    ./Test_intel
     
 in the `bin` folder within the build directory.
 It will run an emulation of the kernel and execute some functionality tests.

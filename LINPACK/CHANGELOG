@@ -2,6 +2,12 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.0.1
+
+#### Added:
+- Support for Xilinx Vitis toolchain
+- Tests are only partially supported for Xilinx because of failing compilation of lu_blocked_pvt_test
+
 ## 2.0
 
 #### Added:

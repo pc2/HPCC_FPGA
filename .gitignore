@@ -5,3 +5,4 @@ cmake-*
 *._*
 build*
 .idea
+.venv

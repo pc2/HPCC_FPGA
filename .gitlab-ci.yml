@@ -85,8 +85,8 @@ build:GEMM:
   artifacts:
     paths:
       - build/bin/gemm_cannon_emulate.aocx
-      - build/bin/fgemm
-      - build/bin/Google_Tests_run
+      - build/bin/GEMM_intel
+      - build/bin/Test_intel
 
 build:FFT:
   stage: build
@@ -100,8 +100,8 @@ build:FFT:
   artifacts:
     paths:
       - build/bin/fft1d_float_8_emulate.aocx
-      - build/bin/fFFT
-      - build/bin/Google_Tests_run
+      - build/bin/FFT_intel
+      - build/bin/Test_intel
 
 build:b_eff:
   stage: build

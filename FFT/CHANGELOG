@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.0.1
+
+#### Added:
+- Support for Xilinx Vitis toolchain
+
 ## 1.0
 
 #### Added:

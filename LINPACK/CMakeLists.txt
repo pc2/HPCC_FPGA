@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(LINPACK VERSION 2.0.0)
+project(LINPACK VERSION 2.0.1)
 
 set(DEFAULT_MATRIX_SIZE 1024 CACHE STRING "Default matrix size")
 set(GLOBAL_MEM_UNROLL 16 CACHE STRING "Unrolling factor that is used for all loops in the kernels")
@@ -16,9 +16,3 @@ endif()
 
 set(USE_OPENMP Yes)
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
-
-if (NOT INTELFPGAOPENCL_FOUND)
-    message(ERROR "Benchmark does only support the Intel OpenCL SDK")
-endif()
-
-

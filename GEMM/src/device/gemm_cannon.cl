@@ -63,9 +63,9 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
     DEVICE_DATA_TYPE c_block[GEMM_BLOCK][GEMM_BLOCK];
 
     // Load block of matrix A and B and init C and reorder values
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
     for (int y=0; y<GEMM_BLOCK; y++) {
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK; x++) {
             int k = (x + y) % GEMM_BLOCK;
             a_block[y][x] = a[y][k];
@@ -75,16 +75,16 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
     }
 
     // Calculate result for 8x8 matrix
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
     for (int i=0;i<GEMM_BLOCK; i++) {
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK;x++) {
             a_block[x][GEMM_BLOCK] = a_block[x][0];
             b_block[GEMM_BLOCK][x] = b_block[0][x];
         }
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for(int y=0; y < GEMM_BLOCK; y++) {
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
             for (int x=0; x<GEMM_BLOCK;x++) {
                 c_block[y][x] += a_block[y][x] * b_block[y][x];
                 a_block[y][x] = a_block[y][x + 1];
@@ -93,9 +93,9 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
         }
     }
 
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
     for(int y=0; y < GEMM_BLOCK; y++) {
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK;x++) {
             c_out[y][x] += c_block[y][x];
         }
@@ -128,9 +128,9 @@ local_gemm(const DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / 
         // For each element below it in current block
         for (int j = 0; j < BLOCK_SIZE / GEMM_BLOCK; j++) {
             DEVICE_DATA_TYPE   tmp_small_block_out[GEMM_BLOCK][GEMM_BLOCK];
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
             for (int ii = 0; ii < GEMM_BLOCK; ii++) {
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                 for (int jj = 0; jj < GEMM_BLOCK; jj++) {
                     tmp_small_block_out[ii][jj] = 0;
                 }
@@ -141,9 +141,9 @@ local_gemm(const DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / 
                                tmp_small_block_out);
             }
 
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
             for (int ii = 0; ii < GEMM_BLOCK; ii++) {
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                 for (int jj = 0; jj < GEMM_BLOCK; jj++) {
                     c_block_out[i][j][ii][jj] = first_block ? c_block_out[i][j][ii][jj] + alpha * tmp_small_block_out[ii][jj] : alpha * tmp_small_block_out[ii][jj];
                 }
@@ -168,10 +168,10 @@ calculates C_OUT = alpha * C + beta * A.dot(B)
 */
 __attribute__((uses_global_work_offset(0)))
 __kernel
-void gemm(__global volatile const DEVICE_DATA_TYPE* restrict a,
-          __global volatile const DEVICE_DATA_TYPE* restrict b,
-          __global volatile const DEVICE_DATA_TYPE* restrict c,
-          __global volatile DEVICE_DATA_TYPE* restrict c_out,
+void gemm(__global const DEVICE_DATA_TYPE* restrict a,
+          __global const DEVICE_DATA_TYPE* restrict b,
+          __global const DEVICE_DATA_TYPE* restrict c,
+          __global DEVICE_DATA_TYPE* restrict c_out,
           const DEVICE_DATA_TYPE alpha,
           const DEVICE_DATA_TYPE beta,
           const uint size) {
@@ -198,16 +198,16 @@ void gemm(__global volatile const DEVICE_DATA_TYPE* restrict a,
                     for (int j = 0; j < BLOCK_SIZE / GLOBAL_MEM_UNROLL; j++) {
                         DEVICE_DATA_TYPE a_reorder_buffer[GLOBAL_MEM_UNROLL];
                         DEVICE_DATA_TYPE b_reorder_buffer[GLOBAL_MEM_UNROLL];
-#pragma unroll
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                         for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
                             a_reorder_buffer[u] = a[(y_block * size + diagonal_block) * BLOCK_SIZE +
                                 j * GLOBAL_MEM_UNROLL + u + i * size];
                             b_reorder_buffer[u] = b[(diagonal_block * size + x_block) * BLOCK_SIZE +
                                                           j * GLOBAL_MEM_UNROLL + u + i * size];
                         }
-#pragma unroll
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/GEMM_BLOCK)))
                         for (int b = 0; b < GLOBAL_MEM_UNROLL/GEMM_BLOCK; b++) {
-#pragma unroll
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                             for (int u = 0; u < GEMM_BLOCK; u++) {
                                 a_block[i / GEMM_BLOCK][j * (GLOBAL_MEM_UNROLL / GEMM_BLOCK)+ b][i & (GEMM_BLOCK - 1)][u] = a_reorder_buffer[b * GEMM_BLOCK + u];
                                 b_block[i / GEMM_BLOCK][j * (GLOBAL_MEM_UNROLL / GEMM_BLOCK)+ b][i & (GEMM_BLOCK - 1)][u] = b_reorder_buffer[b * GEMM_BLOCK + u];
@@ -220,7 +220,7 @@ void gemm(__global volatile const DEVICE_DATA_TYPE* restrict a,
 
 #pragma loop_coalesce
             for (int i = 0; i < BLOCK_SIZE; i++) {
-#pragma unroll GLOBAL_MEM_UNROLL
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                 for (int j = 0; j < BLOCK_SIZE; j++) {
                     c_out[(y_block * size + x_block) * BLOCK_SIZE + j
                           + i * size] = beta * c[(y_block * size + x_block) * BLOCK_SIZE + j + i * size] +

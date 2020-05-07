@@ -2,17 +2,7 @@
 
 This file contains all changes made to the source code for each release.
 
-## 0.2.1
+## 1.0.1
 
 #### Added:
 - Support for Xilinx Vitis toolchain
-
-## 0.2
-
-#### Added:
-- Support for BLAS library in validation
-
-
-## 0.1
-
-Base version with cannon kernel

@@ -97,10 +97,7 @@ Name             | Default     | Description                          |
 `XILINX_LINK_SETTINGS_FILE` | First `settings.link.xilinx.*.ini` file found in the `settings` folder of the benchmark | Path to the file containing link settings like the mapping of the memory banks to the kernel parameters |
 `XILINX_GENERATE_LINK_SETTINGS` | `Yes` if the link settings file ends on `.generator.ini`, `No` otherwise | Boolean flag indicating if the link settings file will be used as a source to generate a link settings file e.g. for a given number of kernel replications |
 
-Currently the following benchmarks support the build with Xilinx:
-
-- STREAM
-- RandomAccess
+For an overview of the current limitations of the benchmarks with regards to the Xilinx Vitis toolchain refer to the subsection [Notes on Xilinx Vitis Compatibility](#notes-on-xilinx-vitis-compatibility).
 
 For the other benchmarks, the Xilinx configuration options will have no effect.
 When building a benchmark for Xilinx FPGAs double check the path to the settings files and if they match to the target board.
@@ -171,6 +168,25 @@ The subfolder `scripts` contains helper scripts that are used during the build a
 When major changes are made on the code the functionality should be checked by running all tests in the suite.
 To simplify this process the script `test_all.sh` can be used to build all benchmarks with the default configuration
 and run all tests.
+
+
+## Notes on Xilinx Vitis Compatibility
+
+Currently not all benchmarks fully support the Xilinx Vitis toolchain.
+In this section the limitations of the benchmarks with regards to Xilinx Vitis are listed to give an overview:
+
+- **Full Support:** STREAM, RandomAccess
+- **Not optimized:** PTRANS, LINPACK, GEMM, FFT
+- **No or limited testing and emulation:** LINPACK, FFT
+- **Not compatible:** b_eff
+
+*Full Support* means that the benchmarks work for the toolchain as expected.
+*Not optimized* inidcates, that build, emulation and testing works, but the kernels are not optimized for the toolchain which might lead to poor performnce.
+*No or limited testing and emulation* means that there are problems with the creation of the emulation kernels.
+Thus the tests can not be executed for the benchmarks.
+Compilation and synthesis of the kernels works for these benchmarks.
+The benchmarks listed under *Not compatible* are not compatible with the Xilinx toolchain.
+
 
 ## Publications
 
