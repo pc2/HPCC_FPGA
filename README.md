@@ -39,7 +39,7 @@ All benchmarks come with the following build dependencies:
 - CMake >= 3.1
 - C++ compiler with C++11 support
 - Intel OpenCL FPGA SDK or Xilinx Vitis
-- Python 3 with [pandas](https://pandas.pydata.org) installed (for the evaluation scripts)
+- Python 3 for code generation and with [pandas](https://pandas.pydata.org) installed for the evaluation scripts
 
 Moreover the host code and the build system use additional libraries included as git submodules:
 
