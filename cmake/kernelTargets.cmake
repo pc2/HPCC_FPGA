@@ -38,6 +38,7 @@ function(generate_kernel_targets_xilinx)
         )
         if (XILINX_GENERATE_LINK_SETTINGS)
             add_custom_command(OUTPUT ${xilinx_link_settings}
+                    COMMAND ${CODE_GENERATOR} -o ${xilinx_link_settings} -p num_replications=${NUM_REPLICATIONS} --comment "#" --comment-ml-start "$" --comment-ml-end "$" ${gen_xilinx_link_settings}
                     COMMAND ${CMAKE_COMMAND} -Dsettings_f=${xilinx_link_settings} -Dbase_file=${gen_xilinx_link_settings} -DNUM_REPLICATIONS=${NUM_REPLICATIONS} -P "${CMAKE_SOURCE_DIR}/../cmake/generateXilinxSettings.cmake"
                     MAIN_DEPENDENCY ${gen_xilinx_link_settings}
                     )
@@ -45,7 +46,7 @@ function(generate_kernel_targets_xilinx)
 
         if (KERNEL_REPLICATION_ENABLED)
                 add_custom_command(OUTPUT ${source_f}
-                        COMMAND ${CMAKE_COMMAND} -Dsource_f=${source_f} -Dbase_file=${base_file} -DNUM_REPLICATIONS=1 -P "${CMAKE_SOURCE_DIR}/../cmake/generateKernels.cmake"
+                        COMMAND ${CODE_GENERATOR} -o ${source_f} -p num_replications=1 ${base_file}
                         MAIN_DEPENDENCY ${base_file}
                 )
         else()
@@ -104,8 +105,12 @@ function(generate_kernel_targets_intel)
         set(bitstream_emulate_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.aocx)
         set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.aocx)
         if (KERNEL_REPLICATION_ENABLED)
+                set(codegen_parameters -p num_replications=${NUM_REPLICATIONS})
+                if (INTEL_CODE_GENERATION_SETTINGS)
+                        list(APPEND codegen_parameters -p "\"use_file('${INTEL_CODE_GENERATION_SETTINGS}')\"")
+                endif()
                 add_custom_command(OUTPUT ${source_f}
-                        COMMAND ${CMAKE_COMMAND} -Dsource_f=${source_f} -Dbase_file=${base_file} -DNUM_REPLICATIONS=${NUM_REPLICATIONS} -P "${CMAKE_SOURCE_DIR}/../cmake/generateKernels.cmake"
+                        COMMAND ${CODE_GENERATOR} -o ${source_f} ${codegen_parameters} ${base_file}
                         MAIN_DEPENDENCY ${base_file}
                         )
         else()

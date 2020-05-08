@@ -6,9 +6,11 @@ KERNEL_NUMBER will be replaced by the build script with the ID of the current re
 */
 #include "parameters.h"
 
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+
 __kernel
 __attribute__((uses_global_work_offset(0)))
-void copy_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
+void copy_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
           __global DEVICE_ARRAY_DATA_TYPE * restrict out,
           const uint array_size) {
     uint number_elements = array_size / VECTOR_COUNT;
@@ -20,7 +22,7 @@ void copy_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
 
 __kernel
 __attribute__((uses_global_work_offset(0)))
-void add_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
+void add_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
           __global const DEVICE_ARRAY_DATA_TYPE * restrict in2,
           __global DEVICE_ARRAY_DATA_TYPE * restrict out,
           const uint array_size) {
@@ -33,7 +35,7 @@ void add_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
 
 __kernel
 __attribute__((uses_global_work_offset(0)))
-void scale_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
+void scale_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
           __global DEVICE_ARRAY_DATA_TYPE * restrict out,
           const DEVICE_SCALAR_DATA_TYPE scalar,
           const uint array_size) {
@@ -46,7 +48,7 @@ void scale_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
 
 __kernel
 __attribute__((uses_global_work_offset(0)))
-void triad_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
+void triad_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
           __global const DEVICE_ARRAY_DATA_TYPE * restrict in2,
           __global DEVICE_ARRAY_DATA_TYPE * restrict out,
           const DEVICE_SCALAR_DATA_TYPE scalar,
@@ -57,3 +59,5 @@ void triad_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
         out[i] = in1[i] + scalar * in2[i];
     }
 }
+
+// PY_CODE_GEN block_end
