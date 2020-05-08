@@ -85,19 +85,20 @@ def replace(code_block=None, local_variables=None):
     else:
         variables = globals()
     matches = itertools.chain(re.finditer("%s\\s*%s\\s+(?P<code>(.|\n)+?)%s" % (ml_comment_symbol_start, pycodegen_cmd, ml_comment_symbol_end), code_block, flags=0),
-                                re.finditer("%s\\s+((?!block_start)|(?!block_end))\\s+(?P<code>(.)+?)\n" % (pragma_cmd), code_block, flags=0))
+                                re.finditer("%s\\s+(?!block_start\\s+)(?!block_end\\s+)(?P<code>(.)+?)\n" % (pragma_cmd), code_block, flags=0))
     for res_ml in matches:
-        logging.debug("Found inline code!")
         res_ml_code = res_ml.group(0)
         try:
-            code_block = code_block.replace(res_ml_code, str(eval(res_ml.groupdict()["code"], variables)))
+            evaluated = str(eval(res_ml.groupdict()["code"], variables))
+            code_block = code_block.replace(res_ml_code, evaluated)
+            logging.debug("Evaluated '%s' to '%s'" % (res_ml.groupdict()["code"], evaluated))
             continue
         except Exception as e:
             logging.debug("Failed to evaluate inline code")
         try:
-            logging.debug("Try execution in global space")
             exec(res_ml.groupdict()["code"], globals())
             code_block = code_block.replace(res_ml_code, "")
+            logging.debug("Executed in global space: '%s'" % res_ml.groupdict()["code"])
         except Exception as e:
             logging.warning("Could not execute inline code:\n\tCommand: '''\n%s\n'''\n\tError: %s" % (res_ml.groupdict()["code"], e))
     return code_block
@@ -131,7 +132,7 @@ def modify_block(code_block, cmd_str, out):
 def parse_string(code_string, out):
     try:
         code_string = replace(code_string)
-        for res in re.finditer("%s\\s*block_start\\s+(?P<cmd>.*)\n(?P<code>(.|\n)+?)%s\\s*block_end\\s*\n" % (pragma_cmd, pragma_cmd), code_string, flags=0):
+        for res in re.finditer("%s\\s+block_start\\s+(?P<cmd>.*)\n(?P<code>(.|\n)+?)%s\\s+block_end\\s*\n" % (pragma_cmd, pragma_cmd), code_string, flags=0):
             logging.debug("Found block match!")
             d = res.groupdict()
             code_block = d["code"]
