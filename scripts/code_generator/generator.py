@@ -22,53 +22,28 @@
 ##
 
 import argparse
+import itertools
 import sys
 import logging
+import re
 
 
 comment_symbol = "//"
+ml_comment_symbol_start = "/*"
+ml_comment_symbol_end = "*/"
 pycodegen_cmd = "PY_CODE_GEN"
-pragma_cmd = PRAGMA +" "+ pycodegen_cmd
+pragma_cmd = comment_symbol +"\\s*"+ pycodegen_cmd
 
 parser = argparse.ArgumentParser(description='Preprocessor for code replication and advanced code modification.')
 parser.add_argument('file', metavar='CODE_FILE', type=str,
                    help='Path to the file that is used as input')
 parser.add_argument("-o", dest="output_file", default=None, help="Path to the output file. If not given, output will printed to stdout.")
 parser.add_argument("--comment", dest="comment_symbol", default=comment_symbol, help="Symbols that are used to comment out lines in the target language. Default='%s'" % comment_symbol)
+parser.add_argument("--comment-ml-start", dest="comment_symbol_ml_start", default=ml_comment_symbol_start, help="Symbols that are used to start a multi line comment in the target language. Default='%s'" % ml_comment_symbol_start)
+parser.add_argument("--comment-ml-end", dest="comment_symbol_ml_end", default=ml_comment_symbol_end, help="Symbols that are used to end a multi line comment in the target language. Default='%s'" % ml_comment_symbol_end)
 parser.add_argument("-p", dest="params", default=[], action="append", help="Python statement that is parsed before modifying the files. Can be used to define global variables.")
 
 CODE = ""
-
-def replace(input_code=None,replace_dict=None, frame="$"):
-    """
-    Replace variables in given code.
-    Helper function to simplify code replacement
-    """
-    if input_code is None:
-        input_code = CODE
-    if replace_dict is None:
-        replace_dict = {**locals(), **globals()}
-    mod_code = input_code
-    for k, v in replace_dict.items():
-        mod_code = mod_code.replace(frame + str(k) + frame, str(v))
-    return mod_code
-
-
-def if_cond(condition, if_return, else_return):
-    """
-    Evaluate a condition to select a return value
-
-    @param condition Statement that evaluates to a boolean
-    @param if_return Value that is returned if condition is true
-    @param else_return Value that is returned if condition is false
-
-    @return if_return or else_return, depending on condition
-    """
-    if condition:
-        return if_return
-    else:
-        return else_return
-
 
 def use_file(file_name):
     """
@@ -93,6 +68,41 @@ def use_file(file_name):
         exit(1)
 
 
+def replace(code_block=None, local_variables=None):
+    """
+    Evaluate or execute inline code and replace the code with the result.
+
+    @param code_block The input code block that will be parsed and modified
+    @param local_variables A dictionary containing local variables that should also be considered (like locals())
+
+    @return the modified code
+    """
+    global CODE
+    if not code_block:
+        code_block = CODE
+    if local_variables is not None:
+        variables = {**globals(), **local_variables}
+    else:
+        variables = globals()
+    matches = itertools.chain(re.finditer("%s\\s*%s\\s+(?P<code>(.|\n)+?)%s" % (ml_comment_symbol_start, pycodegen_cmd, ml_comment_symbol_end), code_block, flags=0),
+                                re.finditer("%s\\s+((?!block_start)|(?!block_end))\\s+(?P<code>(.)+?)\n" % (pragma_cmd), code_block, flags=0))
+    for res_ml in matches:
+        logging.debug("Found inline code!")
+        res_ml_code = res_ml.group(0)
+        try:
+            code_block = code_block.replace(res_ml_code, str(eval(res_ml.groupdict()["code"], variables)))
+            continue
+        except Exception as e:
+            logging.debug("Failed to evaluate inline code")
+        try:
+            logging.debug("Try execution in global space")
+            exec(res_ml.groupdict()["code"], globals())
+            code_block = code_block.replace(res_ml_code, "")
+        except Exception as e:
+            logging.warning("Could not execute inline code:\n\tCommand: '''\n%s\n'''\n\tError: %s" % (res_ml.groupdict()["code"], e))
+    return code_block
+
+
 def modify_block(code_block, cmd_str, out):
     global CODE
     CODE  = code_block
@@ -112,53 +122,29 @@ def modify_block(code_block, cmd_str, out):
     elif type(mod_code) is not str:
         logging.warning("%s is not a string. Automatic convert to string!" % mod_code)
         mod_code = str(mod_code)
-    logging.debug("Start parsing of modified sub-block")
-    parse_string(mod_code, out)
-    logging.debug("Finished parsing of modified sub-block")
+    return mod_code
+    #logging.debug("Start parsing of modified sub-block")
+    #parse_string(mod_code, out)
+    #logging.debug("Finished parsing of modified sub-block")
 
 
 def parse_string(code_string, out):
-    nested_level = 0
-    current_block = ""
-    for line_number, line in enumerate(code_string.split('\n')):
-        line += "\n"
-        sline = line.strip()
-        if sline.startswith(pragma_cmd) and nested_level == 0:
-            sline = sline.replace(pragma_cmd,"")
-            if 'block_start' in sline:
-                nested_level += 1
-            elif 'block_end' in sline:
-                logging.error("Block end before start! Invalid syntax!")
-                print("Block end before start! Invalid syntax!", file=sys.stderr)
-                exit(1)
-            else:
-                cmd_str = sline.strip()
-                try:
-                    exec(cmd_str, globals())
-                except Exception as e:
-                    logging.error("Block: %s \n %s" % (current_block, e))
-                    logging.error("Global variables: %s" % globals())
-                    print( "Block: %s \n %s" % (current_block, e),file=sys.stderr)
-                    exit(1)
-        elif sline.startswith(pragma_cmd):
-            sline = sline.replace(pragma_cmd,"")
-            if 'block_start' in sline:
-                nested_level += 1
-                current_block += line
-            elif 'block_end' in sline:
-                nested_level -= 1
-                if nested_level == 0:
-                    cmd_str = sline.replace('block_end', "").strip()
-                    modify_block(current_block, cmd_str, out)
-                    current_block = ""
-                else:
-                    current_block += line
-            else:
-                current_block += line
-        elif nested_level > 0:
-            current_block += line
-        else:
-            print(line, end='', file=out)
+    try:
+        code_string = replace(code_string)
+        for res in re.finditer("%s\\s*block_start\\s+(?P<cmd>.*)\n(?P<code>(.|\n)+?)%s\\s*block_end\\s*\n" % (pragma_cmd, pragma_cmd), code_string, flags=0):
+            logging.debug("Found block match!")
+            d = res.groupdict()
+            code_block = d["code"]
+            logging.debug("Modify the block!")
+            code_block = modify_block(code_block, d["cmd"], out)
+            code_string = code_string.replace(res.group(0), code_block)
+        logging.debug("Parsing complete. Write result to file.")
+        output.write(code_string)
+    except Exception as e:
+        logging.error("Block: %s \n %s" % (code_string, e))
+        logging.error("Global variables: %s" % globals())
+        logging.error("Local variables: %s" % locals())
+        print( "Error while parsing code block: %s \n %s" % (e),file=sys.stderr)
 
 
 def parse_file(file_name, out):
@@ -182,7 +168,10 @@ def parse_file(file_name, out):
 
 if __name__=="__main__":
     args = parser.parse_args()
-    log_file_name = args.file + ".genlog"
+    if args.output_file:
+        log_file_name = args.output_file + ".log"
+    else:
+        log_file_name = "generator.log"
     logging.basicConfig(filename=log_file_name, filemode='w', level=logging.DEBUG)
     output = sys.stdout
     for p in args.params:
@@ -191,7 +180,10 @@ if __name__=="__main__":
     if args.output_file:
         logging.debug("Use output file: %s" % args.output_file)
         output = open(args.output_file, 'w')
-    pragma_cmd = args.pragma_cmd
+    comment_symbol = re.escape(args.comment_symbol)
+    ml_comment_symbol_start = re.escape(args.comment_symbol_ml_start)
+    ml_comment_symbol_end = re.escape(args.comment_symbol_ml_end)
+    pragma_cmd = comment_symbol +"\\s*"+ pycodegen_cmd
     logging.debug("Use pragma command: %s", pragma_cmd)
     logging.debug("Start parsing file: %s" % args.file)
     parse_file(args.file, output)
