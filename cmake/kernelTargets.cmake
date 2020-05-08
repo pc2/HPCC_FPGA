@@ -98,15 +98,22 @@ function(generate_kernel_targets_intel)
         if (KERNEL_REPLICATION_ENABLED)
                 set(source_f "${CMAKE_BINARY_DIR}/src/device/replicated_${kernel_file_name}.cl")
         else()
-                set(source_f ${base_file})
+                set(source_f "${CMAKE_BINARY_DIR}/src/device/copied_${kernel_file_name}_intel.cl")
         endif()
         set(report_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_report_intel)
         set(bitstream_emulate_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.aocx)
         set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.aocx)
-        add_custom_command(OUTPUT ${source_f}
-                COMMAND ${CMAKE_COMMAND} -Dsource_f=${source_f} -Dbase_file=${base_file} -DNUM_REPLICATIONS=${NUM_REPLICATIONS} -P "${CMAKE_SOURCE_DIR}/../cmake/generateKernels.cmake"
-                MAIN_DEPENDENCY ${base_file}
+        if (KERNEL_REPLICATION_ENABLED)
+                add_custom_command(OUTPUT ${source_f}
+                        COMMAND ${CMAKE_COMMAND} -Dsource_f=${source_f} -Dbase_file=${base_file} -DNUM_REPLICATIONS=${NUM_REPLICATIONS} -P "${CMAKE_SOURCE_DIR}/../cmake/generateKernels.cmake"
+                        MAIN_DEPENDENCY ${base_file}
+                        )
+        else()
+                add_custom_command(OUTPUT ${source_f}
+                        COMMAND cp ${base_file} ${source_f}
+                        MAIN_DEPENDENCY ${base_file}
                 )
+        endif()
         add_custom_command(OUTPUT ${bitstream_emulate_f}
                 COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -legacy-emulator -march=emulator
                 -o ${bitstream_emulate_f}
@@ -123,13 +130,10 @@ function(generate_kernel_targets_intel)
                 MAIN_DEPENDENCY ${source_f}
                 )
         add_custom_target(${kernel_file_name}_report_intel DEPENDS ${report_f}
-                DEPENDS ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h
-                SOURCES ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h)
+                DEPENDS ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h)
         add_custom_target(${kernel_file_name}_intel DEPENDS ${bitstream_f}
-                DEPENDS ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h
-                SOURCES ${source_f} ${CMAKE_BINARY_DIR}/src/common/parameters.h)
+                DEPENDS ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h)
         add_custom_target(${kernel_file_name}_emulate_intel DEPENDS ${bitstream_emulate_f}
-                DEPENDS ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h
-                SOURCES ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h)
+                DEPENDS ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h)
     endforeach ()
 endfunction()
