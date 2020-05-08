@@ -3,6 +3,6 @@
 cmake-*
 .vscode
 *._*
-build*
+build/*
 .idea
 .venv
