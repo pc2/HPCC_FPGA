@@ -261,8 +261,8 @@ choose a device.
             if (defaultDevice < deviceList.size()) {
                 chosenDeviceId = defaultDevice;
             } else {
-                std::cerr << "Default platform " << defaultDevice
-                          << " can not be used. Available platforms: "
+                std::cerr << "Default device " << defaultDevice
+                          << " can not be used. Available devices: "
                           << deviceList.size() << std::endl;
                 exit(1);
             }

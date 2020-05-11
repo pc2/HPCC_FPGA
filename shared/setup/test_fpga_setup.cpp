@@ -20,7 +20,7 @@ TEST (FPGASetup, FindNonExistingPlatform) {
     // TODO regex does not work so for now its not tested!
     EXPECT_EXIT(fpga_setup::selectFPGADevice(DEFAULT_PLATFORM + 100, DEFAULT_DEVICE),
                 ::testing::ExitedWithCode(1),
-                ::testing::MatchesRegex(".*"));
+                ::testing::MatchesRegex(".*?Default platform \\d+ can not be used. Available platforms: \\d+"));
 }
 
 /**
@@ -31,7 +31,7 @@ TEST (FPGASetup, FindNonExistingDevice) {
     // TODO regex does not work so for now its not tested!
     EXPECT_EXIT(fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE + 100),
                 ::testing::ExitedWithCode(1),
-                ::testing::MatchesRegex(".*"));
+                ::testing::MatchesRegex(".*?Default device \\d+ can not be used. Available devices: \\d+"));
 }
 
 
