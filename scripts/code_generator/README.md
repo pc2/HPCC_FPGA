@@ -108,10 +108,9 @@ This will read the file and make all functions and global variables available wi
 
 `replace()` makes it easier to replace global variables within the code:
 
-    // PY_CODE_GEN i=2
-    // PY_CODE_GEN block_start
+    // PY_CODE_GEN block_start replace(local_variables={"test": 2})
     int var = /*PY_CODE_GEN test*/
-    // PY_CODE_GEN block_end replace(local_variables={"test": 2})
+    // PY_CODE_GEN block_end
 
 will generate the code `int var = 2`.
 
