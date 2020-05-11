@@ -5,10 +5,11 @@
 #include "parameters.h"
 #include "../src/host/execution.h"
 #include "setup/fpga_setup.hpp"
+#include "testing/test_program_settings.h"
 #include "../src/host/stream_functionality.hpp"
 
 
-struct OpenCLKernelTest : testing::Test {
+struct OpenCLKernelTest :public  ::testing::Test {
     HOST_DATA_TYPE *A;
     HOST_DATA_TYPE *B;
     HOST_DATA_TYPE *C;
@@ -25,10 +26,20 @@ struct OpenCLKernelTest : testing::Test {
                        sizeof(HOST_DATA_TYPE) * array_size);
     }
 
-    void setupFPGA(std::string kernelFileName, bool is_single_kernel) {
-        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
+    void SetUp( ) { 
+        std::cout << programSettings << std::endl;
+       setupFPGA(programSettings);
+   }
+
+    void setupFPGA(std::shared_ptr<ProgramSettings> settings) {
+        // Redirect stout buffer to local buffer to make checks possible
+        // std::stringstream newStdOutBuffer;
+        // std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
+        // std::cout.rdbuf(newStdOutBuffer.rdbuf());
+
+        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(settings->defaultPlatform, settings->defaultDevice);
         cl::Context context(device[0]);
-        cl::Program program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
+        cl::Program program = fpga_setup::fpgaSetup(&context, device, &settings->kernelFileName);
         config = std::make_shared<bm_execution::ExecutionConfiguration>(
                 bm_execution::ExecutionConfiguration{
                         context, device[0], program,
@@ -36,10 +47,13 @@ struct OpenCLKernelTest : testing::Test {
                         NUM_KERNEL_REPLICATIONS,
                         array_size,
                         false,
-                        is_single_kernel
+                        settings->useSingleKernel
                 });
         HOST_DATA_TYPE norm;
         generateInputData(A, B, C, array_size);
+
+        // Redirect stdout to old buffer
+        // std::cout.rdbuf(oldStdOutBuffer);
     }
 
     ~OpenCLKernelTest() override {
@@ -49,20 +63,11 @@ struct OpenCLKernelTest : testing::Test {
     }
 };
 
-struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface<std::tuple<std::string,bool>> {
-    DifferentOpenCLKernelTest() {
-        auto params = GetParam();
-        auto kernel_file = std::get<0>(params);
-        bool is_single_kernel = std::get<1>(params);
-        setupFPGA(kernel_file, is_single_kernel);
-    }
-};
-
 
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_P(DifferentOpenCLKernelTest, FPGACorrectResultsOneRepetition) {
+TEST_F(OpenCLKernelTest, FPGACorrectResultsOneRepetition) {
 
     auto result = bm_execution::calculate(config, A, B, C);
     for (int i = 0; i < array_size; i++) {
@@ -75,7 +80,7 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectResultsOneRepetition) {
 /**
  * Execution returns correct results for three repetitions
  */
-TEST_P(DifferentOpenCLKernelTest, FPGACorrectResultsThreeRepetition) {
+TEST_F(OpenCLKernelTest, FPGACorrectResultsThreeRepetition) {
     config->repetitions = 3;
     auto result = bm_execution::calculate(config, A, B, C);
     for (int i = 0; i < array_size; i++) {
@@ -84,17 +89,3 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectResultsThreeRepetition) {
         EXPECT_FLOAT_EQ(C[i], 1800.0);
     }
 }
-
-
-#ifdef INTEL_FPGA
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-        testing::Values(std::make_tuple("stream_kernels_emulate.aocx", false),
-                std::make_tuple("stream_kernels_single_emulate.aocx", true))
-);
-#endif
-
-#ifdef XILINX_FPGA
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-                        testing::Values(std::make_tuple("stream_kernels_single_emulate.xclbin", true))
-);
-#endif

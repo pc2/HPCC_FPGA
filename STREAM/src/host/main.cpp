@@ -3,6 +3,8 @@
 //
 
 #include "stream_functionality.hpp"
+#include "program_settings.h"
+#include "setup/common_benchmark_io.hpp"
 #include "CL/opencl.h"
 
 /**

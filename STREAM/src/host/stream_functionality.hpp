@@ -33,45 +33,6 @@ SOFTWARE.
 #include "setup/fpga_setup.hpp"
 #include "parameters.h"
 
-/*
-Short description of the program.
-Moreover the version and build time is also compiled into the description.
-*/
-#define STR_EXPAND(tok) #tok
-#define STR(tok) STR_EXPAND(tok)
-
-#define PROGRAM_DESCRIPTION "Implementation of the STREAM benchmark"\
-                            " proposed in the HPCC benchmark suite for FPGA.\n"\
-                            "Version: " VERSION "\n"
-
-#define ENTRY_SPACE 15
-
-struct ProgramSettings {
-    uint numRepetitions;
-    uint streamArraySize;
-    uint kernelReplications;
-    bool useMemoryInterleaving;
-    int defaultPlatform;
-    int defaultDevice;
-    std::string kernelFileName;
-    bool useSingleKernel;
-};
-
-
-/**
-Parses and returns program options using the cxxopts library.
-Supports the following parameters:
-    - file name of the FPGA kernel file (-f,--file)
-    - number of repetitions (-n)
-    - number of kernel replications (-r)
-    - data size (-d)
-    - use memory interleaving
-@see https://github.com/jarro2783/cxxopts
-
-@return program settings that are created from the given program arguments
-*/
-std::shared_ptr<ProgramSettings>
-parseProgramParameters(int argc, char *argv[]);
 
 /**
 Prints the execution results to stdout
@@ -80,15 +41,6 @@ Prints the execution results to stdout
 */
 void
 printResults(std::shared_ptr<bm_execution::ExecutionTimings> results);
-
-/**
- * Prints the used configuration to std out before starting the actual benchmark.
- *
- * @param programSettings The program settings retrieved from the command line
- * @param device The device used for execution
- */
-void printFinalConfiguration(const std::shared_ptr<ProgramSettings> &programSettings,
-                             const cl::Device &device);
 
 
 /**
