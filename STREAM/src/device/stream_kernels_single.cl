@@ -26,6 +26,9 @@ void calc_/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]*/ 
         DEVICE_ARRAY_DATA_TYPE buffer1[BUFFER_SIZE];
 #endif
     uint number_elements = array_size / VECTOR_COUNT;
+#ifdef INTEL_FPGA
+#pragma disable_loop_pipelining
+#endif
     for(uint i = 0;i<number_elements;i += BUFFER_SIZE){
 #ifdef INNER_LOOP_BUFFERS
         DEVICE_ARRAY_DATA_TYPE buffer1[BUFFER_SIZE];

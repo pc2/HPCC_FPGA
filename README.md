@@ -86,6 +86,7 @@ For the Intel compiler these are:
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
 `AOC_FLAGS`| `-fpc -fp-relaxed -no-interleaving=default` | Additional Intel AOC compiler flags that are used for kernel compilation |
+`INTEL_CODE_GENERATION_SETTINGS` | "" | Path to the settings file that will be used as input for the code generator script. It may contain additional variables or functions.  |
 
 For the Xilinx compiler it is also necessary to set settings files for the compile and link step of the compiler.
 The available options are given in the following table:
