@@ -39,6 +39,8 @@ main(int argc, char *argv[]) {
 
     std::cout << "THIS BINARY EXECUTES UNIT TESTS FOR THE FOLLOWING BENCHMARK:" << std::endl << std::endl;
 
+    ::testing::InitGoogleTest(&argc, argv);
+
     // Parse input parameters
     programSettings = parseProgramParameters(argc, argv);
     fpga_setup::setupEnvironmentAndClocks();
@@ -49,8 +51,6 @@ main(int argc, char *argv[]) {
 
     // Print input parameters
     printFinalConfiguration(programSettings, usedDevice[0]);
-
-    ::testing::InitGoogleTest();
 
     return RUN_ALL_TESTS();
 

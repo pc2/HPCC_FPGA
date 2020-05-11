@@ -33,9 +33,9 @@ struct OpenCLKernelTest :public  ::testing::Test {
 
     void setupFPGA(std::shared_ptr<ProgramSettings> settings) {
         // Redirect stout buffer to local buffer to make checks possible
-        // std::stringstream newStdOutBuffer;
-        // std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
-        // std::cout.rdbuf(newStdOutBuffer.rdbuf());
+        std::stringstream newStdOutBuffer;
+        std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
+        std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
         std::vector<cl::Device> device = fpga_setup::selectFPGADevice(settings->defaultPlatform, settings->defaultDevice);
         cl::Context context(device[0]);
@@ -53,7 +53,7 @@ struct OpenCLKernelTest :public  ::testing::Test {
         generateInputData(A, B, C, array_size);
 
         // Redirect stdout to old buffer
-        // std::cout.rdbuf(oldStdOutBuffer);
+        std::cout.rdbuf(oldStdOutBuffer);
     }
 
     ~OpenCLKernelTest() override {
