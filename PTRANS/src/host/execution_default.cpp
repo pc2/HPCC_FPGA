@@ -55,7 +55,7 @@ namespace bm_execution {
         transposeKernel.setArg(0, bufferA);
         transposeKernel.setArg(1, bufferB);
         transposeKernel.setArg(2, bufferA_out);
-        transposeKernel.setArg(3, config->matrixSize);
+        transposeKernel.setArg(3, config->matrixSize / config->blockSize);
 
         cl::CommandQueue queue(config->context);
 

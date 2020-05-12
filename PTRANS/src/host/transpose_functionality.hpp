@@ -46,6 +46,7 @@ Moreover the version and build time is also compiled into the description.
 struct ProgramSettings {
     uint numRepetitions;
     cl_uint matrixSize;
+    cl_uint blockSize;
     int defaultPlatform;
     int defaultDevice;
     bool useMemInterleaving;

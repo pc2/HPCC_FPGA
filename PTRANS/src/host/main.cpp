@@ -37,7 +37,8 @@ main(int argc, char *argv[]) {
                     context, device, program,
                     programSettings->kernelName,
                     programSettings->numRepetitions,
-                    programSettings->matrixSize,
+                    programSettings->matrixSize * programSettings->blockSize,
+                    programSettings->blockSize,
                     programSettings->useMemInterleaving
             });
 

@@ -69,25 +69,28 @@ For execution of the benchmark run:
     
 For more information on available input parameters run
 
-    ./trans_intel -h
-    
+    $./trans_xilinx -h
     Implementation of the matrix transposition benchmark proposed in the HPCC benchmark suite for FPGA.
-    Version: 0.1.2
+    Version: 1.0.1
+
     Usage:
-      ./trans_intel [OPTION...]
-    
-      -f, --file arg        Kernel file name
-      -n, arg               Number of repetitions (default: 10)
-      -m, arg               Matrix size (default: 4096)
-          --kernel arg      Name of the kernel (default: transpose)
-      -i, --nointerleaving  Disable memory interleaving
-          --device arg      Index of the device that has to be used. If not given
+    ./trans_xilinx [OPTION...]
+
+    -f, --file arg        Kernel file name
+    -n, arg               Number of repetitions (default: 10)
+    -m, arg               Matrix size in number of blocks in one dimension
+                            (default: 8)
+    -b, arg               Block size in number of values in one dimension
+                            (default: 512)
+        --kernel arg      Name of the kernel (default: transpose)
+    -i, --nointerleaving  Disable memory interleaving
+        --device arg      Index of the device that has to be used. If not given
                             you will be asked which device to use if there are
                             multiple devices available. (default: -1)
-          --platform arg    Index of the platform that has to be used. If not
+        --platform arg    Index of the platform that has to be used. If not
                             given you will be asked which platform to use if there
                             are multiple platforms available. (default: -1)
-      -h, --help            Print this help
+    -h, --help            Print this help
     
 
     
