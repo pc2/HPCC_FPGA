@@ -5,6 +5,8 @@
 #include <memory>
 
 #include "network_functionality.hpp"
+#include "setup/common_benchmark_io.hpp"
+#include "program_settings.h"
 #include "mpi.h"
 
 /**

@@ -4,11 +4,12 @@
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "../src/host/execution.h"
+#include "execution.h"
 #include "parameters.h"
 #include "setup/fpga_setup.hpp"
 #include "unistd.h"
 #include "mpi.h"
+#include "testing/test_program_settings.h"
 #include <fstream>
 
 struct OpenCLKernelTest : testing::Test {
@@ -18,6 +19,11 @@ struct OpenCLKernelTest : testing::Test {
     unsigned numberOfChannels = 4;
     std::string channelOutName = "kernel_output_ch";
     std::string channelInName = "kernel_input_ch";
+
+    OpenCLKernelTest() {
+        kernelFileName = programSettings->kernelFileName;
+        setupFPGA();
+    }
 
     void createChannelFilesAndSymbolicLinks() {
         for (int i=0; i < numberOfChannels; i++) {
@@ -32,7 +38,7 @@ struct OpenCLKernelTest : testing::Test {
 
     void setupFPGA() {
         createChannelFilesAndSymbolicLinks();
-        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
+        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(programSettings->defaultPlatform, programSettings->defaultDevice);
         cl::Context context(device[0]);
         cl::Program program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
         config = std::make_shared<bm_execution::ExecutionConfiguration>(
@@ -44,31 +50,9 @@ struct OpenCLKernelTest : testing::Test {
 };
 
 /**
- * Parametrized test takes a tuple of 4 parameters:
- * - name of the emulation bitstream
- * - number of channels
- * - name of the external output channel descriptors
- * - name of the external input channel descriptors
- */
-struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface<std::tuple<std::string, unsigned, std::string, std::string>> {
-    DifferentOpenCLKernelTest() {
-        auto params = GetParam();
-        kernelFileName = std::get<0>(params);
-        numberOfChannels = std::get<1>(params);
-        channelOutName = std::get<2>(params);
-        channelInName = std::get<3>(params);
-        setupFPGA();
-    }
-
-    ~DifferentOpenCLKernelTest() {
-    }
-};
-
-
-/**
  * Tests if calculate returns the correct execution results
  */
-TEST_P(DifferentOpenCLKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
+TEST_F(OpenCLKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
     config->repetitions = 1;
     auto result = bm_execution::calculate(config, 1,1);
     EXPECT_EQ(1, result->messageSize);
@@ -79,7 +63,7 @@ TEST_P(DifferentOpenCLKernelTest, CalculateReturnsCorrectExecutionResultFor111) 
 /**
  * Tests if calculate returns the correct execution results for multiple repetitions
  */
-TEST_P(DifferentOpenCLKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
+TEST_F(OpenCLKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
     config->repetitions = 2;
     auto result = bm_execution::calculate(config, 8,4);
     EXPECT_EQ(8, result->messageSize);
@@ -90,7 +74,7 @@ TEST_P(DifferentOpenCLKernelTest, CalculateReturnsCorrectExecutionResultFor842) 
 /**
  * Tests if data is written to the channels for small message sizes
  */
-TEST_P(DifferentOpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) {
+TEST_F(OpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) {
     config->repetitions = 1;
     const unsigned messageSize = CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 4;
@@ -113,7 +97,7 @@ TEST_P(DifferentOpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingOne
 /**
  * Tests if data is written to the channels for small message sizes filling two channels
  */
-TEST_P(DifferentOpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels) {
+TEST_F(OpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels) {
     config->repetitions = 1;
     const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 4;
@@ -133,7 +117,7 @@ TEST_P(DifferentOpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwo
 /**
  * Tests if data is written to the channels for message sizes filling more than two channels
  */
-TEST_P(DifferentOpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoChannels) {
+TEST_F(OpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoChannels) {
     config->repetitions = 1;
     const unsigned messageSize = 4 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 1;
@@ -153,7 +137,7 @@ TEST_P(DifferentOpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingMor
 /**
  * Tests if correct data is written to the channels
  */
-TEST_P(DifferentOpenCLKernelTest, CorrectDataIsWrittenToChannel) {
+TEST_F(OpenCLKernelTest, CorrectDataIsWrittenToChannel) {
     config->repetitions = 1;
     const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 4;
@@ -171,8 +155,3 @@ TEST_P(DifferentOpenCLKernelTest, CorrectDataIsWrittenToChannel) {
     }
     delete [] buffer;
 }
-
-
-
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-        testing::Values(std::make_tuple("communication_bw520n_emulate.aocx", 4, "kernel_output_ch", "kernel_input_ch")));
