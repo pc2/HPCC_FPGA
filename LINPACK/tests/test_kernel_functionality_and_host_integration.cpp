@@ -5,6 +5,7 @@
 #include "parameters.h"
 #include "../src/host/execution.h"
 #include "setup/fpga_setup.hpp"
+#include "testing/test_program_settings.h"
 #include "../src/host/linpack_functionality.hpp"
 #ifdef _INTEL_MKL_
 #include "mkl.h"
@@ -25,11 +26,12 @@ struct OpenCLKernelTest : testing::Test {
                        sizeof(HOST_DATA_TYPE) * array_size);
         posix_memalign(reinterpret_cast<void **>(&ipvt), 64,
                        sizeof(cl_int) * array_size);
+        setupFPGA(programSettings->kernelFileName);
     }
 
     void setupFPGA(std::string kernelFileName) {
         lastKernelFileName = kernelFileName;
-        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
+        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(programSettings->defaultPlatform, programSettings->defaultDevice);
         cl::Context context(device[0]);
         cl::Program program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
         config = std::make_shared<bm_execution::ExecutionConfiguration>(
@@ -49,19 +51,11 @@ struct OpenCLKernelTest : testing::Test {
     }
 };
 
-struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface<std::string> {
-    DifferentOpenCLKernelTest() {
-        auto params = GetParam();
-        auto kernel_file = params;
-        setupFPGA(kernel_file);
-    }
-};
-
 
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_P(DifferentOpenCLKernelTest, FPGACorrectResultsOneRepetition) {
+TEST_F(OpenCLKernelTest, FPGACorrectResultsOneRepetition) {
 
     auto result = bm_execution::calculate(config, A, b, ipvt);
     for (int i = 0; i < array_size; i++) {
@@ -73,7 +67,7 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectResultsOneRepetition) {
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_P(DifferentOpenCLKernelTest, FPGASimilarResultsToLAPACKforSingleBlock) {
+TEST_F(OpenCLKernelTest, FPGASimilarResultsToLAPACKforSingleBlock) {
 
     auto result = bm_execution::calculate(config, A, b, ipvt);
     int info;    
@@ -103,7 +97,7 @@ TEST_P(DifferentOpenCLKernelTest, FPGASimilarResultsToLAPACKforSingleBlock) {
 /**
  * Execution of reference implementation returns correct results for a single repetition
  */
-TEST_P(DifferentOpenCLKernelTest, FPGAReferenceImplSimilarToMKL) {
+TEST_F(OpenCLKernelTest, FPGAReferenceImplSimilarToMKL) {
 
     gefa_ref(A, config->matrixSize, config->matrixSize, ipvt);
     gesl_ref(A, b, ipvt, config->matrixSize, config->matrixSize);
@@ -138,7 +132,7 @@ TEST_P(DifferentOpenCLKernelTest, FPGAReferenceImplSimilarToMKL) {
 // TODO this test fails most likely because of inreasing errors in C2. Use partial pivoting or other mechanisms
 //      to make the calculation stable again!
 //      Remove DISABLED_ from test name to enable the test again.
-TEST_P(DifferentOpenCLKernelTest, DISABLED_FPGASimilarResultsToLAPACKforMultipleBlocks) {
+TEST_F(OpenCLKernelTest, DISABLED_FPGASimilarResultsToLAPACKforMultipleBlocks) {
     free(A);
     free(b);
     free(ipvt);
@@ -179,16 +173,4 @@ TEST_P(DifferentOpenCLKernelTest, DISABLED_FPGASimilarResultsToLAPACKforMultiple
 }
 
 
-#endif
-
-#ifdef INTEL_FPGA
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-        testing::Values("lu_blocked_pvt_emulate.aocx")
-);
-#endif
-
-#ifdef XILINX_FPGA
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-        testing::Values("lu_blocked_pvt_emulate.xclbin")
-);
 #endif

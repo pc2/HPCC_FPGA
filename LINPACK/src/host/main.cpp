@@ -4,6 +4,7 @@
 
 #include "linpack_functionality.hpp"
 #include "setup/fpga_setup.hpp"
+#include "setup/common_benchmark_io.hpp"
 #include "execution.h"
 
 /**
