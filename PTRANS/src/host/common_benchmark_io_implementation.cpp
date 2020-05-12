@@ -57,6 +57,7 @@ parseProgramParameters(int argc, char *argv[]) {
     std::shared_ptr<ProgramSettings> sharedSettings(
             new ProgramSettings{result["n"].as<uint>(),
                                 result["m"].as<cl_uint>(),
+                                result["b"].as<cl_uint>(),
                                 result["platform"].as<int>(),
                                 result["device"].as<int>(),
                                 static_cast<bool>(result.count("i") <= 0),
