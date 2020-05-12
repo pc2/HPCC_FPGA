@@ -8,6 +8,7 @@
 #include "../src/host/gemm_functionality.hpp"
 #include "parameters.h"
 #include "setup/fpga_setup.hpp"
+#include "testing/test_program_settings.h"
 
 void
 ref_matmul(HOST_DATA_TYPE* A, HOST_DATA_TYPE* B, HOST_DATA_TYPE* C, int size) {
@@ -43,8 +44,9 @@ struct OpenCLKernelTest : testing::Test {
         setupFPGA();
     }
 
+
     void setupFPGA() {
-        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
+        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(programSettings->defaultPlatform, programSettings->defaultDevice);
         cl::Context context(device[0]);
         cl::Program program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
         config = std::make_shared<bm_execution::ExecutionConfiguration>(
@@ -69,11 +71,11 @@ struct OpenCLKernelTest : testing::Test {
     }
 };
 
-struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface<std::tuple<std::string, unsigned>> {
+struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface<unsigned> {
     DifferentOpenCLKernelTest() {
         auto params = GetParam();
-        kernelFileName = std::get<0>(params);
-        matrix_size = std::get<1>(params) * BLOCK_SIZE;
+        kernelFileName = programSettings->kernelFileName;
+        matrix_size = params * BLOCK_SIZE;
         posix_memalign(reinterpret_cast<void **>(&A), 64,
                        sizeof(HOST_DATA_TYPE) * matrix_size * matrix_size);
         posix_memalign(reinterpret_cast<void **>(&B), 64,
@@ -204,14 +206,6 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectbetaCplusalphaAB) {
     }
 }
 
-#ifdef INTEL_FPGA
 INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-        testing::Combine(testing::Values("gemm_cannon_emulate.aocx"), testing::Values(1,2)
-                        ));
-#endif
+         testing::Values(1,2));
 
-#ifdef XILINXL_FPGA
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-        testing::Combine(testing::Values("gemm_cannon_emulate.xclbin"), testing::Values(1,2)
-                        ));
-#endif

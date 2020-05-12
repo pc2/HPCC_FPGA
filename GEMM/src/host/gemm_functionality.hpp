@@ -30,13 +30,6 @@ SOFTWARE.
 #include "parameters.h"
 
 /*
-Short description of the program
-*/
-#define PROGRAM_DESCRIPTION "Implementation of the GEMM benchmark"\
-                            " proposed in the HPCC benchmark adapted for FPGA\n"\
-                            "Version: " VERSION "\n"
-
-/*
 Number of times the execution of the benchmark will be repeated.
 */
 #ifndef NTIMES
@@ -50,17 +43,6 @@ The full name will be
 */
 #define GEMM_KERNEL "gemm"
 
-#define ENTRY_SPACE 13
-
-struct ProgramSettings {
-    uint numRepetitions;
-    cl_uint matrixSize;
-    int defaultPlatform;
-    int defaultDevice;
-    bool useMemInterleaving;
-    std::string kernelFileName;
-    std::string kernelName;
-};
 
 #ifdef _USE_BLAS_
 
@@ -70,21 +52,6 @@ extern "C" void sgemm_(char*, char*, int*, int*,int*, float*, float*, int*, floa
 
 double
 checkGEMMresults(HOST_DATA_TYPE* c_res, cl_int lda, cl_int n);
-
-/**
-Parses and returns program options using the cxxopts library.
-Supports the following parameters:
-    - file name of the FPGA kernel file (-f,--file)
-    - number of repetitions (-n)
-    - number of kernel replications (-r)
-    - data size (-d)
-    - use memory interleaving
-@see https://github.com/jarro2783/cxxopts
-
-@return program settings that are created from the given program arguments
-*/
-std::shared_ptr<ProgramSettings>
-parseProgramParameters(int argc, char * argv[]);
 
 /**
 Print the benchmark results to stdout
@@ -122,8 +89,6 @@ C = alpha * A * B + beta * C
 */
 void gemm_ref( HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c,
                                 int n, HOST_DATA_TYPE alpha, HOST_DATA_TYPE beta);
-
-double checkLINPACKresults (HOST_DATA_TYPE* b_res, cl_int lda, cl_int n);
 
 HOST_DATA_TYPE epslon (HOST_DATA_TYPE x);
 

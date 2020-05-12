@@ -4,6 +4,7 @@
 
 #include "parameters.h"
 #include "gemm_functionality.hpp"
+#include "setup/common_benchmark_io.hpp"
 #include "setup/fpga_setup.hpp"
 
 /**
@@ -21,29 +22,7 @@ int main(int argc, char * argv[]) {
     cl::Program program = fpga_setup::fpgaSetup(&context, usedDevice,
                                                 &programSettings->kernelFileName);
 
-    // Give setup summary
-    std::cout << PROGRAM_DESCRIPTION << std::endl << HLINE;
-    std::cout << "Summary:" << std::endl
-              << "Kernel Repetitions:  " << programSettings->numRepetitions
-              << std::endl
-              << "Total matrix size:   " << programSettings->matrixSize
-              << std::endl
-              << "Memory Interleaving: " << programSettings->useMemInterleaving
-              << " (Intel only)" << std::endl
-              << "Kernel file:         " << programSettings->kernelFileName
-              << std::endl
-              << "Device:              "
-              << usedDevice[0].getInfo<CL_DEVICE_NAME>() << std::endl
-              << "Verification:        "
-              #ifdef _USE_BLAS_
-              << "external library"
-              #else
-              << "internal ref. implementation"
-              #endif
-              << std::endl 
-              << HLINE
-              << "Start benchmark using the given configuration." << std::endl
-              << HLINE;
+    printFinalConfiguration(programSettings, usedDevice[0]);
 
     std::shared_ptr<bm_execution::ExecutionConfiguration> config(
             new bm_execution::ExecutionConfiguration{

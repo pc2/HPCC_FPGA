@@ -1,8 +1,9 @@
 
 include_directories(../../../extern/cxxopts/include ../../../shared/)
 include_directories(${CMAKE_BINARY_DIR}/src/common)
+include_directories(${CMAKE_SOURCE_DIR}/../shared/setup .)
 
-set(HOST_SOURCE execution_cannon.cpp main.cpp ../../../shared/setup/fpga_setup.cpp gemm_functionality.cpp)
+set(HOST_SOURCE execution_cannon.cpp main.cpp common_benchmark_io_implementation.cpp ../../../shared/setup/fpga_setup.cpp gemm_functionality.cpp)
 
 find_package(BLAS)
 
