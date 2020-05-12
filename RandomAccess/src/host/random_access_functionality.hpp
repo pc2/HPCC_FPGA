@@ -31,17 +31,6 @@ SOFTWARE.
 #include "setup/fpga_setup.hpp"
 #include "parameters.h"
 
-/*
-Short description of the program.
-Moreover the version and build time is also compiled into the description.
-*/
-#define STR_EXPAND(tok) #tok
-#define STR(tok) STR_EXPAND(tok)
-
-#define PROGRAM_DESCRIPTION "Implementation of the random access benchmark"\
-                            " proposed in the HPCC benchmark suite for FPGA.\n"\
-                            "Version: " VERSION "\n"
-
 /**
 Prefix of the function name of the used kernel.
 It will be used to construct the full function name for the case of replications.
@@ -56,34 +45,6 @@ Constants used to verify benchmark results
 #define PERIOD 1317624576693539401L
 
 #define BIT_SIZE (sizeof(HOST_DATA_TYPE) * 8)
-
-#define ENTRY_SPACE 13
-
-struct ProgramSettings {
-    uint numRepetitions;
-    uint numReplications;
-    int defaultPlatform;
-    int defaultDevice;
-    size_t dataSize;
-    std::string kernelFileName;
-};
-
-
-/**
-Parses and returns program options using the cxxopts library.
-Supports the following parameters:
-    - file name of the FPGA kernel file (-f,--file)
-    - number of repetitions (-n)
-    - number of kernel replications (-r)
-    - data size (-d)
-    - use memory interleaving
-@see https://github.com/jarro2783/cxxopts
-
-@return program settings that are created from the given program arguments
-*/
-std::shared_ptr<ProgramSettings>
-parseProgramParameters(int argc, char * argv[]);
-
 
 /**
  Generates the value of the random number after a desired number of updates
@@ -116,16 +77,6 @@ void printResults(std::shared_ptr<bm_execution::ExecutionResults> results,
  * @param array_size The size of the data array
  */
 double checkRandomAccessResults(HOST_DATA_TYPE* result_array, size_t array_size);
-
-/**
- * Prints the used configuration to std out before starting the actual benchmark.
- *
- * @param programSettings The program settings retrieved from the command line
- * @param device The device used for execution
- */
-void printFinalConfiguration(const std::shared_ptr<ProgramSettings> &programSettings,
-                             const cl::Device &device);
-
 
 
 void generateInputData(HOST_DATA_TYPE* data, size_t dataSize);

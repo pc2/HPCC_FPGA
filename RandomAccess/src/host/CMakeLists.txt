@@ -1,6 +1,7 @@
 include_directories(../../../extern/cxxopts/include ../../../shared)
+include_directories(.)
 
-set(HOST_SOURCE execution_single.cpp main.cpp ../../../shared/setup/fpga_setup.cpp random_access_functionality.cpp)
+set(HOST_SOURCE execution_single.cpp main.cpp common_benchmark_io_implementation.cpp ../../../shared/setup/fpga_setup.cpp random_access_functionality.cpp)
 
 if (INTELFPGAOPENCL_FOUND)
     include_directories(${IntelFPGAOpenCL_INCLUDE_DIRS})

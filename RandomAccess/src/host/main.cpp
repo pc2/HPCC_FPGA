@@ -3,6 +3,7 @@
 //
 
 #include "random_access_functionality.hpp"
+#include "setup/common_benchmark_io.hpp"
 #include "execution.h"
 
 /**
