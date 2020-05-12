@@ -7,6 +7,7 @@
 #include "../src/host/execution.h"
 #include "../src/host/transpose_functionality.hpp"
 #include "parameters.h"
+#include "testing/test_program_settings.h"
 
 
 struct OpenCLKernelTest : testing::Test {
@@ -21,7 +22,7 @@ struct OpenCLKernelTest : testing::Test {
     std::vector<cl::Device> device;
 
     OpenCLKernelTest() {
-        kernelFileName = "transpose_default_emulate.aocx";
+        kernelFileName = programSettings->kernelFileName;
         matrix_size = BLOCK_SIZE;
         posix_memalign(reinterpret_cast<void **>(&A), 64,
                        sizeof(HOST_DATA_TYPE) * matrix_size * matrix_size);
@@ -36,6 +37,7 @@ struct OpenCLKernelTest : testing::Test {
                 A_out[i * matrix_size + j] = 0.0;
             }
         }
+        setupFPGA();
     }
 
     void setupFPGA() {
@@ -43,7 +45,7 @@ struct OpenCLKernelTest : testing::Test {
             // TODO: Workaround. File bug report to XRT?
             // This is done because of a bug in Xilix XRT that does not allow
             // to reprogram an FPGA twice which will crash with CL_OUT_OF_RESOURCES
-            device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
+            device = fpga_setup::selectFPGADevice(programSettings->defaultPlatform, programSettings->defaultDevice);
             context = cl::Context(device[0]);
             program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
         }
@@ -67,18 +69,11 @@ struct OpenCLKernelTest : testing::Test {
     }
 };
 
-struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface<std::string> {
-    DifferentOpenCLKernelTest() {
-        kernelFileName = GetParam();
-        setupFPGA();
-    }
-};
-
 
 /**
  * Tests if B will not be transposed
  */
-TEST_P(DifferentOpenCLKernelTest, FPGACorrectBStaysTheSame) {
+TEST_F(OpenCLKernelTest, FPGACorrectBStaysTheSame) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             A[i * matrix_size + j] = 0.0;
@@ -96,7 +91,7 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectBStaysTheSame) {
 /**
  * Tests if a block of A will be correctly transposed
  */
-TEST_P(DifferentOpenCLKernelTest, FPGAABlockIsTransposed) {
+TEST_F(OpenCLKernelTest, FPGAABlockIsTransposed) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             A[i * matrix_size + j] = i * matrix_size + j;
@@ -114,7 +109,7 @@ TEST_P(DifferentOpenCLKernelTest, FPGAABlockIsTransposed) {
 /**
  * Tests if A will be transposed when it is bigger than one block
  */
-TEST_P(DifferentOpenCLKernelTest, FPGAAIsTransposed) {
+TEST_F(OpenCLKernelTest, FPGAAIsTransposed) {
     // delete memory allocated in constructor
     free(A);
     free(B);
@@ -150,7 +145,7 @@ TEST_P(DifferentOpenCLKernelTest, FPGAAIsTransposed) {
 /**
  * Tests if matrix A and B will be summed up in the result
  */
-TEST_P(DifferentOpenCLKernelTest, FPGAAAndBAreSummedUp) {
+TEST_F(OpenCLKernelTest, FPGAAAndBAreSummedUp) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             A[i * matrix_size + j] = 1.0;
@@ -169,7 +164,7 @@ TEST_P(DifferentOpenCLKernelTest, FPGAAAndBAreSummedUp) {
 /**
  * Checks the size and values of the timing measurements that are retured by calculate.
  */
-TEST_P(DifferentOpenCLKernelTest, FPGATimingsMeasuredForEveryIteration) {
+TEST_F(OpenCLKernelTest, FPGATimingsMeasuredForEveryIteration) {
     config->repetitons = 10;
     auto result = bm_execution::calculate(config, A, B, A_out);
     EXPECT_EQ(result->calculationTimings.size(), 10);
@@ -179,18 +174,6 @@ TEST_P(DifferentOpenCLKernelTest, FPGATimingsMeasuredForEveryIteration) {
         EXPECT_GE(result->calculationTimings[t], 0.0);
     }
 }
-
-#ifdef INTEL_FPGA
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-                        testing::Values(
-                                "transpose_optimized_emulate.aocx"
-                        ));
-#else
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-                        testing::Values(
-                                "transpose_optimized_emulate.xclbin"
-                        ));
-#endif
 
 /**
  * Check if the generated input data is in the specified range
