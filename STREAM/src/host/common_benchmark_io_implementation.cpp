@@ -80,7 +80,6 @@ parseProgramParameters(int argc, char *argv[]) {
 void printFinalConfiguration(const std::shared_ptr<ProgramSettings> &programSettings,
                              const cl::Device &device) {// Give setup summary
     std::cout << PROGRAM_DESCRIPTION << std::endl;
-    std::cout << "Version: " << VERSION << std::endl << HLINE;
     std::cout << "Summary:" << std::endl
               << "Array Size:          "
               << static_cast<double>(programSettings->streamArraySize * sizeof(HOST_DATA_TYPE)) << " Byte"
