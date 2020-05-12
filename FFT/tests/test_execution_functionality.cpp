@@ -8,6 +8,7 @@
 #include "parameters.h"
 #include "setup/fpga_setup.hpp"
 #include "../src/host/fft_functionality.hpp"
+#include "testing/test_program_settings.h"
 
 
 struct OpenCLKernelTest : testing::Test {
@@ -15,6 +16,12 @@ struct OpenCLKernelTest : testing::Test {
     std::shared_ptr<bm_execution::ExecutionConfiguration> config;
     unsigned repetitions = 10;
 
+    OpenCLKernelTest() {
+        kernelFileName = programSettings->kernelFileName;
+        setupFPGA();
+    }
+
+// TODO fix test
     void setupFPGA() {
         std::vector<cl::Device> device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
         cl::Context context(device[0]);
@@ -235,6 +242,3 @@ TEST_P (DifferentOpenCLKernelTest, FPGAiFFTAndCPUiFFTGiveSameResults) {
     free(data);
     free(data2);
 }
-
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-                        testing::Values("fft1d_float_8_emulate.aocx"));

@@ -3,6 +3,7 @@
 //
 
 #include "fft_functionality.hpp"
+#include "setup/common_benchmark_io.hpp"
 
 /**
 The program entry point
