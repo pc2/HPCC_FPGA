@@ -5,7 +5,7 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 include_directories(${CMAKE_BINARY_DIR}/src/common ../../extern/cxxopts/include ../../shared)
 include_directories(${CMAKE_SOURCE_DIR}/src/host/)
 
-set(PROJECT_SOURCES  ../../shared/setup/fpga_setup.cpp ../src/host/execution_default.cpp ../src/host/common_benchmark_io_implementation.cpp ../src/host/stream_functionality.cpp)
+set(PROJECT_SOURCES ../src/host/execution_default.cpp ../src/host/stream_functionality.cpp)
 set(TEST_SOURCES ../../shared/setup/test_fpga_setup.cpp test_kernel_functionality_and_host_integration.cpp ../../shared/testing/main.cpp)
 
 if (INTELFPGAOPENCL_FOUND)

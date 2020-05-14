@@ -31,6 +31,8 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 #include "parameters.h"
+#include "hpcc_benchmark.hpp"
+#include "stream_functionality.hpp"
 
 // Map keys for execution timings
 #define PCIE_WRITE_KEY "PCI write"
@@ -41,22 +43,6 @@ SOFTWARE.
 #define TRIAD_KEY "Triad"
 
 namespace bm_execution {
-
-    struct ExecutionConfiguration {
-        cl::Context context;
-        cl::Device device;
-        cl::Program program;
-        uint repetitions;
-        uint replications;
-        unsigned arraySize;
-        bool useMemoryInterleaving;
-        bool useSingleKernel;
-    };
-
-    struct ExecutionTimings {
-        std::map<std::string,std::vector<double>> timings;
-        uint arraySize;
-    };
 
     static std::map<std::string,double> multiplicatorMap = {
             {PCIE_WRITE_KEY, 3.0},
@@ -77,8 +63,8 @@ simple exchange of the different calculation methods.
 
 @return The resulting matrix
 */
-    std::shared_ptr<ExecutionTimings>
-    calculate(std::shared_ptr<ExecutionConfiguration> config,
+    std::shared_ptr<StreamExecutionTimings>
+    calculate(const hpcc_base::ExecutionSettings<StreamProgramSettings> config,
               HOST_DATA_TYPE* A,
               HOST_DATA_TYPE* B,
               HOST_DATA_TYPE* C);

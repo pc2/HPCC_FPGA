@@ -20,50 +20,71 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef SRC_HOST_NETWORK_FUNCTIONALITY_H_
-#define SRC_HOST_NETWORK_FUNCTIONALITY_H_
+#ifndef SRC_HOST_STREAM_BENCHMARK_H_
+#define SRC_HOST_STREAM_BENCHMARK_H_
 
 /* C++ standard library headers */
 #include <complex>
 #include <memory>
 
 /* Project's headers */
-#include "execution.h"
-#include "cxxopts.hpp"
-#include "setup/fpga_setup.hpp"
+#include "hpcc_benchmark.hpp"
 #include "parameters.h"
 
 
-/**
-Prints the execution results to stdout
+class StreamProgramSettings : public hpcc_base::BaseSettings {
 
-@param results The execution results
-*/
-void
-printResults(std::shared_ptr<bm_execution::ExecutionTimings> results);
+public:
+    uint streamArraySize;
+    uint kernelReplications;
+    bool useSingleKernel;
 
+    StreamProgramSettings(cxxopts::ParseResult &results);
 
-/**
- * Fill the data buffer with random number using the mersenne twister engine with
- * seed 0.
- *
- * @param data Data array that has to be filled
- * @param size Size of the data array that has to be filled
- */
-void generateInputData(HOST_DATA_TYPE* A, HOST_DATA_TYPE* B, HOST_DATA_TYPE* C, unsigned array_size);
+};
+
+std::ostream& operator<<(std::ostream& os, StreamProgramSettings const& printedSettings);
 
 
-/**
- * Checks the calculation error of an FFt calculation by calculating the inverse FFT on the result data
- * and calculating the residual with abs(x - x')/(epsilon * log(FFT_SIZE)).
- *
- * @param verify_data The input data of the FFT calculation
- * @param result_data Result of the FFT calculation
- * @param iterations Number data iterations (total data size should be iterations * FFT_SIZE)
- * @return the residual error of the calculation
- */
-double checkSTREAMResult(const HOST_DATA_TYPE* A, const HOST_DATA_TYPE* B, const HOST_DATA_TYPE* C, unsigned repetitions,
-                         unsigned array_size);
+class StreamData {
+
+public:
+    HOST_DATA_TYPE *A, *B, *C;
+    StreamData(HOST_DATA_TYPE *A,HOST_DATA_TYPE *B,HOST_DATA_TYPE *C) : A(A), B(B), C(C) {}
+    StreamData(StreamData *d) : A(d->A), B(d->B), C(d->C) {}
+
+};
+
+class StreamExecutionTimings {
+public:
+        std::map<std::string,std::vector<double>> timings;
+        uint arraySize;
+};
+
+class StreamBenchmark : public hpcc_base::HpccFpgaBenchmark<StreamProgramSettings, StreamData, StreamExecutionTimings> {
+
+protected:
+
+    std::shared_ptr<StreamData>
+    generateInputData(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings) override;
+
+    std::shared_ptr<StreamExecutionTimings>
+    executeKernel(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings, StreamData &data) override;
+
+    bool
+    validateOutputAndPrintError(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings ,StreamData &data, const StreamExecutionTimings &output) override;
+
+    void
+    printResults(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings, const StreamExecutionTimings &output) override;
+
+    void
+    addAdditionalParseOptions(cxxopts::Options &options) override;
+
+public:
+
+    StreamBenchmark(int argc, char* argv[]);
+
+};
 
 
-#endif // SRC_HOST_NETWORK_FUNCTIONALITY_H_
+#endif // SRC_HOST_STREAM_BENCHMARK_H_
