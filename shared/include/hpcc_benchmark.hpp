@@ -19,8 +19,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef SHARED_HPCC_BENCHMAKR_HPP_
-#define SHARED_HPCC_BENCHMAKR_HPP_
+#ifndef SHARED_HPCC_BENCHMARK_HPP_
+#define SHARED_HPCC_BENCHMARK_HPP_
 
 /* Project's headers */
 #include "setup/fpga_setup.hpp"
@@ -56,15 +56,6 @@ public:
 
 };
 
-std::ostream& operator<<(std::ostream& os, BaseSettings const& printedBaseSettings){
-        return (os    << "Data Type:            " << STR(HOST_DATA_TYPE)
-              << std::endl
-              << "Repetitions:         " << printedBaseSettings.numRepetitions
-              << std::endl
-              << "Kernel File:         " << printedBaseSettings.kernelFileName
-              << std::endl);
-    }
-
 template <class TSettings>
 class ExecutionSettings {
 public:
@@ -75,40 +66,37 @@ public:
 
     ExecutionSettings(const std::shared_ptr<TSettings> programSettings_, cl::Device device_,cl::Context context_,cl::Program program_): 
                                     programSettings(programSettings_), device(device_), context(context_), program(program_) {}
+    
+    ExecutionSettings(ExecutionSettings<TSettings> *s) : ExecutionSettings(s->programSettings, s->device, s->context, s->program) {}
 
 };
 
 template <class TSettings>
-std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings){
-        return os    << &(printedExecutionSettings.programSettings)
-              << "Device:              "
-              //<< printedExecutionSettings.device.getInfo<CL_DEVICE_NAME>() 
-              << std::endl;
-    }
+std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings);
 
 template <class TSettings, class TData, class TOutput>
 class HpccFpgaBenchmark {
 
 private:
     bool isSetupExecuted = false;
-    ExecutionSettings<TSettings> executionSettings;
+    std::shared_ptr<ExecutionSettings<TSettings>> executionSettings;
 
 protected:
 
     virtual std::shared_ptr<TData>
-    generateInputData(const ExecutionSettings<TSettings> &settings);
+    generateInputData(const ExecutionSettings<TSettings> &settings) = 0;
 
     virtual std::shared_ptr<TOutput>
-    executeKernel(const ExecutionSettings<TSettings> &settings, TData &data);
+    executeKernel(const ExecutionSettings<TSettings> &settings, TData &data) = 0;
 
     virtual bool
-    validateOutputAndPrintError(const ExecutionSettings<TSettings> &settings ,TData &data, const TOutput &output);
+    validateOutputAndPrintError(const ExecutionSettings<TSettings> &settings ,TData &data, const TOutput &output) = 0;
 
     virtual void
-    printResults(const ExecutionSettings<TSettings> &settings, const TOutput &output);
+    printResults(const ExecutionSettings<TSettings> &settings, const TOutput &output) = 0;
 
     virtual void
-    addAdditionalParseOptions(cxxopts::Options &options) {}
+    addAdditionalParseOptions(cxxopts::Options &options) = 0;
 
     /**
     * Parses and returns program options using the cxxopts library.
@@ -143,7 +131,7 @@ protected:
                 ("h,help", "Print this help");
 
 
-        addAdditionalParseOptions(&options);
+        addAdditionalParseOptions(options);
         cxxopts::ParseResult result = options.parse(argc, argv);
 
         if (result.count("h")) {
@@ -173,7 +161,7 @@ protected:
     *                            context, program and device
     */
     void 
-    printFinalConfiguration(const ExecutionSettings<TSettings> executionSettings) {
+    printFinalConfiguration(ExecutionSettings<TSettings> const& executionSettings) {
         std::cout << PROGRAM_DESCRIPTION << std::endl;
         std::cout << "Summary:" << std::endl;
         std::cout << executionSettings << std::endl;
@@ -190,18 +178,18 @@ public:
      */
     void 
     setupBenchmark(int argc, char *argv[]) {
-        std::shared_ptr<TSettings> programSettings = parseProgramParameters(argc, argv);
         fpga_setup::setupEnvironmentAndClocks();
+        std::shared_ptr<TSettings> programSettings = parseProgramParameters(argc, argv);
         cl::Device usedDevice =
-            fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
-                                            programSettings->defaultDevice);
+            cl::Device(fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
+                                            programSettings->defaultDevice));
         cl::Context context = cl::Context(usedDevice);
         cl::Program program = fpga_setup::fpgaSetup(&context, {usedDevice},
                                                 &programSettings->kernelFileName);
 
-        executionSettings = ExecutionSettings<TSettings>(programSettings, usedDevice, context, program);
+        executionSettings = std::make_shared<ExecutionSettings<TSettings>>(new ExecutionSettings<TSettings>(programSettings, usedDevice, context, program));
 
-        printFinalConfiguration(executionSettings);
+        printFinalConfiguration(*executionSettings);
         isSetupExecuted = true;
     }
 
@@ -213,32 +201,34 @@ public:
         }
         std::cout << HLINE << "Start benchmark using the given configuration. Generating data..." << std::endl
                 << HLINE;
-        std::shared_ptr<TData> data = generateInputData(&executionSettings);
-        std::cout << HLINE << "Execute benchmar kernel..." << std::endl
+        std::shared_ptr<TData> data = generateInputData(*executionSettings);
+        std::cout << HLINE << "Execute benchmark kernel..." << std::endl
                 << HLINE;
-        std::shared_ptr<TOutput> output =  executeKernel(&executionSettings, &data);
+        std::shared_ptr<TOutput> output =  executeKernel(*executionSettings, *data);
 
         std::cout << HLINE << "Validate output..." << std::endl
                 << HLINE;
 
-        bool validateSuccess = validateOutputAndPrintError(&executionSettings , &data, &output);
+        bool validateSuccess = validateOutputAndPrintError(*executionSettings , *data, *output);
 
-        printResults(&executionSettings, &output);
-
-        std::cout << HLINE << "Cleaning up." << std::endl
-                << HLINE;
-
-        delete data;
-        delete output;
+        printResults(*executionSettings, *output);
 
         return validateSuccess;
     }
 
-    HpccFpgaBenchmark(int argc, char *argv[]) {
-        setupBenchmark(argc, argv);
-    }
-
 };
+
+std::ostream& operator<<(std::ostream& os, BaseSettings const& printedBaseSettings);
+
+template <class TSettings>
+std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings){
+        std::string device_name;
+        printedExecutionSettings.device.getInfo(CL_DEVICE_NAME, &device_name);
+        return os    << *printedExecutionSettings.programSettings
+              << "Device:              "
+              << device_name
+              << std::endl;
+}
 
 } // namespace hpcc_base
 
