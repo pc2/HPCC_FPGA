@@ -21,7 +21,7 @@ SOFTWARE.
 */
 
 /* Related header files */
-#include "execution.h"
+#include "execution.hpp"
 
 /* C++ standard library headers */
 #include <memory>
@@ -156,7 +156,7 @@ namespace bm_execution {
         std::cout << "precision of your system timer." << std::endl;
         std::cout << HLINE;
 
-        for (int i=0; i<config.programSettings->numRepetitions; i++) {
+        for (int i=0; i<config.programSettings->kernelReplications; i++) {
 #ifdef USE_SVM
             ASSERT_CL(clEnqueueSVMUnmap(command_queues[i](),
                         reinterpret_cast<void *>(A), 0,
@@ -174,7 +174,7 @@ namespace bm_execution {
         //
         // Do actual benchmark measurements
         //
-        for (uint r = 0; r < config.programSettings->kernelReplications; r++) {
+        for (uint r = 0; r < config.programSettings->numRepetitions; r++) {
 #pragma omp parallel
             {
 #pragma omp single

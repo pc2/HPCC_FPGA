@@ -43,9 +43,6 @@ public:
 
 };
 
-std::ostream& operator<<(std::ostream& os, StreamProgramSettings const& printedSettings);
-
-
 class StreamData {
 
 public:

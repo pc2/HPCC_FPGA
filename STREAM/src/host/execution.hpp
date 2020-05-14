@@ -31,7 +31,6 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 #include "parameters.h"
-#include "hpcc_benchmark.hpp"
 #include "stream_functionality.hpp"
 
 // Map keys for execution timings

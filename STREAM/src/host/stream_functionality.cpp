@@ -31,7 +31,7 @@ SOFTWARE.
 #include <random>
 
 /* Project's headers */
-#include "execution.h"
+#include "execution.hpp"
 #include "parameters.h"
 
 StreamProgramSettings::StreamProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
@@ -42,10 +42,11 @@ StreamProgramSettings::StreamProgramSettings(cxxopts::ParseResult &results) : hp
 }
 
 std::ostream& operator<<(std::ostream& os, StreamProgramSettings const& printedSettings) {
-    return os << "Array Size:          "
-        << static_cast<double>(printedSettings.streamArraySize * sizeof(HOST_DATA_TYPE)) << " Byte"
+    return os << static_cast<hpcc_base::BaseSettings>(printedSettings)
+        << "Data Type:           " << STR(HOST_DATA_TYPE)
         << std::endl
-        << "Data Type:            " << STR(HOST_DATA_TYPE)
+        << "Array Size:          " << printedSettings.streamArraySize << " (" 
+        <<  static_cast<double>(printedSettings.streamArraySize * sizeof(HOST_DATA_TYPE)) <<" Byte )"
         << std::endl
         << "Kernel Replications: " << printedSettings.kernelReplications
         << std::endl
@@ -53,7 +54,8 @@ std::ostream& operator<<(std::ostream& os, StreamProgramSettings const& printedS
         << std::endl;
 }
 
-StreamBenchmark::StreamBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
+StreamBenchmark::StreamBenchmark(int argc, char* argv[]) {
+    setupBenchmark(argc, argv);
 }
 
 void
