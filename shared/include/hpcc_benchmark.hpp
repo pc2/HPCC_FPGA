@@ -383,11 +383,13 @@ public:
 template <class TSettings>
 std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings){
         std::string device_name;
+        os << std::left;
         printedExecutionSettings.device.getInfo(CL_DEVICE_NAME, &device_name);
         for (auto k : printedExecutionSettings.programSettings->getSettingsMap()) {
-            os   << std::setw(2 * ENTRY_SPACE) << std::left<< k.first << k.second << std::endl;
+            os   << std::setw(2 * ENTRY_SPACE) << k.first << k.second << std::endl;
         }
-        os  << std::setw(2 * ENTRY_SPACE) << std::left << "Device"  << device_name << std::endl;
+        os  << std::setw(2 * ENTRY_SPACE) << "Device"  << device_name << std::endl;
+        os << std::right;
         return os;
 }
 

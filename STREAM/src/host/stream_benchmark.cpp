@@ -53,25 +53,6 @@ stream::StreamProgramSettings::getSettingsMap() {
         return map;
 }
 
-/**
- * @brief Print method for the stream specific program settings
- * 
- * @param os 
- * @param printedSettings 
- * @return std::ostream& 
- */
-std::ostream& operator<<(std::ostream& os, stream::StreamProgramSettings const& printedSettings) {
-    return os << "Data Type:           " << STR(HOST_DATA_TYPE)
-        << std::endl
-        << "Array Size:          " << printedSettings.streamArraySize << " (" 
-        <<  static_cast<double>(printedSettings.streamArraySize * sizeof(HOST_DATA_TYPE)) <<" Byte )"
-        << std::endl
-        << "Kernel Replications: " << printedSettings.kernelReplications
-        << std::endl
-        << "Kernel Type:         " << (printedSettings.useSingleKernel ? "Single" : "Separate")
-        << std::endl;
-}
-
 stream::StreamBenchmark::StreamBenchmark(int argc, char* argv[]) {
     setupBenchmark(argc, argv);
 }
