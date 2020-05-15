@@ -41,6 +41,18 @@ stream::StreamProgramSettings::StreamProgramSettings(cxxopts::ParseResult &resul
 
 }
 
+std::map<std::string, std::string>
+stream::StreamProgramSettings::getSettingsMap() {
+        auto map = hpcc_base::BaseSettings::getSettingsMap();
+        map["Data Type"] = STR(HOST_DATA_TYPE);
+        std::stringstream ss;
+        ss << streamArraySize << " (" << static_cast<double>(streamArraySize * sizeof(HOST_DATA_TYPE)) << " Byte )";
+        map["Array Size"] = ss.str();
+        map["Kernel Replications"] = std::to_string(kernelReplications);
+        map["Kernel Type"] = (useSingleKernel ? "Single" : "Separate");
+        return map;
+}
+
 /**
  * @brief Print method for the stream specific program settings
  * 
@@ -76,7 +88,7 @@ stream::StreamBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
             ("single-kernel", "Use the single kernel implementation");
 }
 
-std::shared_ptr<StreamExecutionTimings>
+std::shared_ptr<stream::StreamExecutionTimings>
 stream::StreamBenchmark::executeKernel(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &settings, StreamData &data) {
     return bm_execution::calculate(settings,
               data.A,
@@ -114,7 +126,7 @@ stream::StreamBenchmark::printResults(const hpcc_base::ExecutionSettings<stream:
 
 }
 
-std::shared_ptr<StreamData>
+std::shared_ptr<stream::StreamData>
 stream::StreamBenchmark::generateInputData(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &settings) {
     HOST_DATA_TYPE *A, *B, *C;
 #ifdef INTEL_FPGA

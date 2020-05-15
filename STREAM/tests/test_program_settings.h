@@ -24,4 +24,4 @@ SOFTWARE.
 #include "stream_benchmark.hpp"
 
 
-extern std::shared_ptr<StreamBenchmark> bm;
+extern std::shared_ptr<stream::StreamBenchmark> bm;

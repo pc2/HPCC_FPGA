@@ -69,6 +69,8 @@ public:
      */
     StreamProgramSettings(cxxopts::ParseResult &results);
 
+    std::map<std::string, std::string> getSettingsMap() override;
+
 };
 
 /**

@@ -98,6 +98,10 @@ public:
             defaultDevice(results["device"].as<int>()),
             kernelFileName(results["f"].as<std::string>()) {}
 
+    virtual std::map<std::string,std::string> getSettingsMap() {
+        return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel File", kernelFileName}};
+    }
+
 };
 
 
@@ -358,7 +362,7 @@ public:
      * 
      * @return ExecutionSettings& The execution settings object
      */
-    ExecutionSettings& getExecutionSettings() {
+    ExecutionSettings<TSettings>& getExecutionSettings() {
         return *executionSettings;
     }
 
@@ -367,15 +371,6 @@ public:
     }
 
 };
-
-/**
- * @brief Prints the base settings to an output stream.
- * 
- * @param os The output stream
- * @param printedBaseSettings The base settings that should be printed
- * @return std::ostream& The output stream after the base settings are piped in
- */
-std::ostream& operator<<(std::ostream& os, BaseSettings const& printedBaseSettings);
 
 /**
  * @brief Prints the execution settings to an output stream
@@ -389,14 +384,10 @@ template <class TSettings>
 std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings){
         std::string device_name;
         printedExecutionSettings.device.getInfo(CL_DEVICE_NAME, &device_name);
-        std::string platform_name;
-        printedExecutionSettings.device.getInfo(CL_PLATFORM_NAME, &platform_name);
-        os    << static_cast<BaseSettings>(*printedExecutionSettings.programSettings);
-        if (typeid(printedExecutionSettings.programSettings) != typeid(BaseSettings)) {
-            os    << *printedExecutionSettings.programSettings;
+        for (auto k : printedExecutionSettings.programSettings->getSettingsMap()) {
+            os   << std::setw(2 * ENTRY_SPACE) << std::left<< k.first << k.second << std::endl;
         }
-        os  << "Platform:            " << platform_name << std::endl;
-        os  << "Device:              " << device_name << std::endl;
+        os  << std::setw(2 * ENTRY_SPACE) << std::left << "Device"  << device_name << std::endl;
         return os;
 }
 

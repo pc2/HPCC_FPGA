@@ -4,6 +4,8 @@
 
 #include "stream_benchmark.hpp"
 
+using namespace stream;
+
 /**
 The program entry point
 */

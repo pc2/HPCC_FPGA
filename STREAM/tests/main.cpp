@@ -41,6 +41,8 @@ public:
 };
 #endif
 
+using namespace stream;
+
 std::shared_ptr<StreamBenchmark> bm;
 
 /**
@@ -58,7 +60,7 @@ main(int argc, char *argv[]) {
         ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
 #endif
 
-    bm = std::shared_ptr(StreamBenchmark());
+    bm = std::shared_ptr<StreamBenchmark>(new StreamBenchmark());
 
     bm->setupBenchmark(argc, argv);
 

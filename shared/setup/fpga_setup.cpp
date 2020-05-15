@@ -261,15 +261,15 @@ choose a device.
             if (defaultDevice < deviceList.size()) {
                 chosenDeviceId = defaultDevice;
             } else {
-                std::cerr << "Default platform " << defaultDevice
-                          << " can not be used. Available platforms: "
+                std::cerr << "Default device " << defaultDevice
+                          << " can not be used. Available devices: "
                           << deviceList.size() << std::endl;
                 exit(1);
             }
         } else if (deviceList.size() > 1) {
             if (world_size == 1) {
                     std::cout <<
-                              "Multiple devices have been found. Select the platform by"\
+                              "Multiple devices have been found. Select the device by"\
                             " typing a number:" << std::endl;
 
                 for (int deviceId = 0;

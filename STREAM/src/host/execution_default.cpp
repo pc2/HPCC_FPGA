@@ -335,7 +335,7 @@ namespace bm_execution {
         return result;
     }
 
-    void initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<StreamProgramSettings> &config,
+    void initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -414,7 +414,7 @@ namespace bm_execution {
         }
     }
 
-    void initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<StreamProgramSettings> &config,
+    void initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -591,7 +591,7 @@ namespace bm_execution {
         }
     }
 
-    void initialize_buffers(const hpcc_base::ExecutionSettings<StreamProgramSettings> &config, unsigned int data_per_kernel,
+    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config, unsigned int data_per_kernel,
                             std::vector<cl::Buffer> &Buffers_A, std::vector<cl::Buffer> &Buffers_B,
                             std::vector<cl::Buffer> &Buffers_C) {
         if (!config.programSettings->useMemoryInterleaving) {

@@ -6,16 +6,9 @@
 #include "gtest/gtest.h"
 #include "setup/fpga_setup.hpp"
 #include "parameters.h"
-#include "testing/test_program_settings.h"
+#include "test_program_settings.h"
 #include "gmock/gmock.h"
 
-
-/**
- * Check if it is possible to find the platform and device that are given as default
- */
-TEST (FPGASetup, FindValidPlatformAndDevice) {
-    EXPECT_EQ (1, fpga_setup::selectFPGADevice(programSettings->defaultPlatform, programSettings->defaultDevice).size());
-}
 
 /**
  * Checks if non existing platform leads to an error
@@ -23,8 +16,8 @@ TEST (FPGASetup, FindValidPlatformAndDevice) {
 TEST (FPGASetup, FindNonExistingPlatform) {
     testing::FLAGS_gtest_death_test_style="threadsafe";
     std::stringstream fmt;
-    fmt << "Default platform " << programSettings->defaultPlatform + 100 << " can not be used. Available platforms: " ;
-    EXPECT_EXIT(fpga_setup::selectFPGADevice(programSettings->defaultPlatform + 100, programSettings->defaultDevice),
+    fmt << "Default platform " << bm->getExecutionSettings().programSettings->defaultPlatform + 100 << " can not be used. Available platforms: " ;
+    EXPECT_EXIT(fpga_setup::selectFPGADevice(bm->getExecutionSettings().programSettings->defaultPlatform + 100, bm->getExecutionSettings().programSettings->defaultDevice),
                 ::testing::ExitedWithCode(1),
                 ::testing::StartsWith(fmt.str()));
 }
@@ -35,8 +28,8 @@ TEST (FPGASetup, FindNonExistingPlatform) {
 TEST (FPGASetup, FindNonExistingDevice) {
     testing::FLAGS_gtest_death_test_style="threadsafe";
     std::stringstream fmt;
-    fmt << "Default device " << programSettings->defaultDevice + 100 << " can not be used. Available devices: " ;
-    EXPECT_EXIT(fpga_setup::selectFPGADevice(programSettings->defaultPlatform, programSettings->defaultDevice + 100),
+    fmt << "Default device " << bm->getExecutionSettings().programSettings->defaultDevice + 100 << " can not be used. Available devices: " ;
+    EXPECT_EXIT(fpga_setup::selectFPGADevice(bm->getExecutionSettings().programSettings->defaultPlatform, bm->getExecutionSettings().programSettings->defaultDevice + 100),
                 ::testing::ExitedWithCode(1),
                 ::testing::StartsWith(fmt.str()));
 }

@@ -1,9 +1,8 @@
 
 # 'lib' is the folder with Google Test sources
-add_subdirectory(../../extern/googletest ${CMAKE_CURRENT_BINARY_DIR}/lib)
+add_subdirectory(../../extern/googletest ${CMAKE_CURRENT_BINARY_DIR}/lib/googletest)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-include_directories(${CMAKE_BINARY_DIR}/src/common)
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/host/)
+include_directories(${CMAKE_BINARY_DIR}/src/common .)
 
 set(TEST_SOURCES ../../shared/setup/test_fpga_setup.cpp test_kernel_functionality_and_host_integration.cpp main.cpp)
 
