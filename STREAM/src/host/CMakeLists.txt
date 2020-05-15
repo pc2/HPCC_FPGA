@@ -1,4 +1,4 @@
-add_subdirectory(../../../shared ${CMAKE_CURRENT_BINARY_DIR}/lib/hpccbase)
+add_subdirectory(../../../shared ${CMAKE_BINARY_DIR}/lib/hpccbase)
 set(HOST_SOURCE execution_default.cpp stream_benchmark.cpp)
 
 if (INTELFPGAOPENCL_FOUND)
