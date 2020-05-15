@@ -39,11 +39,11 @@ SOFTWARE.
 
 namespace bm_execution {
 
-    void initialize_buffers(const hpcc_base::ExecutionSettings<StreamProgramSettings> &config, unsigned int data_per_kernel,
+    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config, unsigned int data_per_kernel,
                             std::vector<cl::Buffer> &Buffers_A, std::vector<cl::Buffer> &Buffers_B,
                             std::vector<cl::Buffer> &Buffers_C);
 
-    void initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<StreamProgramSettings> &config,
+    void initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -52,7 +52,7 @@ namespace bm_execution {
                                        std::vector<cl::Kernel> &triad_kernels,
                                        std::vector<cl::CommandQueue> &command_queues);
 
-    void initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<StreamProgramSettings> &config,
+    void initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -68,8 +68,8 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<StreamExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<StreamProgramSettings> config,
+    std::shared_ptr<stream::StreamExecutionTimings>
+    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> config,
             HOST_DATA_TYPE* A,
             HOST_DATA_TYPE* B,
             HOST_DATA_TYPE* C) {
@@ -328,7 +328,7 @@ namespace bm_execution {
             }
         }
 
-        std::shared_ptr<StreamExecutionTimings> result(new StreamExecutionTimings{
+        std::shared_ptr<stream::StreamExecutionTimings> result(new stream::StreamExecutionTimings{
                 timingMap,
                 config.programSettings->streamArraySize
         });

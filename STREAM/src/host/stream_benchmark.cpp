@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "stream_functionality.hpp"
+#include "stream_benchmark.hpp"
 
 /* C++ standard library headers */
 #include <memory>
@@ -34,16 +34,22 @@ SOFTWARE.
 #include "execution.hpp"
 #include "parameters.h"
 
-StreamProgramSettings::StreamProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
+stream::StreamProgramSettings::StreamProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     streamArraySize(results["s"].as<uint>()),
     kernelReplications(results["r"].as<uint>()),
     useSingleKernel(static_cast<bool>(results.count("single-kernel"))) {
 
 }
 
-std::ostream& operator<<(std::ostream& os, StreamProgramSettings const& printedSettings) {
-    return os << static_cast<hpcc_base::BaseSettings>(printedSettings)
-        << "Data Type:           " << STR(HOST_DATA_TYPE)
+/**
+ * @brief Print method for the stream specific program settings
+ * 
+ * @param os 
+ * @param printedSettings 
+ * @return std::ostream& 
+ */
+std::ostream& operator<<(std::ostream& os, stream::StreamProgramSettings const& printedSettings) {
+    return os << "Data Type:           " << STR(HOST_DATA_TYPE)
         << std::endl
         << "Array Size:          " << printedSettings.streamArraySize << " (" 
         <<  static_cast<double>(printedSettings.streamArraySize * sizeof(HOST_DATA_TYPE)) <<" Byte )"
@@ -54,12 +60,14 @@ std::ostream& operator<<(std::ostream& os, StreamProgramSettings const& printedS
         << std::endl;
 }
 
-StreamBenchmark::StreamBenchmark(int argc, char* argv[]) {
+stream::StreamBenchmark::StreamBenchmark(int argc, char* argv[]) {
     setupBenchmark(argc, argv);
 }
 
+stream::StreamBenchmark::StreamBenchmark() {}
+
 void
-StreamBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
+stream::StreamBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
         options.add_options()
             ("s", "Size of the data arrays",
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ARRAY_LENGTH)))
@@ -69,7 +77,7 @@ StreamBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
 }
 
 std::shared_ptr<StreamExecutionTimings>
-StreamBenchmark::executeKernel(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings, StreamData &data) {
+stream::StreamBenchmark::executeKernel(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &settings, StreamData &data) {
     return bm_execution::calculate(settings,
               data.A,
               data.B,
@@ -82,7 +90,7 @@ Prints the execution results to stdout
 @param results The execution results
 */
 void
-StreamBenchmark::printResults(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings, const StreamExecutionTimings &output) {
+stream::StreamBenchmark::printResults(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &settings, const stream::StreamExecutionTimings &output) {
 
     std::cout << std::setw(ENTRY_SPACE) << "Function";
     std::cout << std::setw(ENTRY_SPACE) << "Best Rate MB/s";
@@ -107,7 +115,7 @@ StreamBenchmark::printResults(const hpcc_base::ExecutionSettings<StreamProgramSe
 }
 
 std::shared_ptr<StreamData>
-StreamBenchmark::generateInputData(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings) {
+stream::StreamBenchmark::generateInputData(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &settings) {
     HOST_DATA_TYPE *A, *B, *C;
 #ifdef INTEL_FPGA
 #ifdef USE_SVM
@@ -137,10 +145,11 @@ StreamBenchmark::generateInputData(const hpcc_base::ExecutionSettings<StreamProg
         C[i] = 0.0;
     }
 
-    return std::make_shared<StreamData>(new StreamData{A, B, C});
+    return std::make_shared<stream::StreamData>(new stream::StreamData{A, B, C});
 }
 
-bool  StreamBenchmark::validateOutputAndPrintError(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings ,StreamData &data, const StreamExecutionTimings &output) {
+bool  
+stream::StreamBenchmark::validateOutputAndPrintError(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &settings ,stream::StreamData &data, const stream::StreamExecutionTimings &output) {
     HOST_DATA_TYPE aj,bj,cj,scalar;
     HOST_DATA_TYPE aSumErr,bSumErr,cSumErr;
     HOST_DATA_TYPE aAvgErr,bAvgErr,cAvgErr;

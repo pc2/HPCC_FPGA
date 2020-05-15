@@ -2,7 +2,7 @@
 // Created by Marius Meyer on 04.12.19.
 //
 
-#include "stream_functionality.hpp"
+#include "stream_benchmark.hpp"
 
 /**
 The program entry point

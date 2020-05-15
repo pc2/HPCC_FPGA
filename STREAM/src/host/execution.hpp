@@ -31,7 +31,7 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 #include "parameters.h"
-#include "stream_functionality.hpp"
+#include "stream_benchmark.hpp"
 
 // Map keys for execution timings
 #define PCIE_WRITE_KEY "PCI write"
@@ -62,8 +62,8 @@ simple exchange of the different calculation methods.
 
 @return The resulting matrix
 */
-    std::shared_ptr<StreamExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<StreamProgramSettings> config,
+    std::shared_ptr<stream::StreamExecutionTimings>
+    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> config,
               HOST_DATA_TYPE* A,
               HOST_DATA_TYPE* B,
               HOST_DATA_TYPE* C);
