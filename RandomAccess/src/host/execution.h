@@ -30,28 +30,10 @@ SOFTWARE.
 #include "CL/cl.hpp"
 
 #include "parameters.h"
+#include "random_access_benchmark.hpp"
 
 
 namespace bm_execution {
-
-struct ExecutionConfiguration {
-    cl::Context context;
-    cl::Device device;
-    cl::Program program;
-    uint repetitions;
-    uint replications;
-    size_t arraySize;
-};
-
-/**
-This struct is returned by the calculate call and contains the measured
-runtimes and the error rate in the data set after the updates.
-
-@see bm_execution::calculate()
-*/
-struct ExecutionResults {
-    std::vector<double> times;
-};
 
 /**
 The actual execution of the benchmark.
@@ -71,8 +53,8 @@ simple exchange of the different calculation methods.
 
 @return The time measurements and the error rate counted from the executions
 */
-std::shared_ptr<ExecutionResults>
-calculate(std::shared_ptr<bm_execution::ExecutionConfiguration> config, HOST_DATA_TYPE * data);
+std::shared_ptr<random_access::RandomAccessExecutionTimings>
+calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data);
 
 }  // namespace bm_execution
 
