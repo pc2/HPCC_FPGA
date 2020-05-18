@@ -6,7 +6,7 @@ include_directories(${CMAKE_BINARY_DIR}/src/common)
 set(HOST_EXE_NAME RandomAccess)
 set(LIB_NAME ra)
 
-set(TEST_SOURCES main.cpp test_host_code.cpp ) #test_kernel_functionality_and_host_integration.cpp)
+set(TEST_SOURCES main.cpp test_host_code.cpp test_kernel_functionality_and_host_integration.cpp)
 
 if (INTELFPGAOPENCL_FOUND)
     include_directories(SYSTEM ${IntelFPGAOpenCL_INCLUDE_DIRS})

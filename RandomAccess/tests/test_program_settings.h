@@ -23,46 +23,5 @@ SOFTWARE.
 /* Project's headers */
 #include "random_access_benchmark.hpp"
 
-#include "gtest/gtest.h"
-#include "CL/cl.hpp"
 
-#ifdef _USE_MPI_
-#include "mpi.h"
-
-class MPIEnvironment : public ::testing::Environment {
-public:
-    MPIEnvironment(int* argc, char** argv[]) {
-        MPI_Init(argc, argv);
-    }
-
-    ~MPIEnvironment() override {
-        MPI_Finalize();
-    }
-};
-#endif
-
-using namespace random_access;
-
-std::shared_ptr<RandomAccessBenchmark> bm;
-
-/**
-The program entry point for the unit tests
-*/
-int
-main(int argc, char *argv[]) {
-
-    std::cout << "THIS BINARY EXECUTES UNIT TESTS FOR THE FOLLOWING BENCHMARK:" << std::endl << std::endl;
-
-    ::testing::InitGoogleTest(&argc, argv);
-
-    bm = std::shared_ptr<RandomAccessBenchmark>(new RandomAccessBenchmark(argc, argv));
-
-#ifdef _USE_MPI_
-    ::testing::Environment* const mpi_env =
-        ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
-#endif
-
-    return RUN_ALL_TESTS();
-
-}
-
+extern std::shared_ptr<random_access::RandomAccessBenchmark> bm;
