@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(RandomAccess VERSION 2.0.2.1)
+project(RandomAccess VERSION 2.0.3)
 
 # Additional benchmark specific build parameters
 set(DEFAULT_ARRAY_LENGTH 536870912 CACHE STRING "Default size of the data arrays")
