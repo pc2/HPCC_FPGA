@@ -68,8 +68,8 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<stream::StreamExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> config,
+    std::unique_ptr<stream::StreamExecutionTimings>
+    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings>& config,
             HOST_DATA_TYPE* A,
             HOST_DATA_TYPE* B,
             HOST_DATA_TYPE* C) {
@@ -328,7 +328,7 @@ namespace bm_execution {
             }
         }
 
-        std::shared_ptr<stream::StreamExecutionTimings> result(new stream::StreamExecutionTimings{
+        std::unique_ptr<stream::StreamExecutionTimings> result(new stream::StreamExecutionTimings{
                 timingMap,
                 config.programSettings->streamArraySize
         });
@@ -346,15 +346,15 @@ namespace bm_execution {
         int err;
         for (int i=0; i < config.programSettings->kernelReplications; i++) {
             // create the kernels
-            cl::Kernel testkernel(config.program, ("scale_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel testkernel(*config.program, ("scale_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel copykernel(config.program, ("copy_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel copykernel(*config.program, ("copy_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel scalekernel(config.program, ("scale_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel scalekernel(*config.program, ("scale_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel addkernel(config.program, ("add_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel addkernel(*config.program, ("add_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel triadkernel(config.program, ("triad_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel triadkernel(*config.program, ("triad_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
 
             HOST_DATA_TYPE scalar = 3.0;
@@ -405,7 +405,7 @@ namespace bm_execution {
             err = triadkernel.setArg(4, data_per_kernel);
             ASSERT_CL(err);
 
-            command_queues.push_back(cl::CommandQueue(config.context));
+            command_queues.push_back(cl::CommandQueue(*config.context));
             test_kernels.push_back(testkernel);
             copy_kernels.push_back(copykernel);
             scale_kernels.push_back(scalekernel);
@@ -429,28 +429,28 @@ namespace bm_execution {
         for (int i=0; i < config.programSettings->kernelReplications; i++) {
 #ifdef INTEL_FPGA
             // create the kernels
-            cl::Kernel testkernel(config.program, ("calc_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel testkernel(*config.program, ("calc_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel copykernel(config.program, ("calc_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel copykernel(*config.program, ("calc_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel scalekernel(config.program, ("calc_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel scalekernel(*config.program, ("calc_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel addkernel(config.program, ("calc_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel addkernel(*config.program, ("calc_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel triadkernel(config.program, ("calc_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel triadkernel(*config.program, ("calc_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
 #endif
 #ifdef XILINX_FPGA
             // create the kernels
-            cl::Kernel testkernel(config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
+            cl::Kernel testkernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel copykernel(config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
+            cl::Kernel copykernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel scalekernel(config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
+            cl::Kernel scalekernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel addkernel(config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
+            cl::Kernel addkernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel triadkernel(config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
+            cl::Kernel triadkernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
 #endif
             HOST_DATA_TYPE scalar = 3.0;
@@ -582,7 +582,7 @@ namespace bm_execution {
             err = triadkernel.setArg(5, TRIAD_KERNEL_TYPE);
             ASSERT_CL(err);
 
-            command_queues.push_back(cl::CommandQueue(config.context));
+            command_queues.push_back(cl::CommandQueue(*config.context));
             test_kernels.push_back(testkernel);
             copy_kernels.push_back(copykernel);
             scale_kernels.push_back(scalekernel);
@@ -600,30 +600,30 @@ namespace bm_execution {
 #ifdef INTEL_FPGA
                 if (config.programSettings->useSingleKernel) {
                     //Create Buffers for input and output
-                    Buffers_A.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_B.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_C.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
                 }
                 else {
                     //Create Buffers for input and output
-                    Buffers_A.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE | CL_CHANNEL_1_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_B.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE | CL_CHANNEL_3_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_C.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE | CL_CHANNEL_2_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | CL_CHANNEL_1_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | CL_CHANNEL_3_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | CL_CHANNEL_2_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
                 }
 #endif
 #ifdef XILINX_FPGA
-                Buffers_A.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_B.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_C.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
 #endif
             }
 
         } else {
             for (int i=0; i < config.programSettings->kernelReplications; i++) {
                 //Create Buffers for input and output
-                Buffers_A.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_B.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_C.push_back(cl::Buffer(config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
             }
         }
     }

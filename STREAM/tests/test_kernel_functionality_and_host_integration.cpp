@@ -12,8 +12,9 @@ struct StreamKernelTest :public  ::testing::Test {
 
     void SetUp( ) { 
         bm->getExecutionSettings().programSettings->streamArraySize = VECTOR_COUNT * UNROLL_COUNT * NUM_KERNEL_REPLICATIONS * BUFFER_SIZE;
-        data = bm->generateInputData(bm->getExecutionSettings());
+        data = bm->generateInputData();
    }
+
 
 };
 
@@ -23,7 +24,7 @@ struct StreamKernelTest :public  ::testing::Test {
  */
 TEST_F(StreamKernelTest, FPGACorrectResultsOneRepetition) {
     bm->getExecutionSettings().programSettings->numRepetitions = 1;
-    auto result = bm->executeKernel(bm->getExecutionSettings(), *data);
+    auto result = bm->executeKernel(*data);
     for (int i = 0; i < bm->getExecutionSettings().programSettings->streamArraySize; i++) {
         EXPECT_FLOAT_EQ(data->A[i], 30.0);
         EXPECT_FLOAT_EQ(data->B[i], 6.0);
@@ -36,7 +37,7 @@ TEST_F(StreamKernelTest, FPGACorrectResultsOneRepetition) {
  */
 TEST_F(StreamKernelTest, FPGACorrectResultsThreeRepetition) {
     bm->getExecutionSettings().programSettings->numRepetitions = 3;
-    auto result = bm->executeKernel(bm->getExecutionSettings(), *data);
+    auto result = bm->executeKernel(*data);
     for (int i = 0; i < bm->getExecutionSettings().programSettings->streamArraySize; i++) {
         EXPECT_FLOAT_EQ(data->A[i], 6750.0);
         EXPECT_FLOAT_EQ(data->B[i], 1350.0);

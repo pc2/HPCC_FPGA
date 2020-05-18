@@ -62,8 +62,8 @@ simple exchange of the different calculation methods.
 
 @return The resulting matrix
 */
-    std::shared_ptr<stream::StreamExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> config,
+    std::unique_ptr<stream::StreamExecutionTimings>
+    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings>& config,
               HOST_DATA_TYPE* A,
               HOST_DATA_TYPE* B,
               HOST_DATA_TYPE* C);

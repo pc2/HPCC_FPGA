@@ -23,5 +23,4 @@ SOFTWARE.
 /* Project's headers */
 #include "stream_benchmark.hpp"
 
-
-extern std::shared_ptr<stream::StreamBenchmark> bm;
+extern std::unique_ptr<stream::StreamBenchmark> bm;

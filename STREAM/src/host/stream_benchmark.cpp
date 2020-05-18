@@ -69,9 +69,9 @@ stream::StreamBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
             ("single-kernel", "Use the single kernel implementation");
 }
 
-std::shared_ptr<stream::StreamExecutionTimings>
-stream::StreamBenchmark::executeKernel(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &settings, StreamData &data) {
-    return bm_execution::calculate(settings,
+std::unique_ptr<stream::StreamExecutionTimings>
+stream::StreamBenchmark::executeKernel(StreamData &data) {
+    return bm_execution::calculate(*executionSettings,
               data.A,
               data.B,
               data.C);
@@ -83,7 +83,7 @@ Prints the execution results to stdout
 @param results The execution results
 */
 void
-stream::StreamBenchmark::printResults(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &settings, const stream::StreamExecutionTimings &output) {
+stream::StreamBenchmark::printResults(const stream::StreamExecutionTimings &output) {
 
     std::cout << std::setw(ENTRY_SPACE) << "Function";
     std::cout << std::setw(ENTRY_SPACE) << "Best Rate MB/s";
@@ -107,42 +107,20 @@ stream::StreamBenchmark::printResults(const hpcc_base::ExecutionSettings<stream:
 
 }
 
-std::shared_ptr<stream::StreamData>
-stream::StreamBenchmark::generateInputData(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &settings) {
-    HOST_DATA_TYPE *A, *B, *C;
-#ifdef INTEL_FPGA
-#ifdef USE_SVM
-    A = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            settings.programSettings->streamArraySize * sizeof(HOST_DATA_TYPE), 1024));
-    B = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            settings.programSettings->streamArraySize * sizeof(HOST_DATA_TYPE), 1024));
-    C = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            settings.programSettings->streamArraySize * sizeof(HOST_DATA_TYPE), 1024));
-#else
-    posix_memalign(reinterpret_cast<void**>(&A), 64, settings.programSettings->streamArraySize * sizeof(HOST_DATA_TYPE));
-    posix_memalign(reinterpret_cast<void**>(&B), 64, settings.programSettings->streamArraySize * sizeof(HOST_DATA_TYPE));
-    posix_memalign(reinterpret_cast<void**>(&C), 64, settings.programSettings->streamArraySize * sizeof(HOST_DATA_TYPE));
-#endif
-#endif
-#ifdef XILINX_FPGA
-    posix_memalign(reinterpret_cast<void**>(&A), 4096, settings.programSettings->streamArraySize * sizeof(HOST_DATA_TYPE));
-    posix_memalign(reinterpret_cast<void**>(&B), 4096, settings.programSettings->streamArraySize * sizeof(HOST_DATA_TYPE));
-    posix_memalign(reinterpret_cast<void**>(&C), 4096, settings.programSettings->streamArraySize * sizeof(HOST_DATA_TYPE));
-#endif
-    for (int i=0; i< settings.programSettings->streamArraySize; i++) {
-        A[i] = 1.0;
-        B[i] = 2.0;
-        C[i] = 0.0;
+std::unique_ptr<stream::StreamData>
+stream::StreamBenchmark::generateInputData() {
+    auto d = std::unique_ptr<stream::StreamData>(new StreamData(*executionSettings->context, executionSettings->programSettings->streamArraySize));
+    for (int i=0; i< executionSettings->programSettings->streamArraySize; i++) {
+        d->A[i] = 1.0;
+        d->B[i] = 2.0;
+        d->C[i] = 0.0;
     }
 
-    return std::make_shared<stream::StreamData>(new stream::StreamData{A, B, C});
+    return d;
 }
 
 bool  
-stream::StreamBenchmark::validateOutputAndPrintError(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &settings ,stream::StreamData &data, const stream::StreamExecutionTimings &output) {
+stream::StreamBenchmark::validateOutputAndPrintError(stream::StreamData &data) {
     HOST_DATA_TYPE aj,bj,cj,scalar;
     HOST_DATA_TYPE aSumErr,bSumErr,cSumErr;
     HOST_DATA_TYPE aAvgErr,bAvgErr,cAvgErr;
@@ -158,7 +136,7 @@ stream::StreamBenchmark::validateOutputAndPrintError(const hpcc_base::ExecutionS
     aj = 2.0E0 * aj;
     /* now execute timing loop */
     scalar = 3.0;
-    for (k=0; k<settings.programSettings->numRepetitions; k++)
+    for (k=0; k<executionSettings->programSettings->numRepetitions; k++)
     {
         cj = aj;
         bj = scalar*cj;
@@ -170,15 +148,15 @@ stream::StreamBenchmark::validateOutputAndPrintError(const hpcc_base::ExecutionS
     aSumErr = 0.0;
     bSumErr = 0.0;
     cSumErr = 0.0;
-    for (j=0; j< settings.programSettings->streamArraySize; j++) {
+    for (j=0; j< executionSettings->programSettings->streamArraySize; j++) {
         aSumErr += abs(data.A[j] - aj);
         bSumErr += abs(data.B[j] - bj);
         cSumErr += abs(data.C[j] - cj);
         // if (j == 417) printf("Index 417: c[j]: %f, cj: %f\n",c[j],cj);	// MCCALPIN
     }
-    aAvgErr = aSumErr / (HOST_DATA_TYPE) settings.programSettings->streamArraySize;
-    bAvgErr = bSumErr / (HOST_DATA_TYPE) settings.programSettings->streamArraySize;
-    cAvgErr = cSumErr / (HOST_DATA_TYPE) settings.programSettings->streamArraySize;
+    aAvgErr = aSumErr / (HOST_DATA_TYPE) executionSettings->programSettings->streamArraySize;
+    bAvgErr = bSumErr / (HOST_DATA_TYPE) executionSettings->programSettings->streamArraySize;
+    cAvgErr = cSumErr / (HOST_DATA_TYPE) executionSettings->programSettings->streamArraySize;
 
     if (sizeof(HOST_DATA_TYPE) == 4) {
         epsilon = 1.e-6;
@@ -187,7 +165,7 @@ stream::StreamBenchmark::validateOutputAndPrintError(const hpcc_base::ExecutionS
         epsilon = 1.e-13;
     }
     else {
-        printf("WEIRD: sizeof(STREAM_TYPE) = %lu\n",sizeof(settings.programSettings->streamArraySize));
+        printf("WEIRD: sizeof(STREAM_TYPE) = %lu\n",sizeof(executionSettings->programSettings->streamArraySize));
         epsilon = 1.e-6;
     }
 
@@ -197,7 +175,7 @@ stream::StreamBenchmark::validateOutputAndPrintError(const hpcc_base::ExecutionS
         printf ("Failed Validation on array a[], AvgRelAbsErr > epsilon (%e)\n",epsilon);
         printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",aj,aAvgErr,abs(aAvgErr)/aj);
         ierr = 0;
-        for (j=0; j<settings.programSettings->streamArraySize; j++) {
+        for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
             if (abs(data.A[j]/aj-1.0) > epsilon) {
                 ierr++;
             }
@@ -210,7 +188,7 @@ stream::StreamBenchmark::validateOutputAndPrintError(const hpcc_base::ExecutionS
         printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",bj,bAvgErr,abs(bAvgErr)/bj);
         printf ("     AvgRelAbsErr > Epsilon (%e)\n",epsilon);
         ierr = 0;
-        for (j=0; j<settings.programSettings->streamArraySize; j++) {
+        for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
             if (abs(data.B[j]/bj-1.0) > epsilon) {
                 ierr++;
             }
@@ -223,7 +201,7 @@ stream::StreamBenchmark::validateOutputAndPrintError(const hpcc_base::ExecutionS
         printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",cj,cAvgErr,abs(cAvgErr)/cj);
         printf ("     AvgRelAbsErr > Epsilon (%e)\n",epsilon);
         ierr = 0;
-        for (j=0; j<settings.programSettings->streamArraySize; j++) {
+        for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
             if (abs(data.C[j]/cj-1.0) > epsilon) {
                 ierr++;
             }

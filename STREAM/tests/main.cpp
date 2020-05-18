@@ -43,7 +43,7 @@ public:
 
 using namespace stream;
 
-std::shared_ptr<StreamBenchmark> bm;
+std::unique_ptr<StreamBenchmark> bm;
 
 /**
 The program entry point for the unit tests
@@ -60,11 +60,13 @@ main(int argc, char *argv[]) {
         ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
 #endif
 
-    bm = std::shared_ptr<StreamBenchmark>(new StreamBenchmark());
+    bm = std::unique_ptr<StreamBenchmark>(new StreamBenchmark(argc, argv));
 
-    bm->setupBenchmark(argc, argv);
+    bool result = RUN_ALL_TESTS();
 
-    return RUN_ALL_TESTS();
+    bm = nullptr;
+
+    return result;
 
 }
 

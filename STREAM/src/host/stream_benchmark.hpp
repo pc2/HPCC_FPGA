@@ -81,8 +81,42 @@ class StreamData {
 
 public:
     HOST_DATA_TYPE *A, *B, *C;
-    StreamData(HOST_DATA_TYPE *A,HOST_DATA_TYPE *B,HOST_DATA_TYPE *C) : A(A), B(B), C(C) {}
-    StreamData(StreamData *d) : A(d->A), B(d->B), C(d->C) {}
+    StreamData(const cl::Context& context, size_t size) {
+    #ifdef INTEL_FPGA
+    #ifdef USE_SVM
+        A = reinterpret_cast<HOST_DATA_TYPE*>(
+                                clSVMAlloc(context(), 0 ,
+                                size * sizeof(HOST_DATA_TYPE), 1024));
+        B = reinterpret_cast<HOST_DATA_TYPE*>(
+                                clSVMAlloc(context(), 0 ,
+                                size * sizeof(HOST_DATA_TYPE), 1024));
+        C = reinterpret_cast<HOST_DATA_TYPE*>(
+                                clSVMAlloc(context(), 0 ,
+                                size * sizeof(HOST_DATA_TYPE), 1024));
+    #else
+        posix_memalign(reinterpret_cast<void**>(&A), 64, size * sizeof(HOST_DATA_TYPE));
+        posix_memalign(reinterpret_cast<void**>(&B), 64, size * sizeof(HOST_DATA_TYPE));
+        posix_memalign(reinterpret_cast<void**>(&C), 64, size * sizeof(HOST_DATA_TYPE));
+    #endif
+    #endif
+    #ifdef XILINX_FPGA
+        posix_memalign(reinterpret_cast<void**>(&A), 4096, size * sizeof(HOST_DATA_TYPE));
+        posix_memalign(reinterpret_cast<void**>(&B), 4096, size * sizeof(HOST_DATA_TYPE));
+        posix_memalign(reinterpret_cast<void**>(&C), 4096, size * sizeof(HOST_DATA_TYPE));
+    #endif
+    }
+
+    ~StreamData() {
+    #ifdef USE_SVM
+        clSVMFree(A);
+        clSVMFree(B);
+        clSVMFree(C);
+    #else
+        free(A);
+        free(B);
+        free(C);
+    #endif
+    }
 
 };
 
@@ -125,43 +159,39 @@ public:
 
     /**
      * @brief Stream specific implementation of the data generation
-     * 
-     * @param settings 
-     * @return std::shared_ptr<StreamData> 
+     *  
+     * @return std::unique_ptr<StreamData> 
      */
-    std::shared_ptr<StreamData>
-    generateInputData(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings) override;
+    std::unique_ptr<StreamData>
+    generateInputData() override;
 
     /**
      * @brief Stream specific implementation of the kernel execution
      * 
-     * @param settings 
      * @param data 
-     * @return std::shared_ptr<StreamExecutionTimings> 
+     * @return std::unique_ptr<StreamExecutionTimings> 
      */
-    std::shared_ptr<StreamExecutionTimings>
-    executeKernel(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings, StreamData &data) override;
+    std::unique_ptr<StreamExecutionTimings>
+    executeKernel( StreamData &data) override;
 
     /**
      * @brief Stream specific implementation of the execution validation
-     * 
-     * @param settings 
+     *  
      * @param data 
      * @param output 
      * @return true 
      * @return false 
      */
     bool
-    validateOutputAndPrintError(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings ,StreamData &data, const StreamExecutionTimings &output) override;
+    validateOutputAndPrintError(StreamData &data) override;
 
     /**
      * @brief Stream specific implementation of printing the execution results
      * 
-     * @param settings 
      * @param output 
      */
     void
-    printResults(const hpcc_base::ExecutionSettings<StreamProgramSettings> &settings, const StreamExecutionTimings &output) override;
+    printResults(const StreamExecutionTimings &output) override;
 
     /**
      * @brief Construct a new Stream Benchmark object

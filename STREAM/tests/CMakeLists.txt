@@ -4,7 +4,7 @@ add_subdirectory(../../extern/googletest ${CMAKE_BINARY_DIR}/lib/googletest)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 include_directories(${CMAKE_BINARY_DIR}/src/common .)
 
-set(TEST_SOURCES ../../shared/setup/test_fpga_setup.cpp test_kernel_functionality_and_host_integration.cpp main.cpp)
+set(TEST_SOURCES main.cpp test_kernel_functionality_and_host_integration.cpp)
 
 set(HOST_EXE_NAME STREAM_FPGA)
 set(LIB_NAME stream)
