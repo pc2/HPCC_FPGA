@@ -39,36 +39,36 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<ExecutionTimings>
-    calculate(std::shared_ptr<ExecutionConfiguration> config, HOST_DATA_TYPE *const A,
+    std::unique_ptr<transpose::TransposeExecutionTimings>
+    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, HOST_DATA_TYPE *const A,
               HOST_DATA_TYPE *const B, HOST_DATA_TYPE *A_out) {
 
-        cl::Buffer bufferA(config->context, CL_MEM_READ_ONLY,
-                           sizeof(HOST_DATA_TYPE) * config->matrixSize * config->matrixSize);
-        cl::Buffer bufferB(config->context, CL_MEM_READ_ONLY,
-                           sizeof(HOST_DATA_TYPE) * config->matrixSize * config->matrixSize);
-        cl::Buffer bufferA_out(config->context, CL_MEM_WRITE_ONLY,
-                               sizeof(HOST_DATA_TYPE) * config->matrixSize * config->matrixSize);
+        cl::Buffer bufferA(*config.context, CL_MEM_READ_ONLY,
+                           sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize);
+        cl::Buffer bufferB(*config.context, CL_MEM_READ_ONLY,
+                           sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize);
+        cl::Buffer bufferA_out(*config.context, CL_MEM_WRITE_ONLY,
+                               sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize);
 
-        cl::Kernel transposeKernel(config->program, config->kernelName.c_str());
+        cl::Kernel transposeKernel(*config.program, KERNEL_NAME);
 
         transposeKernel.setArg(0, bufferA);
         transposeKernel.setArg(1, bufferB);
         transposeKernel.setArg(2, bufferA_out);
-        transposeKernel.setArg(3, config->matrixSize / config->blockSize);
+        transposeKernel.setArg(3, config.programSettings->matrixSize / config.programSettings->blockSize);
 
-        cl::CommandQueue queue(config->context);
+        cl::CommandQueue queue(*config.context);
 
         std::vector<double> transferTimings;
         std::vector<double> calculationTimings;
 
-        for (int repetition = 0; repetition < config->repetitons; repetition++) {
+        for (int repetition = 0; repetition < config.programSettings->numRepetitions; repetition++) {
 
             auto startTransfer = std::chrono::high_resolution_clock::now();
             queue.enqueueWriteBuffer(bufferA, CL_FALSE, 0,
-                                     sizeof(HOST_DATA_TYPE) * config->matrixSize * config->matrixSize, A);
+                                     sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, A);
             queue.enqueueWriteBuffer(bufferB, CL_FALSE, 0,
-                                     sizeof(HOST_DATA_TYPE) * config->matrixSize * config->matrixSize, B);
+                                     sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, B);
             queue.finish();
             auto endTransfer = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> transferTime =
@@ -86,7 +86,7 @@ namespace bm_execution {
 
             startTransfer = std::chrono::high_resolution_clock::now();
             queue.enqueueReadBuffer(bufferA_out, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE) * config->matrixSize * config->matrixSize, A_out);
+                                    sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, A_out);
             endTransfer = std::chrono::high_resolution_clock::now();
             transferTime +=
                     std::chrono::duration_cast<std::chrono::duration<double>>
@@ -94,7 +94,7 @@ namespace bm_execution {
             transferTimings.push_back(transferTime.count());
         }
 
-        std::shared_ptr<ExecutionTimings> result(new ExecutionTimings{
+        std::unique_ptr<transpose::TransposeExecutionTimings> result(new transpose::TransposeExecutionTimings{
                 transferTimings,
                 calculationTimings
         });
