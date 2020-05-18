@@ -32,7 +32,7 @@ SOFTWARE.
 #include "parameters.h"
 
 /**
- * @brief Contains all classes and methods needed by the STREAM benchmark
+ * @brief Contains all classes and methods needed by the RandomAccess benchmark
  * 
  */
 namespace random_access {
@@ -80,7 +80,23 @@ class RandomAccessData {
 
 public:
     HOST_DATA_TYPE *data;
-    RandomAccessData(HOST_DATA_TYPE *data_) : data(data_) {}
+    RandomAccessData(cl::Context& context, size_t size) {
+    #ifdef USE_SVM
+        data = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc(context(), 0 ,
+                            size * sizeof(HOST_DATA_TYPE), 1024));
+    #else
+        posix_memalign(reinterpret_cast<void**>(&data), 4096, size * sizeof(HOST_DATA_TYPE));
+    #endif
+    }
+
+    ~RandomAccessData() {
+    #ifdef USE_SVM
+        clSVMFree(data);
+    #else
+        free(data);
+    #endif
+    }
 
 };
 
@@ -120,20 +136,20 @@ public:
      * @brief Random access specific implementation of the data generation
      * 
      * @param settings 
-     * @return std::shared_ptr<RandomAccessData> 
+     * @return std::unique_ptr<RandomAccessData> 
      */
-    std::shared_ptr<RandomAccessData>
-    generateInputData(const hpcc_base::ExecutionSettings<RandomAccessProgramSettings> &settings) override;
+    std::unique_ptr<RandomAccessData>
+    generateInputData() override;
 
     /**
      * @brief RandomAccess specific implementation of the kernel execution
      * 
      * @param settings 
      * @param data 
-     * @return std::shared_ptr<RandomAccessExecutionTimings> 
+     * @return std::unique_ptr<RandomAccessExecutionTimings> 
      */
-    std::shared_ptr<RandomAccessExecutionTimings>
-    executeKernel(const hpcc_base::ExecutionSettings<RandomAccessProgramSettings> &settings, RandomAccessData &data) override;
+    std::unique_ptr<RandomAccessExecutionTimings>
+    executeKernel(RandomAccessData &data) override;
 
     /**
      * @brief RandomAccess specific implementation of the execution validation
@@ -145,7 +161,7 @@ public:
      * @return false 
      */
     bool
-    validateOutputAndPrintError(const hpcc_base::ExecutionSettings<RandomAccessProgramSettings> &settings ,RandomAccessData &data, const RandomAccessExecutionTimings &output) override;
+    validateOutputAndPrintError(RandomAccessData &data) override;
 
     /**
      * @brief RandomAccess specific implementation of printing the execution results
@@ -154,7 +170,7 @@ public:
      * @param output 
      */
     void
-    printResults(const hpcc_base::ExecutionSettings<RandomAccessProgramSettings> &settings, const RandomAccessExecutionTimings &output) override;
+    printResults(const RandomAccessExecutionTimings &output) override;
 
     /**
      * @brief Construct a new RandomAccess Benchmark object

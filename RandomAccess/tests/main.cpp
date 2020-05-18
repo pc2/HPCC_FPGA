@@ -62,7 +62,10 @@ main(int argc, char *argv[]) {
         ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
 #endif
 
-    return RUN_ALL_TESTS();
+    bool result = RUN_ALL_TESTS();
 
+    bm = nullptr;
+
+    return result;
 }
 

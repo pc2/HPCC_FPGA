@@ -62,13 +62,12 @@ random_access::RandomAccessBenchmark::addAdditionalParseOptions(cxxopts::Options
         ("d", "Size of the data array",
             cxxopts::value<size_t>()->default_value(std::to_string(DEFAULT_ARRAY_LENGTH)))
         ("r", "Number of kernel replications used",
-            cxxopts::value<uint>()->default_value(std::to_string(NUM_KERNEL_REPLICATIONS)))
-        ("single-kernel", "Use the single kernel implementation");
+            cxxopts::value<uint>()->default_value(std::to_string(NUM_KERNEL_REPLICATIONS)));
 }
 
-std::shared_ptr<random_access::RandomAccessExecutionTimings>
-random_access::RandomAccessBenchmark::executeKernel(const hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> &settings, RandomAccessData &data) {
-    return bm_execution::calculate(settings, data.data);
+std::unique_ptr<random_access::RandomAccessExecutionTimings>
+random_access::RandomAccessBenchmark::executeKernel(RandomAccessData &data) {
+    return bm_execution::calculate(*executionSettings, data.data);
 }
 
 /**
@@ -77,7 +76,7 @@ Prints the execution results to stdout
 @param results The execution results
 */
 void
-random_access::RandomAccessBenchmark::printResults(const hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> &settings, const random_access::RandomAccessExecutionTimings &output) {
+random_access::RandomAccessBenchmark::printResults(const random_access::RandomAccessExecutionTimings &output) {
     std::cout << std::setw(ENTRY_SPACE)
               << "best" << std::setw(ENTRY_SPACE) << "mean"
               << std::setw(ENTRY_SPACE) << "GUOPS" << std::endl;
@@ -85,7 +84,7 @@ random_access::RandomAccessBenchmark::printResults(const hpcc_base::ExecutionSet
     // Calculate performance for kernel execution plus data transfer
     double tmean = 0;
     double tmin = std::numeric_limits<double>::max();
-    double gups = static_cast<double>(4 * settings.programSettings->dataSize) / 1000000000;
+    double gups = static_cast<double>(4 * executionSettings->programSettings->dataSize) / 1000000000;
     for (double currentTime : output.times) {
         tmean +=  currentTime;
         if (currentTime < tmin) {
@@ -101,45 +100,36 @@ random_access::RandomAccessBenchmark::printResults(const hpcc_base::ExecutionSet
 
 }
 
-std::shared_ptr<random_access::RandomAccessData>
-random_access::RandomAccessBenchmark::generateInputData(const hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> &settings) {
-    HOST_DATA_TYPE *data;
-#ifdef USE_SVM
-    data = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            settings.programSettings->dataSize * sizeof(HOST_DATA_TYPE), 1024));
-#else
-    posix_memalign(reinterpret_cast<void**>(&data), 4096, settings.programSettings->dataSize * sizeof(HOST_DATA_TYPE));
-#endif
-
-    for (HOST_DATA_TYPE j=0; j < settings.programSettings->dataSize ; j++) {
-        data[j] = j;
+std::unique_ptr<random_access::RandomAccessData>
+random_access::RandomAccessBenchmark::generateInputData() {
+    auto d = std::unique_ptr<RandomAccessData>(new RandomAccessData(*executionSettings->context, executionSettings->programSettings->dataSize));
+    for (HOST_DATA_TYPE j=0; j < executionSettings->programSettings->dataSize ; j++) {
+        d->data[j] = j;
     }
-
-    return std::shared_ptr<RandomAccessData>(new RandomAccessData{data});
+    return d;
 }
 
 bool  
-random_access::RandomAccessBenchmark::validateOutputAndPrintError(const hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> &settings ,random_access::RandomAccessData &data, const random_access::RandomAccessExecutionTimings &output) {
+random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access::RandomAccessData &data) {
     HOST_DATA_TYPE temp = 1;
-    for (HOST_DATA_TYPE i=0; i < 4L*settings.programSettings->dataSize; i++) {
+    for (HOST_DATA_TYPE i=0; i < 4L*executionSettings->programSettings->dataSize; i++) {
         HOST_DATA_TYPE_SIGNED v = 0;
         if (((HOST_DATA_TYPE_SIGNED)temp) < 0) {
             v = POLY;
         }
         temp = (temp << 1) ^ v;
-        data.data[(temp >> 3) & (settings.programSettings->dataSize - 1)] ^= temp;
+        data.data[(temp >> 3) & (executionSettings->programSettings->dataSize - 1)] ^= temp;
     }
 
     double errors = 0;
 #pragma omp parallel for reduction(+:errors)
-    for (HOST_DATA_TYPE i=0; i< settings.programSettings->dataSize; i++) {
+    for (HOST_DATA_TYPE i=0; i< executionSettings->programSettings->dataSize; i++) {
         if (data.data[i] != i) {
             errors++;
         }
     }
-    std::cout  << "Error: " << (static_cast<double>(errors) / settings.programSettings->dataSize) * 100 
+    std::cout  << "Error: " << (static_cast<double>(errors) / executionSettings->programSettings->dataSize) * 100 
                 << "%" << std::endl;
 
-    return (static_cast<double>(errors) / settings.programSettings->dataSize) < 0.01;
+    return (static_cast<double>(errors) / executionSettings->programSettings->dataSize) < 0.01;
 }

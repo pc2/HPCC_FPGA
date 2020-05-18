@@ -39,7 +39,7 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<random_access::RandomAccessExecutionTimings>
+    std::unique_ptr<random_access::RandomAccessExecutionTimings>
     calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data) {
         // int used to check for OpenCL errors
         int err;
@@ -52,22 +52,22 @@ namespace bm_execution {
         /* --- Prepare kernels --- */
 
         for (int r=0; r < config.programSettings->kernelReplications; r++) {
-            compute_queue.push_back(cl::CommandQueue(config.context, config.device));
+            compute_queue.push_back(cl::CommandQueue(*config.context, *config.device));
 
             int memory_bank_info = 0;
 #ifdef INTEL_FPGA
             memory_bank_info = ((r + 1) << 16);
 #endif
-            Buffer_data.push_back(cl::Buffer(config.context,
+            Buffer_data.push_back(cl::Buffer(*config.context,
                         CL_MEM_READ_WRITE | memory_bank_info,
                         sizeof(HOST_DATA_TYPE)*(config.programSettings->dataSize / config.programSettings->kernelReplications)));
 #ifdef INTEL_FPGA
-            accesskernel.push_back(cl::Kernel(config.program,
+            accesskernel.push_back(cl::Kernel(*config.program,
                         (RANDOM_ACCESS_KERNEL + std::to_string(r)).c_str() ,
                         &err));
 #endif
 #ifdef XILINX_FPGA
-            accesskernel.push_back(cl::Kernel(config.program,
+            accesskernel.push_back(cl::Kernel(*config.program,
                         (std::string(RANDOM_ACCESS_KERNEL) + "0:{" + RANDOM_ACCESS_KERNEL + "0_" + std::to_string(r + 1) + "}").c_str() ,
                         &err));
 #endif
@@ -153,7 +153,7 @@ namespace bm_execution {
 #endif
         }
 
-        return std::shared_ptr<random_access::RandomAccessExecutionTimings>(new random_access::RandomAccessExecutionTimings{executionTimes});
+        return std::unique_ptr<random_access::RandomAccessExecutionTimings>(new random_access::RandomAccessExecutionTimings{executionTimes});
     }
 
 }  // namespace bm_execution

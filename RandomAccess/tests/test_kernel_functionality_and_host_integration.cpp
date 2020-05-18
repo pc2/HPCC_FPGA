@@ -8,7 +8,7 @@
 
 
 struct RandomAccessKernelTest : testing::Test {
-    std::shared_ptr<random_access::RandomAccessData> data;
+    std::unique_ptr<random_access::RandomAccessData> data;
 
     RandomAccessKernelTest() {
         bm->getExecutionSettings().programSettings->dataSize =  128 * NUM_KERNEL_REPLICATIONS * BUFFER_SIZE;
@@ -16,7 +16,7 @@ struct RandomAccessKernelTest : testing::Test {
     }
 
     void SetUp() override {
-        data = bm->generateInputData(bm->getExecutionSettings());
+        data = bm->generateInputData();
     }
 
 };
@@ -26,7 +26,7 @@ struct RandomAccessKernelTest : testing::Test {
  * Check if the number of measurements from the calculation matches the number of repetitions
  */
 TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements1Rep) {
-    auto result = bm->executeKernel(bm->getExecutionSettings(), *data);
+    auto result = bm->executeKernel( *data);
     EXPECT_EQ(result->times.size(), 1);
 }
 
@@ -35,7 +35,7 @@ TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements1Rep) {
  */
 TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements3Rep) {
     bm->getExecutionSettings().programSettings->numRepetitions = 3;
-    auto result = bm->executeKernel(bm->getExecutionSettings(), *data);
+    auto result = bm->executeKernel(*data);
     EXPECT_EQ(result->times.size(), 3);
 }
 
@@ -43,7 +43,7 @@ TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements3Rep) {
  * Execution returns correct results for a single repetition
  */
 TEST_F(RandomAccessKernelTest, FPGAErrorBelow1Percent) {
-    auto result = bm->executeKernel(bm->getExecutionSettings(), *data);
-    bool success = bm->validateOutputAndPrintError(bm->getExecutionSettings(), *data, *result);
+    auto result = bm->executeKernel(*data);
+    bool success = bm->validateOutputAndPrintError(*data);
     EXPECT_TRUE(success);
 }

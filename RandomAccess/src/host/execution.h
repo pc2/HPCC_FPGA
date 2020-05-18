@@ -53,7 +53,7 @@ simple exchange of the different calculation methods.
 
 @return The time measurements and the error rate counted from the executions
 */
-std::shared_ptr<random_access::RandomAccessExecutionTimings>
+std::unique_ptr<random_access::RandomAccessExecutionTimings>
 calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data);
 
 }  // namespace bm_execution

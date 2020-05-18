@@ -19,11 +19,11 @@ struct RandomAccessHostCodeTest : testing::Test {
  * Check if the correctness test gives correct results for correct array
  */
 TEST_F(RandomAccessHostCodeTest, ResultValidationWorksForCorrectUpdates) {
-    auto data = bm->generateInputData(bm->getExecutionSettings());
+    auto data = bm->generateInputData();
     // do random accesses
-    bm->validateOutputAndPrintError(bm->getExecutionSettings(), *data, random_access::RandomAccessExecutionTimings{{}});
+    bm->validateOutputAndPrintError(*data);
     // check correctness of random accesses
-    bool success = bm->validateOutputAndPrintError(bm->getExecutionSettings(), *data, random_access::RandomAccessExecutionTimings{{}});
+    bool success = bm->validateOutputAndPrintError(*data);
     EXPECT_TRUE(success);
 }
 
@@ -32,8 +32,8 @@ TEST_F(RandomAccessHostCodeTest, ResultValidationWorksForCorrectUpdates) {
  * Check if the correctness test gives correct results for not updated array
  */
 TEST_F(RandomAccessHostCodeTest, ResultValidationWorksForWrongUpdates) {
-    auto data = bm->generateInputData(bm->getExecutionSettings());
+    auto data = bm->generateInputData();
     // check correctness of random accesses
-    bool success = bm->validateOutputAndPrintError(bm->getExecutionSettings(), *data, random_access::RandomAccessExecutionTimings{{}});
+    bool success = bm->validateOutputAndPrintError( *data);
     EXPECT_FALSE(success);
 }
