@@ -43,7 +43,8 @@ public:
 
 using namespace linpack;
 
-std::unique_ptr<LinpackBenchmark> bm;
+int global_argc;
+char** global_argv;
 
 /**
 The program entry point for the unit tests
@@ -55,7 +56,8 @@ main(int argc, char *argv[]) {
 
     ::testing::InitGoogleTest(&argc, argv);
 
-    bm = std::unique_ptr<LinpackBenchmark>(new LinpackBenchmark(argc, argv));
+    global_argc = argc;
+    global_argv = argv;
 
 #ifdef _USE_MPI_
     ::testing::Environment* const mpi_env =
@@ -63,8 +65,6 @@ main(int argc, char *argv[]) {
 #endif
 
     bool result = RUN_ALL_TESTS();
-
-    bm = nullptr;
 
     return result;
 

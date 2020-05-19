@@ -24,4 +24,5 @@ SOFTWARE.
 #include "linpack_benchmark.hpp"
 
 
-extern std::unique_ptr<linpack::LinpackBenchmark> bm;
+extern int global_argc;
+extern char** global_argv;

@@ -43,7 +43,7 @@ namespace bm_execution {
  @copydoc bm_execution::calculate()
 */
 std::unique_ptr<linpack::LinpackExecutionTimings>
-calculate(const hpcc_base::ExecutionConfiguration<linpack::LinpackProgramSettings>&config,
+calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&config,
           HOST_DATA_TYPE* A,
           HOST_DATA_TYPE* b,
           cl_int* ipvt) {
@@ -77,7 +77,7 @@ calculate(const hpcc_base::ExecutionConfiguration<linpack::LinpackProgramSetting
 
     double t;
     std::vector<double> executionTimes;
-    for (int i = 0; i < config.repetitions; i++) {
+    for (int i = 0; i < config.programSettings->numRepetitions; i++) {
         compute_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
         compute_queue.finish();
@@ -103,7 +103,7 @@ calculate(const hpcc_base::ExecutionConfiguration<linpack::LinpackProgramSetting
     linpack::gesl_ref(A, b, ipvt, config.programSettings->matrixSize, config.programSettings->matrixSize);
 
     std::unique_ptr<linpack::LinpackExecutionTimings> results(
-                    new LinpackExecutionTimings{executionTimes});
+                    new linpack::LinpackExecutionTimings{executionTimes});
     return results;
 }
 

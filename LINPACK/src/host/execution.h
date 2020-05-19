@@ -45,7 +45,7 @@ simple exchange of the different calculation methods.
 @return The resulting matrix
 */
     std::unique_ptr<linpack::LinpackExecutionTimings>
-    calculate(const hpcc_base::ExecutionConfiguration<linpack::LinpackProgramSettings>& config,
+    calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>& config,
               HOST_DATA_TYPE* A,
               HOST_DATA_TYPE* b,
               cl_int* ipvt);

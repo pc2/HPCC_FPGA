@@ -73,15 +73,16 @@ public:
 class LinpackData {
 
 public:
-    HOST_DATA_TYPE *A, *B;
+    HOST_DATA_TYPE *A, *b;
     cl_int* ipvt;
+    HOST_DATA_TYPE norma;
 
     /**
      * @brief Construct a new Linpack Data object
      * 
      * @param size Size of the allocated square matrix and vectors
      */
-    LinpackData(uint size) {
+    LinpackData(uint size) : norma(0.0) {
         posix_memalign(reinterpret_cast<void**>(&A), 4096, size * size * sizeof(HOST_DATA_TYPE));
         posix_memalign(reinterpret_cast<void**>(&b), 4096, size * sizeof(HOST_DATA_TYPE));
         posix_memalign(reinterpret_cast<void**>(&ipvt), 4096, size * sizeof(cl_int));
@@ -93,7 +94,7 @@ public:
      */
     ~LinpackData() {
         free(A);
-        free(B);
+        free(b);
         free(ipvt);
     }
 

@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 linpack::LinpackProgramSettings::LinpackProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["m"].as<uint>()) {
+    matrixSize(results["s"].as<uint>()) {
 
 }
 
@@ -55,7 +55,7 @@ linpack::LinpackBenchmark::LinpackBenchmark() {}
 void
 linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
-        ("m", "Matrix size in number of values in one dimension",
+        ("s", "Matrix size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)));
 }
 
@@ -103,11 +103,11 @@ linpack::LinpackBenchmark::generateInputData() {
     auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(executionSettings->programSettings->matrixSize));
     std::mt19937 gen(7);
     std::uniform_real_distribution<> dis(-1.0, 1.0);
-    *norma = 0.0;
+    d->norma = 0.0;
     for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
         for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
             d->A[executionSettings->programSettings->matrixSize*i+j] = dis(gen);
-            *norma = (d->A[executionSettings->programSettings->matrixSize*i+j] > *norma) ? d->A[executionSettings->programSettings->matrixSize*i+j] : *norma;
+            d->norma = (d->A[executionSettings->programSettings->matrixSize*i+j] > d->norma) ? d->A[executionSettings->programSettings->matrixSize*i+j] : d->norma;
         }
     }
     for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
@@ -139,7 +139,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     }
 
     HOST_DATA_TYPE eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
-    HOST_DATA_TYPE residn = resid / (n*norma*normx*eps);
+    HOST_DATA_TYPE residn = resid / (n*newdata->norma*normx*eps);
     //std::cout << resid << ", " << norma << ", " << normx << std::endl;
     std::cout << "  norm. resid        resid       "\
                  "machep       x[0]-1     x[n-1]-1" << std::endl;
@@ -157,7 +157,7 @@ Standard LU factorization on a block with fixed size
 Case 1 of Zhangs description
 */
 void
-gefa_ref(HOST_DATA_TYPE* a, unsigned n, unsigned lda, cl_int* ipvt) {
+linpack::gefa_ref(HOST_DATA_TYPE* a, unsigned n, unsigned lda, cl_int* ipvt) {
     for (int i = 0; i < n; i++) {
         ipvt[i] = i;
     }
@@ -206,7 +206,7 @@ gefa_ref(HOST_DATA_TYPE* a, unsigned n, unsigned lda, cl_int* ipvt) {
 }
 
 void
-gesl_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, cl_int* ipvt, unsigned n, unsigned lda) {
+linpack::gesl_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, cl_int* ipvt, unsigned n, unsigned lda) {
     auto b_tmp = new HOST_DATA_TYPE[n];
 #pragma omp parallel default(shared)
     {
@@ -249,7 +249,7 @@ gesl_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, cl_int* ipvt, unsigned n, unsigne
     delete [] b_tmp;
 }
 
-void dmxpy(unsigned n1, HOST_DATA_TYPE* y, unsigned n2, unsigned ldm, HOST_DATA_TYPE* x, HOST_DATA_TYPE* m) {
+void linpack::dmxpy(unsigned n1, HOST_DATA_TYPE* y, unsigned n2, unsigned ldm, HOST_DATA_TYPE* x, HOST_DATA_TYPE* m) {
     for (int i=0; i < n1; i++) {
         for (int j=0; j < n2; j++) {
             y[i] = y[i] + x[j] * m[ldm*i + j];

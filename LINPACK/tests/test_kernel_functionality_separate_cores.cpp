@@ -3,23 +3,27 @@
 //
 #include "gtest/gtest.h"
 #include "parameters.h"
-#include "../src/host/execution.h"
-#include "setup/fpga_setup.hpp"
-#include "../src/host/linpack_functionality.hpp"
+#include "linpack_benchmark.hpp"
 #include <algorithm>
 #ifdef _INTEL_MKL_
 #include "mkl.h"
 #endif
 
-struct OpenCLKernelSeparateTest : testing::Test {
+struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<std::string> {
+
     HOST_DATA_TYPE *A, *B, *C, *scale;
     cl_int *ipvt;
-    std::shared_ptr<bm_execution::ExecutionConfiguration> config;
-    cl_uint array_size;
-    std::string lastKernelFileName;
+    uint array_size;
+    std::unique_ptr<linpack::LinpackBenchmark> bm;
 
-    OpenCLKernelSeparateTest() {
+    LinpackKernelSeparateTest() {
+        int argc = 3;
+        std::string str_param = GetParam();
+        std::vector<char> param(str_param.c_str(), str_param.c_str() + str_param.size() + 1);
+        char* argv[3] = {"Test", "-f", reinterpret_cast<char*>(&param)};
         array_size = (1 << LOCAL_MEM_BLOCK_LOG);
+        bm->getExecutionSettings().programSettings->matrixSize = array_size;
+        bm = std::unique_ptr<linpack::LinpackBenchmark>(new linpack::LinpackBenchmark(argc, argv));
         posix_memalign(reinterpret_cast<void **>(&A), 4096,
                        sizeof(HOST_DATA_TYPE) * array_size * array_size);
         posix_memalign(reinterpret_cast<void **>(&B), 4096,
@@ -29,20 +33,7 @@ struct OpenCLKernelSeparateTest : testing::Test {
         posix_memalign(reinterpret_cast<void **>(&scale), 4096,
                        sizeof(HOST_DATA_TYPE) * array_size );
         posix_memalign(reinterpret_cast<void **>(&ipvt), 4096,
-                       sizeof(cl_int) * array_size);
-    }
-
-    void setupFPGA(std::string kernelFileName) {
-        lastKernelFileName = kernelFileName;
-        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
-        cl::Context context(device[0]);
-        cl::Program program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
-        config = std::make_shared<bm_execution::ExecutionConfiguration>(
-                bm_execution::ExecutionConfiguration{
-                        context, device[0], program,
-                        1,
-                        array_size,
-                });
+                       sizeof(cl_int) * array_size);  
     }
 
     void initializeData() {
@@ -69,22 +60,22 @@ struct OpenCLKernelSeparateTest : testing::Test {
         int err;
 
         // Create Command queue
-        cl::CommandQueue compute_queue(config->context, config->device);
+        cl::CommandQueue compute_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device);
 
         // Create Buffers for input and output
-        cl::Buffer Buffer_a(config->context, CL_MEM_READ_WRITE,
-                            sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize);
-        cl::Buffer Buffer_b(config->context, CL_MEM_READ_WRITE,
-                            sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize);
-        cl::Buffer Buffer_c(config->context, CL_MEM_READ_WRITE,
-                            sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize);
-        cl::Buffer Buffer_scale(config->context, CL_MEM_READ_WRITE,
-                            sizeof(HOST_DATA_TYPE)*config->matrixSize);
-        cl::Buffer Buffer_pivot(config->context, CL_MEM_READ_WRITE,
-                                sizeof(cl_int)*config->matrixSize);
+        cl::Buffer Buffer_a(*bm->getExecutionSettings().context, CL_MEM_READ_WRITE,
+                            sizeof(HOST_DATA_TYPE)*array_size*array_size);
+        cl::Buffer Buffer_b(*bm->getExecutionSettings().context, CL_MEM_READ_WRITE,
+                            sizeof(HOST_DATA_TYPE)*array_size*array_size);
+        cl::Buffer Buffer_c(*bm->getExecutionSettings().context, CL_MEM_READ_WRITE,
+                            sizeof(HOST_DATA_TYPE)*array_size*array_size);
+        cl::Buffer Buffer_scale(*bm->getExecutionSettings().context, CL_MEM_READ_WRITE,
+                            sizeof(HOST_DATA_TYPE)*array_size);
+        cl::Buffer Buffer_pivot(*bm->getExecutionSettings().context, CL_MEM_READ_WRITE,
+                                sizeof(cl_int)*array_size);
 
         // create the kernels
-        cl::Kernel test_c4_kernel(config->program, kernel_name.c_str(),
+        cl::Kernel test_c4_kernel(*bm->getExecutionSettings().program, kernel_name.c_str(),
                                   &err);
         ASSERT_CL(err);
 
@@ -100,24 +91,24 @@ struct OpenCLKernelSeparateTest : testing::Test {
         ASSERT_CL(err);
         err = test_c4_kernel.setArg(4, Buffer_pivot);
         ASSERT_CL(err);
-        err = test_c4_kernel.setArg(5, static_cast<uint>(config->matrixSize >> LOCAL_MEM_BLOCK_LOG));
+        err = test_c4_kernel.setArg(5, static_cast<uint>(array_size >> LOCAL_MEM_BLOCK_LOG));
         ASSERT_CL(err);
 
         /* --- Execute actual benchmark kernels --- */
 
         double t;
         std::vector<double> executionTimes;
-        for (int i = 0; i < config->repetitions; i++) {
+        for (int i = 0; i < bm->getExecutionSettings().programSettings->numRepetitions; i++) {
             compute_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
-                                             sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, A);
+                                             sizeof(HOST_DATA_TYPE)*array_size*array_size, A);
             compute_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
-                                             sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, B);
+                                             sizeof(HOST_DATA_TYPE)*array_size*array_size, B);
             compute_queue.enqueueWriteBuffer(Buffer_c, CL_TRUE, 0,
-                                             sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, C);
+                                             sizeof(HOST_DATA_TYPE)*array_size*array_size, C);
             compute_queue.enqueueWriteBuffer(Buffer_scale, CL_TRUE, 0,
-                                             sizeof(HOST_DATA_TYPE)*config->matrixSize, scale);
+                                             sizeof(HOST_DATA_TYPE)*array_size, scale);
             compute_queue.enqueueWriteBuffer(Buffer_pivot, CL_TRUE, 0,
-                                             sizeof(cl_int)*config->matrixSize, ipvt);
+                                             sizeof(cl_int)*array_size, ipvt);
             compute_queue.finish();
             auto t1 = std::chrono::high_resolution_clock::now();
             compute_queue.enqueueTask(test_c4_kernel);
@@ -131,33 +122,26 @@ struct OpenCLKernelSeparateTest : testing::Test {
 
         /* --- Read back results from Device --- */
         compute_queue.enqueueReadBuffer(Buffer_a, CL_TRUE, 0,
-                                        sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, A);
+                                        sizeof(HOST_DATA_TYPE)*array_size*array_size, A);
         compute_queue.enqueueReadBuffer(Buffer_b, CL_TRUE, 0,
-                                        sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, B);
+                                        sizeof(HOST_DATA_TYPE)*array_size*array_size, B);
         compute_queue.enqueueReadBuffer(Buffer_c, CL_TRUE, 0,
-                                        sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, C);
+                                        sizeof(HOST_DATA_TYPE)*array_size*array_size, C);
     }
 
-    ~OpenCLKernelSeparateTest() override {
+    ~LinpackKernelSeparateTest() override {
         free(A);
         free(B);
         free(C);
         free(ipvt);
-    }
-};
-
-struct DifferentOpenCLKernelSeparateTest : OpenCLKernelSeparateTest, testing::WithParamInterface<std::string> {
-    DifferentOpenCLKernelSeparateTest() {
-        auto params = GetParam();
-        auto kernel_file = params;
-        setupFPGA(kernel_file);
+        free(scale);
     }
 };
 
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_P(DifferentOpenCLKernelSeparateTest, FPGACorrectResultsForC1) {
+TEST_P(LinpackKernelSeparateTest, FPGACorrectResultsForC1) {
     auto a_result = new HOST_DATA_TYPE[array_size * array_size];
     initializeData();
     executeTest("test_c1");
@@ -167,7 +151,7 @@ TEST_P(DifferentOpenCLKernelSeparateTest, FPGACorrectResultsForC1) {
         }
     }
     initializeData();
-    gefa_ref(A, array_size, array_size, ipvt);
+    linpack::gefa_ref(A, array_size, array_size, ipvt);
     double error = 0.0;
     for (int i=0; i<array_size; i++) {
         for (int j=0; j < array_size; j++) {
@@ -182,7 +166,7 @@ TEST_P(DifferentOpenCLKernelSeparateTest, FPGACorrectResultsForC1) {
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_P(DifferentOpenCLKernelSeparateTest, FPGACorrectResultsForC2) {
+TEST_P(LinpackKernelSeparateTest, FPGACorrectResultsForC2) {
     auto b_result = new HOST_DATA_TYPE[array_size * array_size];
     initializeData();
     executeTest("test_c2");
@@ -216,7 +200,7 @@ TEST_P(DifferentOpenCLKernelSeparateTest, FPGACorrectResultsForC2) {
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_P(DifferentOpenCLKernelSeparateTest, FPGACorrectResultsForC3) {
+TEST_P(LinpackKernelSeparateTest, FPGACorrectResultsForC3) {
     auto b_result = new HOST_DATA_TYPE[array_size * array_size];
     initializeData();
     executeTest("test_c3");
@@ -247,7 +231,7 @@ TEST_P(DifferentOpenCLKernelSeparateTest, FPGACorrectResultsForC3) {
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_P(DifferentOpenCLKernelSeparateTest, FPGACorrectResultsForC4) {
+TEST_P(LinpackKernelSeparateTest, FPGACorrectResultsForC4) {
     auto c_result = new HOST_DATA_TYPE[array_size * array_size];
     initializeData();
     executeTest("test_c4");
@@ -278,7 +262,7 @@ TEST_P(DifferentOpenCLKernelSeparateTest, FPGACorrectResultsForC4) {
 }
 
 #ifdef INTEL_FPGA
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelSeparateTest,
+INSTANTIATE_TEST_CASE_P(Default, LinpackKernelSeparateTest,
         testing::Values("lu_blocked_pvt_test_emulate.aocx")
 );
 #endif
@@ -288,7 +272,7 @@ INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelSeparateTest,
 // TODO: separate function testing is disabled since compilation from
 // multiple cl files fails with the given code because of redundant
 // kernel names
-INSTANTIATE_TEST_CASE_P(DISABLED_Default, DifferentOpenCLKernelSeparateTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_Default, LinpackKernelSeparateTest,
         testing::Values("lu_blocked_pvt_test_emulate.xclbin")
 );
 #endif
