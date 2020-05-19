@@ -30,28 +30,9 @@ SOFTWARE.
 #include "CL/cl.hpp"
 
 #include "parameters.h"
-
-#ifndef BLOCK_SIZE
-#define BLOCK_SIZE 32
-#endif
-
+#include "gemm_benchmark.hpp"
 
 namespace bm_execution {
-
-    struct ExecutionConfiguration {
-        cl::Context context;
-        cl::Device device;
-        cl::Program program;
-        std::string kernelName;
-        uint repetitions;
-        cl_uint matrixSize;
-        bool useMemInterleaving;
-    };
-
-    struct ExecutionTimings {
-        std::vector<double> transferTimings;
-        std::vector<double> calculationTimings;
-    };
 
 
 /**
@@ -72,8 +53,8 @@ simple exchange of the different calculation methods.
 
 @return The time measurements and the error rate counted from the executions
 */
-std::shared_ptr<ExecutionTimings>
-calculate(std::shared_ptr<ExecutionConfiguration> config, HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c,
+std::unique_ptr<gemm::GEMMExecutionTimings>
+calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config, HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c,
         HOST_DATA_TYPE* c_out, HOST_DATA_TYPE alpha, HOST_DATA_TYPE beta);
 }  // namespace bm_execution
 
