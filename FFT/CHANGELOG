@@ -2,6 +2,12 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.0.2
+
+#### Changed:
+- Converted host code to new OO code
+- Unit tests and emulation kernels wrok now: Fail for Xilinx
+
 ## 1.0.1
 
 #### Added:

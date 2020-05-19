@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 Marius Meyer
+Copyright (c) 2020 Marius Meyer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,36 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef SRC_HOST_EXECUTION_H_
-#define SRC_HOST_EXECUTION_H_
-
-/* C++ standard library headers */
-#include <complex>
-#include <memory>
-#include <vector>
-
-/* External library headers */
-#include "CL/cl.hpp"
-#include "parameters.h"
-#include "fft_benchmark.hpp"
 
 
-namespace bm_execution {
-
-
-/**
-The actual execution of the benchmark.
-This method can be implemented in multiple *.cpp files. This header enables
-simple exchange of the different calculation methods.
-
-@param config struct that contains all necessary information to execute the kernel on the FPGA
-
-
-@return The resulting matrix
-*/
-    std::unique_ptr<fft::FFTExecutionTimings>
-    calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const& config, std::complex<HOST_DATA_TYPE>* data, unsigned iterations, bool inverse);
-
-}  // namespace bm_execution
-
-#endif  // SRC_HOST_EXECUTION_H_
+extern int global_argc;
+extern char** global_argv;

@@ -39,32 +39,32 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<ExecutionTimings>
-    calculate(std::shared_ptr<ExecutionConfiguration> config,
+    std::unique_ptr<fft::FFTExecutionTimings>
+    calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const&  config,
             std::complex<HOST_DATA_TYPE>* data,
             unsigned iterations,
             bool inverse) {
 
-        cl::Buffer inBuffer = cl::Buffer(config->context, CL_MEM_WRITE_ONLY, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE));
-        cl::Buffer outBuffer = cl::Buffer(config->context, CL_MEM_READ_ONLY, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE));
+        cl::Buffer inBuffer = cl::Buffer(*config.context, CL_MEM_WRITE_ONLY, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE));
+        cl::Buffer outBuffer = cl::Buffer(*config.context, CL_MEM_READ_ONLY, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE));
 
-        cl::Kernel fetchKernel(config->program, FETCH_KERNEL_NAME);
+        cl::Kernel fetchKernel(*config.program, FETCH_KERNEL_NAME);
 
         fetchKernel.setArg(0, inBuffer);
 
-        cl::Kernel fftKernel(config->program, FFT_KERNEL_NAME);
+        cl::Kernel fftKernel(*config.program, FFT_KERNEL_NAME);
 
         fftKernel.setArg(0, outBuffer);
         fftKernel.setArg(1, iterations);
         fftKernel.setArg(2, static_cast<cl_int>(inverse));
 
-        cl::CommandQueue fetchQueue(config->context);
-        cl::CommandQueue fftQueue(config->context);
+        cl::CommandQueue fetchQueue(*config.context);
+        cl::CommandQueue fftQueue(*config.context);
 
         fetchQueue.enqueueWriteBuffer(inBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data);
 
         std::vector<double> calculationTimings;
-        for (uint r =0; r < config->repetitions; r++) {
+        for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             auto startCalculation = std::chrono::high_resolution_clock::now();
             fetchQueue.enqueueNDRangeKernel(fetchKernel, cl::NullRange, cl::NDRange((1 << LOG_FFT_SIZE)/ FFT_UNROLL * iterations),
                     cl::NDRange((1 << LOG_FFT_SIZE)/ FFT_UNROLL));
@@ -80,9 +80,7 @@ namespace bm_execution {
 
         fetchQueue.enqueueReadBuffer(outBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data);
 
-        std::shared_ptr<ExecutionTimings> result(new ExecutionTimings{
-                iterations,
-                inverse,
+        std::unique_ptr<fft::FFTExecutionTimings> result(new fft::FFTExecutionTimings{
                 calculationTimings
         });
         return result;

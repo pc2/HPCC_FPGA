@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 Marius Meyer
+Copyright (c) 2020 Marius Meyer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,36 +19,51 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef SRC_HOST_EXECUTION_H_
-#define SRC_HOST_EXECUTION_H_
 
-/* C++ standard library headers */
-#include <complex>
-#include <memory>
-#include <vector>
-
-/* External library headers */
+/* Project's headers */
+#include "test_program_settings.h"
+#include "gtest/gtest.h"
 #include "CL/cl.hpp"
-#include "parameters.h"
-#include "fft_benchmark.hpp"
 
+#ifdef _USE_MPI_
+#include "mpi.h"
 
-namespace bm_execution {
+class MPIEnvironment : public ::testing::Environment {
+public:
+    MPIEnvironment(int* argc, char** argv[]) {
+        MPI_Init(argc, argv);
+    }
 
+    ~MPIEnvironment() override {
+        MPI_Finalize();
+    }
+};
+#endif
+
+int global_argc;
+char** global_argv;
 
 /**
-The actual execution of the benchmark.
-This method can be implemented in multiple *.cpp files. This header enables
-simple exchange of the different calculation methods.
-
-@param config struct that contains all necessary information to execute the kernel on the FPGA
-
-
-@return The resulting matrix
+The program entry point for the unit tests
 */
-    std::unique_ptr<fft::FFTExecutionTimings>
-    calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const& config, std::complex<HOST_DATA_TYPE>* data, unsigned iterations, bool inverse);
+int
+main(int argc, char *argv[]) {
 
-}  // namespace bm_execution
+    std::cout << "THIS BINARY EXECUTES UNIT TESTS FOR THE FOLLOWING BENCHMARK:" << std::endl << std::endl;
 
-#endif  // SRC_HOST_EXECUTION_H_
+    ::testing::InitGoogleTest(&argc, argv);
+
+    global_argc = argc;
+    global_argv = argv;
+
+#ifdef _USE_MPI_
+    ::testing::Environment* const mpi_env =
+        ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
+#endif
+
+    bool result = RUN_ALL_TESTS();
+
+    return result;
+
+}
+
