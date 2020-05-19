@@ -107,28 +107,19 @@ transpose::TransposeBenchmark::printResults(const transpose::TransposeExecutionT
 
 std::unique_ptr<transpose::TransposeData>
 transpose::TransposeBenchmark::generateInputData() {
-    HOST_DATA_TYPE* A;
-    HOST_DATA_TYPE* B;
-    HOST_DATA_TYPE* result;
-
-    posix_memalign(reinterpret_cast<void **>(&A), 64,
-                   sizeof(HOST_DATA_TYPE) * executionSettings->programSettings->matrixSize * executionSettings->programSettings->matrixSize);
-    posix_memalign(reinterpret_cast<void **>(&B), 64,
-                   sizeof(HOST_DATA_TYPE) * executionSettings->programSettings->matrixSize * executionSettings->programSettings->matrixSize);
-    posix_memalign(reinterpret_cast<void **>(&result), 64,
-                   sizeof(HOST_DATA_TYPE) * executionSettings->programSettings->matrixSize * executionSettings->programSettings->matrixSize);
+    auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(executionSettings->programSettings->matrixSize));
 
     std::mt19937 gen(7);
     std::uniform_real_distribution<> dis(-100.0, 100.0);
     for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
         for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
-            A[i * executionSettings->programSettings->matrixSize + j] = dis(gen);
-            B[j * executionSettings->programSettings->matrixSize + i] = dis(gen);
-            result[j * executionSettings->programSettings->matrixSize + i] = 0.0;
+            d->A[i * executionSettings->programSettings->matrixSize + j] = dis(gen);
+            d->B[j * executionSettings->programSettings->matrixSize + i] = dis(gen);
+            d->result[j * executionSettings->programSettings->matrixSize + i] = 0.0;
         }
     }
 
-    return std::unique_ptr<TransposeData>(new TransposeData{A, B, result});
+    return d;
 }
 
 bool  

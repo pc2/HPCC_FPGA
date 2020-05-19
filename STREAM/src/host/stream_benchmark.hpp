@@ -69,6 +69,11 @@ public:
      */
     StreamProgramSettings(cxxopts::ParseResult &results);
 
+    /**
+     * @brief Get a map of the settings. This map will be used to print the final configuration.
+     * 
+     * @return a map of program parameters. keys are the name of the parameter.
+     */
     std::map<std::string, std::string> getSettingsMap() override;
 
 };
@@ -201,7 +206,7 @@ public:
      */
     StreamBenchmark(int argc, char* argv[]);
 
-        /**
+     /**
      * @brief Construct a new Stream Benchmark object
      */
     StreamBenchmark();

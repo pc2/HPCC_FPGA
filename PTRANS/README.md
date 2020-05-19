@@ -21,8 +21,8 @@ The targets below can be used to build the benchmark and its kernels:
 
  |  Target  | Description                                    |
  | -------- | ---------------------------------------------- |
- | trans_VENDOR   | Builds the host application                    |
- | Test_VENDOR    | Compile the tests and its dependencies  |
+ | Transpose_VENDOR   | Builds the host application                    |
+ | Transpose_test_VENDOR    | Compile the tests and its dependencies  |
 
  `VENDOR` can be `intel` or `xilinx`.
  
@@ -45,7 +45,7 @@ The currently supported values for KERNEL_FILE_NAME are listed below where `tran
  
     mkdir build && cd build
     cmake ..
-    make trans_intel
+    make Transpose_intel
 
 You will find all executables and kernel files in the `bin`
 folder of your build directory.
@@ -65,16 +65,16 @@ of the Intel FPGA SDK installation.
 
 For execution of the benchmark run:
 
-    ./trans_intel -f path_to_kernel.aocx
+    ./Transpose_intel -f path_to_kernel.aocx
     
 For more information on available input parameters run
 
-    $./trans_xilinx -h
+    $./Transpose_xilinx -h
     Implementation of the matrix transposition benchmark proposed in the HPCC benchmark suite for FPGA.
     Version: 1.0.1
 
     Usage:
-    ./trans_xilinx [OPTION...]
+    ./Transpose_xilinx [OPTION...]
 
     -f, --file arg        Kernel file name
     -n, arg               Number of repetitions (default: 10)
@@ -96,7 +96,7 @@ For more information on available input parameters run
     
 To execute the unit and integration tests run
 
-    ./Test_intel
+    ./Transpose_test_intel -f KERNEL_FILE_NAME
     
 in the `bin` folder within the build directory.
 It will run an emulation of the kernel and execute some functionality tests.

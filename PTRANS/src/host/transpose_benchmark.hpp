@@ -64,7 +64,7 @@ public:
     TransposeProgramSettings(cxxopts::ParseResult &results);
 
     /**
-     * @brief Construct a new Transpose Program Settings object
+     * @brief Get a map of the settings. This map will be used to print the final configuration.
      * 
      * @return a map of program parameters. keys are the name of the parameter.
      */
@@ -80,8 +80,25 @@ class TransposeData {
 
 public:
     HOST_DATA_TYPE *A, *B, *result;
-    TransposeData(HOST_DATA_TYPE *A_, HOST_DATA_TYPE *B_, HOST_DATA_TYPE *result_) : A(A_), B(B_), result(result_) {}
 
+    /**
+     * @brief Construct a new Transpose Data object
+     * 
+     * @param size Size of the allocated square matrices
+     */
+    TransposeData(uint size) {
+        posix_memalign(reinterpret_cast<void **>(&A), 64,
+                    sizeof(HOST_DATA_TYPE) * size * size);
+        posix_memalign(reinterpret_cast<void **>(&B), 64,
+                    sizeof(HOST_DATA_TYPE) * size * size);
+        posix_memalign(reinterpret_cast<void **>(&result), 64,
+                    sizeof(HOST_DATA_TYPE) * size * size);
+    }
+
+    /**
+     * @brief Destroy the Transpose Data object. Free the allocated memory
+     * 
+     */
     ~TransposeData() {
         free(A);
         free(B);
@@ -131,7 +148,7 @@ public:
     /**
      * @brief Random access specific implementation of the data generation
      * 
-     * @return std::unique_ptr<TransposeData> 
+     * @return std::unique_ptr<TransposeData> The input and output data of the benchmark
      */
     std::unique_ptr<TransposeData>
     generateInputData() override;
@@ -139,8 +156,8 @@ public:
     /**
      * @brief Transpose specific implementation of the kernel execution
      * 
-     * @param data 
-     * @return std::unique_ptr<TransposeExecutionTimings> 
+     * @param data The input and output data of the benchmark
+     * @return std::unique_ptr<TransposeExecutionTimings> Measured runtimes of the kernel execution
      */
     std::unique_ptr<TransposeExecutionTimings>
     executeKernel(TransposeData &data) override;
@@ -148,10 +165,9 @@ public:
     /**
      * @brief Transpose specific implementation of the execution validation
      * 
-     * @param data 
-     * @param output 
-     * @return true 
-     * @return false 
+     * @param data The input and output data of the benchmark
+     * @return true If validation is successful
+     * @return false otherwise
      */
     bool
     validateOutputAndPrintError(TransposeData &data) override;
@@ -159,7 +175,7 @@ public:
     /**
      * @brief Transpose specific implementation of printing the execution results
      * 
-     * @param output 
+     * @param output Measured runtimes of the kernel execution
      */
     void
     printResults(const TransposeExecutionTimings &output) override;

@@ -48,8 +48,6 @@ namespace hpcc_base {
  * @brief This class should be derived and extended for every benchmark.
  *          It is a pure data object containing the benchmark settings that are
  *          used to execute the benchmark kernel.
- * 
- *  DERIVED CLASSES NEED TO IMPLEMENT A operator<< METHOD! 
  *       
  */
 class BaseSettings {
@@ -100,6 +98,12 @@ public:
             defaultDevice(results["device"].as<int>()),
             kernelFileName(results["f"].as<std::string>()) {}
 
+    /**
+     * @brief Get a map of the settings. This map will be used to print the final configuration.
+     *          Derived classes should override it to add additional configuration options
+     * 
+     * @return std::map<std::string,std::string> 
+     */
     virtual std::map<std::string,std::string> getSettingsMap() {
         return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel File", kernelFileName}};
     }

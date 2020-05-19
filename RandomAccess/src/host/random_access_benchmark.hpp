@@ -64,7 +64,7 @@ public:
     RandomAccessProgramSettings(cxxopts::ParseResult &results);
 
     /**
-     * @brief Construct a new random access Program Settings object
+     * @brief Get a map of the settings. This map will be used to print the final configuration.
      * 
      * @return a map of program parameters. keys are the name of the parameter.
      */
@@ -80,6 +80,13 @@ class RandomAccessData {
 
 public:
     HOST_DATA_TYPE *data;
+
+    /**
+     * @brief Construct a new Random Access Data object
+     * 
+     * @param context The OpenCL context that will be used to allocate SVM memory
+     * @param size The size  of the allocated memory in number of values
+     */
     RandomAccessData(cl::Context& context, size_t size) {
     #ifdef USE_SVM
         data = reinterpret_cast<HOST_DATA_TYPE*>(
@@ -90,6 +97,10 @@ public:
     #endif
     }
 
+    /**
+     * @brief Destroy the Random Access Data object and free the memory allocated in the constructor
+     * 
+     */
     ~RandomAccessData() {
     #ifdef USE_SVM
         clSVMFree(data);
@@ -135,8 +146,7 @@ public:
     /**
      * @brief Random access specific implementation of the data generation
      * 
-     * @param settings 
-     * @return std::unique_ptr<RandomAccessData> 
+     * @return std::unique_ptr<RandomAccessData> pointer to the object storing the benchmark input and output data
      */
     std::unique_ptr<RandomAccessData>
     generateInputData() override;
@@ -144,8 +154,7 @@ public:
     /**
      * @brief RandomAccess specific implementation of the kernel execution
      * 
-     * @param settings 
-     * @param data 
+     * @param data The benchmark input and output data
      * @return std::unique_ptr<RandomAccessExecutionTimings> 
      */
     std::unique_ptr<RandomAccessExecutionTimings>
@@ -154,11 +163,9 @@ public:
     /**
      * @brief RandomAccess specific implementation of the execution validation
      * 
-     * @param settings 
-     * @param data 
-     * @param output 
-     * @return true 
-     * @return false 
+     * @param data The benchmark input and output data
+     * @return true If the validation is successful
+     * @return false otherwise
      */
     bool
     validateOutputAndPrintError(RandomAccessData &data) override;
@@ -166,8 +173,7 @@ public:
     /**
      * @brief RandomAccess specific implementation of printing the execution results
      * 
-     * @param settings 
-     * @param output 
+     * @param output The measurement values that are generated yb the kernel execution
      */
     void
     printResults(const RandomAccessExecutionTimings &output) override;
@@ -180,7 +186,7 @@ public:
      */
     RandomAccessBenchmark(int argc, char* argv[]);
 
-        /**
+     /**
      * @brief Construct a new RandomAccess Benchmark object
      */
     RandomAccessBenchmark();
