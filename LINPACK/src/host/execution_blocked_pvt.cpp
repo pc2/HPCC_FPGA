@@ -35,10 +35,6 @@ SOFTWARE.
 #include "CL/cl_ext_intelfpga.h"
 #endif
 
-/* Project's headers */
-#include "setup/fpga_setup.hpp"
-#include "linpack_functionality.hpp"
-
 namespace bm_execution {
 
 /*
@@ -46,8 +42,8 @@ namespace bm_execution {
 
  @copydoc bm_execution::calculate()
 */
-std::shared_ptr<ExecutionTimings>
-calculate(std::shared_ptr<ExecutionConfiguration> config,
+std::unique_ptr<linpack::LinpackExecutionTimings>
+calculate(const hpcc_base::ExecutionConfiguration<linpack::LinpackProgramSettings>&config,
           HOST_DATA_TYPE* A,
           HOST_DATA_TYPE* b,
           cl_int* ipvt) {
@@ -55,16 +51,16 @@ calculate(std::shared_ptr<ExecutionConfiguration> config,
     int err;
 
     // Create Command queue
-    cl::CommandQueue compute_queue(config->context, config->device);
+    cl::CommandQueue compute_queue(*config.context, *config.device);
 
     // Create Buffers for input and output
-    cl::Buffer Buffer_a(config->context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize);
-    cl::Buffer Buffer_pivot(config->context, CL_MEM_READ_WRITE,
-                                        sizeof(cl_int)*config->matrixSize);
+    cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+    cl::Buffer Buffer_pivot(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(cl_int)*config.programSettings->matrixSize);
 
     // create the kernels
-    cl::Kernel gefakernel(config->program, "gefa",
+    cl::Kernel gefakernel(*config.program, "gefa",
                                     &err);
     ASSERT_CL(err);
 
@@ -74,16 +70,16 @@ calculate(std::shared_ptr<ExecutionConfiguration> config,
     ASSERT_CL(err);
     err = gefakernel.setArg(1, Buffer_pivot);
     ASSERT_CL(err);
-    err = gefakernel.setArg(2, static_cast<uint>(config->matrixSize >> LOCAL_MEM_BLOCK_LOG));
+    err = gefakernel.setArg(2, static_cast<uint>(config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG));
     ASSERT_CL(err);
 
     /* --- Execute actual benchmark kernels --- */
 
     double t;
     std::vector<double> executionTimes;
-    for (int i = 0; i < config->repetitions; i++) {
+    for (int i = 0; i < config.repetitions; i++) {
         compute_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, A);
+                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
         compute_queue.finish();
         auto t1 = std::chrono::high_resolution_clock::now();
         compute_queue.enqueueTask(gefakernel);
@@ -98,16 +94,16 @@ calculate(std::shared_ptr<ExecutionConfiguration> config,
     /* --- Read back results from Device --- */
 
     compute_queue.enqueueReadBuffer(Buffer_a, CL_TRUE, 0,
-                                     sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, A);
+                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
     compute_queue.enqueueReadBuffer(Buffer_pivot, CL_TRUE, 0,
-                                     sizeof(cl_int)*config->matrixSize, ipvt);
+                                     sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
 
     // Solve linear equations on CPU
     // TODO: This has to be done on FPGA
-    gesl_ref(A, b, ipvt, config->matrixSize, config->matrixSize);
+    linpack::gesl_ref(A, b, ipvt, config.programSettings->matrixSize, config.programSettings->matrixSize);
 
-    std::shared_ptr<bm_execution::ExecutionTimings> results(
-                    new ExecutionTimings{executionTimes});
+    std::unique_ptr<linpack::LinpackExecutionTimings> results(
+                    new LinpackExecutionTimings{executionTimes});
     return results;
 }
 

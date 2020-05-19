@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 Marius Meyer
+Copyright (c) 2020 Marius Meyer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,37 +19,54 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef SRC_HOST_EXECUTION_H_
-#define SRC_HOST_EXECUTION_H_
 
-/* C++ standard library headers */
-#include <memory>
-#include <vector>
-
-/* External library headers */
-#include "CL/cl.hpp"
-#include "parameters.h"
+/* Project's headers */
 #include "linpack_benchmark.hpp"
 
+#include "gtest/gtest.h"
+#include "CL/cl.hpp"
 
-namespace bm_execution {
+#ifdef _USE_MPI_
+#include "mpi.h"
+
+class MPIEnvironment : public ::testing::Environment {
+public:
+    MPIEnvironment(int* argc, char** argv[]) {
+        MPI_Init(argc, argv);
+    }
+
+    ~MPIEnvironment() override {
+        MPI_Finalize();
+    }
+};
+#endif
+
+using namespace linpack;
+
+std::unique_ptr<LinpackBenchmark> bm;
 
 /**
-The actual execution of the benchmark.
-This method can be implemented in multiple *.cpp files. This header enables
-simple exchange of the different calculation methods.
-
-@param config struct that contains all necessary information to execute the kernel on the FPGA
-
-
-@return The resulting matrix
+The program entry point for the unit tests
 */
-    std::unique_ptr<linpack::LinpackExecutionTimings>
-    calculate(const hpcc_base::ExecutionConfiguration<linpack::LinpackProgramSettings>& config,
-              HOST_DATA_TYPE* A,
-              HOST_DATA_TYPE* b,
-              cl_int* ipvt);
+int
+main(int argc, char *argv[]) {
 
-}  // namespace bm_execution
+    std::cout << "THIS BINARY EXECUTES UNIT TESTS FOR THE FOLLOWING BENCHMARK:" << std::endl << std::endl;
 
-#endif  // SRC_HOST_EXECUTION_H_
+    ::testing::InitGoogleTest(&argc, argv);
+
+    bm = std::unique_ptr<LinpackBenchmark>(new LinpackBenchmark(argc, argv));
+
+#ifdef _USE_MPI_
+    ::testing::Environment* const mpi_env =
+        ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
+#endif
+
+    bool result = RUN_ALL_TESTS();
+
+    bm = nullptr;
+
+    return result;
+
+}
+
