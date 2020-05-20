@@ -7,11 +7,18 @@ KERNEL_NUMBER will be replaced by the build script with the ID of the current re
 */
 #include "parameters.h"
 
+/* PY_CODE_GEN 
+try:
+    kernel_param_attributes = generate_attributes(num_replications)
+except:
+    kernel_param_attributes = ["" for i in range(num_replications)]
+*/
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
 __kernel
 __attribute__((uses_global_work_offset(0)))
-void calc_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE *restrict in1,
-          __global const DEVICE_ARRAY_DATA_TYPE *restrict in2,
-          __global DEVICE_ARRAY_DATA_TYPE *restrict out,
+void calc_/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]*/ const DEVICE_ARRAY_DATA_TYPE *restrict in1,
+          __global /*PY_CODE_GEN kernel_param_attributes[i]*/ const DEVICE_ARRAY_DATA_TYPE *restrict in2,
+          __global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_ARRAY_DATA_TYPE *restrict out,
           const DEVICE_SCALAR_DATA_TYPE scalar,
           const uint array_size,
           const uint operation_type) {
@@ -19,6 +26,9 @@ void calc_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE *restrict in1,
         DEVICE_ARRAY_DATA_TYPE buffer1[BUFFER_SIZE];
 #endif
     uint number_elements = array_size / VECTOR_COUNT;
+#ifdef INTEL_FPGA
+#pragma disable_loop_pipelining
+#endif
     for(uint i = 0;i<number_elements;i += BUFFER_SIZE){
 #ifdef INNER_LOOP_BUFFERS
         DEVICE_ARRAY_DATA_TYPE buffer1[BUFFER_SIZE];
@@ -38,8 +48,9 @@ void calc_KERNEL_NUMBER(__global const DEVICE_ARRAY_DATA_TYPE *restrict in1,
         // Calculate result and write back to output array depending on chosen operation type
         __attribute__((opencl_unroll_hint(UNROLL_COUNT)))
         for (uint k = 0;k<BUFFER_SIZE;k++) {
-            out[i + k] = buffer1[k];
-                   
-	}
+            out[i + k] = buffer1[k];                  
+    	}
     }
 }
+
+// PY_CODE_GEN block_end

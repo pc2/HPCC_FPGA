@@ -20,12 +20,13 @@ function(generate_kernel_targets_xilinx)
         set(bitstream_emulate_f
             ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.xclbin)
         set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.xclbin)
+        file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/settings)
         if (XILINX_GENERATE_LINK_SETTINGS)
 	    set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
             set(xilinx_link_settings ${CMAKE_BINARY_DIR}/settings/settings.link.xilinx.${kernel_file_name}.ini)
         else()
             set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
-            set(xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
+            set(xilinx_link_settings ${CMAKE_BINARY_DIR}/settings/settings.link.xilinx.${kernel_file_name}.ini)
         endif()
         set(xilinx_report_folder "--report_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_reports")
         file(MAKE_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports)
@@ -38,14 +39,19 @@ function(generate_kernel_targets_xilinx)
         )
         if (XILINX_GENERATE_LINK_SETTINGS)
             add_custom_command(OUTPUT ${xilinx_link_settings}
-                    COMMAND ${CMAKE_COMMAND} -Dsettings_f=${xilinx_link_settings} -Dbase_file=${gen_xilinx_link_settings} -DNUM_REPLICATIONS=${NUM_REPLICATIONS} -P "${CMAKE_SOURCE_DIR}/../cmake/generateXilinxSettings.cmake"
+                    COMMAND ${CODE_GENERATOR} -o ${xilinx_link_settings} -p num_replications=${NUM_REPLICATIONS} --comment "\"#\"" --comment-ml-start "\"$$\"" --comment-ml-end "\"$$\"" ${gen_xilinx_link_settings}
                     MAIN_DEPENDENCY ${gen_xilinx_link_settings}
                     )
+        else()
+                add_custom_command(OUTPUT ${xilinx_link_settings}
+                        COMMAND cp ${gen_xilinx_link_settings} ${xilinx_link_settings}
+                        MAIN_DEPENDENCY ${gen_xilinx_link_settings}
+                        )
         endif()
 
         if (KERNEL_REPLICATION_ENABLED)
                 add_custom_command(OUTPUT ${source_f}
-                        COMMAND ${CMAKE_COMMAND} -Dsource_f=${source_f} -Dbase_file=${base_file} -DNUM_REPLICATIONS=1 -P "${CMAKE_SOURCE_DIR}/../cmake/generateKernels.cmake"
+                        COMMAND ${CODE_GENERATOR} -o ${source_f} -p num_replications=1 ${base_file}
                         MAIN_DEPENDENCY ${base_file}
                 )
         else()
@@ -104,8 +110,12 @@ function(generate_kernel_targets_intel)
         set(bitstream_emulate_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.aocx)
         set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.aocx)
         if (KERNEL_REPLICATION_ENABLED)
+                set(codegen_parameters -p num_replications=${NUM_REPLICATIONS})
+                if (INTEL_CODE_GENERATION_SETTINGS)
+                        list(APPEND codegen_parameters -p "\"use_file('${INTEL_CODE_GENERATION_SETTINGS}')\"")
+                endif()
                 add_custom_command(OUTPUT ${source_f}
-                        COMMAND ${CMAKE_COMMAND} -Dsource_f=${source_f} -Dbase_file=${base_file} -DNUM_REPLICATIONS=${NUM_REPLICATIONS} -P "${CMAKE_SOURCE_DIR}/../cmake/generateKernels.cmake"
+                        COMMAND ${CODE_GENERATOR} -o ${source_f} ${codegen_parameters} ${base_file}
                         MAIN_DEPENDENCY ${base_file}
                         )
         else()

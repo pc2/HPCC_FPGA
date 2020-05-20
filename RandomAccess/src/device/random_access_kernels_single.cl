@@ -27,6 +27,15 @@ Constant used to update the pseudo random number
 */
 #define POLY 7
 
+/* PY_CODE_GEN 
+try:
+    kernel_param_attributes = generate_attributes(num_replications)
+except:
+    kernel_param_attributes = ["" for i in range(num_replications)]
+*/
+
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+
 /*
 Kernel, that will update the given data array accoring to a predefined pseudo-
 random access scheme. The overall data array might be equally split between
@@ -39,7 +48,7 @@ to the kernel.
 */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void accessMemory_KERNEL_NUMBER(__global DEVICE_DATA_TYPE_UNSIGNED  volatile * restrict data,
+void accessMemory_/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_DATA_TYPE_UNSIGNED  volatile * restrict data,
                         const DEVICE_DATA_TYPE_UNSIGNED m,
                         const DEVICE_DATA_TYPE_UNSIGNED data_chunk,
                         const uint kernel_number) {
@@ -109,3 +118,5 @@ void accessMemory_KERNEL_NUMBER(__global DEVICE_DATA_TYPE_UNSIGNED  volatile * r
         }
     }
 }
+
+// PY_CODE_GEN block_end
