@@ -32,6 +32,11 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 
+#ifdef _USE_MPI_
+#include "mpi.h"
+#endif
+
+
 #define STR_EXPAND(tok) #tok
 #define STR(tok) STR_EXPAND(tok)
 
@@ -312,8 +317,15 @@ public:
 
         executionSettings = std::unique_ptr<ExecutionSettings<TSettings>>(new ExecutionSettings<TSettings>(std::move(programSettings), std::move(usedDevice), 
                                                             std::move(context), std::move(program)));
+        // Get the rank of the process
+        int world_rank = 0;
 
-        printFinalConfiguration(*executionSettings);
+#ifdef _USE_MPI_
+        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+#endif
+        if (world_rank == 0) {
+            printFinalConfiguration(*executionSettings);
+        }
     }
 
     /**
@@ -325,23 +337,38 @@ public:
      */
     bool
     executeBenchmark() {
+        // Get the rank of the process
+        int world_rank = 0;
+
+#ifdef _USE_MPI_
+        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+#endif
+
         if (!executionSettings.get()) {
             std::cerr << "Benchmark execution started without running the benchmark setup!" << std::endl;
             exit(1);
         }
-        std::cout << HLINE << "Start benchmark using the given configuration. Generating data..." << std::endl
-                << HLINE;
+        if (world_rank == 0) {
+            std::cout << HLINE << "Start benchmark using the given configuration. Generating data..." << std::endl
+                    << HLINE;
+        }
         std::unique_ptr<TData> data = generateInputData();
-        std::cout << HLINE << "Execute benchmark kernel..." << std::endl
-                << HLINE;
+        if (world_rank == 0) {
+            std::cout << HLINE << "Execute benchmark kernel..." << std::endl
+                    << HLINE;
+        }
         std::unique_ptr<TOutput> output =  executeKernel(*data);
 
-        std::cout << HLINE << "Validate output..." << std::endl
-                << HLINE;
-
+        if (world_rank == 0) {
+            std::cout << HLINE << "Validate output..." << std::endl
+                    << HLINE;
+        }
+        
         bool validateSuccess = validateOutputAndPrintError(*data);
 
-        printResults(*output);
+        if (world_rank == 0) {
+            printResults(*output);
+        }
 
         return validateSuccess;
     }
