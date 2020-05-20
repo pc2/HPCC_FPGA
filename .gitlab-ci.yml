@@ -22,7 +22,7 @@ build:STREAM:
       - build/bin/stream_kernels_single_emulate.aocx
       - build/bin/stream_kernels_emulate.aocx
       - build/bin/STREAM_FPGA_intel
-      - build/bin/Test_intel
+      - build/bin/STREAM_FPGA_test_intel
       
       
 build:RandomAccess:
@@ -38,7 +38,7 @@ build:RandomAccess:
     paths:
       - build/bin/random_access_kernels_single_emulate.aocx
       - build/bin/RandomAccess_intel
-      - build/bin/Test_intel
+      - build/bin/RandomAccess_test_intel
 
 
 build:PTRANS:
@@ -54,8 +54,8 @@ build:PTRANS:
     paths:
       - build/bin/transpose_optimized_emulate.aocx
       - build/bin/transpose_default_emulate.aocx
-      - build/bin/trans_intel
-      - build/bin/Test_intel
+      - build/bin/Transpose_intel
+      - build/bin/Transpose_test_intel
 
 build:LINPACK:
   stage: build
@@ -70,8 +70,8 @@ build:LINPACK:
     paths:
       - build/bin/lu_blocked_pvt_emulate.aocx
       - build/bin/lu_blocked_pvt_test_emulate.aocx
-      - build/bin/LINPACK_intel
-      - build/bin/Test_intel
+      - build/bin/Linpack_intel
+      - build/bin/Linpack_test_intel
 
 build:GEMM:
   stage: build
@@ -86,7 +86,7 @@ build:GEMM:
     paths:
       - build/bin/gemm_cannon_emulate.aocx
       - build/bin/GEMM_intel
-      - build/bin/Test_intel
+      - build/bin/GEMM_test_intel
 
 build:FFT:
   stage: build
@@ -101,7 +101,7 @@ build:FFT:
     paths:
       - build/bin/fft1d_float_8_emulate.aocx
       - build/bin/FFT_intel
-      - build/bin/Test_intel
+      - build/bin/FFT_test_intel
 
 build:b_eff:
   stage: build
@@ -115,8 +115,8 @@ build:b_eff:
   artifacts:
     paths:
       - build/bin/communication_bw520n_emulate.aocx
-      - build/bin/fnet
-      - build/bin/Google_Tests_run
+      - build/bin/Network_intel
+      - build/bin/Network_test_intel
 
 ###
 #
