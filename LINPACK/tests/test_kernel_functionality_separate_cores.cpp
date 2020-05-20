@@ -15,15 +15,17 @@ struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<st
     cl_int *ipvt;
     uint array_size;
     std::unique_ptr<linpack::LinpackBenchmark> bm;
+    char* kernelFileName;
 
     LinpackKernelSeparateTest() {
         int argc = 3;
         std::string str_param = GetParam();
-        std::vector<char> param(str_param.c_str(), str_param.c_str() + str_param.size() + 1);
-        char* argv[3] = {"Test", "-f", reinterpret_cast<char*>(&param)};
+        kernelFileName = new char[str_param.length() + 1];
+        std::strcpy(kernelFileName, str_param.c_str());
+        char* argv[3] = {"Test", "-f", kernelFileName};
+        bm = std::unique_ptr<linpack::LinpackBenchmark>(new linpack::LinpackBenchmark(argc, argv));
         array_size = (1 << LOCAL_MEM_BLOCK_LOG);
         bm->getExecutionSettings().programSettings->matrixSize = array_size;
-        bm = std::unique_ptr<linpack::LinpackBenchmark>(new linpack::LinpackBenchmark(argc, argv));
         posix_memalign(reinterpret_cast<void **>(&A), 4096,
                        sizeof(HOST_DATA_TYPE) * array_size * array_size);
         posix_memalign(reinterpret_cast<void **>(&B), 4096,
@@ -135,6 +137,7 @@ struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<st
         free(C);
         free(ipvt);
         free(scale);
+        delete [] kernelFileName;
     }
 };
 

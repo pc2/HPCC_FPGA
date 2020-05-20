@@ -44,7 +44,7 @@ TEST_F(LinpackKernelTest, FPGACorrectResultsOneRepetition) {
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_F(OpenCLKernelTest, ValidationWorksForMKL) {
+TEST_F(LinpackKernelTest, ValidationWorksForMKL) {
 
     int info;    
     auto data_cpu = bm->generateInputData();
