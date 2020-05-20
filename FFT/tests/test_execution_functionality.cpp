@@ -113,6 +113,7 @@ TEST_F(FFTKernelTest, FFTandiFFTProduceResultCloseToSource) {
 
     // Need to again bit reverse input for iFFT
     fft::bit_reverse(data->data, 1);
+    bm->getExecutionSettings().programSettings->inverse = true;
     auto result2 = bm->executeKernel(*data);
     // Since data was already sorted by iFFT the bit reversal of the kernel has t be undone
     fft::bit_reverse(data->data, 1);
