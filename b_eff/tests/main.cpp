@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 Marius Meyer
+Copyright (c) 2020 Marius Meyer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -20,30 +20,50 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef SRC_HOST_NETWORK_FUNCTIONALITY_H_
-#define SRC_HOST_NETWORK_FUNCTIONALITY_H_
-
-/* C++ standard library headers */
-#include <memory>
-
 /* Project's headers */
-#include "execution.h"
-#include "cxxopts.hpp"
-#include "setup/fpga_setup.hpp"
-#include "parameters.h"
+#include "test_program_settings.h"
+#include "gtest/gtest.h"
+#include "CL/cl.hpp"
 
+#ifdef _USE_MPI_
+#include "mpi.h"
+
+class MPIEnvironment : public ::testing::Environment {
+public:
+    MPIEnvironment(int* argc, char** argv[]) {
+        MPI_Init(argc, argv);
+    }
+
+    ~MPIEnvironment() override {
+        MPI_Finalize();
+    }
+};
+#endif
+
+int global_argc;
+char** global_argv;
 
 /**
-Prints the execution results to stdout
-
-@param results The execution results
+The program entry point for the unit tests
 */
-void
-printResults(bm_execution::CollectedResultMap results);
+int
+main(int argc, char *argv[]) {
 
+    std::cout << "THIS BINARY EXECUTES UNIT TESTS FOR THE FOLLOWING BENCHMARK:" << std::endl << std::endl;
 
-std::vector<cl_uint> getMessageSizes();
+    ::testing::InitGoogleTest(&argc, argv);
 
+    global_argc = argc;
+    global_argv = argv;
 
+#ifdef _USE_MPI_
+    ::testing::Environment* const mpi_env =
+        ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
+#endif
 
-#endif // SRC_HOST_NETWORK_FUNCTIONALITY_H_
+    bool result = RUN_ALL_TESTS();
+
+    return result;
+
+}
+

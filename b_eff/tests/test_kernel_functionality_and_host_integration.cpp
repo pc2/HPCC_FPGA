@@ -4,81 +4,82 @@
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "execution.h"
+#include "network_benchmark.hpp"
 #include "parameters.h"
-#include "setup/fpga_setup.hpp"
-#include "unistd.h"
 #include "mpi.h"
-#include "testing/test_program_settings.h"
+#include "test_program_settings.h"
 #include <fstream>
 
-struct OpenCLKernelTest : testing::Test {
-    std::string kernelFileName = "communication_bw520n_emulate.aocx";
-    std::shared_ptr<bm_execution::ExecutionConfiguration> config;
-    unsigned repetitions = 10;
+struct NetworkKernelTest : testing::Test {
+    std::unique_ptr<network::NetworkBenchmark> bm;
+    std::unique_ptr<network::NetworkData> data;
     unsigned numberOfChannels = 4;
     std::string channelOutName = "kernel_output_ch";
     std::string channelInName = "kernel_input_ch";
 
-    OpenCLKernelTest() {
-        kernelFileName = programSettings->kernelFileName;
-        setupFPGA();
+    NetworkKernelTest() {
+        bm = std::unique_ptr<network::NetworkBenchmark>(new network::NetworkBenchmark(global_argc, global_argv));
+        bm->getExecutionSettings().programSettings->numRepetitions = 1;
+        data = bm->generateInputData();
+    }
+
+    void SetUp() override {
+        createChannelFilesAndSymbolicLinks();
     }
 
     void createChannelFilesAndSymbolicLinks() {
         for (int i=0; i < numberOfChannels; i++) {
             std::string fname = channelOutName + std::to_string(i);
-            std::fstream fs;
-            fs.open(fname, std::ios::out);
+            std::ofstream fs;
+            fs.open(fname, std::ofstream::out | std::ofstream::trunc);
             fs.close();
             std::remove((channelInName + std::to_string(i%2 ? i-1 : i+1)).c_str());
             symlink(fname.c_str(), (channelInName + std::to_string(i%2 ? i-1 : i+1)).c_str());
         }
-    }
-
-    void setupFPGA() {
-        createChannelFilesAndSymbolicLinks();
-        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(programSettings->defaultPlatform, programSettings->defaultDevice);
-        cl::Context context(device[0]);
-        cl::Program program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
-        config = std::make_shared<bm_execution::ExecutionConfiguration>(
-                bm_execution::ExecutionConfiguration{
-                        context, device[0], program,
-                        repetitions
-                });
     }
 };
 
 /**
  * Tests if calculate returns the correct execution results
  */
-TEST_F(OpenCLKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
-    config->repetitions = 1;
-    auto result = bm_execution::calculate(config, 1,1);
-    EXPECT_EQ(1, result->messageSize);
-    EXPECT_EQ(1, result->looplength);
-    EXPECT_EQ(1, result->calculationTimings.size());
+TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
+    bm->getExecutionSettings().programSettings->numRepetitions = 1;
+    bm->getExecutionSettings().programSettings->looplength = 1;
+    data->messageSizes.clear();
+    data->messageSizes.push_back(1);
+    auto result = bm->executeKernel(*data);
+    EXPECT_NE(result->timings.end(), result->timings.find(1));
+    EXPECT_EQ(1, result->timings.find(1)->second->at(0)->looplength);
+    EXPECT_EQ(1, result->timings.find(1)->second->at(0)->calculationTimings.size());
 }
 
 /**
  * Tests if calculate returns the correct execution results for multiple repetitions
  */
-TEST_F(OpenCLKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
-    config->repetitions = 2;
-    auto result = bm_execution::calculate(config, 8,4);
-    EXPECT_EQ(8, result->messageSize);
-    EXPECT_EQ(4, result->looplength);
-    EXPECT_EQ(2, result->calculationTimings.size());
+TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
+    bm->getExecutionSettings().programSettings->numRepetitions = 2;
+    bm->getExecutionSettings().programSettings->looplength = 4;
+    data->messageSizes.clear();
+    data->messageSizes.push_back(8);
+    auto result = bm->executeKernel(*data);
+    EXPECT_NE(result->timings.end(), result->timings.find(8));
+    EXPECT_EQ(4, result->timings.find(8)->second->at(0)->looplength);
+    EXPECT_EQ(2, result->timings.find(8)->second->at(0)->calculationTimings.size());
 }
 
 /**
  * Tests if data is written to the channels for small message sizes
  */
-TEST_F(OpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) {
-    config->repetitions = 1;
+TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) {
     const unsigned messageSize = CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 4;
-    auto result = bm_execution::calculate(config, messageSize,looplength);
+    bm->getExecutionSettings().programSettings->numRepetitions = 1;
+    // looplength * 2 because the looplength will be recalculated in executeKernel!
+    // This should end up in looplength again
+    bm->getExecutionSettings().programSettings->looplength = looplength * 2;
+    data->messageSizes.clear();
+    data->messageSizes.push_back(messageSize);
+    auto result = bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[messageSize * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
         std::string ifname = channelOutName + std::to_string(i);
@@ -97,11 +98,16 @@ TEST_F(OpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) 
 /**
  * Tests if data is written to the channels for small message sizes filling two channels
  */
-TEST_F(OpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels) {
-    config->repetitions = 1;
+TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels) {
     const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 4;
-    auto result = bm_execution::calculate(config, messageSize,looplength);
+    bm->getExecutionSettings().programSettings->numRepetitions = 1;
+    // looplength * 3 because the looplength will be recalculated in executeKernel!
+    // This should end up in looplength again
+    bm->getExecutionSettings().programSettings->looplength = looplength * 3;
+    data->messageSizes.clear();
+    data->messageSizes.push_back(messageSize);
+    auto result = bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[messageSize * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
         std::string ifname = channelOutName + std::to_string(i);
@@ -117,11 +123,14 @@ TEST_F(OpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels)
 /**
  * Tests if data is written to the channels for message sizes filling more than two channels
  */
-TEST_F(OpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoChannels) {
-    config->repetitions = 1;
+TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoChannels) {
     const unsigned messageSize = 4 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 1;
-    auto result = bm_execution::calculate(config, messageSize,looplength);
+    bm->getExecutionSettings().programSettings->numRepetitions = 1;
+    bm->getExecutionSettings().programSettings->looplength = looplength;
+    data->messageSizes.clear();
+    data->messageSizes.push_back(messageSize);
+    auto result = bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[messageSize * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
         std::string ifname = channelOutName + std::to_string(i);
@@ -137,11 +146,16 @@ TEST_F(OpenCLKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoC
 /**
  * Tests if correct data is written to the channels
  */
-TEST_F(OpenCLKernelTest, CorrectDataIsWrittenToChannel) {
-    config->repetitions = 1;
+TEST_F(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
     const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 4;
-    auto result = bm_execution::calculate(config, messageSize,looplength);
+    bm->getExecutionSettings().programSettings->numRepetitions = 1;
+    // looplength * 3 because the looplength will be recalculated in executeKernel!
+    // This should end up in looplength again
+    bm->getExecutionSettings().programSettings->looplength = looplength * 3;
+    data->messageSizes.clear();
+    data->messageSizes.push_back(messageSize);
+    auto result = bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[messageSize * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
         std::string ifname = channelOutName + std::to_string(i);
