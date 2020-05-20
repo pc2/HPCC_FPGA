@@ -79,7 +79,23 @@ public:
 class TransposeData {
 
 public:
-    HOST_DATA_TYPE *A, *B, *result;
+    /**
+     * @brief Input matrix A
+     * 
+     */
+    HOST_DATA_TYPE *A;
+
+    /**
+     * @brief Input matrix B
+     * 
+     */
+    HOST_DATA_TYPE *B;
+
+    /**
+     * @brief The result matrix
+     * 
+     */
+    HOST_DATA_TYPE *result;
 
     /**
      * @brief Construct a new Transpose Data object

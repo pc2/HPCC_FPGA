@@ -299,8 +299,10 @@ public:
     }
 
     /**
-     * @brief Selects and prepares the target device and prints the final configuration
-     *          before executing the benchmark
+     * @brief Selects and prepares the target device and prints the final configuration.
+     *          This method will initialize the executionSettings that are needed for the 
+     *          benchmark execution.
+     *          Thus, it has to be called before executeBenchmark() or executeKernel() method are called!
      * 
      * @param argc Number of input parameters as it is provided by the main function
      * @param argv Strings containing the input parameters as provided by the main function

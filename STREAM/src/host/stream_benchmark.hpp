@@ -85,7 +85,30 @@ public:
 class StreamData {
 
 public:
-    HOST_DATA_TYPE *A, *B, *C;
+    /**
+     * @brief The input array A of the benchmark
+     * 
+     */
+    HOST_DATA_TYPE *A;
+
+    /**
+     * @brief The input array B of the benchmark
+     * 
+     */
+    HOST_DATA_TYPE *B;
+
+    /**
+     * @brief The input array C of the benchmark
+     * 
+     */
+    HOST_DATA_TYPE *C;
+
+    /**
+     * @brief Construct a new Stream Data object
+     * 
+     * @param context the context that will be used to allocate SVM memory
+     * @param size the size of the data arrays in number of values
+     */
     StreamData(const cl::Context& context, size_t size) {
     #ifdef INTEL_FPGA
     #ifdef USE_SVM
@@ -111,6 +134,10 @@ public:
     #endif
     }
 
+    /**
+     * @brief Destroy the Stream Data object
+     * 
+     */
     ~StreamData() {
     #ifdef USE_SVM
         clSVMFree(A);
@@ -183,7 +210,6 @@ public:
      * @brief Stream specific implementation of the execution validation
      *  
      * @param data 
-     * @param output 
      * @return true 
      * @return false 
      */

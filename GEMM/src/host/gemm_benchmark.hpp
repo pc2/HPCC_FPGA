@@ -39,7 +39,7 @@ extern "C" void sgemm_(char*, char*, int*, int*,int*, float*, float*, int*, floa
 
 
 /**
- * @brief Contains all classes and methods needed by the LINPACK benchmark
+ * @brief Contains all classes and methods needed by the GEMM benchmark
  * 
  */
 namespace gemm {
@@ -74,14 +74,54 @@ public:
 };
 
 /**
- * @brief Data class cotnaining the data the kernel is exeucted with
+ * @brief Data class containing all data needed by the kernel to calculate
+ *          \f$C\_out = \alpha * A * B + \beta * C\f$
  * 
  */
 class GEMMData {
 
 public:
-    HOST_DATA_TYPE *A, *B, *C, *C_out;
-    HOST_DATA_TYPE normtotal, alpha, beta;
+    /**
+     * @brief Pointer to the matrix A of the calculation
+     * 
+     */
+    HOST_DATA_TYPE *A;
+
+    /**
+     * @brief Pointer to the matrix B of the calculation
+     * 
+     */
+    HOST_DATA_TYPE *B;
+
+    /**
+     * @brief Pointer to the matrix C of the calculation
+     * 
+     */
+    HOST_DATA_TYPE *C;
+
+    /**
+     * @brief Pointer to the output matrix of the calculation
+     * 
+     */
+    HOST_DATA_TYPE *C_out;
+
+    /**
+     * @brief Stores the maximum value of all input matrices for the error calculation
+     * 
+     */
+    HOST_DATA_TYPE normtotal;
+
+    /**
+     * @brief The scalar value that will be used for \f$\alpha\f$ in the calculation
+     * 
+     */
+    HOST_DATA_TYPE alpha;
+
+    /**
+     * @brief The scalar value that will be used for \f$\beta\f$ in the calculation
+     * 
+     */
+    HOST_DATA_TYPE beta;
 
     /**
      * @brief Construct a new GEMM Data object

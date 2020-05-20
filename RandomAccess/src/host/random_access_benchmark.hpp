@@ -79,6 +79,11 @@ public:
 class RandomAccessData {
 
 public:
+
+    /**
+     * @brief The input data array that will be updated using random accesses
+     * 
+     */
     HOST_DATA_TYPE *data;
 
     /**

@@ -37,9 +37,30 @@ SOFTWARE.
  */
 namespace network {
 
+    /**
+     * @brief This data struct is part of the CollectedResultMap.
+     *         It is used to store the measurement results for a single rank
+     *          executed with a specific loop length and message size
+     * 
+     */
     struct ExecutionTimings {
+
+        /**
+         * @brief The number of messages that were sent for this measurement
+         * 
+         */
         cl_uint looplength;
+
+        /**
+         * @brief The size of the messages in bytes
+         * 
+         */
         cl_uint messageSize;
+
+        /**
+         * @brief The kernel runtimes for each repetition in seconds
+         * 
+         */
         std::vector<double> calculationTimings;
     };
 
@@ -146,8 +167,7 @@ public:
      * @brief Network specific implementation of the execution validation
      * 
      * @param data The input and output data of the benchmark
-     * @return true If validation is successful
-     * @return false otherwise
+     * @return true always, since no checks are done
      */
     bool
     validateOutputAndPrintError(NetworkData &data) override;
@@ -161,56 +181,20 @@ public:
     printResults(const NetworkExecutionTimings &output) override;
 
     /**
-     * @brief Construct a new Network Benchmark object
+     * @brief Construct a new Network Benchmark object. This construtor will directly setup
+     *          The benchmark suing the given input parameters and the setupBenchmark() method
      * 
      * @param argc the number of program input parameters
      * @param argv the program input parameters as array of strings
      */
     NetworkBenchmark(int argc, char* argv[]);
 
-        /**
+    /**
      * @brief Construct a new Network Benchmark object
      */
     NetworkBenchmark();
 
 };
-
-/**
- * Bit reverses the order of the given Network data in place
- *
- * @param data Array of complex numbers that will be sorted in bit reversed order
- * @param iterations Length of the data array will be calculated with iterations * Network Size
- */
-void bit_reverse(std::complex<HOST_DATA_TYPE> *data, unsigned iterations);
-
-// The function definitions and implementations below this comment are taken from the
-// Network1D example implementation of the Intel FPGA SDK for OpenCL 19.4
-// They are licensed under the following conditions:
-//
-// Copyright (C) 2013-2019 Altera Corporation, San Jose, California, USA. All rights reserved.
-// Permission is hereby granted, free of charge, to any person obtaining a copy of this
-// software and associated documentation files (the "Software"), to deal in the Software
-// without restriction, including without limitation the rights to use, copy, modify, merge,
-// publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to
-// whom the Software is furnished to do so, subject to the following conditions:
-// The above copyright notice and this permission notice shall be included in all copies or
-// substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-// OTHER DEALINGS IN THE SOFTWARE.
-//
-// This agreement shall be governed in all respects by the laws of the State of California and
-// by the laws of the United States of America.
-
-void fourier_transform_gold(bool inverse, const int lognr_points, std::complex<HOST_DATA_TYPE> *data);
-
-void fourier_stage(int lognr_points, std::complex<double> *data);
 
 } // namespace network
 

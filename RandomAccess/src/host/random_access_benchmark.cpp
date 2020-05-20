@@ -70,11 +70,6 @@ random_access::RandomAccessBenchmark::executeKernel(RandomAccessData &data) {
     return bm_execution::calculate(*executionSettings, data.data);
 }
 
-/**
-Prints the execution results to stdout
-
-@param results The execution results
-*/
 void
 random_access::RandomAccessBenchmark::printResults(const random_access::RandomAccessExecutionTimings &output) {
     std::cout << std::setw(ENTRY_SPACE)

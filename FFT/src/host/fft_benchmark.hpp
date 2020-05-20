@@ -79,6 +79,10 @@ class FFTData {
 
 public:
 
+    /**
+     * @brief The data array used ofr the FFT calculation
+     * 
+     */
     std::complex<HOST_DATA_TYPE>* data;
 
     /**
@@ -215,8 +219,22 @@ void bit_reverse(std::complex<HOST_DATA_TYPE> *data, unsigned iterations);
 // This agreement shall be governed in all respects by the laws of the State of California and
 // by the laws of the United States of America.
 
+/**
+ * @brief Do a FFT with a reference implementation on the CPU
+ * 
+ * @param inverse if false, the FFT will be calculated, else the iFFT
+ * @param lognr_points The log2 of the FFT size that should be calculated 
+ * @param data The input data for the FFT
+ */
 void fourier_transform_gold(bool inverse, const int lognr_points, std::complex<HOST_DATA_TYPE> *data);
 
+/**
+ * @brief Calculate a single stage of the whole FFT calculation.
+ *          This function will mainly be used by fourier_transform_gold() to calculate the FFT.
+ * 
+ * @param lognr_points The log2 of the FFT size that should be calculated 
+ * @param data The input data for the FFT stage
+ */
 void fourier_stage(int lognr_points, std::complex<double> *data);
 
 } // namespace fft

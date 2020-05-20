@@ -167,7 +167,7 @@ test:LINPACK:
   stage: test
   script:
     - cd build
-    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:LINPACK
@@ -180,7 +180,7 @@ test:GEMM:
   stage: test
   script:
     - cd build
-    - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:GEMM

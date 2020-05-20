@@ -68,11 +68,6 @@ transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
     return bm_execution::calculate(*executionSettings, data.A, data.B, data.result);
 }
 
-/**
-Prints the execution results to stdout
-
-@param results The execution results
-*/
 void
 transpose::TransposeBenchmark::printResults(const transpose::TransposeExecutionTimings &output) {
     double flops = executionSettings->programSettings->matrixSize * executionSettings->programSettings->matrixSize;

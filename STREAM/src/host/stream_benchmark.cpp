@@ -77,11 +77,6 @@ stream::StreamBenchmark::executeKernel(StreamData &data) {
               data.C);
 }
 
-/**
-Prints the execution results to stdout
-
-@param results The execution results
-*/
 void
 stream::StreamBenchmark::printResults(const stream::StreamExecutionTimings &output) {
 

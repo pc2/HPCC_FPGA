@@ -67,14 +67,35 @@ public:
 };
 
 /**
- * @brief Data class cotnaining the data the kernel is exeucted with
+ * @brief Data class containing the data the kernel is exeucted with
  * 
  */
 class LinpackData {
 
 public:
-    HOST_DATA_TYPE *A, *b;
+
+    /**
+     * @brief  The input matrix representing the left side of the linear equation system
+     * 
+     */
+    HOST_DATA_TYPE *A;
+
+    /**
+     * @brief  The input vector the right side of the linear equation system
+     * 
+     */
+    HOST_DATA_TYPE *b;
+
+    /**
+     * @brief A vector that can be used to store pivoting information
+     * 
+     */
     cl_int* ipvt;
+
+    /**
+     * @brief The maximum value of A that will be used for the error calculation
+     * 
+     */
     HOST_DATA_TYPE norma;
 
     /**
@@ -201,6 +222,7 @@ Can be used in exchange with kernel functions for functionality testing
 @param a the matrix with size of n*n
 @param n size of matrix A
 @param lda row with of the matrix. must be >=n
+@param ipvt array of pivoting indices
 
 */
 void gefa_ref(HOST_DATA_TYPE* a, unsigned n, unsigned lda, cl_int* ipvt);
