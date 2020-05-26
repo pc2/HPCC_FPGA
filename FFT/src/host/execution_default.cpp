@@ -66,6 +66,10 @@ namespace bm_execution {
 #else
         err = fetchKernel.setArg(0, inBuffer);
         ASSERT_CL(err)
+        #ifdef XILINX_FPGA
+        fetchKernel.setArg(1, iterations);
+        ASSERT_CL(err)
+        #endif
         err = fftKernel.setArg(0, outBuffer);
         ASSERT_CL(err)
 #endif
@@ -100,9 +104,14 @@ namespace bm_execution {
         std::vector<double> calculationTimings;
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             auto startCalculation = std::chrono::high_resolution_clock::now();
+            #ifdef INTEL_FPGA
             fetchQueue.enqueueNDRangeKernel(fetchKernel, cl::NullRange, cl::NDRange((1 << LOG_FFT_SIZE)/ FFT_UNROLL * iterations),
                     cl::NDRange((1 << LOG_FFT_SIZE)/ FFT_UNROLL));
-            fftQueue.enqueueTask(fftKernel);
+            #endif
+            #ifdef XILINX_FPGA
+            fetchQueue.enqueueTask(fetchKernel);
+            #endif
+            // fftQueue.enqueueTask(fftKernel);
             fetchQueue.finish();
             fftQueue.finish();
             auto endCalculation = std::chrono::high_resolution_clock::now();
