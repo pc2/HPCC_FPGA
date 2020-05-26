@@ -145,6 +145,7 @@ uint permute_gid (uint gid) {
   return result;
 }
 
+#ifdef INTEL_FPGA
 // group dimension (N/(8*CONT_FACTOR), num_iterations)
 __attribute__((reqd_work_group_size(CONT_FACTOR * POINTS, 1, 1)))
 kernel void fetch (global float2 * restrict src) {
@@ -198,6 +199,43 @@ __attribute__((opencl_unroll_hint(POINTS)))
   write_pipe_block(chanin, &buf2x8);
   #endif
 }
+#endif
+
+#ifdef XILINX_FPGA
+__kernel
+void fetch(__global float2 * restrict src, int iter) {
+
+  const int N = (1 << LOGN);
+  const int BUF_SIZE = N;
+
+  for(unsigned k = 0; k < iter; k++){ 
+
+    float2 buf[BUF_SIZE/POINTS][POINTS] __attribute__((xcl_array_partition(complete, 2)));
+
+    for(int i = 0; i < N / POINTS; i++){
+      __attribute__((opencl_unroll_hint(POINTS)))
+      for(int j = 0; j < POINTS; j++){
+        buf[i][(j + i) & (POINTS-1)] = src[k * N + i * POINTS + j];   
+      } 
+    }
+
+    for(unsigned j = 0; j < (N / POINTS); j++){
+      float2x8 buf2x8;
+      const unsigned offset = N / POINTS + j;
+      buf2x8.i0 = buf[(j) / POINTS][(j + j/POINTS) & (POINTS - 1)];
+      buf2x8.i1 = buf[(4 * offset) / POINTS][((4 * offset) + (4 * offset)/POINTS)  & (POINTS - 1)];
+      buf2x8.i2 = buf[(2 * offset) / POINTS][((2 * offset) + (2 * offset)/POINTS) & (POINTS - 1)];
+      buf2x8.i3 = buf[(6 * offset) / POINTS][((6 * offset) + (6 * offset)/POINTS) & (POINTS - 1)];
+      buf2x8.i4 = buf[(offset) / POINTS][(offset + offset/POINTS) & (POINTS - 1)];
+      buf2x8.i5 = buf[(5 * offset) / POINTS][((5 * offset) + (5 * offset)/POINTS) & (POINTS - 1)];
+      buf2x8.i6 = buf[(3 * offset) / POINTS][((3 * offset) + (3 * offset)/POINTS) & (POINTS - 1)];
+      buf2x8.i7 = buf[(7 * offset) / POINTS][((7 * offset) + (7 * offset)/POINTS) & (POINTS - 1)];
+      printf("Send data %d/%d\n", j, (N/POINTS - 1));
+      write_pipe_block(chanin, &buf2x8);
+    }
+  }
+}
+#endif
 
 
 /* Attaching the attribute 'task' to the top level kernel to indicate 
@@ -257,7 +295,9 @@ kernel void fft1d(global float2 * restrict dest,
       data.i6 = read_channel_intel(chanin[6]);
       data.i7 = read_channel_intel(chanin[7]);
       #else
+      printf("Wait for data \n");
       read_pipe_block(chanin, &data);
+      printf("Received data \n");
       #endif
     } else {
       data.i0 = data.i1 = data.i2 = data.i3 = 
