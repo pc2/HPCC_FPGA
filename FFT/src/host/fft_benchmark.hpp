@@ -86,12 +86,25 @@ public:
     std::complex<HOST_DATA_TYPE>* data;
 
     /**
+     * @brief The context that is used to allocate memory in SVM mode
+     * 
+     */
+    cl::Context context;
+
+    /**
      * @brief Construct a new FFT Data object
      * 
+     * @param context The OpenCL context used to allocate memory in SVM mode
      * @param iterations Number of FFT data that will be stored sequentially in the array
      */
-    FFTData(uint iterations) {
+    FFTData(cl::Context context, uint iterations) : context(context) {
+#ifdef USE_SVM
+        data = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc(context(), 0 ,
+                            iterations * (1 << LOG_FFT_SIZE) * sizeof(std::complex<HOST_DATA_TYPE>), 1024));
+#else
         posix_memalign(reinterpret_cast<void**>(&data), 64, iterations * (1 << LOG_FFT_SIZE) * sizeof(std::complex<HOST_DATA_TYPE>));
+#endif
     }
 
     /**
@@ -99,7 +112,11 @@ public:
      * 
      */
     ~FFTData() {
+#ifdef USE_SVM
+        clSVMFree(context(), reinterpret_cast<void**>(data));
+#else
         free(data);
+#endif
     }
 
 };

@@ -49,19 +49,32 @@ namespace bm_execution {
         cl::Buffer outBuffer = cl::Buffer(*config.context, CL_MEM_READ_ONLY, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE));
 
         cl::Kernel fetchKernel(*config.program, FETCH_KERNEL_NAME);
-
-        fetchKernel.setArg(0, inBuffer);
-
         cl::Kernel fftKernel(*config.program, FFT_KERNEL_NAME);
 
+#ifdef USE_SVM
+        err = clSetKernelArgSVMPointer(fetchkernel(), 0,
+                                        reinterpret_cast<void*>(data));
+        err = clSetKernelArgSVMPointer(fftkernel(), 0,
+                                        reinterpret_cast<void*>(data));
+#else
+        fetchKernel.setArg(0, inBuffer);
         fftKernel.setArg(0, outBuffer);
+#endif
         fftKernel.setArg(1, iterations);
         fftKernel.setArg(2, static_cast<cl_int>(inverse));
 
         cl::CommandQueue fetchQueue(*config.context);
         cl::CommandQueue fftQueue(*config.context);
 
+#ifdef USE_SVM
+        clEnqueueSVMMap(compute_queue(), CL_TRUE,
+                        CL_MAP_READ | CL_MAP_WRITE,
+                        reinterpret_cast<void *>(data),
+                        (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), 0,
+                        NULL, NULL);
+#else
         fetchQueue.enqueueWriteBuffer(inBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data);
+#endif
 
         std::vector<double> calculationTimings;
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
@@ -77,8 +90,13 @@ namespace bm_execution {
                             (endCalculation - startCalculation);
             calculationTimings.push_back(calculationTime.count());
         }
-
+#ifdef USE_SVM
+            clEnqueueSVMUnmap(compute_queue(),
+                                reinterpret_cast<void *>(data), 0,
+                                NULL, NULL);
+#else
         fetchQueue.enqueueReadBuffer(outBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data);
+#endif
 
         std::unique_ptr<fft::FFTExecutionTimings> result(new fft::FFTExecutionTimings{
                 calculationTimings

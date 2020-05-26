@@ -85,7 +85,7 @@ fft::FFTBenchmark::printResults(const fft::FFTExecutionTimings &output) {
 
 std::unique_ptr<fft::FFTData>
 fft::FFTBenchmark::generateInputData() {
-    auto d = std::unique_ptr<fft::FFTData>(new fft::FFTData(executionSettings->programSettings->iterations));
+    auto d = std::unique_ptr<fft::FFTData>(new fft::FFTData(*executionSettings->context, executionSettings->programSettings->iterations));
     std::mt19937 gen(0);
     auto dis = std::uniform_real_distribution<HOST_DATA_TYPE>(-1.0, 1.0);
     for (int i=0; i< executionSettings->programSettings->iterations * (1 << LOG_FFT_SIZE); i++) {
