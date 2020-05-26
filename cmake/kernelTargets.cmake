@@ -37,7 +37,7 @@ function(generate_kernel_targets_xilinx)
         endif()
         set(xilinx_report_folder "--report_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_reports")
         set(local_CLFLAGS ${CLFLAGS} -DXILINX_FPGA)
-        list(APPEND local_CLFLAGS ${xilinx_report_folder} --log_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile)
+        list(APPEND local_CLFLAGS --report_dir=${xilinx_report_folder} --log_dir=${xilinx_report_folder}/logs)
 
         # build emulation config for device
         add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/emconfig.json
