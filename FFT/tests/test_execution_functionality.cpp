@@ -80,6 +80,21 @@ TEST_F(FFTKernelTest, FFTCloseToZeroForAll1And1) {
     }
 }
 
+/**
+ * Check if FFT calculates the correct result for all number being 0.0,0.0i
+ */
+TEST_F(FFTKernelTest, FFTCloseToZeroForAll0And0) {
+    for (int i=0; i<(1 << LOG_FFT_SIZE); i++) {
+        data->data[i].real(0.0);
+        data->data[i].imag(0.0);
+    }
+    auto result = bm->executeKernel(*data);
+    for (int i=0; i < (1 << LOG_FFT_SIZE); i++) {
+        EXPECT_NEAR(data->data[i].real(), 0.0, 0.00001);
+        EXPECT_NEAR(data->data[i].imag(), 0.0, 0.00001);
+    }
+}
+
 
 /**
 * Check if iFFT calculates the correct result for all number being 1.0,1.0i
