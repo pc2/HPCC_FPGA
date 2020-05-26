@@ -100,7 +100,7 @@ linpack::LinpackBenchmark::printResults(const linpack::LinpackExecutionTimings &
 
 std::unique_ptr<linpack::LinpackData>
 linpack::LinpackBenchmark::generateInputData() {
-    auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(executionSettings->programSettings->matrixSize));
+    auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(*executionSettings->context ,executionSettings->programSettings->matrixSize));
     std::mt19937 gen(7);
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     d->norma = 0.0;

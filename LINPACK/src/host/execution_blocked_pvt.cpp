@@ -66,10 +66,17 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
 
     // prepare kernels
+#ifdef USE_SVM
+    err = clSetKernelArgSVMPointer(gefakernel(), 0,
+                                    reinterpret_cast<void*>(A));
+    err = clSetKernelArgSVMPointer(gefakernel(), 1,
+                                    reinterpret_cast<void*>(ipvt));
+#else
     err = gefakernel.setArg(0, Buffer_a);
     ASSERT_CL(err);
     err = gefakernel.setArg(1, Buffer_pivot);
     ASSERT_CL(err);
+#endif
     err = gefakernel.setArg(2, static_cast<uint>(config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG));
     ASSERT_CL(err);
 
@@ -78,9 +85,30 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     double t;
     std::vector<double> executionTimes;
     for (int i = 0; i < config.programSettings->numRepetitions; i++) {
+#ifdef USE_SVM
+        clEnqueueSVMMap(compute_queue(), CL_TRUE,
+                        CL_MAP_READ | CL_MAP_WRITE,
+                        reinterpret_cast<void *>(A),
+                        sizeof(HOST_DATA_TYPE) *
+                        (config.programSettings->matrixSize * config.programSettings->matrixSize), 0,
+                        NULL, NULL);
+        clEnqueueSVMMap(compute_queue(), CL_TRUE,
+                        CL_MAP_READ,
+                        reinterpret_cast<void *>(b),
+                        sizeof(HOST_DATA_TYPE) *
+                        (config.programSettings->matrixSize), 0,
+                        NULL, NULL);
+        clEnqueueSVMMap(compute_queue(), CL_TRUE,
+                        CL_MAP_WRITE,
+                        reinterpret_cast<void *>(ipvt),
+                        sizeof(cl_int) *
+                        (config.programSettings->matrixSize), 0,
+                        NULL, NULL);
+#else
         compute_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
         compute_queue.finish();
+#endif
         auto t1 = std::chrono::high_resolution_clock::now();
         compute_queue.enqueueTask(gefakernel);
         compute_queue.finish();
@@ -93,10 +121,22 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
     /* --- Read back results from Device --- */
 
+#ifdef USE_SVM
+            clEnqueueSVMUnmap(compute_queue(),
+                                reinterpret_cast<void *>(A), 0,
+                                NULL, NULL);
+            clEnqueueSVMUnmap(compute_queue(),
+                                reinterpret_cast<void *>(b), 0,
+                                NULL, NULL);
+            clEnqueueSVMUnmap(compute_queue(),
+                                reinterpret_cast<void *>(ipvt), 0,
+                                NULL, NULL);
+#else
     compute_queue.enqueueReadBuffer(Buffer_a, CL_TRUE, 0,
                                      sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
     compute_queue.enqueueReadBuffer(Buffer_pivot, CL_TRUE, 0,
                                      sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
+#endif
 
     // Solve linear equations on CPU
     // TODO: This has to be done on FPGA
