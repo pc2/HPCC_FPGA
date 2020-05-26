@@ -94,7 +94,7 @@ gemm::GEMMBenchmark::printResults(const gemm::GEMMExecutionTimings &output) {
 
 std::unique_ptr<gemm::GEMMData>
 gemm::GEMMBenchmark::generateInputData() {
-    auto d = std::unique_ptr<gemm::GEMMData>(new gemm::GEMMData(executionSettings->programSettings->matrixSize));
+    auto d = std::unique_ptr<gemm::GEMMData>(new gemm::GEMMData(*executionSettings->context, executionSettings->programSettings->matrixSize));
     std::mt19937 gen(7);
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {

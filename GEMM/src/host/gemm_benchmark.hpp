@@ -118,6 +118,12 @@ public:
     HOST_DATA_TYPE alpha;
 
     /**
+     * @brief The context that is used to allocate memory in SVM mode
+     * 
+     */
+    cl::Context context;
+
+    /**
      * @brief The scalar value that will be used for \f$\beta\f$ in the calculation
      * 
      */
@@ -126,13 +132,29 @@ public:
     /**
      * @brief Construct a new GEMM Data object
      * 
+     * @param context The OpenCL context used to allocate memory in SVM mode
      * @param size Size of the allocated square matrices
      */
-    GEMMData(uint size) : normtotal(0.0), alpha(0.5), beta(2.0) {
+    GEMMData(cl::Context context, uint size) : normtotal(0.0), alpha(0.5), beta(2.0), context(context) {
+#ifdef USE_SVM
+        A = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc(context(), 0 ,
+                            size * size * sizeof(HOST_DATA_TYPE), 1024));
+        B = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc(context(), 0 ,
+                            size * size * sizeof(HOST_DATA_TYPE), 1024));
+        C = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc(context(), 0 ,
+                            size * size * sizeof(HOST_DATA_TYPE), 1024));
+        C_out = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc(context(), 0 ,
+                            size * size * sizeof(HOST_DATA_TYPE), 1024));
+#else
         posix_memalign(reinterpret_cast<void**>(&A), 4096, size * size * sizeof(HOST_DATA_TYPE));
         posix_memalign(reinterpret_cast<void**>(&B), 4096, size * size * sizeof(HOST_DATA_TYPE));
         posix_memalign(reinterpret_cast<void**>(&C), 4096, size * size * sizeof(HOST_DATA_TYPE));
         posix_memalign(reinterpret_cast<void**>(&C_out), 4096, size * size * sizeof(HOST_DATA_TYPE));
+#endif
     }
 
     /**
@@ -140,10 +162,17 @@ public:
      * 
      */
     ~GEMMData() {
+#ifdef USE_SVM
+        clSVMFree(context(), reinterpret_cast<void**>(A));
+        clSVMFree(context(), reinterpret_cast<void**>(B));
+        clSVMFree(context(), reinterpret_cast<void**>(C));
+        clSVMFree(context(), reinterpret_cast<void**>(C_out));
+#else
         free(A);
         free(B);
         free(C);
         free(C_out);
+#endif
     }
 
 };
