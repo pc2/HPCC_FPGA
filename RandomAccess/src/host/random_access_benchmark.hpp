@@ -87,12 +87,18 @@ public:
     HOST_DATA_TYPE *data;
 
     /**
+     * @brief The context that is used to allocate memory in SVM mode
+     * 
+     */
+    cl::Context context;
+
+    /**
      * @brief Construct a new Random Access Data object
      * 
      * @param context The OpenCL context that will be used to allocate SVM memory
      * @param size The size  of the allocated memory in number of values
      */
-    RandomAccessData(cl::Context& context, size_t size) {
+    RandomAccessData(cl::Context& context, size_t size) : context(context) {
     #ifdef USE_SVM
         data = reinterpret_cast<HOST_DATA_TYPE*>(
                             clSVMAlloc(context(), 0 ,
@@ -108,7 +114,7 @@ public:
      */
     ~RandomAccessData() {
     #ifdef USE_SVM
-        clSVMFree(data);
+        clSVMFree(context(), reinterpret_cast<void**>(data));
     #else
         free(data);
     #endif
