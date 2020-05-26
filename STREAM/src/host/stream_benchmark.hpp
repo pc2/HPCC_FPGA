@@ -104,12 +104,18 @@ public:
     HOST_DATA_TYPE *C;
 
     /**
+     * @brief The context that is used to allocate memory in SVM mode
+     * 
+     */
+    cl::Context context;
+
+    /**
      * @brief Construct a new Stream Data object
      * 
-     * @param context the context that will be used to allocate SVM memory
+     * @param _context the context that will be used to allocate SVM memory
      * @param size the size of the data arrays in number of values
      */
-    StreamData(const cl::Context& context, size_t size) {
+    StreamData(const cl::Context& _context, size_t size) : context(_context) {
     #ifdef INTEL_FPGA
     #ifdef USE_SVM
         A = reinterpret_cast<HOST_DATA_TYPE*>(
@@ -140,9 +146,9 @@ public:
      */
     ~StreamData() {
     #ifdef USE_SVM
-        clSVMFree(A);
-        clSVMFree(B);
-        clSVMFree(C);
+        clSVMFree(context(), reinterpret_cast<void**>(A));
+        clSVMFree(context(), reinterpret_cast<void**>(B));
+        clSVMFree(context(), reinterpret_cast<void**>(C));
     #else
         free(A);
         free(B);
