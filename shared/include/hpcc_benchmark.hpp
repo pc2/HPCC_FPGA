@@ -354,22 +354,34 @@ public:
             std::cout << HLINE << "Start benchmark using the given configuration. Generating data..." << std::endl
                     << HLINE;
         }
+
+        auto gen_start = std::chrono::high_resolution_clock::now();
         std::unique_ptr<TData> data = generateInputData();
+        std::chrono::duration<double> gen_time = std::chrono::high_resolution_clock::now() - gen_start;
+        
         if (world_rank == 0) {
+            std::cout << "Generation Time: " << gen_time.count() << " s"  << std::endl;
             std::cout << HLINE << "Execute benchmark kernel..." << std::endl
                     << HLINE;
         }
-        std::unique_ptr<TOutput> output =  executeKernel(*data);
 
+        auto exe_start = std::chrono::high_resolution_clock::now();
+        std::unique_ptr<TOutput> output =  executeKernel(*data);
+        std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
+        
         if (world_rank == 0) {
+            std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
             std::cout << HLINE << "Validate output..." << std::endl
                     << HLINE;
         }
-        
+
+        auto eval_start = std::chrono::high_resolution_clock::now();
         bool validateSuccess = validateOutputAndPrintError(*data);
+        std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
 
         if (world_rank == 0) {
             printResults(*output);
+            std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
         }
 
         return validateSuccess;
