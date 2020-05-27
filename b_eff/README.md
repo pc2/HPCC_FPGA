@@ -24,8 +24,8 @@ The targets below can be used to build the benchmark and its kernels:
 
  |  Target  | Description                                    |
  | -------- | ---------------------------------------------- |
- | fnet     | Builds the host application                    |
- | Google_Tests_run| Compile the tests and its dependencies  |
+ | Network_intel     | Builds the host application                    |
+ | Network_test_intel| Compile the tests and its dependencies  |
  
  More over the are additional targets to generate kernel reports and bitstreams.
  The provided kernel is optimized for the Bittware 520N board with four external
@@ -46,7 +46,7 @@ The targets below can be used to build the benchmark and its kernels:
  
     mkdir build && cd build
     cmake ..
-    make fnet
+    make Network_intel
 
 You will find all executables and kernel files in the `bin`
 folder of your build directory.
@@ -64,16 +64,16 @@ of the Intel FPGA SDK installation.
 All binaries and FPGA bitstreams can be found in the `bin` directory with in the build directory.
 For execution of the benchmark run:
 
-    ./fnet -f path_to_kernel.aocx
+    ./Network_intel -f path_to_kernel.aocx
     
 For more information on available input parameters run
 
-    $./fnet -h
+    $./Network_intel -h
     
     Implementation of the effective bandwidth benchmark proposed in the HPCC benchmark suite for FPGA.
     Version: "1.1"
     Usage:
-      ./fnet [OPTION...]
+      ./Network_intel [OPTION...]
     
       -f, --file arg      Kernel file name
       -n, arg             Number of repetitions (default: 10)
@@ -89,7 +89,7 @@ For more information on available input parameters run
     
 To execute the unit and integration tests run
 
-    ./Google_Tests_run
+    ./Network_test_intel -f KERNEL_FILE_NAME
     
 in the `bin` folder within the build directory.
 It will run an emulation of the kernel and execute some functionality tests.

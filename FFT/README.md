@@ -19,7 +19,7 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
  |  Target  | Description                                    |
  | -------- | ---------------------------------------------- |
  | FFT_`VENDOR`     | Builds the host application                    |
- | Test_`VENDOR`    | Compile the tests and its dependencies  |
+ | FFT_test_`VENDOR`    | Compile the tests and its dependencies  |
  
  More over the are additional targets to generate kernel reports and bitstreams.
  The provided kernel is optimized for Stratix 10 with 512bit LSUs.
@@ -37,7 +37,7 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
  
     mkdir build && cd build
     cmake ..
-    make fFFT
+    make FFT_intel
 
 You will find all executables and kernel files in the `bin`
 folder of your build directory.
@@ -68,7 +68,7 @@ For more information on available input parameters run
     
       -f, --file arg      Kernel file name
       -n, arg             Number of repetitions (default: 10)
-      -i, arg             Multiplier for the used data size that will be i *
+      -b, arg             Multiplier for the used data size that will be i *
                           FFT_SIZE (default: 100)
           --inverse       If set, the inverse FFT is calculated instead
           --device arg    Index of the device that has to be used. If not given
@@ -81,7 +81,7 @@ For more information on available input parameters run
     
 To execute the unit and integration tests run
 
-    ./Test_intel
+    ./FFT_test_intel -f KERNEL_FILE_NAME
     
 in the `bin` folder within the build directory.
 It will run an emulation of the kernel and execute some functionality tests.

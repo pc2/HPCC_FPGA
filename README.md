@@ -170,6 +170,17 @@ When major changes are made on the code the functionality should be checked by r
 To simplify this process the script `test_all.sh` can be used to build all benchmarks with the default configuration
 and run all tests.
 
+## Code Documentation
+
+The benchmark suite supports the generation of code documentation using doxygen in HTML and Latex format.
+To generate the documentation, execute the following commands:
+
+    cd docs
+    doxygen doxy.config
+
+The generated documentation will be placed in `docs/html` and `docs/latex`.
+To view the HTML documentation, open `docs/html/index.html` with a internet browser.
+
 
 ## Notes on Xilinx Vitis Compatibility
 

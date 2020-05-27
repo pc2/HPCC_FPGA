@@ -1,0 +1,202 @@
+/*
+Copyright (c) 2019 Marius Meyer
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+#ifndef SRC_HOST_NETWORK_BENCHMARK_H_
+#define SRC_HOST_NETWORK_BENCHMARK_H_
+
+/* C++ standard library headers */
+#include <complex>
+#include <memory>
+
+/* Project's headers */
+#include "hpcc_benchmark.hpp"
+#include "parameters.h"
+
+/**
+ * @brief Contains all classes and methods needed by the Network benchmark
+ * 
+ */
+namespace network {
+
+    /**
+     * @brief This data struct is part of the CollectedResultMap.
+     *         It is used to store the measurement results for a single rank
+     *          executed with a specific loop length and message size
+     * 
+     */
+    struct ExecutionTimings {
+
+        /**
+         * @brief The number of messages that were sent for this measurement
+         * 
+         */
+        cl_uint looplength;
+
+        /**
+         * @brief The size of the messages in bytes
+         * 
+         */
+        cl_uint messageSize;
+
+        /**
+         * @brief The kernel runtimes for each repetition in seconds
+         * 
+         */
+        std::vector<double> calculationTimings;
+    };
+
+    /**
+     * @brief The data structure used to store all measurement results
+     * 
+     */
+    typedef std::map<int, std::shared_ptr<std::vector<std::shared_ptr<ExecutionTimings>>>> CollectedResultMap;
+
+/**
+ * @brief The Network benchmark specific program settings
+ * 
+ */
+class NetworkProgramSettings : public hpcc_base::BaseSettings {
+
+public:
+    /**
+     * @brief Initial number of sent messages per message size
+     * 
+     */
+    uint looplength;
+
+    /**
+     * @brief Construct a new Network Program Settings object
+     * 
+     * @param results the result map from parsing the program input parameters
+     */
+    NetworkProgramSettings(cxxopts::ParseResult &results);
+
+    /**
+     * @brief Get a map of the settings. This map will be used to print the final configuration.
+     * 
+     * @return a map of program parameters. keys are the name of the parameter.
+     */
+    std::map<std::string, std::string> getSettingsMap() override;
+
+};
+
+/**
+ * @brief Data class for the network benchmark
+ * 
+ */
+class NetworkData {
+
+public:
+    /**
+     * @brief Used message sizes for the benchmark execution
+     * 
+     */
+    std::vector<uint> messageSizes;
+};
+
+/**
+ * @brief Measured execution timing from the kernel execution
+ * 
+ */
+class NetworkExecutionTimings {
+public:
+
+    /**
+     * @brief A vector containing the timings for all repetitions for the kernel execution
+     * 
+     */
+    CollectedResultMap timings;
+
+};
+
+/**
+ * @brief Implementation of the Network benchmark
+ * 
+ */
+class NetworkBenchmark : public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, NetworkData, NetworkExecutionTimings> {
+
+protected:
+
+    /**
+     * @brief Additional input parameters of the Network benchmark
+     * 
+     * @param options 
+     */
+    void
+    addAdditionalParseOptions(cxxopts::Options &options) override;
+
+public:
+
+    /**
+     * @brief Network specific implementation of the data generation
+     * 
+     * @return std::unique_ptr<NetworkData> The input and output data of the benchmark
+     */
+    std::unique_ptr<NetworkData>
+    generateInputData() override;
+
+    /**
+     * @brief Network specific implementation of the kernel execution
+     * 
+     * @param data The input and output data of the benchmark
+     * @return std::unique_ptr<NetworkExecutionTimings> Measured runtimes of the kernel execution
+     */
+    std::unique_ptr<NetworkExecutionTimings>
+    executeKernel(NetworkData &data) override;
+
+    /**
+     * @brief Network specific implementation of the execution validation
+     * 
+     * @param data The input and output data of the benchmark
+     * @return true always, since no checks are done
+     */
+    bool
+    validateOutputAndPrintError(NetworkData &data) override;
+
+    /**
+     * @brief Network specific implementation of printing the execution results
+     * 
+     * @param output Measured runtimes of the kernel execution
+     */
+    void
+    printResults(const NetworkExecutionTimings &output) override;
+
+    /**
+     * @brief Construct a new Network Benchmark object. This construtor will directly setup
+     *          The benchmark suing the given input parameters and the setupBenchmark() method
+     * 
+     * @param argc the number of program input parameters
+     * @param argv the program input parameters as array of strings
+     */
+    NetworkBenchmark(int argc, char* argv[]);
+
+    /**
+     * @brief Construct a new Network Benchmark object
+     */
+    NetworkBenchmark();
+
+};
+
+} // namespace network
+
+
+#endif // SRC_HOST_STREAM_BENCHMARK_H_

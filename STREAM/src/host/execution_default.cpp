@@ -21,7 +21,7 @@ SOFTWARE.
 */
 
 /* Related header files */
-#include "execution.h"
+#include "execution.hpp"
 
 /* C++ standard library headers */
 #include <memory>
@@ -36,15 +36,14 @@ SOFTWARE.
 #include "CL/cl_ext_intelfpga.h"
 #endif
 /* Project's headers */
-#include "setup/fpga_setup.hpp"
 
 namespace bm_execution {
 
-    void initialize_buffers(const std::shared_ptr<ExecutionConfiguration> &config, unsigned int data_per_kernel,
+    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config, unsigned int data_per_kernel,
                             std::vector<cl::Buffer> &Buffers_A, std::vector<cl::Buffer> &Buffers_B,
                             std::vector<cl::Buffer> &Buffers_C);
 
-    void initialize_queues_and_kernels(const std::shared_ptr<ExecutionConfiguration> &config,
+    void initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -53,7 +52,7 @@ namespace bm_execution {
                                        std::vector<cl::Kernel> &triad_kernels,
                                        std::vector<cl::CommandQueue> &command_queues);
 
-    void initialize_queues_and_kernels_single(const std::shared_ptr<ExecutionConfiguration> &config,
+    void initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -69,13 +68,13 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<ExecutionTimings>
-    calculate(std::shared_ptr<ExecutionConfiguration> config,
+    std::unique_ptr<stream::StreamExecutionTimings>
+    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings>& config,
             HOST_DATA_TYPE* A,
             HOST_DATA_TYPE* B,
             HOST_DATA_TYPE* C) {
 
-        unsigned data_per_kernel = config->arraySize/config->replications;
+        unsigned data_per_kernel = config.programSettings->streamArraySize/config.programSettings->kernelReplications;
 
         std::vector<cl::Buffer> Buffers_A;
         std::vector<cl::Buffer> Buffers_B;
@@ -95,7 +94,7 @@ namespace bm_execution {
         //
         // Setup kernels
         //
-        if (config->useSingleKernel) {
+        if (config.programSettings->useSingleKernel) {
             initialize_queues_and_kernels_single(config, data_per_kernel, Buffers_A, Buffers_B, Buffers_C, test_kernels,
                                           copy_kernels, scale_kernels,
                                           add_kernels, triad_kernels, A, B, C, command_queues);
@@ -123,7 +122,7 @@ namespace bm_execution {
         std::chrono::time_point<std::chrono::high_resolution_clock> startExecution, endExecution;
         std::chrono::duration<double> duration;
         // Time checking with test kernel
-        for (int i=0; i<config->replications; i++) {
+        for (int i=0; i<config.programSettings->kernelReplications; i++) {
 #ifdef USE_SVM
             ASSERT_CL(clEnqueueSVMMap(command_queues[i](), CL_FALSE,
                                 CL_MAP_READ | CL_MAP_WRITE,
@@ -135,14 +134,14 @@ namespace bm_execution {
             ASSERT_CL(command_queues[i].enqueueWriteBuffer(Buffers_A[i], CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*data_per_kernel, &A[data_per_kernel*i]));
 #endif
         }
-        for (int i=0; i<config->replications; i++) {
+        for (int i=0; i<config.programSettings->kernelReplications; i++) {
             ASSERT_CL(command_queues[i].finish());
         }
         startExecution = std::chrono::high_resolution_clock::now();
-        for (int i=0; i<config->replications; i++) {
+        for (int i=0; i<config.programSettings->kernelReplications; i++) {
             ASSERT_CL(command_queues[i].enqueueTask(test_kernels[i]));
         }
-        for (int i=0; i<config->replications; i++) {
+        for (int i=0; i<config.programSettings->kernelReplications; i++) {
             ASSERT_CL(command_queues[i].finish());
         }
         endExecution = std::chrono::high_resolution_clock::now();
@@ -157,7 +156,7 @@ namespace bm_execution {
         std::cout << "precision of your system timer." << std::endl;
         std::cout << HLINE;
 
-        for (int i=0; i<config->replications; i++) {
+        for (int i=0; i<config.programSettings->kernelReplications; i++) {
 #ifdef USE_SVM
             ASSERT_CL(clEnqueueSVMUnmap(command_queues[i](),
                         reinterpret_cast<void *>(A), 0,
@@ -167,7 +166,7 @@ namespace bm_execution {
             ASSERT_CL(command_queues[i].enqueueReadBuffer(Buffers_A[i], CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*data_per_kernel, &A[data_per_kernel*i]));
 #endif
         }
-        for (int i=0; i<config->replications; i++) {
+        for (int i=0; i<config.programSettings->kernelReplications; i++) {
             ASSERT_CL(command_queues[i].finish());
         }
 
@@ -175,13 +174,13 @@ namespace bm_execution {
         //
         // Do actual benchmark measurements
         //
-        for (uint r = 0; r < config->repetitions; r++) {
+        for (uint r = 0; r < config.programSettings->numRepetitions; r++) {
 #pragma omp parallel
             {
 #pragma omp single
                 startExecution = std::chrono::high_resolution_clock::now();
 #pragma omp for nowait
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
 #ifdef USE_SVM
                     clEnqueueSVMMap(command_queues[i](), CL_FALSE,
                                 CL_MAP_READ | CL_MAP_WRITE,
@@ -211,7 +210,7 @@ namespace bm_execution {
 #endif
                 }
 #pragma omp for
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                     command_queues[i].finish();
                 }
 #pragma omp single
@@ -224,11 +223,11 @@ namespace bm_execution {
                     startExecution = std::chrono::high_resolution_clock::now();
                 }
 #pragma omp for nowait
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                     command_queues[i].enqueueTask(copy_kernels[i]);
                 }
 #pragma omp for
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                     command_queues[i].finish();
                 }
 #pragma omp single
@@ -241,11 +240,11 @@ namespace bm_execution {
                     startExecution = std::chrono::high_resolution_clock::now();
                 }
 #pragma omp for nowait
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                     command_queues[i].enqueueTask(scale_kernels[i]);
                 }
 #pragma omp for
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                     command_queues[i].finish();
                 }
 #pragma omp single
@@ -258,11 +257,11 @@ namespace bm_execution {
                     startExecution = std::chrono::high_resolution_clock::now();
                 }
 #pragma omp for nowait
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                     command_queues[i].enqueueTask(add_kernels[i]);
                 }
 #pragma omp for
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                     command_queues[i].finish();
                 }
 #pragma omp single
@@ -275,11 +274,11 @@ namespace bm_execution {
                     startExecution = std::chrono::high_resolution_clock::now();
                 }
 #pragma omp for nowait
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                     command_queues[i].enqueueTask(triad_kernels[i]);
                 }
 #pragma omp for
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                     command_queues[i].finish();
                 }
 #pragma omp single
@@ -292,7 +291,7 @@ namespace bm_execution {
                     startExecution = std::chrono::high_resolution_clock::now();
                 }
 #pragma omp for nowait
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
 #ifdef USE_SVM
                     clEnqueueSVMUnmap(command_queues[i](),
                                 reinterpret_cast<void *>(&A[data_per_kernel * i]), 0,
@@ -316,7 +315,7 @@ namespace bm_execution {
 #endif
                 }
 #pragma omp for
-                for (int i = 0; i < config->replications; i++) {
+                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                     command_queues[i].finish();
                 }
 #pragma omp single
@@ -329,14 +328,14 @@ namespace bm_execution {
             }
         }
 
-        std::shared_ptr<ExecutionTimings> result(new ExecutionTimings{
+        std::unique_ptr<stream::StreamExecutionTimings> result(new stream::StreamExecutionTimings{
                 timingMap,
-                config->arraySize
+                config.programSettings->streamArraySize
         });
         return result;
     }
 
-    void initialize_queues_and_kernels(const std::shared_ptr<ExecutionConfiguration> &config,
+    void initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -345,17 +344,17 @@ namespace bm_execution {
                                        std::vector<cl::Kernel> &triad_kernels,
                                        std::vector<cl::CommandQueue> &command_queues) {
         int err;
-        for (int i=0; i < config->replications; i++) {
+        for (int i=0; i < config.programSettings->kernelReplications; i++) {
             // create the kernels
-            cl::Kernel testkernel(config->program, ("scale_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel testkernel(*config.program, ("scale_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel copykernel(config->program, ("copy_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel copykernel(*config.program, ("copy_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel scalekernel(config->program, ("scale_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel scalekernel(*config.program, ("scale_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel addkernel(config->program, ("add_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel addkernel(*config.program, ("add_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel triadkernel(config->program, ("triad_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel triadkernel(*config.program, ("triad_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
 
             HOST_DATA_TYPE scalar = 3.0;
@@ -406,7 +405,7 @@ namespace bm_execution {
             err = triadkernel.setArg(4, data_per_kernel);
             ASSERT_CL(err);
 
-            command_queues.push_back(cl::CommandQueue(config->context));
+            command_queues.push_back(cl::CommandQueue(*config.context));
             test_kernels.push_back(testkernel);
             copy_kernels.push_back(copykernel);
             scale_kernels.push_back(scalekernel);
@@ -415,7 +414,7 @@ namespace bm_execution {
         }
     }
 
-    void initialize_queues_and_kernels_single(const std::shared_ptr<ExecutionConfiguration> &config,
+    void initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -427,31 +426,31 @@ namespace bm_execution {
                                        HOST_DATA_TYPE* C,
                                        std::vector<cl::CommandQueue> &command_queues) {
         int err;
-        for (int i=0; i < config->replications; i++) {
+        for (int i=0; i < config.programSettings->kernelReplications; i++) {
 #ifdef INTEL_FPGA
             // create the kernels
-            cl::Kernel testkernel(config->program, ("calc_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel testkernel(*config.program, ("calc_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel copykernel(config->program, ("calc_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel copykernel(*config.program, ("calc_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel scalekernel(config->program, ("calc_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel scalekernel(*config.program, ("calc_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel addkernel(config->program, ("calc_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel addkernel(*config.program, ("calc_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel triadkernel(config->program, ("calc_" + std::to_string(i)).c_str(), &err);
+            cl::Kernel triadkernel(*config.program, ("calc_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
 #endif
 #ifdef XILINX_FPGA
             // create the kernels
-            cl::Kernel testkernel(config->program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
+            cl::Kernel testkernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel copykernel(config->program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
+            cl::Kernel copykernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel scalekernel(config->program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
+            cl::Kernel scalekernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel addkernel(config->program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
+            cl::Kernel addkernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
-            cl::Kernel triadkernel(config->program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
+            cl::Kernel triadkernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
 #endif
             HOST_DATA_TYPE scalar = 3.0;
@@ -583,7 +582,7 @@ namespace bm_execution {
             err = triadkernel.setArg(5, TRIAD_KERNEL_TYPE);
             ASSERT_CL(err);
 
-            command_queues.push_back(cl::CommandQueue(config->context));
+            command_queues.push_back(cl::CommandQueue(*config.context));
             test_kernels.push_back(testkernel);
             copy_kernels.push_back(copykernel);
             scale_kernels.push_back(scalekernel);
@@ -592,39 +591,39 @@ namespace bm_execution {
         }
     }
 
-    void initialize_buffers(const std::shared_ptr<ExecutionConfiguration> &config, unsigned int data_per_kernel,
+    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config, unsigned int data_per_kernel,
                             std::vector<cl::Buffer> &Buffers_A, std::vector<cl::Buffer> &Buffers_B,
                             std::vector<cl::Buffer> &Buffers_C) {
-        if (!config->useMemoryInterleaving) {
+        if (!config.programSettings->useMemoryInterleaving) {
             //Create Buffers for input and output
-            for (int i=0; i < config->replications; i++) {
+            for (int i=0; i < config.programSettings->kernelReplications; i++) {
 #ifdef INTEL_FPGA
-                if (config->useSingleKernel) {
+                if (config.programSettings->useSingleKernel) {
                     //Create Buffers for input and output
-                    Buffers_A.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_B.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_C.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
                 }
                 else {
                     //Create Buffers for input and output
-                    Buffers_A.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE | CL_CHANNEL_1_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_B.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE | CL_CHANNEL_3_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_C.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE | CL_CHANNEL_2_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | CL_CHANNEL_1_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | CL_CHANNEL_3_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | CL_CHANNEL_2_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
                 }
 #endif
 #ifdef XILINX_FPGA
-                Buffers_A.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_B.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_C.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
 #endif
             }
 
         } else {
-            for (int i=0; i < config->replications; i++) {
+            for (int i=0; i < config.programSettings->kernelReplications; i++) {
                 //Create Buffers for input and output
-                Buffers_A.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_B.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_C.push_back(cl::Buffer(config->context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
             }
         }
     }

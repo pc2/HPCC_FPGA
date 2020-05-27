@@ -31,6 +31,7 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 #include "parameters.h"
+#include "stream_benchmark.hpp"
 
 // Map keys for execution timings
 #define PCIE_WRITE_KEY "PCI write"
@@ -42,22 +43,6 @@ SOFTWARE.
 
 namespace bm_execution {
 
-    struct ExecutionConfiguration {
-        cl::Context context;
-        cl::Device device;
-        cl::Program program;
-        uint repetitions;
-        uint replications;
-        unsigned arraySize;
-        bool useMemoryInterleaving;
-        bool useSingleKernel;
-    };
-
-    struct ExecutionTimings {
-        std::map<std::string,std::vector<double>> timings;
-        uint arraySize;
-    };
-
     static std::map<std::string,double> multiplicatorMap = {
             {PCIE_WRITE_KEY, 3.0},
             {PCIE_READ_KEY, 3.0},
@@ -67,18 +52,17 @@ namespace bm_execution {
             {TRIAD_KEY, 3.0}
     };
 
-/**
-The actual execution of the benchmark.
-This method can be implemented in multiple *.cpp files. This header enables
-simple exchange of the different calculation methods.
-
-@param config struct that contains all necessary information to execute the kernel on the FPGA
-
-
-@return The resulting matrix
-*/
-    std::shared_ptr<ExecutionTimings>
-    calculate(std::shared_ptr<ExecutionConfiguration> config,
+    /**
+     * @brief This method will prepare and execute the FPGA kernel and measure the execution time
+     * 
+     * @param config The ExecutionSettings with the OpenCL objects and program settings
+     * @param A The array A of the stream benchmark
+     * @param B The array B of the stream benchmark
+     * @param C The array C of the stream benchmark
+     * @return std::unique_ptr<stream::StreamExecutionTimings> The measured timings for all stream operations
+     */
+    std::unique_ptr<stream::StreamExecutionTimings>
+    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings>& config,
               HOST_DATA_TYPE* A,
               HOST_DATA_TYPE* B,
               HOST_DATA_TYPE* C);

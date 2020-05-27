@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.0.2
+
+#### Changed:
+- Converted host code to new OO code
+
 ## 2.0.1
 
 #### Added:

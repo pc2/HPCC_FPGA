@@ -30,24 +30,10 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 #include "parameters.h"
+#include "network_benchmark.hpp"
 
 
 namespace bm_execution {
-
-    struct ExecutionConfiguration {
-        cl::Context context;
-        cl::Device device;
-        cl::Program program;
-        uint repetitions;
-    };
-
-    struct ExecutionTimings {
-        cl_uint looplength;
-        cl_uint messageSize;
-        std::vector<double> calculationTimings;
-    };
-
-    typedef std::map<int, std::shared_ptr<std::vector<std::shared_ptr<ExecutionTimings>>>> CollectedResultMap;
 
 /**
 The actual execution of the benchmark.
@@ -59,8 +45,8 @@ simple exchange of the different calculation methods.
 
 @return The resulting matrix
 */
-    std::shared_ptr<ExecutionTimings>
-    calculate(std::shared_ptr<ExecutionConfiguration> config, cl_uint messageSize, cl_uint looplength);
+    std::shared_ptr<network::ExecutionTimings>
+    calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength);
 
 }  // namespace bm_execution
 

@@ -35,9 +35,6 @@ SOFTWARE.
 #include "CL/cl_ext_intelfpga.h"
 #endif
 
-/* Project's headers */
-#include "setup/fpga_setup.hpp"
-#include "gemm_functionality.hpp"
 
 namespace bm_execution {
 
@@ -46,37 +43,37 @@ namespace bm_execution {
 
  @copydoc bm_execution::calculate()
 */
-std::shared_ptr<ExecutionTimings>
-calculate(std::shared_ptr<ExecutionConfiguration> config, HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c, HOST_DATA_TYPE* c_out,
+std::unique_ptr<gemm::GEMMExecutionTimings>
+calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config, HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c, HOST_DATA_TYPE* c_out,
         HOST_DATA_TYPE alpha, HOST_DATA_TYPE beta) {
 
     int err;
 
     // Create Command queue
-    cl::CommandQueue compute_queue(config->context, config->device);
+    cl::CommandQueue compute_queue(*config.context, *config.device);
 #ifdef INTEL_FPGA
-    cl::Buffer Buffer_a(config->context, CL_MEM_READ_WRITE | (config->useMemInterleaving ? 0 :CL_CHANNEL_1_INTELFPGA),
-                        sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize);
-    cl::Buffer Buffer_b(config->context, CL_MEM_READ_WRITE | (config->useMemInterleaving ? 0 :CL_CHANNEL_2_INTELFPGA),
-                        sizeof(cl_int)*config->matrixSize*config->matrixSize);
-    cl::Buffer Buffer_c_in(config->context, CL_MEM_READ_WRITE | (config->useMemInterleaving ? 0 :CL_CHANNEL_3_INTELFPGA),
-                           sizeof(cl_int)*config->matrixSize*config->matrixSize);
-    cl::Buffer Buffer_c_out(config->context, CL_MEM_READ_WRITE | (config->useMemInterleaving ? 0 :CL_CHANNEL_4_INTELFPGA),
-                            sizeof(cl_int)*config->matrixSize*config->matrixSize);
+    cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_1_INTELFPGA),
+                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+    cl::Buffer Buffer_b(*config.context, CL_MEM_READ_WRITE | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_2_INTELFPGA),
+                        sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+    cl::Buffer Buffer_c_in(*config.context, CL_MEM_READ_WRITE | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_3_INTELFPGA),
+                           sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+    cl::Buffer Buffer_c_out(*config.context, CL_MEM_READ_WRITE | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_4_INTELFPGA),
+                            sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
 #else
-    cl::Buffer Buffer_a(config->context, CL_MEM_READ_WRITE,
-                        sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize);
-    cl::Buffer Buffer_b(config->context, CL_MEM_READ_WRITE,
-                        sizeof(cl_int)*config->matrixSize*config->matrixSize);
-    cl::Buffer Buffer_c_in(config->context, CL_MEM_READ_WRITE,
-                           sizeof(cl_int)*config->matrixSize*config->matrixSize);
-    cl::Buffer Buffer_c_out(config->context, CL_MEM_READ_WRITE,
-                            sizeof(cl_int)*config->matrixSize*config->matrixSize);
+    cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE,
+                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+    cl::Buffer Buffer_b(*config.context, CL_MEM_READ_WRITE,
+                        sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+    cl::Buffer Buffer_c_in(*config.context, CL_MEM_READ_WRITE,
+                           sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+    cl::Buffer Buffer_c_out(*config.context, CL_MEM_READ_WRITE,
+                            sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
 #endif
 
 
     // create the kernels
-    cl::Kernel gemmkernel(config->program, GEMM_KERNEL,
+    cl::Kernel gemmkernel(*config.program, KERNEL_NAME,
                                     &err);
     ASSERT_CL(err);
 
@@ -94,20 +91,20 @@ calculate(std::shared_ptr<ExecutionConfiguration> config, HOST_DATA_TYPE* a, HOS
     ASSERT_CL(err);
     err = gemmkernel.setArg(5, beta);
     ASSERT_CL(err);
-    err = gemmkernel.setArg(6, config->matrixSize);
+    err = gemmkernel.setArg(6, config.programSettings->matrixSize);
     ASSERT_CL(err);
 
     /* --- Execute actual benchmark kernels --- */
 
     double t;
     std::vector<double> executionTimes;
-    for (int i = 0; i < config->repetitions; i++) {
+    for (int i = 0; i < config.programSettings->matrixSize; i++) {
         compute_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, a);
+                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, a);
         compute_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, b);
+                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, b);
         compute_queue.enqueueWriteBuffer(Buffer_c_in, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, c);
+                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, c);
         compute_queue.finish();
         auto t1 = std::chrono::high_resolution_clock::now();
         compute_queue.enqueueTask(gemmkernel);
@@ -122,11 +119,11 @@ calculate(std::shared_ptr<ExecutionConfiguration> config, HOST_DATA_TYPE* a, HOS
     /* --- Read back results from Device --- */
 
     compute_queue.enqueueReadBuffer(Buffer_c_out, CL_TRUE, 0,
-                                     sizeof(HOST_DATA_TYPE)*config->matrixSize*config->matrixSize, c_out);
+                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, c_out);
 
 
-    std::shared_ptr<ExecutionTimings> results(
-                    new ExecutionTimings{executionTimes, executionTimes});
+    std::unique_ptr<gemm::GEMMExecutionTimings> results(
+                    new gemm::GEMMExecutionTimings{executionTimes});
     return results;
 }
 

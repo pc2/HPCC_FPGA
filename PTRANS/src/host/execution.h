@@ -29,38 +29,23 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 #include "parameters.h"
+#include "transpose_benchmark.hpp"
 
 
 namespace bm_execution {
 
-    struct ExecutionConfiguration {
-        cl::Context context;
-        cl::Device device;
-        cl::Program program;
-        std::string kernelName;
-        uint repetitons;
-        cl_uint matrixSize;
-        cl_uint blockSize;
-        bool useMemInterleaving;
-    };
-
-    struct ExecutionTimings {
-        std::vector<double> transferTimings;
-        std::vector<double> calculationTimings;
-    };
 
 /**
-The actual execution of the benchmark.
-This method can be implemented in multiple *.cpp files. This header enables
-simple exchange of the different calculation methods.
-
-@param config struct that contains all necessary information to execute the kernel on the FPGA
-
-
-@return The resulting matrix
-*/
-    std::shared_ptr<ExecutionTimings>
-    calculate(std::shared_ptr<ExecutionConfiguration> config, HOST_DATA_TYPE *const A,
+ * @brief Transpose and add the matrices using the OpenCL kernel
+ * 
+ * @param config The progrma configuration
+ * @param A The input matrix A
+ * @param B The input matrix B
+ * @param A_out The matrix storing the result of the calculation
+ * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured executuon times 
+ */
+    std::unique_ptr<transpose::TransposeExecutionTimings>
+    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, HOST_DATA_TYPE *const A,
               HOST_DATA_TYPE *const B, HOST_DATA_TYPE *A_out);
 
 }  // namespace bm_execution

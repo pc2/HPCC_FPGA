@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(PTRANS VERSION 1.1)
+project(PTRANS VERSION 1.1.1)
 
 set(KERNEL_NAME transpose CACHE STRING "Name of the OpenCL kernel")
 set(DEFAULT_MATRIX_SIZE 8 CACHE STRING "Default size of the used matrices")

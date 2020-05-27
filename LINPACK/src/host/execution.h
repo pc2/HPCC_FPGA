@@ -29,22 +29,10 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 #include "parameters.h"
+#include "linpack_benchmark.hpp"
 
 
 namespace bm_execution {
-
-    struct ExecutionConfiguration {
-        cl::Context context;
-        cl::Device device;
-        cl::Program program;
-        uint repetitions;
-        unsigned matrixSize;
-
-    };
-
-    struct ExecutionTimings {
-        std::vector<double> timings;
-    };
 
 /**
 The actual execution of the benchmark.
@@ -56,8 +44,8 @@ simple exchange of the different calculation methods.
 
 @return The resulting matrix
 */
-    std::shared_ptr<ExecutionTimings>
-    calculate(std::shared_ptr<ExecutionConfiguration> config,
+    std::unique_ptr<linpack::LinpackExecutionTimings>
+    calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>& config,
               HOST_DATA_TYPE* A,
               HOST_DATA_TYPE* b,
               cl_int* ipvt);

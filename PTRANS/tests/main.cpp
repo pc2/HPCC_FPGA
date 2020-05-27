@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 Marius Meyer
+Copyright (c) 2020 Marius Meyer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -20,35 +20,53 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#define DATA_TYPE long
-#define DATA_TYPE_UNSIGNED unsigned DATA_TYPE
+/* Project's headers */
+#include "transpose_benchmark.hpp"
 
-#ifndef UPDATE_SPLIT
-#define UPDATE_SPLIT 1024
+#include "gtest/gtest.h"
+#include "CL/cl.hpp"
+
+#ifdef _USE_MPI_
+#include "mpi.h"
+
+class MPIEnvironment : public ::testing::Environment {
+public:
+    MPIEnvironment(int* argc, char** argv[]) {
+        MPI_Init(argc, argv);
+    }
+
+    ~MPIEnvironment() override {
+        MPI_Finalize();
+    }
+};
 #endif
 
-#define POLY 7
+using namespace transpose;
 
+std::unique_ptr<TransposeBenchmark> bm;
 
-// SIMD not used, and instead CU replication since we have random accesses
-__attribute__((num_simd_work_items(1)))
-__attribute__((num_compute_units(UPDATE_SPLIT)))
-__kernel
-void accessMemory(__global volatile DATA_TYPE_UNSIGNED* restrict data,
-                  __global const DATA_TYPE_UNSIGNED* restrict ran_const,
-                  ulong m) {
-    DATA_TYPE_UNSIGNED ran = ran_const[get_global_id(0)];
+/**
+The program entry point for the unit tests
+*/
+int
+main(int argc, char *argv[]) {
 
-    uint mupdate = 4 * m;
-    // do random accesses
-    for (int i=0; i< mupdate / UPDATE_SPLIT; i++) {
-        DATA_TYPE_UNSIGNED v = 0;
-        if (((DATA_TYPE) ran) < 0) {
-            v = POLY;
-        }
-        ran = (ran << 1) ^ v;
-        DATA_TYPE_UNSIGNED address = ran & (m - 1);
-        data[address] ^= ran;
+    std::cout << "THIS BINARY EXECUTES UNIT TESTS FOR THE FOLLOWING BENCHMARK:" << std::endl << std::endl;
 
-    }
+    ::testing::InitGoogleTest(&argc, argv);
+
+    bm = std::unique_ptr<TransposeBenchmark>(new TransposeBenchmark(argc, argv));
+
+#ifdef _USE_MPI_
+    ::testing::Environment* const mpi_env =
+        ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
+#endif
+
+    bool result = RUN_ALL_TESTS();
+
+    bm = nullptr;
+
+    return result;
+
 }
+

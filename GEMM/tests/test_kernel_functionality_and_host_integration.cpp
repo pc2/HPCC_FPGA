@@ -4,10 +4,9 @@
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "../src/host/execution.h"
-#include "../src/host/gemm_functionality.hpp"
+#include "gemm_benchmark.hpp"
 #include "parameters.h"
-#include "setup/fpga_setup.hpp"
+#include "test_program_settings.h"
 
 void
 ref_matmul(HOST_DATA_TYPE* A, HOST_DATA_TYPE* B, HOST_DATA_TYPE* C, int size) {
@@ -16,73 +15,23 @@ ref_matmul(HOST_DATA_TYPE* A, HOST_DATA_TYPE* B, HOST_DATA_TYPE* C, int size) {
             C[i * size + j] = 0;
         }
     }
-    gemm_ref(A,B,C,size,1.0,0.0);
+    gemm::gemm_ref(A,B,C,size,1.0,0.0);
 }
 
 
-struct OpenCLKernelTest : testing::Test {
-    std::string kernelFileName;
-    HOST_DATA_TYPE *A;
-    HOST_DATA_TYPE *B;
-    HOST_DATA_TYPE *C;
-    HOST_DATA_TYPE *C_out;
-    std::shared_ptr<bm_execution::ExecutionConfiguration> config;
-    cl_uint matrix_size;
+struct GEMMKernelTest : testing::Test, testing::WithParamInterface<unsigned> {
+    std::unique_ptr<gemm::GEMMBenchmark> bm;
+    std::unique_ptr<gemm::GEMMData> data;
+    unsigned matrix_size;
 
-    OpenCLKernelTest() {
-        kernelFileName = "gemm_cannon_emulate.aocx";
-        matrix_size = 2 * BLOCK_SIZE;
-        posix_memalign(reinterpret_cast<void **>(&A), 64,
-                       sizeof(HOST_DATA_TYPE) * matrix_size * matrix_size);
-        posix_memalign(reinterpret_cast<void **>(&B), 64,
-                       sizeof(HOST_DATA_TYPE) * matrix_size * matrix_size);
-        posix_memalign(reinterpret_cast<void **>(&C), 64,
-                       sizeof(HOST_DATA_TYPE) * matrix_size * matrix_size);
-        posix_memalign(reinterpret_cast<void **>(&C_out), 64,
-                       sizeof(HOST_DATA_TYPE) * matrix_size * matrix_size);
-        setupFPGA();
+    GEMMKernelTest() {
+        bm = std::unique_ptr<gemm::GEMMBenchmark>(new gemm::GEMMBenchmark(global_argc, global_argv));
+        matrix_size = GetParam() * BLOCK_SIZE;
+        bm->getExecutionSettings().programSettings->matrixSize = matrix_size;
     }
 
-    void setupFPGA() {
-        std::vector<cl::Device> device = fpga_setup::selectFPGADevice(DEFAULT_PLATFORM, DEFAULT_DEVICE);
-        cl::Context context(device[0]);
-        cl::Program program = fpga_setup::fpgaSetup(&context, device, &kernelFileName);
-        config = std::make_shared<bm_execution::ExecutionConfiguration>(
-                bm_execution::ExecutionConfiguration{
-                        context, device[0], program,
-                        KERNEL_NAME,
-                        1,
-                        matrix_size,
-                        false
-                });
-        HOST_DATA_TYPE norm;
-        matgen(A,1,matrix_size, matrix_size, &norm);
-        matgen(B,2,matrix_size, matrix_size, &norm);
-        matgen(C,3,matrix_size, matrix_size, &norm);
-    }
-
-    ~OpenCLKernelTest() override {
-        free(A);
-        free(B);
-        free(C);
-        free(C_out);
-    }
-};
-
-struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface<std::tuple<std::string, unsigned>> {
-    DifferentOpenCLKernelTest() {
-        auto params = GetParam();
-        kernelFileName = std::get<0>(params);
-        matrix_size = std::get<1>(params) * BLOCK_SIZE;
-        posix_memalign(reinterpret_cast<void **>(&A), 64,
-                       sizeof(HOST_DATA_TYPE) * matrix_size * matrix_size);
-        posix_memalign(reinterpret_cast<void **>(&B), 64,
-                       sizeof(HOST_DATA_TYPE) * matrix_size * matrix_size);
-        posix_memalign(reinterpret_cast<void **>(&C), 64,
-                       sizeof(HOST_DATA_TYPE) * matrix_size * matrix_size);
-        posix_memalign(reinterpret_cast<void **>(&C_out), 64,
-                       sizeof(HOST_DATA_TYPE) * matrix_size * matrix_size);
-        setupFPGA();
+    void SetUp() {
+        data = bm->generateInputData();
     }
 };
 
@@ -90,18 +39,18 @@ struct DifferentOpenCLKernelTest : OpenCLKernelTest, testing::WithParamInterface
 /**
  * Tests if C will be multiplied by beta
  */
-TEST_P(DifferentOpenCLKernelTest, FPGACorrectCtimesBeta) {
+TEST_P(GEMMKernelTest, FPGACorrectCtimesBeta) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            A[i * matrix_size + j] = 0.0;
-            B[i * matrix_size + j] = 0.0;
-            C[i * matrix_size + j] = 1.0;
+            data->A[i * matrix_size + j] = 0.0;
+            data->B[i * matrix_size + j] = 0.0;
+            data->C[i * matrix_size + j] = 1.0;
         }
     }
-    auto result = bm_execution::calculate(config, A, B, C, C_out,0.0,2.0);
+    auto result = bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(C_out[i * matrix_size + j], 2.0 * C[i * matrix_size + j]);
+            EXPECT_FLOAT_EQ(data->C_out[i * matrix_size + j], 2.0 * data->C[i * matrix_size + j]);
         }
     }
 }
@@ -109,17 +58,20 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectCtimesBeta) {
 /**
  * Tests if A will be multiplied by alpha
  */
-TEST_P(DifferentOpenCLKernelTest, FPGACorrectAtimesAlpha) {
+TEST_P(GEMMKernelTest, FPGACorrectAtimesAlpha) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            B[i * matrix_size + j] = i == j ? 1.0 : 0.0;
-            C[i * matrix_size + j] = 0.0;
+            data->B[i * matrix_size + j] = i == j ? 1.0 : 0.0;
+            data->C[i * matrix_size + j] = 0.0;
         }
     }
-    auto result = bm_execution::calculate(config, A, B, C, C_out,2.0,0.0);
+    data->alpha = 2.0;
+    data->beta = 0.0;
+
+    auto result = bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(C_out[i * matrix_size + j], 2.0 * A[i * matrix_size + j]);
+            EXPECT_FLOAT_EQ(data->C_out[i * matrix_size + j], 2.0 * data->A[i * matrix_size + j]);
         }
     }
 }
@@ -127,17 +79,19 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectAtimesAlpha) {
 /**
  * Tests if B will be multiplied by alpha
  */
-TEST_P(DifferentOpenCLKernelTest, FPGACorrectBtimesAlpha) {
+TEST_P(GEMMKernelTest, FPGACorrectBtimesAlpha) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            A[i * matrix_size + j] = i == j ? 1.0 : 0.0;
-            C[i * matrix_size + j] = 0.0;
+            data->A[i * matrix_size + j] = i == j ? 1.0 : 0.0;
+            data->C[i * matrix_size + j] = 0.0;
         }
     }
-    auto result = bm_execution::calculate(config, A, B, C, C_out,2.0,0.0);
+    data->alpha = 2.0;
+    data->beta = 0.0;
+    auto result = bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(C_out[i * matrix_size + j], 2.0 * B[i * matrix_size + j]);
+            EXPECT_FLOAT_EQ(data->C_out[i * matrix_size + j], 2.0 * data->B[i * matrix_size + j]);
         }
     }
 }
@@ -145,21 +99,23 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectBtimesAlpha) {
 /**
  * Tests if A will be multiplied with B
  */
-TEST_P(DifferentOpenCLKernelTest, FPGACorrectAmulB) {
+TEST_P(GEMMKernelTest, FPGACorrectAmulB) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            C[i * matrix_size + j] = 0.0;
-            A[i * matrix_size + j] = j;
-            B[i * matrix_size + j] = i;
+            data->C[i * matrix_size + j] = 0.0;
+            data->A[i * matrix_size + j] = j;
+            data->B[i * matrix_size + j] = i;
         }
     }
-    auto result = bm_execution::calculate(config, A, B, C, C_out,1.0,0.0);
+    data->alpha = 1.0;
+    data->beta = 1.0;
+    auto result = bm->executeKernel(*data);
 
     HOST_DATA_TYPE c_ref_out[matrix_size * matrix_size];
-    ref_matmul(A,B,c_ref_out,matrix_size);
+    ref_matmul(data->A,data->B,c_ref_out,matrix_size);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_NEAR(C_out[i * matrix_size + j], c_ref_out[i * matrix_size + j], 0.001);
+            EXPECT_NEAR(data->C_out[i * matrix_size + j], c_ref_out[i * matrix_size + j], 0.001);
         }
     }
 }
@@ -167,18 +123,20 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectAmulB) {
 /**
  * Tests if C will be added to A
  */
-TEST_P(DifferentOpenCLKernelTest, FPGACorrectCplusA) {
+TEST_P(GEMMKernelTest, FPGACorrectCplusA) {
 
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            B[i * matrix_size + j] = i == j ? 1.0 : 0.0;
+            data->B[i * matrix_size + j] = i == j ? 1.0 : 0.0;
         }
     }
+    data->alpha = 1.0;
+    data->beta = 1.0;
 
-    auto result = bm_execution::calculate(config, A, B, C, C_out,1.0, 1.0);
+    auto result = bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(C_out[i * matrix_size + j], A[i * matrix_size + j] + C[i * matrix_size + j]);
+            EXPECT_FLOAT_EQ(data->C_out[i * matrix_size + j], data->A[i * matrix_size + j] + data->C[i * matrix_size + j]);
         }
     }
 }
@@ -188,30 +146,22 @@ TEST_P(DifferentOpenCLKernelTest, FPGACorrectCplusA) {
  * Tests full multiply add
  */
 
-TEST_P(DifferentOpenCLKernelTest, FPGACorrectbetaCplusalphaAB) {
+TEST_P(GEMMKernelTest, FPGACorrectbetaCplusalphaAB) {
     HOST_DATA_TYPE c_ref_out[matrix_size * matrix_size];
-    auto result = bm_execution::calculate(config, A, B, C, C_out,0.5, 2.0);
+    auto result = bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-           c_ref_out[i * matrix_size + j] = C[i * matrix_size + j];
+           c_ref_out[i * matrix_size + j] = data->C[i * matrix_size + j];
         }
     }
-    gemm_ref(A,B,c_ref_out,matrix_size,0.5,2.0);
+    gemm::gemm_ref(data->A,data->B,c_ref_out,matrix_size,0.5,2.0);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_NEAR(C_out[i * matrix_size + j], c_ref_out[i * matrix_size + j], 0.001);
+            EXPECT_NEAR(data->C_out[i * matrix_size + j], c_ref_out[i * matrix_size + j], 0.001);
         }
     }
 }
 
-#ifdef INTEL_FPGA
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-        testing::Combine(testing::Values("gemm_cannon_emulate.aocx"), testing::Values(1,2)
-                        ));
-#endif
+INSTANTIATE_TEST_CASE_P(Default, GEMMKernelTest,
+         testing::Values(1,2));
 
-#ifdef XILINXL_FPGA
-INSTANTIATE_TEST_CASE_P(Default, DifferentOpenCLKernelTest,
-        testing::Combine(testing::Values("gemm_cannon_emulate.xclbin"), testing::Values(1,2)
-                        ));
-#endif

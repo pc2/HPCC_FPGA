@@ -101,7 +101,7 @@ choose a device.
 
 @return A list containing a single selected device
 */
-    std::vector<cl::Device>
+    cl::Device
     selectFPGADevice(int defaultPlatform, int defaultDevice);
 
 }  // namespace fpga_setup

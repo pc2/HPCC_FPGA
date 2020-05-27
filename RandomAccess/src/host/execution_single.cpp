@@ -32,9 +32,6 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 
-/* Project's headers */
-#include "setup/fpga_setup.hpp"
-#include "random_access_functionality.hpp"
 
 namespace bm_execution {
 
@@ -42,8 +39,8 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<ExecutionResults>
-    calculate(std::shared_ptr<bm_execution::ExecutionConfiguration> config, HOST_DATA_TYPE * data) {
+    std::unique_ptr<random_access::RandomAccessExecutionTimings>
+    calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data) {
         // int used to check for OpenCL errors
         int err;
 
@@ -54,23 +51,23 @@ namespace bm_execution {
 
         /* --- Prepare kernels --- */
 
-        for (int r=0; r < config->replications; r++) {
-            compute_queue.push_back(cl::CommandQueue(config->context, config->device));
+        for (int r=0; r < config.programSettings->kernelReplications; r++) {
+            compute_queue.push_back(cl::CommandQueue(*config.context, *config.device));
 
             int memory_bank_info = 0;
 #ifdef INTEL_FPGA
             memory_bank_info = ((r + 1) << 16);
 #endif
-            Buffer_data.push_back(cl::Buffer(config->context,
+            Buffer_data.push_back(cl::Buffer(*config.context,
                         CL_MEM_READ_WRITE | memory_bank_info,
-                        sizeof(HOST_DATA_TYPE)*(config->arraySize / config->replications)));
+                        sizeof(HOST_DATA_TYPE)*(config.programSettings->dataSize / config.programSettings->kernelReplications)));
 #ifdef INTEL_FPGA
-            accesskernel.push_back(cl::Kernel(config->program,
+            accesskernel.push_back(cl::Kernel(*config.program,
                         (RANDOM_ACCESS_KERNEL + std::to_string(r)).c_str() ,
                         &err));
 #endif
 #ifdef XILINX_FPGA
-            accesskernel.push_back(cl::Kernel(config->program,
+            accesskernel.push_back(cl::Kernel(*config.program,
                         (std::string(RANDOM_ACCESS_KERNEL) + "0:{" + RANDOM_ACCESS_KERNEL + "0_" + std::to_string(r + 1) + "}").c_str() ,
                         &err));
 #endif
@@ -79,16 +76,16 @@ namespace bm_execution {
             // prepare kernels
 #ifdef USE_SVM
             err = clSetKernelArgSVMPointer(accesskernel[r](), 0,
-                                        reinterpret_cast<void*>(&data[r * (config->arraySize / config->replications)]));
+                                        reinterpret_cast<void*>(&data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]));
 #else
             err = accesskernel[r].setArg(0, Buffer_data[r]);
 #endif
 
             ASSERT_CL(err);
-            err = accesskernel[r].setArg(1, HOST_DATA_TYPE(config->arraySize));
+            err = accesskernel[r].setArg(1, HOST_DATA_TYPE(config.programSettings->dataSize));
             ASSERT_CL(err);
             err = accesskernel[r].setArg(2,
-                                         HOST_DATA_TYPE((config->arraySize / config->replications)));
+                                         HOST_DATA_TYPE((config.programSettings->dataSize / config.programSettings->kernelReplications)));
             ASSERT_CL(err);
             err = accesskernel[r].setArg(3,
                                          cl_uint(r));
@@ -98,24 +95,24 @@ namespace bm_execution {
         /* --- Execute actual benchmark kernels --- */
 
         std::vector<double> executionTimes;
-        for (int i = 0; i < config->repetitions; i++) {
+        for (int i = 0; i < config.programSettings->numRepetitions; i++) {
             std::chrono::time_point<std::chrono::high_resolution_clock> t1;
 #pragma omp parallel default(shared)
             {
 #pragma omp for
-                for (int r = 0; r < config->replications; r++) {
+                for (int r = 0; r < config.programSettings->kernelReplications; r++) {
 #ifdef USE_SVM
                     clEnqueueSVMMap(compute_queue[r](), CL_TRUE,
                                     CL_MAP_READ | CL_MAP_WRITE,
-                                    reinterpret_cast<void *>(&data[r * (config->arraySize / config->replications)]),
+                                    reinterpret_cast<void *>(&data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]),
                                     sizeof(HOST_DATA_TYPE) *
-                                    (config->arraySize / config->replications), 0,
+                                    (config.programSettings->dataSize / config.programSettings->kernelReplications), 0,
                                     NULL, NULL);
 #else
                     compute_queue[r].enqueueWriteBuffer(Buffer_data[r], CL_TRUE, 0,
                                                         sizeof(HOST_DATA_TYPE) *
-                                                        (config->arraySize / config->replications),
-                                                        &data[r * (config->arraySize / config->replications)]);
+                                                        (config.programSettings->dataSize / config.programSettings->kernelReplications),
+                                                        &data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]);
 #endif
                 }
 #pragma omp master
@@ -125,11 +122,11 @@ namespace bm_execution {
                 }
 #pragma omp barrier
 #pragma omp for nowait
-                for (int r = 0; r < config->replications; r++) {
+                for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                     compute_queue[r].enqueueTask(accesskernel[r]);
                 }
 #pragma omp for
-                for (int r = 0; r < config->replications; r++) {
+                for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                     compute_queue[r].finish();
                 }
 #pragma omp master
@@ -144,20 +141,19 @@ namespace bm_execution {
         }
 
         /* --- Read back results from Device --- */
-        for (int r=0; r < config->replications; r++) {
+        for (int r=0; r < config.programSettings->kernelReplications; r++) {
 #ifdef USE_SVM
             clEnqueueSVMUnmap(compute_queue[r](),
-                                reinterpret_cast<void *>(&data[r * (config->arraySize / config->replications)]), 0,
+                                reinterpret_cast<void *>(&data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]), 0,
                                 NULL, NULL);
 #else
             compute_queue[r].enqueueReadBuffer(Buffer_data[r], CL_TRUE, 0,
-                    sizeof(HOST_DATA_TYPE)*(config->arraySize / config->replications), &data[r * (config->arraySize / config->replications)]);
+                    sizeof(HOST_DATA_TYPE)*(config.programSettings->dataSize / config.programSettings->kernelReplications), 
+                    &data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]);
 #endif
         }
 
-        std::shared_ptr<ExecutionResults> results(
-                        new ExecutionResults{executionTimes});
-        return results;
+        return std::unique_ptr<random_access::RandomAccessExecutionTimings>(new random_access::RandomAccessExecutionTimings{executionTimes});
     }
 
 }  // namespace bm_execution

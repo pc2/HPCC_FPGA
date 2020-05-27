@@ -25,6 +25,30 @@
 #cmakedefine COMBINE_LOOPS
 #cmakedefine USE_SVM
 
+/*
+Short description of the program.
+Moreover the version and build time is also compiled into the description.
+*/
+
+#define PROGRAM_DESCRIPTION "Implementation of the random access benchmark"\
+                            " proposed in the HPCC benchmark suite for FPGA.\n"\
+                            "Version: " VERSION "\n"
+
+/**
+Prefix of the function name of the used kernel.
+It will be used to construct the full function name for the case of replications.
+The full name will be
+*/
+#define RANDOM_ACCESS_KERNEL "accessMemory_"
+
+/**
+Constants used to verify benchmark results
+*/
+#define POLY 7
+#define PERIOD 1317624576693539401L
+
+#define BIT_SIZE (sizeof(HOST_DATA_TYPE) * 8)
+
 /**
 Output separator
 */

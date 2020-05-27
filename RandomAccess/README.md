@@ -27,7 +27,7 @@ The targets below can be used to build the benchmark and its kernels:
  |  Target               | Description                                    |
  | --------------------- | ---------------------------------------------- |
  | RandomAccess_`VENDOR`     | Builds the host application linking with the Intel SDK|
- | Test_`VENDOR`            | Compile the tests and its dependencies linking with the Intel SDK  |
+ | RandomAccess_test_`VENDOR`            | Compile the tests and its dependencies linking with the Intel SDK  |
  
  More over there are additional targets to generate kernel reports and bitstreams.
  The kernel targets are:
@@ -77,7 +77,7 @@ For more information on available input parameters run
     
 To execute the unit and integration tests for Intel devices run
 
-    CL_CONTEXT_EMULATOR_DEVICE=1 ./Test_intel
+    CL_CONTEXT_EMULATOR_DEVICE=1 ./RandomAccess_test_intel -f KERNEL_FILE_NAME
     
 in the `bin` folder within the build directory.
 It will run an emulation of the kernel and execute some functionality tests.
@@ -87,8 +87,9 @@ It will run an emulation of the kernel and execute some functionality tests.
 The host code will print the results of the execution to the standard output.
 The result  summary looks similar to this:
 
-    best         mean         GUPS        error
-    1.73506e+01  1.73507e+01  2.47540e-01  9.87137e-03
+    Error: 9.87137e-03%
+    best         mean         GUPS      
+    1.73506e+01  1.73507e+01  2.47540e-01 
 
 - `best` and `mean` are the fastest and the mean kernel execution time.
     The pure kernel execution time is measured without transferring the buffer
@@ -96,7 +97,7 @@ The result  summary looks similar to this:
 - `GUPS` contains the calculated metric _Giga Updates per Second_. It takes the
     fastest kernel execution time. The formula is
     ![GOPs = 4 * GLOBAL_MEM_SIZE / (best_time * 10^9)](https://latex.codecogs.com/gif.latex?\inline&space;GUPS&space;=&space;&bsol;frac{4&space;*&space;GLOBAL\\_MEM\\_SIZE}{&space;best\\_time&space;*&space;10^9}).
-- `error` contains the percentage of memory positions with wrong values
+- `Error` contains the percentage of memory positions with wrong values
     after the updates where made. The maximal allowed error rate of the
     random access benchmark is 1% according to the rules given in the HPCChallenge
     specification.

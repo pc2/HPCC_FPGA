@@ -30,49 +30,20 @@ SOFTWARE.
 #include "CL/cl.hpp"
 
 #include "parameters.h"
+#include "random_access_benchmark.hpp"
 
 
 namespace bm_execution {
 
-struct ExecutionConfiguration {
-    cl::Context context;
-    cl::Device device;
-    cl::Program program;
-    uint repetitions;
-    uint replications;
-    size_t arraySize;
-};
-
 /**
-This struct is returned by the calculate call and contains the measured
-runtimes and the error rate in the data set after the updates.
-
-@see bm_execution::calculate()
-*/
-struct ExecutionResults {
-    std::vector<double> times;
-};
-
-/**
-The actual execution of the benchmark.
-This method can be implemented in multiple *.cpp files. This header enables
-simple exchange of the different calculation methods.
-
-@param context OpenCL context used to create needed Buffers and queues
-@param device The OpenCL device that is used to execute the benchmarks
-@param program The OpenCL program containing the kernels
-@param repetitions Number of times the kernels are executed
-@param replications Number of times a kernel is replicated - may be used in
-                    different ways depending on the implementation of this
-                    method
-@param dataSize The size of the data array that may be used for benchmark
-                execution in number of items
-@param useMemInterleaving Prepare buffers using memory interleaving
-
-@return The time measurements and the error rate counted from the executions
-*/
-std::shared_ptr<ExecutionResults>
-calculate(std::shared_ptr<bm_execution::ExecutionConfiguration> config, HOST_DATA_TYPE * data);
+ * @brief This method will prepare and execute the FPGA kernel and measure the execution time
+ * 
+ * @param config The ExecutionSettings with the OpenCL objects and program settings
+ * @param data The data that is used as input and output of the random accesses
+ * @return std::unique_ptr<random_access::RandomAccessExecutionTimings> The measured runtimes of the kernel
+ */
+std::unique_ptr<random_access::RandomAccessExecutionTimings>
+calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data);
 
 }  // namespace bm_execution
 

@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "fft_functionality.hpp"
+#include "fft_benchmark.hpp"
 
 /* C++ standard library headers */
 #include <memory>
@@ -32,143 +32,86 @@ SOFTWARE.
 
 /* Project's headers */
 #include "execution.h"
-#include "cxxopts.hpp"
-#include "setup/fpga_setup.hpp"
 #include "parameters.h"
 
-/**
-Parses and returns program options using the cxxopts library.
-Supports the following parameters:
-    - file name of the FPGA kernel file (-f,--file)
-    - number of repetitions (-n)
-    - number of kernel replications (-r)
-    - data size (-d)
-    - use memory interleaving
-@see https://github.com/jarro2783/cxxopts
+fft::FFTProgramSettings::FFTProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
+    iterations(results["b"].as<uint>()), inverse(results.count("inverse")) {
 
-@return program settings that are created from the given program arguments
-*/
-std::shared_ptr<ProgramSettings>
-parseProgramParameters(int argc, char *argv[]) {
-    // Defining and parsing program options
-    cxxopts::Options options(argv[0], PROGRAM_DESCRIPTION);
-    options.add_options()
-            ("f,file", "Kernel file name", cxxopts::value<std::string>())
-            ("n", "Number of repetitions",
-             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_REPETITIONS)))
-            ("i", "Multiplier for the used data size that will be i * FFT_SIZE",
-             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ITERATIONS)))
-            ("inverse", "If set, the inverse FFT is calculated instead")
-            ("device", "Index of the device that has to be used. If not given you "\
-        "will be asked which device to use if there are multiple devices "\
-        "available.", cxxopts::value<int>()->default_value(std::to_string(DEFAULT_DEVICE)))
-            ("platform", "Index of the platform that has to be used. If not given "\
-        "you will be asked which platform to use if there are multiple "\
-        "platforms available.",
-             cxxopts::value<int>()->default_value(std::to_string(DEFAULT_PLATFORM)))
-            ("h,help", "Print this help");
-    cxxopts::ParseResult result = options.parse(argc, argv);
-    
-    if (result.count("h")) {
-        // Just print help when argument is given
-        std::cout << options.help() << std::endl;
-        exit(0);
-    }
-    // Check parsed options and handle special cases
-    if (result.count("f") <= 0) {
-        // Path to the kernel file is mandatory - exit if not given!
-        std::cerr << "Kernel file must be given! Aborting" << std::endl;
-        std::cout << options.help() << std::endl;
-        exit(1);
-    }
-
-    // Create program settings from program arguments
-    std::shared_ptr<ProgramSettings> sharedSettings(
-            new ProgramSettings{result["n"].as<uint>(),
-                                result["i"].as<uint>(),
-                                static_cast<bool>(result.count("inverse")),
-                                result["platform"].as<int>(),
-                                result["device"].as<int>(),
-                                result["f"].as<std::string>()});
-    return sharedSettings;
 }
 
+std::map<std::string, std::string>
+fft::FFTProgramSettings::getSettingsMap() {
+        auto map = hpcc_base::BaseSettings::getSettingsMap();
+        map["FFT Size"] = std::to_string(1 << LOG_FFT_SIZE);
+        map["Batch Size"] = std::to_string(iterations);
+        return map;
+}
 
-/**
-Prints the execution results to stdout
+fft::FFTBenchmark::FFTBenchmark(int argc, char* argv[]) {
+    setupBenchmark(argc, argv);
+}
 
-@param results The execution results
-*/
+fft::FFTBenchmark::FFTBenchmark() {}
+
 void
-printResults(std::shared_ptr<bm_execution::ExecutionTimings> results) {
+fft::FFTBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
+    options.add_options()
+            ("b", "Number of batched FFT calculations (iterations)",
+             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ITERATIONS)))
+            ("inverse", "If set, the inverse FFT is calculated instead");
+}
 
-    double gflop = 5 * (1 << LOG_FFT_SIZE) * LOG_FFT_SIZE * results->iterations * 1.0e-9;
+std::unique_ptr<fft::FFTExecutionTimings>
+fft::FFTBenchmark::executeKernel(FFTData &data) {
+    return bm_execution::calculate(*executionSettings, data.data,executionSettings->programSettings->iterations,
+                                         executionSettings->programSettings->inverse);
+}
 
-    double minTime = *min_element(results->calculationTimings.begin(), results->calculationTimings.end());
-    double avgTime = accumulate(results->calculationTimings.begin(), results->calculationTimings.end(), 0.0)
-                                                                                / results->calculationTimings.size();
+void
+fft::FFTBenchmark::printResults(const fft::FFTExecutionTimings &output) {
+    double gflop = 5 * (1 << LOG_FFT_SIZE) * LOG_FFT_SIZE * executionSettings->programSettings->iterations * 1.0e-9;
+
+    double minTime = *min_element(output.timings.begin(), output.timings.end());
+    double avgTime = accumulate(output.timings.begin(), output.timings.end(), 0.0)
+                                                                                / output.timings.size();
 
     std::cout << std::setw(ENTRY_SPACE) << " " << std::setw(ENTRY_SPACE) << "avg"
               << std::setw(ENTRY_SPACE) << "best" << std::endl;
-    std::cout << std::setw(ENTRY_SPACE) << "Time in s:" << std::setw(ENTRY_SPACE) << avgTime / results->iterations
-                << std::setw(ENTRY_SPACE) << minTime / results->iterations << std::endl;
+    std::cout << std::setw(ENTRY_SPACE) << "Time in s:" << std::setw(ENTRY_SPACE) << avgTime / executionSettings->programSettings->iterations
+                << std::setw(ENTRY_SPACE) << minTime / executionSettings->programSettings->iterations << std::endl;
     std::cout << std::setw(ENTRY_SPACE) << "GFLOPS:" << std::setw(ENTRY_SPACE) << gflop / avgTime
                 << std::setw(ENTRY_SPACE) << gflop / minTime << std::endl;
-
 }
 
-/**
- * Prints the used configuration to std out before starting the actual benchmark.
- *
- * @param programSettings The program settings retrieved from the command line
- * @param device The device used for execution
- */
-void printFinalConfiguration(const std::shared_ptr<ProgramSettings> &programSettings,
-                             const cl::Device &device) {// Give setup summary
-    std::cout << PROGRAM_DESCRIPTION << std::endl << HLINE;
-    std::cout << "Summary:" << std::endl
-              << "FFT Size:            " << (1 << LOG_FFT_SIZE)
-              << std::endl
-              << "Data Size:           " << programSettings->iterations << " * FFT Size * sizeof("
-              << STR(HOST_DATA_TYPE)
-              << ") = " << static_cast<double>((1 << LOG_FFT_SIZE) * programSettings->iterations * sizeof(HOST_DATA_TYPE)) << " Byte"
-              << std::endl
-              << "Repetitions:         " << programSettings->numRepetitions
-              << std::endl
-              << "Kernel file:         " << programSettings->kernelFileName
-              << std::endl;
-    std::cout << "Device:              "
-              << device.getInfo<CL_DEVICE_NAME>() << std::endl;
-    std::cout << HLINE
-              << "Start benchmark using the given configuration." << std::endl
-              << HLINE;
-}
-
-
-void generateInputData(std::complex<HOST_DATA_TYPE>* data, unsigned iterations) {
+std::unique_ptr<fft::FFTData>
+fft::FFTBenchmark::generateInputData() {
+    auto d = std::unique_ptr<fft::FFTData>(new fft::FFTData(executionSettings->programSettings->iterations));
     std::mt19937 gen(0);
     auto dis = std::uniform_real_distribution<HOST_DATA_TYPE>(-1.0, 1.0);
-    for (int i=0; i< iterations * (1 << LOG_FFT_SIZE); i++) {
-        data[i].real(dis(gen));
-        data[i].imag(dis(gen));
+    for (int i=0; i< executionSettings->programSettings->iterations * (1 << LOG_FFT_SIZE); i++) {
+        d->data[i].real(dis(gen));
+        d->data[i].imag(dis(gen));
     }
+    return d;
 }
 
-double checkFFTResult(std::complex<HOST_DATA_TYPE>* verify_data, std::complex<HOST_DATA_TYPE>* result_data, unsigned iterations) {
+bool  
+fft::FFTBenchmark::validateOutputAndPrintError(fft::FFTData &data) {
+    auto verify_data = generateInputData();
     double residual_max = 0;
-    for (int i = 0; i < iterations; i++) {
+    for (int i = 0; i < executionSettings->programSettings->iterations; i++) {
         // we have to bit reverse the output data of the FPGA kernel, since it will be provided in bit-reversed order.
         // Directly applying iFFT on the data would thus not form the identity function we want to have for verification.
         // TODO: This might need to be changed for other FPGA implementations that return the data in correct order
-        bit_reverse(&result_data[i * (1 << LOG_FFT_SIZE)], 1);
-        fourier_transform_gold(true, LOG_FFT_SIZE, &result_data[i * (1 << LOG_FFT_SIZE)]);
+        fft::bit_reverse(&data.data[i * (1 << LOG_FFT_SIZE)], 1);
+        fft::fourier_transform_gold(true, LOG_FFT_SIZE, &data.data[i * (1 << LOG_FFT_SIZE)]);
 
         // Normalize the data after applying iFFT
         for (int j = 0; j < (1 << LOG_FFT_SIZE); j++) {
-            result_data[i * (1 << LOG_FFT_SIZE) + j] /= (1 << LOG_FFT_SIZE);
+            data.data[i * (1 << LOG_FFT_SIZE) + j] /= (1 << LOG_FFT_SIZE);
         }
         for (int j = 0; j < (1 << LOG_FFT_SIZE); j++) {
-            double tmp_error =  std::abs(verify_data[i * (1 << LOG_FFT_SIZE) + j] - result_data[i * (1 << LOG_FFT_SIZE) + j]);
+            double tmp_error =  std::abs(verify_data->data[i * (1 << LOG_FFT_SIZE) + j] - data.data[i * (1 << LOG_FFT_SIZE) + j]);
             residual_max = residual_max > tmp_error ? residual_max : tmp_error;
         }
     }
@@ -180,10 +123,11 @@ double checkFFTResult(std::complex<HOST_DATA_TYPE>* verify_data, std::complex<HO
               << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl << std::endl;
 
     // Calculate residual according to paper considering also the used iterations
-    return error;
+    return error < 1.0;
 }
 
-void bit_reverse(std::complex<HOST_DATA_TYPE> *data, unsigned iterations) {
+void 
+fft::bit_reverse(std::complex<HOST_DATA_TYPE> *data, unsigned iterations) {
     auto *tmp = new std::complex<HOST_DATA_TYPE>[(1 << LOG_FFT_SIZE)];
     for (int k=0; k < iterations; k++) {
         for (int i = 0; i < (1 << LOG_FFT_SIZE); i++) {
@@ -229,7 +173,8 @@ void bit_reverse(std::complex<HOST_DATA_TYPE> *data, unsigned iterations) {
 // by the laws of the United States of America.
 
 
-void fourier_transform_gold(bool inverse, const int lognr_points, std::complex<HOST_DATA_TYPE> *data_sp) {
+void 
+fft::fourier_transform_gold(bool inverse, const int lognr_points, std::complex<HOST_DATA_TYPE> *data_sp) {
     const int nr_points = 1 << lognr_points;
 
     auto *data = new std::complex<double>[nr_points];
@@ -248,7 +193,7 @@ void fourier_transform_gold(bool inverse, const int lognr_points, std::complex<H
         }
     }
     // Do a FT recursively
-    fourier_stage(lognr_points, data);
+    fft::fourier_stage(lognr_points, data);
 
     // The inverse requires swapping the real and imaginary component
     if (inverse) {
@@ -267,7 +212,8 @@ void fourier_transform_gold(bool inverse, const int lognr_points, std::complex<H
     delete [] data;
 }
 
-void fourier_stage(int lognr_points, std::complex<double> *data) {
+void 
+fft::fourier_stage(int lognr_points, std::complex<double> *data) {
     int nr_points = 1 << lognr_points;
     if (nr_points == 1) return;
     auto *half1 = new std::complex<double>[nr_points / 2];

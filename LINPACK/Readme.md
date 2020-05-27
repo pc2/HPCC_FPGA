@@ -21,8 +21,8 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
 
  |  Target               | Description                                    |
  | --------------------- | ---------------------------------------------- |
- | LINPACK_`VENDOR`      | Builds the host application linking with the Intel SDK|
- | Test_`VENDOR`          | Compile the tests and its dependencies linking with the Intel SDK  |
+ | Linpack_`VENDOR`      | Builds the host application linking with the Intel SDK|
+ | Linpack_test_`VENDOR`          | Compile the tests and its dependencies linking with the Intel SDK  |
  
  More over there are additional targets to generate kernel reports and bitstreams.
  The provided kernel is optimized for the Bittware 520N board equipped with Stratix 10.
@@ -72,15 +72,15 @@ in the `CMakeCache.txt` located in the build directory after running cmake.
 
 For execution of the benchmark run:
 
-    ./LINPACK_intel -f path_to_kernel.aocx
+    ./Linpack_intel -f path_to_kernel.aocx
     
 For more information on available input parameters run
 
-    ./LINPACK_intel -h
+    ./Linpack_intel -h
     
     Implementation of the LINPACK benchmark proposed in the HPCC benchmark suite for FPGA.
     Usage:
-      ./LINPACK_intel [OPTION...]
+      ./Linpack_intel [OPTION...]
     
       -f, --file arg      Kernel file name
       -n, arg             Number of repetitions (default: 10)
@@ -96,7 +96,7 @@ For more information on available input parameters run
     
 To execute the unit and integration tests for Intel devices run
 
-    CL_CONTEXT_EMULATOR_DEVICE=1 ./Test_intel
+    CL_CONTEXT_EMULATOR_DEVICE=1 ./Linpack_test_intel -f KERNEL_FILE_NAME
     
 in the `bin` folder within the build directory.
 It will run an emulation of the kernel and execute some functionality tests.

@@ -41,25 +41,25 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<ExecutionTimings>
-    calculate(std::shared_ptr<ExecutionConfiguration> config, cl_uint messageSize, cl_uint looplength) {
+    std::shared_ptr<network::ExecutionTimings>
+    calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength) {
 
 
-        cl::Kernel sendKernel(config->program, SEND_KERNEL_NAME);
+        cl::Kernel sendKernel(*config.program, SEND_KERNEL_NAME);
 
         sendKernel.setArg(0, messageSize);
         sendKernel.setArg(1, looplength);
 
-        cl::Kernel recvKernel(config->program, RECV_KERNEL_NAME);
+        cl::Kernel recvKernel(*config.program, RECV_KERNEL_NAME);
 
         recvKernel.setArg(0, messageSize);
         recvKernel.setArg(1, looplength);
 
-        cl::CommandQueue sendQueue(config->context);
-        cl::CommandQueue recvQueue(config->context);
+        cl::CommandQueue sendQueue(*config.context);
+        cl::CommandQueue recvQueue(*config.context);
 
         std::vector<double> calculationTimings;
-        for (uint r =0; r < config->repetitions; r++) {
+        for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             MPI_Barrier(MPI_COMM_WORLD);
             auto startCalculation = std::chrono::high_resolution_clock::now();
             sendQueue.enqueueTask(sendKernel);
@@ -73,7 +73,7 @@ namespace bm_execution {
             calculationTimings.push_back(calculationTime.count());
         }
 
-        std::shared_ptr<ExecutionTimings> result(new ExecutionTimings{
+        std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
                 looplength,
                 messageSize,
                 calculationTimings

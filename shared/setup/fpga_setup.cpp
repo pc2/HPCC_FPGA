@@ -2,7 +2,7 @@
 // Created by Marius Meyer on 04.12.19.
 //
 
-#include "fpga_setup.hpp"
+#include "setup/fpga_setup.hpp"
 
 #include <string>
 #include <vector>
@@ -204,7 +204,7 @@ choose a device.
 
 @return A list containing a single selected device
 */
-    std::vector<cl::Device>
+    cl::Device
     selectFPGADevice(int defaultPlatform, int defaultDevice) {
         // Integer used to store return codes of OpenCL library calls
         int err;
@@ -261,15 +261,15 @@ choose a device.
             if (defaultDevice < deviceList.size()) {
                 chosenDeviceId = defaultDevice;
             } else {
-                std::cerr << "Default platform " << defaultDevice
-                          << " can not be used. Available platforms: "
+                std::cerr << "Default device " << defaultDevice
+                          << " can not be used. Available devices: "
                           << deviceList.size() << std::endl;
                 exit(1);
             }
         } else if (deviceList.size() > 1) {
             if (world_size == 1) {
                     std::cout <<
-                              "Multiple devices have been found. Select the platform by"\
+                              "Multiple devices have been found. Select the device by"\
                             " typing a number:" << std::endl;
 
                 for (int deviceId = 0;
@@ -284,8 +284,6 @@ choose a device.
                 chosenDeviceId = static_cast<int>(world_rank % deviceList.size());
             }
         }
-        std::vector<cl::Device> chosenDeviceList;
-        chosenDeviceList.push_back(deviceList[chosenDeviceId]);
 
         if (world_rank == 0) {
             // Give selection summary
@@ -294,11 +292,11 @@ choose a device.
             std::cout << "Platform Name: " <<
                       platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
             std::cout << "Device Name:   " <<
-                      chosenDeviceList[0].getInfo<CL_DEVICE_NAME>() << std::endl;
+                      deviceList[chosenDeviceId].getInfo<CL_DEVICE_NAME>() << std::endl;
             std::cout << HLINE;
         }
 
-        return chosenDeviceList;
+        return deviceList[chosenDeviceId];
     }
 
 }  // namespace fpga_setup

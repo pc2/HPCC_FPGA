@@ -30,22 +30,11 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 #include "parameters.h"
+#include "fft_benchmark.hpp"
 
 
 namespace bm_execution {
 
-    struct ExecutionConfiguration {
-        cl::Context context;
-        cl::Device device;
-        cl::Program program;
-        uint repetitions;
-    };
-
-    struct ExecutionTimings {
-        unsigned iterations;
-        bool inverse;
-        std::vector<double> calculationTimings;
-    };
 
 /**
 The actual execution of the benchmark.
@@ -57,8 +46,8 @@ simple exchange of the different calculation methods.
 
 @return The resulting matrix
 */
-    std::shared_ptr<ExecutionTimings>
-    calculate(std::shared_ptr<ExecutionConfiguration> config, std::complex<HOST_DATA_TYPE>* data, unsigned iterations, bool inverse);
+    std::unique_ptr<fft::FFTExecutionTimings>
+    calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const& config, std::complex<HOST_DATA_TYPE>* data, unsigned iterations, bool inverse);
 
 }  // namespace bm_execution
 
