@@ -115,30 +115,45 @@ local_gemm(const DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / 
            DEVICE_DATA_TYPE alpha,
            const bool first_block) {
 
-#pragma loop_coalesce 2
+    DEVICE_DATA_TYPE tmp_c_block_out[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK] __attribute__((xcl_array_partition(complete, 3),xcl_array_partition(complete, 4)));
+
+    #pragma loop_coalesce 2
     // For each column in top block
     for (int i = 0; i < BLOCK_SIZE / GEMM_BLOCK; i++) {
         // For each element below it in current block
         for (int j = 0; j < BLOCK_SIZE / GEMM_BLOCK; j++) {
-            DEVICE_DATA_TYPE   tmp_small_block_out[GEMM_BLOCK][GEMM_BLOCK];
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+            __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
             for (int ii = 0; ii < GEMM_BLOCK; ii++) {
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+                __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                 for (int jj = 0; jj < GEMM_BLOCK; jj++) {
-                    tmp_small_block_out[ii][jj] = 0;
+                    tmp_c_block_out[i][j][ii][jj] = 0;
                 }
             }
-            // For each diagonal element in left block
-            for (int k=0; k < BLOCK_SIZE / GEMM_BLOCK; k++) {
-                register_gemm(a_block[i][k], b_block[k][j],
-                               tmp_small_block_out);
-            }
+        }
+    }
 
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+    #pragma loop_coalesce 3
+    // For each diagonal element in left block
+    for (int k=0; k < BLOCK_SIZE / GEMM_BLOCK; k++) {
+        // For each column in top block
+        for (int i = 0; i < BLOCK_SIZE / GEMM_BLOCK; i++) {
+            // For each element below it in current block
+            for (int j = 0; j < BLOCK_SIZE / GEMM_BLOCK; j++) {
+                register_gemm(a_block[i][k], b_block[k][j],
+                               tmp_c_block_out[i][j]);
+            }
+        }
+    }
+
+    // For each column in top block
+    for (int i = 0; i < BLOCK_SIZE / GEMM_BLOCK; i++) {
+        // For each element below it in current block
+        for (int j = 0; j < BLOCK_SIZE / GEMM_BLOCK; j++) {
+            __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
             for (int ii = 0; ii < GEMM_BLOCK; ii++) {
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+                __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                 for (int jj = 0; jj < GEMM_BLOCK; jj++) {
-                    c_block_out[i][j][ii][jj] = first_block ? c_block_out[i][j][ii][jj] + alpha * tmp_small_block_out[ii][jj] : alpha * tmp_small_block_out[ii][jj];
+                    c_block_out[i][j][ii][jj] = first_block ? c_block_out[i][j][ii][jj] + alpha * tmp_c_block_out[i][j][ii][jj] : alpha * tmp_c_block_out[i][j][ii][jj];
                 }
             }
         }
@@ -178,13 +193,13 @@ void gemm(__global const DEVICE_DATA_TYPE* restrict a,
 #pragma disable_loop_pipelining
         for (int y_block = 0; y_block < a_size; y_block++) {
             DEVICE_DATA_TYPE c_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
-            [GEMM_BLOCK][GEMM_BLOCK]  __attribute((numbanks(GEMM_BLOCK * GEMM_BLOCK)));
+            [GEMM_BLOCK][GEMM_BLOCK]  __attribute((numbanks(GEMM_BLOCK * GEMM_BLOCK),xcl_array_partition(complete, 3),xcl_array_partition(complete, 4)));
 
             for (int diagonal_block=0; diagonal_block < a_size; diagonal_block++) {
                 DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
-                                        [GEMM_BLOCK][GEMM_BLOCK]  __attribute((numbanks(GEMM_BLOCK * GEMM_BLOCK)));
+                                        [GEMM_BLOCK][GEMM_BLOCK]  __attribute((numbanks(GEMM_BLOCK * GEMM_BLOCK),xcl_array_partition(complete, 3),xcl_array_partition(complete, 4)));
                 DEVICE_DATA_TYPE b_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
-                                        [GEMM_BLOCK][GEMM_BLOCK]  __attribute((numbanks(GEMM_BLOCK * GEMM_BLOCK)));
+                                        [GEMM_BLOCK][GEMM_BLOCK]  __attribute((numbanks(GEMM_BLOCK * GEMM_BLOCK),xcl_array_partition(complete, 3),xcl_array_partition(complete, 4)));
                 // Load all needed level 1 blocks
 #pragma loop_coalesce 2
                 for (int i = 0; i < BLOCK_SIZE ; i++) {
