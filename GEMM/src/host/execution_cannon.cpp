@@ -80,13 +80,13 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
 
     // prepare kernels
 #ifdef USE_SVM
-    err = clSetKernelArgSVMPointer(gefakernel(), 0,
+    err = clSetKernelArgSVMPointer(gemmkernel(), 0,
                                     reinterpret_cast<void*>(a));
-    err = clSetKernelArgSVMPointer(gefakernel(), 1,
+    err = clSetKernelArgSVMPointer(gemmkernel(), 1,
                                     reinterpret_cast<void*>(b));
-    err = clSetKernelArgSVMPointer(gefakernel(), 2,
+    err = clSetKernelArgSVMPointer(gemmkernel(), 2,
                                     reinterpret_cast<void*>(c));
-    err = clSetKernelArgSVMPointer(gefakernel(), 3,
+    err = clSetKernelArgSVMPointer(gemmkernel(), 3,
                                     reinterpret_cast<void*>(c_out));
 #else
     err = gemmkernel.setArg(0, Buffer_a);
@@ -109,7 +109,7 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
 
     double t;
     std::vector<double> executionTimes;
-    for (int i = 0; i < config.programSettings->matrixSize; i++) {
+    for (int i = 0; i < config.programSettings->numRepetitions; i++) {
 #ifdef USE_SVM
         clEnqueueSVMMap(compute_queue(), CL_TRUE,
                         CL_MAP_READ,
@@ -142,15 +142,13 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, b);
         compute_queue.enqueueWriteBuffer(Buffer_c_in, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, c);
-#endif
         compute_queue.finish();
+#endif
         auto t1 = std::chrono::high_resolution_clock::now();
         compute_queue.enqueueTask(gemmkernel);
         compute_queue.finish();
         auto t2 = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> timespan =
-            std::chrono::duration_cast<std::chrono::duration<double>>
-                                                                (t2 - t1);
+        std::chrono::duration<double> timespan = t2 - t1;
         executionTimes.push_back(timespan.count());
     }
 
