@@ -80,10 +80,16 @@ class FFTData {
 public:
 
     /**
-     * @brief The data array used ofr the FFT calculation
+     * @brief The data array used as input of the FFT calculation
      * 
      */
     std::complex<HOST_DATA_TYPE>* data;
+
+    /**
+     * @brief The data array used as output of the FFT calculation
+     * 
+     */
+    std::complex<HOST_DATA_TYPE>* data_out;
 
     /**
      * @brief The context that is used to allocate memory in SVM mode
@@ -97,27 +103,13 @@ public:
      * @param context The OpenCL context used to allocate memory in SVM mode
      * @param iterations Number of FFT data that will be stored sequentially in the array
      */
-    FFTData(cl::Context context, uint iterations) : context(context) {
-#ifdef USE_SVM
-        data = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            iterations * (1 << LOG_FFT_SIZE) * sizeof(std::complex<HOST_DATA_TYPE>), 1024));
-#else
-        posix_memalign(reinterpret_cast<void**>(&data), 64, iterations * (1 << LOG_FFT_SIZE) * sizeof(std::complex<HOST_DATA_TYPE>));
-#endif
-    }
+    FFTData(cl::Context context, uint iterations);
 
     /**
      * @brief Destroy the FFT Data object. Free the allocated memory
      * 
      */
-    ~FFTData() {
-#ifdef USE_SVM
-        clSVMFree(context(), reinterpret_cast<void**>(data));
-#else
-        free(data);
-#endif
-    }
+     ~FFTData();
 
 };
 

@@ -42,6 +42,7 @@ namespace bm_execution {
     std::unique_ptr<fft::FFTExecutionTimings>
     calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const&  config,
             std::complex<HOST_DATA_TYPE>* data,
+            std::complex<HOST_DATA_TYPE>* data_out,
             unsigned iterations,
             bool inverse) {
 
@@ -52,10 +53,10 @@ namespace bm_execution {
         cl::Kernel fftKernel(*config.program, FFT_KERNEL_NAME);
 
 #ifdef USE_SVM
-        err = clSetKernelArgSVMPointer(fetchkernel(), 0,
+        clSetKernelArgSVMPointer(fetchKernel(), 0,
                                         reinterpret_cast<void*>(data));
-        err = clSetKernelArgSVMPointer(fftkernel(), 0,
-                                        reinterpret_cast<void*>(data));
+        clSetKernelArgSVMPointer(fftKernel(), 0,
+                                        reinterpret_cast<void*>(data_out));
 #else
         fetchKernel.setArg(0, inBuffer);
         fftKernel.setArg(0, outBuffer);
@@ -67,9 +68,14 @@ namespace bm_execution {
         cl::CommandQueue fftQueue(*config.context);
 
 #ifdef USE_SVM
-        clEnqueueSVMMap(compute_queue(), CL_TRUE,
-                        CL_MAP_READ | CL_MAP_WRITE,
+        clEnqueueSVMMap(fetchQueue(), CL_TRUE,
+                        CL_MAP_READ,
                         reinterpret_cast<void *>(data),
+                        (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), 0,
+                        NULL, NULL);
+        clEnqueueSVMMap(fftQueue(), CL_TRUE,
+                        CL_MAP_WRITE,
+                        reinterpret_cast<void *>(data_out),
                         (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), 0,
                         NULL, NULL);
 #else
@@ -91,11 +97,14 @@ namespace bm_execution {
             calculationTimings.push_back(calculationTime.count());
         }
 #ifdef USE_SVM
-            clEnqueueSVMUnmap(compute_queue(),
+            clEnqueueSVMUnmap(fetchQueue(),
                                 reinterpret_cast<void *>(data), 0,
                                 NULL, NULL);
+            clEnqueueSVMUnmap(fftQueue(),
+                                reinterpret_cast<void *>(data_out), 0,
+                                NULL, NULL);
 #else
-        fetchQueue.enqueueReadBuffer(outBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data);
+        fetchQueue.enqueueReadBuffer(outBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data_out);
 #endif
 
         std::unique_ptr<fft::FFTExecutionTimings> result(new fft::FFTExecutionTimings{
