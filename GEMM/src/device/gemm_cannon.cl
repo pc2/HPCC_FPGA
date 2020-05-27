@@ -58,44 +58,37 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
                     const DEVICE_DATA_TYPE b[GEMM_BLOCK][GEMM_BLOCK],
                     DEVICE_DATA_TYPE c_out[GEMM_BLOCK][GEMM_BLOCK]) {
 
-    DEVICE_DATA_TYPE a_block[GEMM_BLOCK][GEMM_BLOCK + 1];
-    DEVICE_DATA_TYPE b_block[GEMM_BLOCK + 1][GEMM_BLOCK];
+    DEVICE_DATA_TYPE a_block[GEMM_BLOCK][GEMM_BLOCK];
+    DEVICE_DATA_TYPE b_block[GEMM_BLOCK][GEMM_BLOCK];
     DEVICE_DATA_TYPE c_block[GEMM_BLOCK][GEMM_BLOCK];
 
     // Load block of matrix A and B and init C and reorder values
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+    __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
     for (int y=0; y<GEMM_BLOCK; y++) {
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+        __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK; x++) {
-            int k = (x + y) % GEMM_BLOCK;
-            a_block[y][x] = a[y][k];
-            b_block[y][x] = b[k][x];
-            c_block[y][x] = 0;
+            a_block[y][x] = a[y][x];
+            b_block[y][x] = b[y][x];
         }
     }
 
     // Calculate result for 8x8 matrix
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-    for (int i=0;i<GEMM_BLOCK; i++) {
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-        for (int x=0; x<GEMM_BLOCK;x++) {
-            a_block[x][GEMM_BLOCK] = a_block[x][0];
-            b_block[GEMM_BLOCK][x] = b_block[0][x];
-        }
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-        for(int y=0; y < GEMM_BLOCK; y++) {
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-            for (int x=0; x<GEMM_BLOCK;x++) {
-                c_block[y][x] += a_block[y][x] * b_block[y][x];
-                a_block[y][x] = a_block[y][x + 1];
-                b_block[y][x] = b_block[y + 1][x];
+    __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+    for (int y=0; y<GEMM_BLOCK; y++) {
+        __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+        for (int x=0; x<GEMM_BLOCK; x++) {
+            float sum = 0.f;
+            __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+            for (int i=0; i<GEMM_BLOCK; i++) {
+                sum += a_block[y][i] * b_block[i][x];
             }
+            c_block[y][x] = sum;
         }
     }
 
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+    __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
     for(int y=0; y < GEMM_BLOCK; y++) {
-__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+        __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK;x++) {
             c_out[y][x] += c_block[y][x];
         }
