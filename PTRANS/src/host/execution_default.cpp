@@ -53,11 +53,11 @@ namespace bm_execution {
         cl::Kernel transposeKernel(*config.program, KERNEL_NAME);
 
 #ifdef USE_SVM
-        err = clSetKernelArgSVMPointer(transposeKernel(), 0,
+        clSetKernelArgSVMPointer(transposeKernel(), 0,
                                         reinterpret_cast<void*>(A));
-        err = clSetKernelArgSVMPointer(transposeKernel(), 1,
+        clSetKernelArgSVMPointer(transposeKernel(), 1,
                                         reinterpret_cast<void*>(B));
-        err = clSetKernelArgSVMPointer(transposeKernel(), 2,
+        clSetKernelArgSVMPointer(transposeKernel(), 2,
                                         reinterpret_cast<void*>(A_out));
 #else
         transposeKernel.setArg(0, bufferA);

@@ -109,42 +109,13 @@ public:
      * @param context Context that is used to allocate memory for SVM
      * @param size Size of the allocated square matrices
      */
-    TransposeData(cl::Context context, uint size) : context(context) {
-#ifdef USE_SVM
-        A = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            size * size * sizeof(HOST_DATA_TYPE), 1024));
-        B = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            size * size * sizeof(HOST_DATA_TYPE), 1024));
-        result = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            size * size * sizeof(HOST_DATA_TYPE), 1024));
-#else
-        posix_memalign(reinterpret_cast<void **>(&A), 64,
-                    sizeof(HOST_DATA_TYPE) * size * size);
-        posix_memalign(reinterpret_cast<void **>(&B), 64,
-                    sizeof(HOST_DATA_TYPE) * size * size);
-        posix_memalign(reinterpret_cast<void **>(&result), 64,
-                    sizeof(HOST_DATA_TYPE) * size * size);
-#endif
-    }
+    TransposeData(cl::Context context, uint size);
 
     /**
      * @brief Destroy the Transpose Data object. Free the allocated memory
      * 
      */
-    ~TransposeData() {
-#ifdef USE_SVM
-        clSVMFree(context(), reinterpret_cast<void**>(A));
-        clSVMFree(context(), reinterpret_cast<void**>(B));
-        clSVMFree(context(), reinterpret_cast<void**>(result));
-#else
-        free(A);
-        free(B);
-        free(result);
-#endif
-    }
+    ~TransposeData();
 
 };
 
