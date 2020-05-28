@@ -112,8 +112,7 @@ local_gemm(const DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / 
                                             [GEMM_BLOCK][GEMM_BLOCK],
            DEVICE_DATA_TYPE c_block_out[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
                                         [GEMM_BLOCK][GEMM_BLOCK],
-           DEVICE_DATA_TYPE alpha,
-           const bool first_block) {
+           const bool do_acc) {
 
     DEVICE_DATA_TYPE tmp_c_block_out[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK] __attribute__((xcl_array_partition(complete, 3),xcl_array_partition(complete, 4)));
 
@@ -153,7 +152,7 @@ local_gemm(const DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / 
             for (int ii = 0; ii < GEMM_BLOCK; ii++) {
                 __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                 for (int jj = 0; jj < GEMM_BLOCK; jj++) {
-                    c_block_out[i][j][ii][jj] = first_block ? c_block_out[i][j][ii][jj] + alpha * tmp_c_block_out[i][j][ii][jj] : alpha * tmp_c_block_out[i][j][ii][jj];
+                    c_block_out[i][j][ii][jj] = do_acc ? c_block_out[i][j][ii][jj] + tmp_c_block_out[i][j][ii][jj] : tmp_c_block_out[i][j][ii][jj];
                 }
             }
         }
@@ -164,7 +163,7 @@ local_gemm(const DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / 
 /**
 Two level blocked GEMM kernel
 
-calculates C_OUT = alpha * C + beta * A.dot(B)
+calculates C_OUT = alpha * A.dot(B) + beta * C
 
 @param a The data array representing the whole matrix a in global memory
 @param b The data array representing the whole matrix b in global memory
@@ -223,7 +222,7 @@ __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                         }
                     }
                 }
-                local_gemm(a_block, b_block, c_block, alpha, diagonal_block);
+                local_gemm(a_block, b_block, c_block, diagonal_block);
             }
 
 #pragma loop_coalesce
@@ -231,7 +230,7 @@ __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                 for (int j = 0; j < BLOCK_SIZE; j++) {
                     c_out[(y_block * size + x_block) * BLOCK_SIZE + j
-                          + i * size] = beta * c[(y_block * size + x_block) * BLOCK_SIZE + j + i * size] +
+                          + i * size] = beta * c[(y_block * size + x_block) * BLOCK_SIZE + j + i * size] + alpha *
                                   c_block[i/GEMM_BLOCK][j/GEMM_BLOCK][i & (GEMM_BLOCK - 1)][j & (GEMM_BLOCK - 1)];
                 }
             }
