@@ -110,39 +110,13 @@ public:
      * @param context The OpenCL context used to allocate memory in SVM mode
      * @param size Size of the allocated square matrix and vectors
      */
-    LinpackData(cl::Context context, uint size) : norma(0.0), context(context) {
-#ifdef USE_SVM
-        A = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            size * size * sizeof(HOST_DATA_TYPE), 1024));
-        b = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            size  * sizeof(HOST_DATA_TYPE), 1024));
-        result = reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            size * sizeof(cl_int), 1024));
-#else
-        posix_memalign(reinterpret_cast<void**>(&A), 4096, size * size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&b), 4096, size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&ipvt), 4096, size * sizeof(cl_int));
-#endif
-    }
+    LinpackData(cl::Context context, uint size);
 
     /**
      * @brief Destroy the Linpack Data object. Free the allocated memory
      * 
      */
-    ~LinpackData() {
-#ifdef USE_SVM
-        clSVMFree(context(), reinterpret_cast<void**>(A));
-        clSVMFree(context(), reinterpret_cast<void**>(b));
-        clSVMFree(context(), reinterpret_cast<void**>(ipvt));
-#else
-        free(A);
-        free(b);
-        free(ipvt);
-#endif
-    }
+    ~LinpackData();
 
 };
 
