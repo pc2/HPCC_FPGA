@@ -20,6 +20,8 @@
 #define LOCAL_MEM_BLOCK_LOG @LOCAL_MEM_BLOCK_LOG@
 #define REGISTER_BLOCK_LOG @REGISTER_BLOCK_LOG@
 
+#cmakedefine USE_SVM
+
 /*
 Short description of the program
 */
