@@ -79,7 +79,7 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
     for (int y=0; y<GEMM_BLOCK; y++) {
         __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK; x++) {
-            float sum = 0.f;
+            float sum = do_acc ? c_out[y][x] : 0.f;
             __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
             for (int i=0; i<GEMM_BLOCK; i++) {
                 sum += a_block[y][i] * b_block[i][x];
@@ -93,7 +93,7 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
     for(int y=0; y < GEMM_BLOCK; y++) {
         __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK; x++) {
-            c_out[y][x] = do_acc ? c_out[y][x] + c_block[y][x] : c_block[y][x];
+            c_out[y][x] = c_block[y][x];
         }
     }
 }
