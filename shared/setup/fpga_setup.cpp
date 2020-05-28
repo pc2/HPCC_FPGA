@@ -210,7 +210,7 @@ choose a device.
         int err;
 
         int world_rank = 0;
-        int world_size = 0;
+        int world_size = 1;
         
 #ifdef _USE_MPI_
         MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
