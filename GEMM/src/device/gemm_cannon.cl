@@ -49,20 +49,22 @@ store_block(DEVICE_DATA_TYPE a_block[BLOCK_SIZE][BLOCK_SIZE],
 /**
 Calculate for the Level 2 block:
 
-c = c +  a * b
+do_acc true:  c = c + a * b
+do_acc false: c = a * b
 
 where a,b,c are matrices of size GEMM_BLOCK.
 Calculation itself is fully unrolled.
  */
 void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
                     const DEVICE_DATA_TYPE b[GEMM_BLOCK][GEMM_BLOCK],
-                    DEVICE_DATA_TYPE c_out[GEMM_BLOCK][GEMM_BLOCK]) {
+                    DEVICE_DATA_TYPE c_out[GEMM_BLOCK][GEMM_BLOCK],
+                    const bool do_acc) {
 
-    DEVICE_DATA_TYPE a_block[GEMM_BLOCK][GEMM_BLOCK];
-    DEVICE_DATA_TYPE b_block[GEMM_BLOCK][GEMM_BLOCK];
-    DEVICE_DATA_TYPE c_block[GEMM_BLOCK][GEMM_BLOCK];
+    DEVICE_DATA_TYPE a_block[GEMM_BLOCK][GEMM_BLOCK]; // automatically in regs
+    DEVICE_DATA_TYPE b_block[GEMM_BLOCK][GEMM_BLOCK]; // automatically in regs
+    DEVICE_DATA_TYPE c_block[GEMM_BLOCK][GEMM_BLOCK]; // automatically in regs
 
-    // Load block of matrix A and B and init C and reorder values
+    // Load block of matrix A and B from BRAM to registers
     __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
     for (int y=0; y<GEMM_BLOCK; y++) {
         __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
@@ -86,50 +88,33 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
         }
     }
 
+    // Write back to BRAM and accumulate
     __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
     for(int y=0; y < GEMM_BLOCK; y++) {
         __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-        for (int x=0; x<GEMM_BLOCK;x++) {
-            c_out[y][x] += c_block[y][x];
+        for (int x=0; x<GEMM_BLOCK; x++) {
+            c_out[y][x] = do_acc ? c_out[y][x] + c_block[y][x] : c_block[y][x];
         }
     }
 }
 
 
 /**
-GEMM for the Level 1 Block
+GEMM for the Level 1 Block (from BRAM to BRAM)
 
-
-@param left_block Most left block that was modified by C2 before
-@param top_block Most upper block that was modified by C3 before
-@param current_block_in Current input block
-@param current_block_out Block to write the output to
+@param a_block input block from A matrix
+@param b_block input block from B matrix
+@param c_block result block to fill (each block will be passed in multiple times)
+@param do_acc: accumulate into c_block (if false, reset to 0 at first write)
 */
 void
 local_gemm(const DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
                                         [GEMM_BLOCK][GEMM_BLOCK],
            const DEVICE_DATA_TYPE b_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
                                             [GEMM_BLOCK][GEMM_BLOCK],
-           DEVICE_DATA_TYPE c_block_out[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
+           DEVICE_DATA_TYPE c_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
                                         [GEMM_BLOCK][GEMM_BLOCK],
            const bool do_acc) {
-
-    DEVICE_DATA_TYPE tmp_c_block_out[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK] __attribute__((xcl_array_partition(complete, 3),xcl_array_partition(complete, 4)));
-
-    #pragma loop_coalesce 2
-    // For each column in top block
-    for (int i = 0; i < BLOCK_SIZE / GEMM_BLOCK; i++) {
-        // For each element below it in current block
-        for (int j = 0; j < BLOCK_SIZE / GEMM_BLOCK; j++) {
-            __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-            for (int ii = 0; ii < GEMM_BLOCK; ii++) {
-                __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-                for (int jj = 0; jj < GEMM_BLOCK; jj++) {
-                    tmp_c_block_out[i][j][ii][jj] = 0;
-                }
-            }
-        }
-    }
 
     #pragma loop_coalesce 3
     // For each diagonal element in left block
@@ -138,22 +123,9 @@ local_gemm(const DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / 
         for (int i = 0; i < BLOCK_SIZE / GEMM_BLOCK; i++) {
             // For each element below it in current block
             for (int j = 0; j < BLOCK_SIZE / GEMM_BLOCK; j++) {
+                // accumulate when requested from outside OR when working on following ks
                 register_gemm(a_block[i][k], b_block[k][j],
-                               tmp_c_block_out[i][j]);
-            }
-        }
-    }
-
-    // For each column in top block
-    for (int i = 0; i < BLOCK_SIZE / GEMM_BLOCK; i++) {
-        // For each element below it in current block
-        for (int j = 0; j < BLOCK_SIZE / GEMM_BLOCK; j++) {
-            __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-            for (int ii = 0; ii < GEMM_BLOCK; ii++) {
-                __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-                for (int jj = 0; jj < GEMM_BLOCK; jj++) {
-                    c_block_out[i][j][ii][jj] = do_acc ? c_block_out[i][j][ii][jj] + tmp_c_block_out[i][j][ii][jj] : tmp_c_block_out[i][j][ii][jj];
-                }
+                    c_block[i][j], do_acc | (k>0));
             }
         }
     }
