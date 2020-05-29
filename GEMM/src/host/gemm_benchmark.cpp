@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 gemm::GEMMProgramSettings::GEMMProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["m"].as<uint>()) {
+    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()) {
 
 }
 
@@ -91,8 +91,10 @@ gemm::GEMMBenchmark::GEMMBenchmark() {}
 void
 gemm::GEMMBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
-            ("m", "Matrix size",
-             cxxopts::value<cl_uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)));
+            ("m", "Matrix size in number of blocks in a single dimension",
+             cxxopts::value<cl_uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
+            ("b", "Block size in number of values in one dimension",
+             cxxopts::value<cl_uint>()->default_value(std::to_string(BLOCK_SIZE)));
 }
 
 std::unique_ptr<gemm::GEMMExecutionTimings>

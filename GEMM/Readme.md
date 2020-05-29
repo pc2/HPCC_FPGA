@@ -76,20 +76,22 @@ For more information on available input parameters run
     
     Implementation of the GEMM benchmark proposed in the HPCC benchmark adapted for FPGA
     Usage:
-      ./GEMM_intel [OPTION...]
-    
-      -f, --file arg        Kernel file name
-      -n, arg               Number of repetitions (default: 10)
-      -m, arg               Matrix size (default: 4096)
-          --kernel arg      Name of the kernel (default: gemm)
-      -i, --nointerleaving  Disable memory interleaving
-          --device arg      Index of the device that has to be used. If not given
-                            you will be asked which device to use if there are
-                            multiple devices available. (default: -1)
-          --platform arg    Index of the platform that has to be used. If not
-                            given you will be asked which platform to use if there
-                            are multiple platforms available. (default: -1)
-      -h, --help            Print this help
+    ./GEMM_intel [OPTION...]
+
+    -f, --file arg      Kernel file name
+    -n, arg             Number of repetitions (default: 10)
+    -i,                 Use memory Interleaving
+        --device arg    Index of the device that has to be used. If not given
+                        you will be asked which device to use if there are
+                        multiple devices available. (default: -1)
+        --platform arg  Index of the platform that has to be used. If not given
+                        you will be asked which platform to use if there are
+                        multiple platforms available. (default: -1)
+    -h, --help          Print this help
+    -m, arg             Matrix size in number of blocks in a single dimension
+                        (default: 8)
+    -b, arg             Block size in number of values in one dimension
+                        (default: 256)
     
 To execute the unit and integration tests run
 

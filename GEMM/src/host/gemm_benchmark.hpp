@@ -52,10 +52,16 @@ class GEMMProgramSettings : public hpcc_base::BaseSettings {
 
 public:
     /**
-     * @brief The size of the whole matrix
+     * @brief The size of the whole matrix in one dimension
      * 
      */
     uint matrixSize;
+
+    /**
+     * @brief The size of a block in one dimension
+     * 
+     */
+    uint blockSize;
 
     /**
      * @brief Construct a new GEMM Program Settings object

@@ -102,7 +102,7 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
     ASSERT_CL(err);
     err = gemmkernel.setArg(5, beta);
     ASSERT_CL(err);
-    err = gemmkernel.setArg(6, config.programSettings->matrixSize);
+    err = gemmkernel.setArg(6, config.programSettings->matrixSize / config.programSettings->blockSize);
     ASSERT_CL(err);
 
     /* --- Execute actual benchmark kernels --- */

@@ -35,6 +35,23 @@ struct GEMMKernelTest : testing::Test, testing::WithParamInterface<unsigned> {
     }
 };
 
+/**
+ * Tests if C will be multiplied by beta
+ */
+TEST_P(GEMMKernelTest, FPGACorrectNumberOfRepetitionsIs1) {
+    bm->getExecutionSettings().programSettings->numRepetitions = 1;
+    auto result = bm->executeKernel(*data);
+    EXPECT_EQ(result->timings.size(), 1);
+}
+
+/**
+ * Tests if C will be multiplied by beta
+ */
+TEST_P(GEMMKernelTest, FPGACorrectNumberOfRepetitionsIs3) {
+    bm->getExecutionSettings().programSettings->numRepetitions = 3;
+    auto result = bm->executeKernel(*data);
+    EXPECT_EQ(result->timings.size(), 3);
+}
 
 /**
  * Tests if C will be multiplied by beta
@@ -103,8 +120,8 @@ TEST_P(GEMMKernelTest, FPGACorrectAmulB) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             data->C[i * matrix_size + j] = 0.0;
-            data->A[i * matrix_size + j] = j;
-            data->B[i * matrix_size + j] = i;
+            data->A[i * matrix_size + j] = j % 10;
+            data->B[i * matrix_size + j] = i % 10;
         }
     }
     data->alpha = 1.0;

@@ -2,6 +2,16 @@
 
 This file contains all changes made to the source code for each release.
 
+## 0.2.3
+
+#### Added:
+- Optimize Kernel for Xilinx
+
+#### Changed:
+- Fix bugs in host code, add tests
+- Add new block size parameter -b to host code
+- Change -m to number of blocks instead of values
+
 ## 0.2.2
 
 #### Changed:
