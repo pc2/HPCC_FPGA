@@ -205,13 +205,13 @@ __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                     DEVICE_DATA_TYPE c_reorder_buffer[GLOBAL_MEM_UNROLL];
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
-                        c_reorder_buffer[u] = c[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + i * size];
+                        c_reorder_buffer[u] = c[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + i * size + u];
                     }
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
                         c_out[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + u
                                 + i * size] = beta * c_reorder_buffer[u] +
-                                c_block[i/GEMM_BLOCK][(j * GLOBAL_MEM_UNROLL + u)/GEMM_BLOCK][i & (GEMM_BLOCK - 1)][(j * GLOBAL_MEM_UNROLL + u) & (GEMM_BLOCK - 1)];
+                                alpha * c_block[i/GEMM_BLOCK][(j * GLOBAL_MEM_UNROLL + u)/GEMM_BLOCK][i & (GEMM_BLOCK - 1)][(j * GLOBAL_MEM_UNROLL + u) & (GEMM_BLOCK - 1)];
                     }
                 }
             }
