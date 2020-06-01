@@ -25,7 +25,25 @@ struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<st
         char* argv[3] = {"Test", "-f", kernelFileName};
         bm = std::unique_ptr<linpack::LinpackBenchmark>(new linpack::LinpackBenchmark(argc, argv));
         array_size = (1 << LOCAL_MEM_BLOCK_LOG);
+        bm->getExecutionSettings().programSettings->numRepetitions = 1;
         bm->getExecutionSettings().programSettings->matrixSize = array_size;
+#ifdef USE_SVM
+        A = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc((*bm->getExecutionSettings().context)(), 0 ,
+                            array_size * array_size * sizeof(HOST_DATA_TYPE), 1024));
+        B = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc((*bm->getExecutionSettings().context)(), 0 ,
+                            array_size * array_size * sizeof(HOST_DATA_TYPE), 1024));
+        C = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc((*bm->getExecutionSettings().context)(), 0 ,
+                            array_size * array_size * sizeof(HOST_DATA_TYPE), 1024));
+        scale = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc((*bm->getExecutionSettings().context)(), 0 ,
+                            array_size  * sizeof(HOST_DATA_TYPE), 1024));
+        ipvt = reinterpret_cast<cl_int*>(
+                            clSVMAlloc((*bm->getExecutionSettings().context)(), 0 ,
+                            array_size * sizeof(cl_int), 1024));
+#else
         posix_memalign(reinterpret_cast<void **>(&A), 4096,
                        sizeof(HOST_DATA_TYPE) * array_size * array_size);
         posix_memalign(reinterpret_cast<void **>(&B), 4096,
@@ -36,6 +54,7 @@ struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<st
                        sizeof(HOST_DATA_TYPE) * array_size );
         posix_memalign(reinterpret_cast<void **>(&ipvt), 4096,
                        sizeof(cl_int) * array_size);  
+#endif
     }
 
     void initializeData() {
@@ -83,6 +102,18 @@ struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<st
 
 
         // prepare kernels
+#ifdef USE_SVM
+        err = clSetKernelArgSVMPointer(test_c4_kernel(), 0,
+                                    reinterpret_cast<void*>(A));
+        err = clSetKernelArgSVMPointer(test_c4_kernel(), 1,
+                                    reinterpret_cast<void*>(B));
+        err = clSetKernelArgSVMPointer(test_c4_kernel(), 2,
+                                    reinterpret_cast<void*>(C));
+        err = clSetKernelArgSVMPointer(test_c4_kernel(), 3,
+                                    reinterpret_cast<void*>(scale));
+        err = clSetKernelArgSVMPointer(test_c4_kernel(), 4,
+                                    reinterpret_cast<void*>(ipvt));
+#else
         err = test_c4_kernel.setArg(0, Buffer_a);
         ASSERT_CL(err);
         err = test_c4_kernel.setArg(1, Buffer_b);
@@ -93,6 +124,7 @@ struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<st
         ASSERT_CL(err);
         err = test_c4_kernel.setArg(4, Buffer_pivot);
         ASSERT_CL(err);
+#endif
         err = test_c4_kernel.setArg(5, static_cast<uint>(array_size >> LOCAL_MEM_BLOCK_LOG));
         ASSERT_CL(err);
 
@@ -101,6 +133,38 @@ struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<st
         double t;
         std::vector<double> executionTimes;
         for (int i = 0; i < bm->getExecutionSettings().programSettings->numRepetitions; i++) {
+#ifdef USE_SVM
+            clEnqueueSVMMap(compute_queue(), CL_TRUE,
+                        CL_MAP_READ | CL_MAP_WRITE,
+                        reinterpret_cast<void *>(A),
+                        sizeof(HOST_DATA_TYPE) *
+                        (array_size * array_size), 0,
+                        NULL, NULL);
+            clEnqueueSVMMap(compute_queue(), CL_TRUE,
+                        CL_MAP_READ | CL_MAP_WRITE,
+                        reinterpret_cast<void *>(B),
+                        sizeof(HOST_DATA_TYPE) *
+                        (array_size * array_size), 0,
+                        NULL, NULL);
+            clEnqueueSVMMap(compute_queue(), CL_TRUE,
+                        CL_MAP_READ | CL_MAP_WRITE,
+                        reinterpret_cast<void *>(C),
+                        sizeof(HOST_DATA_TYPE) *
+                        (array_size * array_size), 0,
+                        NULL, NULL);
+            clEnqueueSVMMap(compute_queue(), CL_TRUE,
+                        CL_MAP_READ | CL_MAP_WRITE,
+                        reinterpret_cast<void *>(scale),
+                        sizeof(HOST_DATA_TYPE) *
+                        (array_size * array_size), 0,
+                        NULL, NULL);
+            clEnqueueSVMMap(compute_queue(), CL_TRUE,
+                        CL_MAP_READ | CL_MAP_WRITE,
+                        reinterpret_cast<void *>(ipvt),
+                        sizeof(HOST_DATA_TYPE) *
+                        (array_size * array_size), 0,
+                        NULL, NULL);
+#else
             compute_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
                                              sizeof(HOST_DATA_TYPE)*array_size*array_size, A);
             compute_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
@@ -111,6 +175,7 @@ struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<st
                                              sizeof(HOST_DATA_TYPE)*array_size, scale);
             compute_queue.enqueueWriteBuffer(Buffer_pivot, CL_TRUE, 0,
                                              sizeof(cl_int)*array_size, ipvt);
+#endif
             compute_queue.finish();
             auto t1 = std::chrono::high_resolution_clock::now();
             compute_queue.enqueueTask(test_c4_kernel);
@@ -123,20 +188,46 @@ struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<st
         }
 
         /* --- Read back results from Device --- */
+#ifdef USE_SVM
+            clEnqueueSVMUnmap(compute_queue(),
+                                reinterpret_cast<void *>(A), 0,
+                                NULL, NULL);
+            clEnqueueSVMUnmap(compute_queue(),
+                                reinterpret_cast<void *>(B), 0,
+                                NULL, NULL);
+            clEnqueueSVMUnmap(compute_queue(),
+                                reinterpret_cast<void *>(C), 0,
+                                NULL, NULL);
+            clEnqueueSVMUnmap(compute_queue(),
+                                reinterpret_cast<void *>(scale), 0,
+                                NULL, NULL);
+            clEnqueueSVMUnmap(compute_queue(),
+                                reinterpret_cast<void *>(ipvt), 0,
+                                NULL, NULL);
+#else
         compute_queue.enqueueReadBuffer(Buffer_a, CL_TRUE, 0,
                                         sizeof(HOST_DATA_TYPE)*array_size*array_size, A);
         compute_queue.enqueueReadBuffer(Buffer_b, CL_TRUE, 0,
                                         sizeof(HOST_DATA_TYPE)*array_size*array_size, B);
         compute_queue.enqueueReadBuffer(Buffer_c, CL_TRUE, 0,
                                         sizeof(HOST_DATA_TYPE)*array_size*array_size, C);
+#endif
     }
 
     ~LinpackKernelSeparateTest() override {
+#ifdef USE_SVM
+    clSVMFree((*bm->getExecutionSettings().context)(), reinterpret_cast<void*>(A));
+    clSVMFree((*bm->getExecutionSettings().context)(), reinterpret_cast<void*>(B));
+    clSVMFree((*bm->getExecutionSettings().context)(), reinterpret_cast<void*>(C));
+    clSVMFree((*bm->getExecutionSettings().context)(), reinterpret_cast<void*>(scale));
+    clSVMFree((*bm->getExecutionSettings().context)(), reinterpret_cast<void*>(ipvt));
+#else
         free(A);
         free(B);
         free(C);
         free(ipvt);
         free(scale);
+#endif
         delete [] kernelFileName;
     }
 };
