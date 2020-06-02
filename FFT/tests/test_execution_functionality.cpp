@@ -58,7 +58,7 @@ TEST_F(FFTKernelTest, FFTReturnsZero) {
     }
     auto result = bm->executeKernel(*data);
     for (int i=0; i<(1 << LOG_FFT_SIZE); i++) {
-        EXPECT_FLOAT_EQ(std::abs(data->data[i]), 0.0);
+        EXPECT_FLOAT_EQ(std::abs(data->data_out[i]), 0.0);
     }
 }
 
@@ -72,11 +72,11 @@ TEST_F(FFTKernelTest, FFTCloseToZeroForAll1And1) {
         data->data[i].imag(1.0);
     }
     auto result = bm->executeKernel(*data);
-    EXPECT_NEAR(data->data[0].real(), (1 << LOG_FFT_SIZE), 0.00001);
-    EXPECT_NEAR(data->data[0].imag(), (1 << LOG_FFT_SIZE), 0.00001);
+    EXPECT_NEAR(data->data_out[0].real(), (1 << LOG_FFT_SIZE), 0.00001);
+    EXPECT_NEAR(data->data_out[0].imag(), (1 << LOG_FFT_SIZE), 0.00001);
     for (int i=1; i < (1 << LOG_FFT_SIZE); i++) {
-        EXPECT_NEAR(data->data[i].real(), 0.0, 0.00001);
-        EXPECT_NEAR(data->data[i].imag(), 0.0, 0.00001);
+        EXPECT_NEAR(data->data_out[i].real(), 0.0, 0.00001);
+        EXPECT_NEAR(data->data_out[i].imag(), 0.0, 0.00001);
     }
 }
 
@@ -90,11 +90,11 @@ TEST_F(FFTKernelTest, IFFTCloseToZeroForAll1And1) {
         data->data[i].imag(0.0);
     }
     auto result = bm->executeKernel(*data);
-    EXPECT_NEAR(data->data[0].real(), static_cast<HOST_DATA_TYPE>(1 << LOG_FFT_SIZE), 0.00001);
-    EXPECT_NEAR(data->data[0].imag(), 0.0, 0.00001);
+    EXPECT_NEAR(data->data_out[0].real(), static_cast<HOST_DATA_TYPE>(1 << LOG_FFT_SIZE), 0.00001);
+    EXPECT_NEAR(data->data_out[0].imag(), 0.0, 0.00001);
     for (int i=1; i < (1 << LOG_FFT_SIZE); i++) {
-        EXPECT_NEAR(data->data[i].real(), 0.0, 0.00001);
-        EXPECT_NEAR(data->data[i].imag(), 0.0, 0.00001);
+        EXPECT_NEAR(data->data_out[i].real(), 0.0, 0.00001);
+        EXPECT_NEAR(data->data_out[i].imag(), 0.0, 0.00001);
     }
 }
 
@@ -108,18 +108,24 @@ TEST_F(FFTKernelTest, FFTandiFFTProduceResultCloseToSource) {
 
     // Normalize iFFT result
     for (int i=0; i<(1 << LOG_FFT_SIZE); i++) {
-        data->data[i] /=  (1 << LOG_FFT_SIZE);
+        data->data_out[i] /=  (1 << LOG_FFT_SIZE);
     }
 
     // Need to again bit reverse input for iFFT
-    fft::bit_reverse(data->data, 1);
+    fft::bit_reverse(data->data_out, 1);
+
+    // Copy to input buffer for iFFT
+    for (int i=0; i<(1 << LOG_FFT_SIZE); i++) {
+        data->data[i] =  data->data_out[i];
+    }
+
     bm->getExecutionSettings().programSettings->inverse = true;
     auto result2 = bm->executeKernel(*data);
     // Since data was already sorted by iFFT the bit reversal of the kernel has t be undone
-    fft::bit_reverse(data->data, 1);
+    fft::bit_reverse(data->data_out, 1);
 
     for (int i=1; i < (1 << LOG_FFT_SIZE); i++) {
-        EXPECT_NEAR(std::abs(data->data[i]), std::abs(verify_data->data[i]), 0.001);
+        EXPECT_NEAR(std::abs(data->data_out[i]), std::abs(verify_data->data[i]), 0.001);
     }
 }
 
@@ -136,10 +142,10 @@ TEST_F(FFTKernelTest, FPGAFFTAndCPUFFTGiveSameResults) {
 
     // Normalize iFFT result
     for (int i=0; i<(1 << LOG_FFT_SIZE); i++) {
-        data->data[i] -= verify_data->data[i];
+        data->data_out[i] -= verify_data->data[i];
     }
     for (int i=1; i < (1 << LOG_FFT_SIZE); i++) {
-        EXPECT_NEAR(std::abs(data->data[i]), 0.0, 0.001);
+        EXPECT_NEAR(std::abs(data->data_out[i]), 0.0, 0.001);
     }
 }
 
@@ -157,9 +163,9 @@ TEST_F(FFTKernelTest, FPGAiFFTAndCPUiFFTGiveSameResults) {
 
     // Normalize iFFT result
     for (int i=0; i<(1 << LOG_FFT_SIZE); i++) {
-        data->data[i] -= verify_data->data[i];
+        data->data_out[i] -= verify_data->data[i];
     }
     for (int i=1; i < (1 << LOG_FFT_SIZE); i++) {
-        EXPECT_NEAR(std::abs(data->data[i]), 0.0, 0.001);
+        EXPECT_NEAR(std::abs(data->data_out[i]), 0.0, 0.001);
     }
 }
