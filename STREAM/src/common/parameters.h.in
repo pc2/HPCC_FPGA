@@ -22,6 +22,7 @@
 #define BUFFER_SIZE @DEVICE_BUFFER_SIZE@
 #cmakedefine INNER_LOOP_BUFFERS
 #cmakedefine USE_SVM
+#cmakedefine USE_HBM
 
 #define PROGRAM_DESCRIPTION "Implementation of the STREAM benchmark"\
                             " proposed in the HPCC benchmark suite for FPGA.\n"\
