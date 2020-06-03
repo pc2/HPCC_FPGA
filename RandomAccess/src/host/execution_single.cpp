@@ -56,7 +56,11 @@ namespace bm_execution {
 
             int memory_bank_info = 0;
 #ifdef INTEL_FPGA
+#ifdef USE_HBM
+            memory_bank_info = CL_MEM_HETEROGENEOUS_INTELFPGA;
+#else
             memory_bank_info = ((r + 1) << 16);
+#endif
 #endif
             Buffer_data.push_back(cl::Buffer(*config.context,
                         CL_MEM_READ_WRITE | memory_bank_info,
