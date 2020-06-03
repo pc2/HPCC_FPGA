@@ -48,6 +48,39 @@ transpose::TransposeProgramSettings::getSettingsMap() {
         return map;
 }
 
+transpose::TransposeData::TransposeData(cl::Context context, uint size) : context(context) {
+#ifdef USE_SVM
+    A = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        size * size * sizeof(HOST_DATA_TYPE), 1024));
+    B = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        size * size * sizeof(HOST_DATA_TYPE), 1024));
+    result = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        size * size * sizeof(HOST_DATA_TYPE), 1024));
+#else
+    posix_memalign(reinterpret_cast<void **>(&A), 64,
+                sizeof(HOST_DATA_TYPE) * size * size);
+    posix_memalign(reinterpret_cast<void **>(&B), 64,
+                sizeof(HOST_DATA_TYPE) * size * size);
+    posix_memalign(reinterpret_cast<void **>(&result), 64,
+                sizeof(HOST_DATA_TYPE) * size * size);
+#endif
+}
+
+transpose::TransposeData::~TransposeData() {
+#ifdef USE_SVM
+    clSVMFree(context(), reinterpret_cast<void*>(A));
+    clSVMFree(context(), reinterpret_cast<void*>(B));
+    clSVMFree(context(), reinterpret_cast<void*>(result));
+#else
+    free(A);
+    free(B);
+    free(result);
+#endif
+}
+
 transpose::TransposeBenchmark::TransposeBenchmark(int argc, char* argv[]) {
     setupBenchmark(argc, argv);
 }
@@ -102,7 +135,7 @@ transpose::TransposeBenchmark::printResults(const transpose::TransposeExecutionT
 
 std::unique_ptr<transpose::TransposeData>
 transpose::TransposeBenchmark::generateInputData() {
-    auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(executionSettings->programSettings->matrixSize));
+    auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*executionSettings->context, executionSettings->programSettings->matrixSize));
 
     std::mt19937 gen(7);
     std::uniform_real_distribution<> dis(-100.0, 100.0);

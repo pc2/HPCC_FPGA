@@ -104,51 +104,24 @@ public:
     HOST_DATA_TYPE *C;
 
     /**
+     * @brief The context that is used to allocate memory in SVM mode
+     * 
+     */
+    cl::Context context;
+
+    /**
      * @brief Construct a new Stream Data object
      * 
-     * @param context the context that will be used to allocate SVM memory
+     * @param _context the context that will be used to allocate SVM memory
      * @param size the size of the data arrays in number of values
      */
-    StreamData(const cl::Context& context, size_t size) {
-    #ifdef INTEL_FPGA
-    #ifdef USE_SVM
-        A = reinterpret_cast<HOST_DATA_TYPE*>(
-                                clSVMAlloc(context(), 0 ,
-                                size * sizeof(HOST_DATA_TYPE), 1024));
-        B = reinterpret_cast<HOST_DATA_TYPE*>(
-                                clSVMAlloc(context(), 0 ,
-                                size * sizeof(HOST_DATA_TYPE), 1024));
-        C = reinterpret_cast<HOST_DATA_TYPE*>(
-                                clSVMAlloc(context(), 0 ,
-                                size * sizeof(HOST_DATA_TYPE), 1024));
-    #else
-        posix_memalign(reinterpret_cast<void**>(&A), 64, size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&B), 64, size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&C), 64, size * sizeof(HOST_DATA_TYPE));
-    #endif
-    #endif
-    #ifdef XILINX_FPGA
-        posix_memalign(reinterpret_cast<void**>(&A), 4096, size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&B), 4096, size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&C), 4096, size * sizeof(HOST_DATA_TYPE));
-    #endif
-    }
+    StreamData(const cl::Context& _context, size_t size);
 
     /**
      * @brief Destroy the Stream Data object
      * 
      */
-    ~StreamData() {
-    #ifdef USE_SVM
-        clSVMFree(A);
-        clSVMFree(B);
-        clSVMFree(C);
-    #else
-        free(A);
-        free(B);
-        free(C);
-    #endif
-    }
+    ~StreamData();
 
 };
 

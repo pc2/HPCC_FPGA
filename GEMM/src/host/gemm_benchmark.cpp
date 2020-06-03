@@ -46,6 +46,42 @@ gemm::GEMMProgramSettings::getSettingsMap() {
         return map;
 }
 
+gemm::GEMMData::GEMMData(cl::Context context, uint size) : normtotal(0.0), alpha(0.5), beta(2.0), context(context) {
+#ifdef USE_SVM
+    A = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        size * size * sizeof(HOST_DATA_TYPE), 1024));
+    B = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        size * size * sizeof(HOST_DATA_TYPE), 1024));
+    C = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        size * size * sizeof(HOST_DATA_TYPE), 1024));
+    C_out = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        size * size * sizeof(HOST_DATA_TYPE), 1024));
+#else
+    posix_memalign(reinterpret_cast<void**>(&A), 4096, size * size * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&B), 4096, size * size * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&C), 4096, size * size * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&C_out), 4096, size * size * sizeof(HOST_DATA_TYPE));
+#endif
+}
+
+gemm::GEMMData::~GEMMData() {
+#ifdef USE_SVM
+    clSVMFree(context(), reinterpret_cast<void**>(A));
+    clSVMFree(context(), reinterpret_cast<void**>(B));
+    clSVMFree(context(), reinterpret_cast<void**>(C));
+    clSVMFree(context(), reinterpret_cast<void**>(C_out));
+#else
+    free(A);
+    free(B);
+    free(C);
+    free(C_out);
+#endif
+}
+
 gemm::GEMMBenchmark::GEMMBenchmark(int argc, char* argv[]) {
     setupBenchmark(argc, argv);
 }
@@ -74,9 +110,9 @@ gemm::GEMMBenchmark::printResults(const gemm::GEMMExecutionTimings &output) {
     double tmean = 0;
     double tmin = std::numeric_limits<double>::max();
 
-    double gflops = 2.0 * static_cast<double>(executionSettings->programSettings->matrixSize
-                                            *executionSettings->programSettings->matrixSize
-                                            *executionSettings->programSettings->matrixSize)/1.0e9;
+    double gflops = 2.0 * (static_cast<double>(executionSettings->programSettings->matrixSize)
+                        *static_cast<double>(executionSettings->programSettings->matrixSize)
+                        *static_cast<double>(executionSettings->programSettings->matrixSize))/1.0e9;
     for (double currentTime : output.timings) {
         tmean +=  currentTime;
         if (currentTime < tmin) {
@@ -94,7 +130,7 @@ gemm::GEMMBenchmark::printResults(const gemm::GEMMExecutionTimings &output) {
 
 std::unique_ptr<gemm::GEMMData>
 gemm::GEMMBenchmark::generateInputData() {
-    auto d = std::unique_ptr<gemm::GEMMData>(new gemm::GEMMData(executionSettings->programSettings->matrixSize));
+    auto d = std::unique_ptr<gemm::GEMMData>(new gemm::GEMMData(*executionSettings->context, executionSettings->programSettings->matrixSize));
     std::mt19937 gen(7);
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {

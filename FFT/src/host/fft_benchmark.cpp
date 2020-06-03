@@ -47,6 +47,30 @@ fft::FFTProgramSettings::getSettingsMap() {
         return map;
 }
 
+fft::FFTData::FFTData(cl::Context context, uint iterations) : context(context) {
+#ifdef USE_SVM
+    data = reinterpret_cast<std::complex<HOST_DATA_TYPE>*>(
+                        clSVMAlloc(context(), 0 ,
+                        iterations * (1 << LOG_FFT_SIZE) * sizeof(std::complex<HOST_DATA_TYPE>), 1024));
+    data_out = reinterpret_cast<std::complex<HOST_DATA_TYPE>*>(
+                        clSVMAlloc(context(), 0 ,
+                        iterations * (1 << LOG_FFT_SIZE) * sizeof(std::complex<HOST_DATA_TYPE>), 1024));
+#else
+    posix_memalign(reinterpret_cast<void**>(&data), 64, iterations * (1 << LOG_FFT_SIZE) * sizeof(std::complex<HOST_DATA_TYPE>));
+    posix_memalign(reinterpret_cast<void**>(&data_out), 64, iterations * (1 << LOG_FFT_SIZE) * sizeof(std::complex<HOST_DATA_TYPE>));
+#endif
+}
+
+fft::FFTData::~FFTData() {
+#ifdef USE_SVM
+    clSVMFree(context(), reinterpret_cast<void*>(data));
+    clSVMFree(context(), reinterpret_cast<void*>(data_out));
+#else
+    free(data);
+    free(data_out);
+#endif
+}
+
 fft::FFTBenchmark::FFTBenchmark(int argc, char* argv[]) {
     setupBenchmark(argc, argv);
 }
@@ -63,7 +87,7 @@ fft::FFTBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
 
 std::unique_ptr<fft::FFTExecutionTimings>
 fft::FFTBenchmark::executeKernel(FFTData &data) {
-    return bm_execution::calculate(*executionSettings, data.data,executionSettings->programSettings->iterations,
+    return bm_execution::calculate(*executionSettings, data.data, data.data_out, executionSettings->programSettings->iterations,
                                          executionSettings->programSettings->inverse);
 }
 
@@ -85,33 +109,34 @@ fft::FFTBenchmark::printResults(const fft::FFTExecutionTimings &output) {
 
 std::unique_ptr<fft::FFTData>
 fft::FFTBenchmark::generateInputData() {
-    auto d = std::unique_ptr<fft::FFTData>(new fft::FFTData(executionSettings->programSettings->iterations));
+    auto d = std::unique_ptr<fft::FFTData>(new fft::FFTData(*executionSettings->context, executionSettings->programSettings->iterations));
     std::mt19937 gen(0);
     auto dis = std::uniform_real_distribution<HOST_DATA_TYPE>(-1.0, 1.0);
     for (int i=0; i< executionSettings->programSettings->iterations * (1 << LOG_FFT_SIZE); i++) {
         d->data[i].real(dis(gen));
         d->data[i].imag(dis(gen));
+        d->data_out[i].real(0.0);
+        d->data_out[i].imag(0.0);
     }
     return d;
 }
 
 bool  
 fft::FFTBenchmark::validateOutputAndPrintError(fft::FFTData &data) {
-    auto verify_data = generateInputData();
     double residual_max = 0;
     for (int i = 0; i < executionSettings->programSettings->iterations; i++) {
         // we have to bit reverse the output data of the FPGA kernel, since it will be provided in bit-reversed order.
         // Directly applying iFFT on the data would thus not form the identity function we want to have for verification.
         // TODO: This might need to be changed for other FPGA implementations that return the data in correct order
-        fft::bit_reverse(&data.data[i * (1 << LOG_FFT_SIZE)], 1);
-        fft::fourier_transform_gold(true, LOG_FFT_SIZE, &data.data[i * (1 << LOG_FFT_SIZE)]);
+        fft::bit_reverse(&data.data_out[i * (1 << LOG_FFT_SIZE)], 1);
+        fft::fourier_transform_gold(true, LOG_FFT_SIZE, &data.data_out[i * (1 << LOG_FFT_SIZE)]);
 
         // Normalize the data after applying iFFT
         for (int j = 0; j < (1 << LOG_FFT_SIZE); j++) {
-            data.data[i * (1 << LOG_FFT_SIZE) + j] /= (1 << LOG_FFT_SIZE);
+            data.data_out[i * (1 << LOG_FFT_SIZE) + j] /= (1 << LOG_FFT_SIZE);
         }
         for (int j = 0; j < (1 << LOG_FFT_SIZE); j++) {
-            double tmp_error =  std::abs(verify_data->data[i * (1 << LOG_FFT_SIZE) + j] - data.data[i * (1 << LOG_FFT_SIZE) + j]);
+            double tmp_error =  std::abs(data.data[i * (1 << LOG_FFT_SIZE) + j] - data.data_out[i * (1 << LOG_FFT_SIZE) + j]);
             residual_max = residual_max > tmp_error ? residual_max : tmp_error;
         }
     }

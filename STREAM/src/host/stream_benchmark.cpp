@@ -53,6 +53,43 @@ stream::StreamProgramSettings::getSettingsMap() {
         return map;
 }
 
+stream::StreamData::StreamData(const cl::Context& _context, size_t size) : context(_context) {
+#ifdef INTEL_FPGA
+#ifdef USE_SVM
+    A = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc(context(), 0 ,
+                            size * sizeof(HOST_DATA_TYPE), 1024));
+    B = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc(context(), 0 ,
+                            size * sizeof(HOST_DATA_TYPE), 1024));
+    C = reinterpret_cast<HOST_DATA_TYPE*>(
+                            clSVMAlloc(context(), 0 ,
+                            size * sizeof(HOST_DATA_TYPE), 1024));
+#else
+    posix_memalign(reinterpret_cast<void**>(&A), 64, size * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&B), 64, size * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&C), 64, size * sizeof(HOST_DATA_TYPE));
+#endif
+#endif
+#ifdef XILINX_FPGA
+    posix_memalign(reinterpret_cast<void**>(&A), 4096, size * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&B), 4096, size * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&C), 4096, size * sizeof(HOST_DATA_TYPE));
+#endif
+}
+
+stream::StreamData::~StreamData() {
+#ifdef USE_SVM
+    clSVMFree(context(), reinterpret_cast<void*>(A));
+    clSVMFree(context(), reinterpret_cast<void*>(B));
+    clSVMFree(context(), reinterpret_cast<void*>(C));
+#else
+    free(A);
+    free(B);
+    free(C);
+#endif
+}
+
 stream::StreamBenchmark::StreamBenchmark(int argc, char* argv[]) {
     setupBenchmark(argc, argv);
 }

@@ -10,6 +10,7 @@ set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
 set(DEFAULT_DEVICE -1 CACHE STRING "Index of the default device to use")
 set(DEFAULT_PLATFORM -1 CACHE STRING "Index of the default platform to use")
 set(USE_OPENMP ${USE_OPENMP} CACHE BOOL "Use OpenMP in the host code")
+set(USE_SVM No CACHE BOOL "Use SVM pointers instead of creating buffers on the board and transferring the data there before execution.")
 
 # Set the used data type
 if (NOT DATA_TYPE)

@@ -118,6 +118,12 @@ public:
     HOST_DATA_TYPE alpha;
 
     /**
+     * @brief The context that is used to allocate memory in SVM mode
+     * 
+     */
+    cl::Context context;
+
+    /**
      * @brief The scalar value that will be used for \f$\beta\f$ in the calculation
      * 
      */
@@ -126,25 +132,16 @@ public:
     /**
      * @brief Construct a new GEMM Data object
      * 
+     * @param context The OpenCL context used to allocate memory in SVM mode
      * @param size Size of the allocated square matrices
      */
-    GEMMData(uint size) : normtotal(0.0), alpha(0.5), beta(2.0) {
-        posix_memalign(reinterpret_cast<void**>(&A), 4096, size * size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&B), 4096, size * size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&C), 4096, size * size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&C_out), 4096, size * size * sizeof(HOST_DATA_TYPE));
-    }
+    GEMMData(cl::Context context, uint size);
 
     /**
      * @brief Destroy the GEMM Data object. Free the allocated memory
      * 
      */
-    ~GEMMData() {
-        free(A);
-        free(B);
-        free(C);
-        free(C_out);
-    }
+    ~GEMMData();
 
 };
 

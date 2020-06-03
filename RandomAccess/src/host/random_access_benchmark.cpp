@@ -50,6 +50,24 @@ random_access::RandomAccessProgramSettings::getSettingsMap() {
         return map;
 }
 
+random_access::RandomAccessData::RandomAccessData(cl::Context& context, size_t size) : context(context) {
+#ifdef USE_SVM
+    data = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        size * sizeof(HOST_DATA_TYPE), 1024));
+#else
+    posix_memalign(reinterpret_cast<void**>(&data), 4096, size * sizeof(HOST_DATA_TYPE));
+#endif
+}
+
+random_access::RandomAccessData::~RandomAccessData() {
+#ifdef USE_SVM
+    clSVMFree(context(), reinterpret_cast<void*>(data));
+#else
+    free(data);
+#endif
+}
+
 random_access::RandomAccessBenchmark::RandomAccessBenchmark(int argc, char* argv[]) {
     setupBenchmark(argc, argv);
 }

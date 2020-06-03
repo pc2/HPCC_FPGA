@@ -46,6 +46,36 @@ linpack::LinpackProgramSettings::getSettingsMap() {
         return map;
 }
 
+linpack::LinpackData::LinpackData(cl::Context context, uint size) : norma(0.0), context(context) {
+#ifdef USE_SVM
+    A = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        size * size * sizeof(HOST_DATA_TYPE), 1024));
+    b = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        size  * sizeof(HOST_DATA_TYPE), 1024));
+    ipvt = reinterpret_cast<cl_int*>(
+                        clSVMAlloc(context(), 0 ,
+                        size * sizeof(cl_int), 1024));
+#else
+    posix_memalign(reinterpret_cast<void**>(&A), 4096, size * size * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&b), 4096, size * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&ipvt), 4096, size * sizeof(cl_int));
+#endif
+    }
+
+linpack::LinpackData::~LinpackData() {
+#ifdef USE_SVM
+    clSVMFree(context(), reinterpret_cast<void*>(A));
+    clSVMFree(context(), reinterpret_cast<void*>(b));
+    clSVMFree(context(), reinterpret_cast<void*>(ipvt));
+#else
+    free(A);
+    free(b);
+    free(ipvt);
+#endif
+}
+
 linpack::LinpackBenchmark::LinpackBenchmark(int argc, char* argv[]) {
     setupBenchmark(argc, argv);
 }
@@ -100,7 +130,7 @@ linpack::LinpackBenchmark::printResults(const linpack::LinpackExecutionTimings &
 
 std::unique_ptr<linpack::LinpackData>
 linpack::LinpackBenchmark::generateInputData() {
-    auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(executionSettings->programSettings->matrixSize));
+    auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(*executionSettings->context ,executionSettings->programSettings->matrixSize));
     std::mt19937 gen(7);
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     d->norma = 0.0;

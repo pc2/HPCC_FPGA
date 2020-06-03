@@ -47,7 +47,7 @@ simple exchange of the different calculation methods.
 @return The resulting matrix
 */
     std::unique_ptr<fft::FFTExecutionTimings>
-    calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const& config, std::complex<HOST_DATA_TYPE>* data, unsigned iterations, bool inverse);
+    calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const& config, std::complex<HOST_DATA_TYPE>* data, std::complex<HOST_DATA_TYPE>* data_out, unsigned iterations, bool inverse);
 
 }  // namespace bm_execution
 

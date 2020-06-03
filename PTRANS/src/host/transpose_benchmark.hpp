@@ -98,28 +98,24 @@ public:
     HOST_DATA_TYPE *result;
 
     /**
+     * @brief The context that is used to allocate memory in SVM mode
+     * 
+     */
+    cl::Context context;
+
+    /**
      * @brief Construct a new Transpose Data object
      * 
+     * @param context Context that is used to allocate memory for SVM
      * @param size Size of the allocated square matrices
      */
-    TransposeData(uint size) {
-        posix_memalign(reinterpret_cast<void **>(&A), 64,
-                    sizeof(HOST_DATA_TYPE) * size * size);
-        posix_memalign(reinterpret_cast<void **>(&B), 64,
-                    sizeof(HOST_DATA_TYPE) * size * size);
-        posix_memalign(reinterpret_cast<void **>(&result), 64,
-                    sizeof(HOST_DATA_TYPE) * size * size);
-    }
+    TransposeData(cl::Context context, uint size);
 
     /**
      * @brief Destroy the Transpose Data object. Free the allocated memory
      * 
      */
-    ~TransposeData() {
-        free(A);
-        free(B);
-        free(result);
-    }
+    ~TransposeData();
 
 };
 

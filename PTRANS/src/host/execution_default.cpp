@@ -52,9 +52,18 @@ namespace bm_execution {
 
         cl::Kernel transposeKernel(*config.program, KERNEL_NAME);
 
+#ifdef USE_SVM
+        clSetKernelArgSVMPointer(transposeKernel(), 0,
+                                        reinterpret_cast<void*>(A));
+        clSetKernelArgSVMPointer(transposeKernel(), 1,
+                                        reinterpret_cast<void*>(B));
+        clSetKernelArgSVMPointer(transposeKernel(), 2,
+                                        reinterpret_cast<void*>(A_out));
+#else
         transposeKernel.setArg(0, bufferA);
         transposeKernel.setArg(1, bufferB);
         transposeKernel.setArg(2, bufferA_out);
+#endif
         transposeKernel.setArg(3, config.programSettings->matrixSize / config.programSettings->blockSize);
 
         cl::CommandQueue queue(*config.context);
@@ -65,10 +74,31 @@ namespace bm_execution {
         for (int repetition = 0; repetition < config.programSettings->numRepetitions; repetition++) {
 
             auto startTransfer = std::chrono::high_resolution_clock::now();
+#ifdef USE_SVM
+        clEnqueueSVMMap(queue(), CL_TRUE,
+                        CL_MAP_READ,
+                        reinterpret_cast<void *>(A),
+                        sizeof(HOST_DATA_TYPE) *
+                        (config.programSettings->matrixSize * config.programSettings->matrixSize), 0,
+                        NULL, NULL);
+        clEnqueueSVMMap(queue(), CL_TRUE,
+                        CL_MAP_READ,
+                        reinterpret_cast<void *>(B),
+                        sizeof(HOST_DATA_TYPE) *
+                        (config.programSettings->matrixSize * config.programSettings->matrixSize), 0,
+                        NULL, NULL);
+        clEnqueueSVMMap(queue(), CL_TRUE,
+                        CL_MAP_WRITE,
+                        reinterpret_cast<void *>(A_out),
+                        sizeof(HOST_DATA_TYPE) *
+                        (config.programSettings->matrixSize * config.programSettings->matrixSize), 0,
+                        NULL, NULL);
+#else
             queue.enqueueWriteBuffer(bufferA, CL_FALSE, 0,
                                      sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, A);
             queue.enqueueWriteBuffer(bufferB, CL_FALSE, 0,
                                      sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, B);
+#endif
             queue.finish();
             auto endTransfer = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> transferTime =
@@ -85,8 +115,20 @@ namespace bm_execution {
             calculationTimings.push_back(calculationTime.count());
 
             startTransfer = std::chrono::high_resolution_clock::now();
+#ifdef USE_SVM
+            clEnqueueSVMUnmap(queue(),
+                                reinterpret_cast<void *>(A), 0,
+                                NULL, NULL);
+            clEnqueueSVMUnmap(queue(),
+                                reinterpret_cast<void *>(B), 0,
+                                NULL, NULL);
+            clEnqueueSVMUnmap(queue(),
+                                reinterpret_cast<void *>(A_out), 0,
+                                NULL, NULL);
+#else
             queue.enqueueReadBuffer(bufferA_out, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, A_out);
+#endif
             endTransfer = std::chrono::high_resolution_clock::now();
             transferTime +=
                     std::chrono::duration_cast<std::chrono::duration<double>>

@@ -93,6 +93,12 @@ public:
     cl_int* ipvt;
 
     /**
+     * @brief The context that is used to allocate memory in SVM mode
+     * 
+     */
+    cl::Context context;
+
+    /**
      * @brief The maximum value of A that will be used for the error calculation
      * 
      */
@@ -101,23 +107,16 @@ public:
     /**
      * @brief Construct a new Linpack Data object
      * 
+     * @param context The OpenCL context used to allocate memory in SVM mode
      * @param size Size of the allocated square matrix and vectors
      */
-    LinpackData(uint size) : norma(0.0) {
-        posix_memalign(reinterpret_cast<void**>(&A), 4096, size * size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&b), 4096, size * sizeof(HOST_DATA_TYPE));
-        posix_memalign(reinterpret_cast<void**>(&ipvt), 4096, size * sizeof(cl_int));
-    }
+    LinpackData(cl::Context context, uint size);
 
     /**
      * @brief Destroy the Linpack Data object. Free the allocated memory
      * 
      */
-    ~LinpackData() {
-        free(A);
-        free(b);
-        free(ipvt);
-    }
+    ~LinpackData();
 
 };
 
