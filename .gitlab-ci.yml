@@ -84,7 +84,7 @@ build:GEMM:
     - make all
   artifacts:
     paths:
-      - build/bin/gemm_cannon_emulate.aocx
+      - build/bin/gemm_base_emulate.aocx
       - build/bin/GEMM_intel
       - build/bin/GEMM_test_intel
 
