@@ -2,10 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
-## 0.2.3
+## 0.3
 
 #### Added:
 - Optimize Kernel for Xilinx
+- Add vendor specific code for Intel
 
 #### Changed:
 - Fix bugs in host code, add tests

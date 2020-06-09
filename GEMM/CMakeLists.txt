@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(GEMM VERSION 0.2.3 )
+project(GEMM VERSION 0.3 )
 
 set(KERNEL_NAME gemm CACHE STRING "Name of the OpenCL kernel")
 set(DEFAULT_MATRIX_SIZE 8 CACHE STRING "Default size of the used matrices")

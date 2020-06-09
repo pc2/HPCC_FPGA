@@ -95,7 +95,7 @@ For more information on available input parameters run
     
 To execute the unit and integration tests run
 
-    ./GE__test_intel -f KERNEL_FILE_NAME
+    ./GEMM_test_intel -f KERNEL_FILE_NAME
     
 in the `bin` folder within the build directory.
 It will run an emulation of the kernel and execute some functionality tests.

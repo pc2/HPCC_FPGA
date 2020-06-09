@@ -23,30 +23,6 @@ SOFTWARE.
 #include "parameters.h"
 
 /**
-Store a block to global memory
-
-@param a_block local memory buffer to load the block from
-@param a the global memory buffer of the Matrix
-@param x_block x position of the block
-@param y_block y position of the block
-@param lda_block LDA of the matrix in number of blocks
-*/
-void
-store_block(DEVICE_DATA_TYPE a_block[BLOCK_SIZE][BLOCK_SIZE],
-            global DEVICE_DATA_TYPE* restrict a,
-            uint x_block, uint y_block, uint lda_block) {
-
-    for (int i = 0; i < BLOCK_SIZE; i++) {
-#pragma unroll GLOBAL_MEM_UNROLL
-        for (int j = 0; j < BLOCK_SIZE; j++) {
-            a[(y_block * lda_block * BLOCK_SIZE + x_block) * BLOCK_SIZE + j
-              + i * lda_block * BLOCK_SIZE] = a_block[i][j];
-        }
-    }
-}
-
-
-/**
 Calculate for the Level 2 block:
 
 do_acc true:  c = c + a * b
@@ -79,7 +55,7 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
     for (int y=0; y<GEMM_BLOCK; y++) {
         __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK; x++) {
-            float sum = do_acc ? c_out[y][x] : 0.f;
+            DEVICE_DATA_TYPE sum = 0.f;
             __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
             for (int i=0; i<GEMM_BLOCK; i++) {
                 sum += a_block[y][i] * b_block[i][x];
@@ -93,7 +69,7 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
     for(int y=0; y < GEMM_BLOCK; y++) {
         __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK; x++) {
-            c_out[y][x] = c_block[y][x];
+            c_out[y][x] = do_acc ? c_out[y][x] + c_block[y][x] : c_block[y][x];
         }
     }
 }
@@ -115,8 +91,41 @@ local_gemm(const DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / 
            DEVICE_DATA_TYPE c_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
                                         [GEMM_BLOCK][GEMM_BLOCK],
            const bool do_acc) {
+/**
+The BRAM matrix multiplication works differently for Intel and Xilinx.
+For Intel the kernel calculates the complete result of an GEMM_BLOCKxGEMM_BLOCK 
+matrix block in registers and writes it back to BRAM. Thus, k is the most inner loop.
 
-    #pragma loop_coalesce 3
+For Xilinx, k is the outer loop and thus it will calculate parial results for all
+GEMM_BLOCKxGEMM_BLOCK matrix block and write the partial result directly back
+to BRAM.
+ */
+#ifdef INTEL_FPGA
+    #pragma loop_coalesce 2
+    // For each column in top block
+    for (int i = 0; i < BLOCK_SIZE / GEMM_BLOCK; i++) {
+        // For each element below it in current block
+        for (int j = 0; j < BLOCK_SIZE / GEMM_BLOCK; j++) {
+            // For Intel FPGA accumulate all partial results in registers
+            // tmp_mul and only write back to BRAM once 
+            DEVICE_DATA_TYPE tmp_mul[GEMM_BLOCK][GEMM_BLOCK];
+            // For each diagonal element in left block
+            for (int k=0; k < BLOCK_SIZE / GEMM_BLOCK; k++) {
+                // accumulate when working on following ks
+                register_gemm(a_block[i][k], b_block[k][j],
+                    tmp_mul, (k>0));
+            }
+            // Write back accumulated result to BRAM and accumulate if requested from outside
+            __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+            for(int y=0; y < GEMM_BLOCK; y++) {
+                __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+                for (int x=0; x<GEMM_BLOCK; x++) {
+                    c_block[i][j][y][x] = do_acc ? c_block[i][j][y][x] + tmp_mul[y][x] : tmp_mul[y][x];
+                }
+            }    
+        }
+    }
+#else
     // For each diagonal element in left block
     for (int k=0; k < BLOCK_SIZE / GEMM_BLOCK; k++) {
         // For each column in top block
@@ -129,6 +138,7 @@ local_gemm(const DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / 
             }
         }
     }
+#endif
 }
 
 
@@ -175,22 +185,22 @@ void gemm(__global const DEVICE_DATA_TYPE* restrict a,
 
 #pragma loop_coalesce 2
                 for (int i = 0; i < BLOCK_SIZE ; i++) {
-                    for (int j = 0; j < BLOCK_SIZE / GLOBAL_MEM_UNROLL; j++) {
+                    for (int j = 0; j < BLOCK_SIZE; j += GLOBAL_MEM_UNROLL) {
                         DEVICE_DATA_TYPE a_reorder_buffer[GLOBAL_MEM_UNROLL];
                         DEVICE_DATA_TYPE b_reorder_buffer[GLOBAL_MEM_UNROLL];
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                         for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
                             a_reorder_buffer[u] = a[(y_block * size + diagonal_block) * BLOCK_SIZE +
-                                j * GLOBAL_MEM_UNROLL + u + i * size];
+                                j + u + i * size];
                             b_reorder_buffer[u] = b[(diagonal_block * size + x_block) * BLOCK_SIZE +
-                                                          j * GLOBAL_MEM_UNROLL + u + i * size];
+                                                          j + u + i * size];
                         }
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/GEMM_BLOCK)))
                         for (int b = 0; b < GLOBAL_MEM_UNROLL/GEMM_BLOCK; b++) {
 __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                             for (int u = 0; u < GEMM_BLOCK; u++) {
-                                a_block[i / GEMM_BLOCK][j * (GLOBAL_MEM_UNROLL / GEMM_BLOCK)+ b][i & (GEMM_BLOCK - 1)][u] = a_reorder_buffer[b * GEMM_BLOCK + u];
-                                b_block[i / GEMM_BLOCK][j * (GLOBAL_MEM_UNROLL / GEMM_BLOCK)+ b][i & (GEMM_BLOCK - 1)][u] = b_reorder_buffer[b * GEMM_BLOCK + u];
+                                a_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = a_reorder_buffer[b * GEMM_BLOCK + u];
+                                b_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = b_reorder_buffer[b * GEMM_BLOCK + u];
                             }
                         }
                     }
