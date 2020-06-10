@@ -42,6 +42,7 @@ namespace bm_execution {
     std::unique_ptr<transpose::TransposeExecutionTimings>
     calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, HOST_DATA_TYPE *const A,
               HOST_DATA_TYPE *const B, HOST_DATA_TYPE *A_out) {
+        int err;
 
         cl::Buffer bufferA(*config.context, CL_MEM_READ_ONLY,
                            sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize);
@@ -50,23 +51,32 @@ namespace bm_execution {
         cl::Buffer bufferA_out(*config.context, CL_MEM_WRITE_ONLY,
                                sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize);
 
-        cl::Kernel transposeKernel(*config.program, KERNEL_NAME);
+        cl::Kernel transposeKernel(*config.program, KERNEL_NAME, &err);
+        ASSERT_CL(err)
 
 #ifdef USE_SVM
-        clSetKernelArgSVMPointer(transposeKernel(), 0,
+        err = clSetKernelArgSVMPointer(transposeKernel(), 0,
                                         reinterpret_cast<void*>(A));
-        clSetKernelArgSVMPointer(transposeKernel(), 1,
+        ASSERT_CL(err)
+        err = clSetKernelArgSVMPointer(transposeKernel(), 1,
                                         reinterpret_cast<void*>(B));
-        clSetKernelArgSVMPointer(transposeKernel(), 2,
+        ASSERT_CL(err)
+        err = clSetKernelArgSVMPointer(transposeKernel(), 2,
                                         reinterpret_cast<void*>(A_out));
+        ASSERT_CL(err)
 #else
-        transposeKernel.setArg(0, bufferA);
-        transposeKernel.setArg(1, bufferB);
-        transposeKernel.setArg(2, bufferA_out);
+        err = transposeKernel.setArg(0, bufferA);
+        ASSERT_CL(err)
+        err = transposeKernel.setArg(1, bufferB);
+        ASSERT_CL(err)
+        err = transposeKernel.setArg(2, bufferA_out);
+        ASSERT_CL(err)
 #endif
-        transposeKernel.setArg(3, config.programSettings->matrixSize / config.programSettings->blockSize);
+        err = transposeKernel.setArg(3, config.programSettings->matrixSize / config.programSettings->blockSize);
+        ASSERT_CL(err)
 
-        cl::CommandQueue queue(*config.context);
+        cl::CommandQueue queue(*config.context, *config.device, 0, &err);
+        ASSERT_CL(err)
 
         std::vector<double> transferTimings;
         std::vector<double> calculationTimings;

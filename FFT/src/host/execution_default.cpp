@@ -45,41 +45,56 @@ namespace bm_execution {
             std::complex<HOST_DATA_TYPE>* data_out,
             unsigned iterations,
             bool inverse) {
+        
+        int err;
 
         cl::Buffer inBuffer = cl::Buffer(*config.context, CL_MEM_WRITE_ONLY, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE));
         cl::Buffer outBuffer = cl::Buffer(*config.context, CL_MEM_READ_ONLY, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE));
 
-        cl::Kernel fetchKernel(*config.program, FETCH_KERNEL_NAME);
-        cl::Kernel fftKernel(*config.program, FFT_KERNEL_NAME);
+        cl::Kernel fetchKernel(*config.program, FETCH_KERNEL_NAME, &err);
+        ASSERT_CL(err)
+        cl::Kernel fftKernel(*config.program, FFT_KERNEL_NAME, &err);
+        ASSERT_CL(err)
 
 #ifdef USE_SVM
-        clSetKernelArgSVMPointer(fetchKernel(), 0,
+        err = clSetKernelArgSVMPointer(fetchKernel(), 0,
                                         reinterpret_cast<void*>(data));
-        clSetKernelArgSVMPointer(fftKernel(), 0,
+        ASSERT_CL(err)
+        err = clSetKernelArgSVMPointer(fftKernel(), 0,
                                         reinterpret_cast<void*>(data_out));
+        ASSERT_CL(err)
 #else
-        fetchKernel.setArg(0, inBuffer);
-        fftKernel.setArg(0, outBuffer);
+        err = fetchKernel.setArg(0, inBuffer);
+        ASSERT_CL(err)
+        err = fftKernel.setArg(0, outBuffer);
+        ASSERT_CL(err)
 #endif
-        fftKernel.setArg(1, iterations);
-        fftKernel.setArg(2, static_cast<cl_int>(inverse));
+        err = fftKernel.setArg(1, iterations);
+        ASSERT_CL(err)
+        err = fftKernel.setArg(2, static_cast<cl_int>(inverse));
+        ASSERT_CL(err)
 
-        cl::CommandQueue fetchQueue(*config.context);
-        cl::CommandQueue fftQueue(*config.context);
+        cl::CommandQueue fetchQueue(*config.context, *config.device, 0, &err);
+        ASSERT_CL(err)
+        cl::CommandQueue fftQueue(*config.context, *config.device, 0, &err);
+        ASSERT_CL(err)
 
 #ifdef USE_SVM
-        clEnqueueSVMMap(fetchQueue(), CL_TRUE,
+        err = clEnqueueSVMMap(fetchQueue(), CL_TRUE,
                         CL_MAP_READ,
                         reinterpret_cast<void *>(data),
                         (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), 0,
                         NULL, NULL);
-        clEnqueueSVMMap(fftQueue(), CL_TRUE,
+        ASSERT_CL(err)
+        err = clEnqueueSVMMap(fftQueue(), CL_TRUE,
                         CL_MAP_WRITE,
                         reinterpret_cast<void *>(data_out),
                         (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), 0,
                         NULL, NULL);
+        ASSERT_CL(err)
 #else
-        fetchQueue.enqueueWriteBuffer(inBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data);
+        err = fetchQueue.enqueueWriteBuffer(inBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data);
+        ASSERT_CL(err)
 #endif
 
         std::vector<double> calculationTimings;
@@ -97,14 +112,17 @@ namespace bm_execution {
             calculationTimings.push_back(calculationTime.count());
         }
 #ifdef USE_SVM
-            clEnqueueSVMUnmap(fetchQueue(),
+            err = clEnqueueSVMUnmap(fetchQueue(),
                                 reinterpret_cast<void *>(data), 0,
                                 NULL, NULL);
-            clEnqueueSVMUnmap(fftQueue(),
+        ASSERT_CL(err)
+            err = clEnqueueSVMUnmap(fftQueue(),
                                 reinterpret_cast<void *>(data_out), 0,
                                 NULL, NULL);
+        ASSERT_CL(err)
 #else
-        fetchQueue.enqueueReadBuffer(outBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data_out);
+        err = fetchQueue.enqueueReadBuffer(outBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data_out);
+        ASSERT_CL(err)
 #endif
 
         std::unique_ptr<fft::FFTExecutionTimings> result(new fft::FFTExecutionTimings{
