@@ -6,11 +6,21 @@
 #include "CL/cl.hpp"
 #include "test_program_settings.h"
 #include "gmock/gmock-matchers.h"
+#include "transpose_benchmark.hpp"
+
+
+struct TransposeHostTest : testing::Test {
+    std::unique_ptr<transpose::TransposeBenchmark> bm;
+
+    TransposeHostTest() {
+        bm = std::unique_ptr<transpose::TransposeBenchmark>( new transpose::TransposeBenchmark(global_argc, global_argv));
+    }
+};
 
 /**
  * Check if the output has the correct structure
  */
-TEST(ResultOutput, OutputsCorrectFormatHeader) {
+TEST_F(TransposeHostTest, OutputsCorrectFormatHeader) {
     std::vector<double> transferTimings;
     std::vector<double> calculateTimings;
     transferTimings.push_back(1.0);
@@ -36,7 +46,7 @@ TEST(ResultOutput, OutputsCorrectFormatHeader) {
 /**
  * Check if the output values have correct formatting
  */
-TEST(ResultOutput, OutputsCorrectFormatValues) {
+TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
     std::vector<double> transferTimings;
     std::vector<double> calculateTimings;
     transferTimings.push_back(1.0);
@@ -62,7 +72,7 @@ TEST(ResultOutput, OutputsCorrectFormatValues) {
 /**
  * Checks if the error is printed to stdout and the error is aggregated over the whole matrix.
  */
-TEST(ErrorOutput, AggregatedErrorIsPrinted) {
+TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
     bm->getExecutionSettings().programSettings->matrixSize = 4;
     bm->executeBenchmark();
     auto data = bm->generateInputData();
@@ -91,7 +101,7 @@ TEST(ErrorOutput, AggregatedErrorIsPrinted) {
 /**
  * Checks if the error is printed to stdout and validation can be success.
  */
-TEST(ErrorOutput, ValidationIsSuccess) {
+TEST_F(TransposeHostTest, ValidationIsSuccess) {
     bm->getExecutionSettings().programSettings->matrixSize = 4;
     bm->executeBenchmark();
     auto data = bm->generateInputData();

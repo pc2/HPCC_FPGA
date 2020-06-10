@@ -2,7 +2,7 @@
 // Created by Marius Meyer on 04.12.19.
 //
 #include <memory>
-
+#include "transpose_benchmark.hpp"
 #include "gtest/gtest.h"
 #include "parameters.h"
 #include "test_program_settings.h"
@@ -10,7 +10,12 @@
 
 struct TransposeKernelTest : testing::Test {
     std::shared_ptr<transpose::TransposeData> data;
+    std::unique_ptr<transpose::TransposeBenchmark> bm;
     uint matrix_size = BLOCK_SIZE;
+
+    TransposeKernelTest() {
+        bm = std::unique_ptr<transpose::TransposeBenchmark>( new transpose::TransposeBenchmark(global_argc, global_argv));
+    }
 
     void SetUp() override {
         matrix_size = BLOCK_SIZE;
