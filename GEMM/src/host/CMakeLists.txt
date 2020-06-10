@@ -6,7 +6,7 @@ if (NOT BLAS_FOUND)
 endif()
 
 add_subdirectory(../../../shared ${CMAKE_BINARY_DIR}/lib/hpccbase)
-set(HOST_SOURCE execution_cannon.cpp gemm_benchmark.cpp)
+set(HOST_SOURCE execution_default.cpp gemm_benchmark.cpp)
 
 set(HOST_EXE_NAME GEMM)
 set(LIB_NAME ge)
