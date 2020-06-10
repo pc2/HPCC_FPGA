@@ -20,9 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/* Project's headers */
-#include "linpack_benchmark.hpp"
-
 #include "gtest/gtest.h"
 #include "CL/cl.hpp"
 
@@ -41,7 +38,7 @@ public:
 };
 #endif
 
-using namespace linpack;
+extern void use_hpcc_base_lib();
 
 int global_argc;
 char** global_argv;
@@ -56,17 +53,18 @@ main(int argc, char *argv[]) {
 
     ::testing::InitGoogleTest(&argc, argv);
 
-    global_argc = argc;
-    global_argv = argv;
-
 #ifdef _USE_MPI_
     ::testing::Environment* const mpi_env =
         ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
 #endif
+
+    global_argc = argc;
+    global_argv = argv;
+
+    use_hpcc_base_lib();
 
     bool result = RUN_ALL_TESTS();
 
     return result;
 
 }
-
