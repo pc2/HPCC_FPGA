@@ -163,6 +163,18 @@ public:
                                     programSettings(std::move(programSettings_)), device(std::move(device_)), 
                                     context(std::move(context_)), program(std::move(program_)) {}
 
+    /**
+     * @brief Destroy the Execution Settings object. Used to specify the order the contained objects are destroyed 
+     *         to prevent segmentation faults during exit.
+     * 
+     */
+    ~ExecutionSettings() {
+        program = nullptr;
+        context = nullptr;
+        device = nullptr;
+        programSettings = nullptr;
+    }
+
 };
 
 /**
@@ -247,6 +259,7 @@ public:
     parseProgramParameters(int argc, char *argv[]) {
         // Defining and parsing program options
         cxxopts::Options options(argv[0], PROGRAM_DESCRIPTION);
+        options.allow_unrecognised_options();
         options.add_options()
                 ("f,file", "Kernel file name", cxxopts::value<std::string>())
                 ("n", "Number of repetitions",
@@ -263,25 +276,36 @@ public:
 
 
         addAdditionalParseOptions(options);
-        cxxopts::ParseResult result = options.parse(argc, argv);
 
-        if (result.count("h")) {
-            // Just print help when argument is given
-            std::cout << options.help() << std::endl;
-            exit(0);
+        try {
+
+            cxxopts::ParseResult result = options.parse(argc, argv);
+
+            if (result.count("h")) {
+                // Just print help when argument is given
+                std::cout << options.help() << std::endl;
+                exit(0);
+            }
+
+            // Check parsed options and handle special cases
+            if (result.count("f") <= 0) {
+                // Path to the kernel file is mandatory - exit if not given!
+                std::cerr << "Kernel file must be given! Aborting" << std::endl;
+                std::cout << options.help() << std::endl;
+                throw fpga_setup::FpgaSetupException("Mandatory option is missing");
+            }
+
+            // Create program settings from program arguments
+            std::unique_ptr<TSettings> sharedSettings(
+                    new TSettings(result));
+            return sharedSettings;
         }
-        // Check parsed options and handle special cases
-        if (result.count("f") <= 0) {
-            // Path to the kernel file is mandatory - exit if not given!
-            std::cerr << "Kernel file must be given! Aborting" << std::endl;
+        catch (cxxopts::OptionException e) {
+            std::cerr << "Error while parsing input parameters: "<< e.what() << std::endl;
             std::cout << options.help() << std::endl;
-            exit(1);
+            throw fpga_setup::FpgaSetupException("Input parameters could not be parsed");
         }
 
-        // Create program settings from program arguments
-        std::unique_ptr<TSettings> sharedSettings(
-                new TSettings(result));
-        return sharedSettings;
     }
 
     /**
@@ -306,28 +330,62 @@ public:
      * 
      * @param argc Number of input parameters as it is provided by the main function
      * @param argv Strings containing the input parameters as provided by the main function
+     * 
+     * @return true if setup was successful, false otherwise
      */
-    void 
-    setupBenchmark(int argc, char *argv[]) {
-        std::unique_ptr<TSettings> programSettings = parseProgramParameters(argc, argv);
-        auto usedDevice =
-            std::unique_ptr<cl::Device>(new cl::Device(fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
-                                            programSettings->defaultDevice)));
-        auto context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
-        auto program = std::unique_ptr<cl::Program>(new cl::Program(fpga_setup::fpgaSetup(context.get(), {*usedDevice},
-                                                &programSettings->kernelFileName)));
+    bool 
+    setupBenchmark(const int argc, char const* const* argv) {
+        bool success = true;
+        // Create deep copies of the input parameters to prevent modification from 
+        // the cxxopts library
+        int tmp_argc = argc;
+        auto tmp_argv = new char*[argc + 1];
+        auto tmp_pointer_storage = new char*[argc + 1];
+        for (int i =0; i < argc; i++) {
+            int len = strlen(argv[i]) + 1;
+            tmp_argv[i] = new char[len];
+            tmp_pointer_storage[i] = tmp_argv[i];
+            strcpy(tmp_argv[i], argv[i]);
+        }
+        tmp_argv[argc] = nullptr;
 
-        executionSettings = std::unique_ptr<ExecutionSettings<TSettings>>(new ExecutionSettings<TSettings>(std::move(programSettings), std::move(usedDevice), 
-                                                            std::move(context), std::move(program)));
-        // Get the rank of the process
-        int world_rank = 0;
+        try {
+
+            std::unique_ptr<TSettings> programSettings = parseProgramParameters(tmp_argc, tmp_argv);
+
+            auto usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
+                                                                programSettings->defaultDevice);
+
+            auto context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
+            auto program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
+                                                                &programSettings->kernelFileName);
+
+            executionSettings = std::unique_ptr<ExecutionSettings<TSettings>>(new ExecutionSettings<TSettings>(std::move(programSettings), std::move(usedDevice), 
+                                                                std::move(context), std::move(program)));
+            // Get the rank of the process
+            int world_rank = 0;
 
 #ifdef _USE_MPI_
-        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+            MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 #endif
-        if (world_rank == 0) {
-            printFinalConfiguration(*executionSettings);
+            if (world_rank == 0) {
+                printFinalConfiguration(*executionSettings);
+            }
         }
+        catch (fpga_setup::FpgaSetupException e) {
+            std::cerr << "An error occured while setting up the benchmark: " << std::endl;
+            std::cerr << "\t" << e.what() << std::endl;
+            success = false;
+        }
+
+        for (int i =0; i < argc; i++) {
+            delete [] tmp_pointer_storage[i];
+        }
+        delete [] tmp_argv;
+        delete [] tmp_pointer_storage;
+
+        return success;
+
     }
 
     /**
@@ -335,7 +393,7 @@ public:
      *          input data, exectuon of the kernel, validation and printing the result
      * 
      * @return true If the validation is a success
-     * @return false If the validation fails
+     * @return false If the validation fails or an execution error occured
      */
     bool
     executeBenchmark() {
@@ -348,43 +406,49 @@ public:
 
         if (!executionSettings.get()) {
             std::cerr << "Benchmark execution started without running the benchmark setup!" << std::endl;
-            exit(1);
+            return false;
         }
         if (world_rank == 0) {
             std::cout << HLINE << "Start benchmark using the given configuration. Generating data..." << std::endl
                     << HLINE;
         }
+       try {
+            auto gen_start = std::chrono::high_resolution_clock::now();
+            std::unique_ptr<TData> data = generateInputData();
+            std::chrono::duration<double> gen_time = std::chrono::high_resolution_clock::now() - gen_start;
+            
+            if (world_rank == 0) {
+                std::cout << "Generation Time: " << gen_time.count() << " s"  << std::endl;
+                std::cout << HLINE << "Execute benchmark kernel..." << std::endl
+                        << HLINE;
+            }
 
-        auto gen_start = std::chrono::high_resolution_clock::now();
-        std::unique_ptr<TData> data = generateInputData();
-        std::chrono::duration<double> gen_time = std::chrono::high_resolution_clock::now() - gen_start;
-        
-        if (world_rank == 0) {
-            std::cout << "Generation Time: " << gen_time.count() << " s"  << std::endl;
-            std::cout << HLINE << "Execute benchmark kernel..." << std::endl
-                    << HLINE;
-        }
+            auto exe_start = std::chrono::high_resolution_clock::now();
+            std::unique_ptr<TOutput> output =  executeKernel(*data);
+            std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
 
-        auto exe_start = std::chrono::high_resolution_clock::now();
-        std::unique_ptr<TOutput> output =  executeKernel(*data);
-        std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
-        
-        if (world_rank == 0) {
-            std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
-            std::cout << HLINE << "Validate output..." << std::endl
-                    << HLINE;
-        }
+            if (world_rank == 0) {
+                std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
+                std::cout << HLINE << "Validate output..." << std::endl
+                        << HLINE;
+            }
 
-        auto eval_start = std::chrono::high_resolution_clock::now();
-        bool validateSuccess = validateOutputAndPrintError(*data);
-        std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
+            auto eval_start = std::chrono::high_resolution_clock::now();
+            bool validateSuccess = validateOutputAndPrintError(*data);
+            std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
 
-        if (world_rank == 0) {
-            printResults(*output);
-            std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
-        }
+            if (world_rank == 0) {
+                printResults(*output);
+                std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
+            }
 
-        return validateSuccess;
+            return validateSuccess;
+       }
+       catch (std::exception e) {
+            std::cerr << "An error occured while executing the benchmark: " << std::endl;
+            std::cerr << "\t" << e.what() << std::endl;
+            return false;
+       }
     }
 
     /**

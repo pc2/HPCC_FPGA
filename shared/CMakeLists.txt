@@ -2,7 +2,7 @@ project(HPCCBaseLibrary VERSION 1.0.1)
 
 add_library(hpcc_fpga_base STATIC ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup.cpp)
 
-find_package(OpenCL)
+find_package(OpenCL QUIET)
 
 if (INTELFPGAOPENCL_FOUND)
     target_include_directories(hpcc_fpga_base PUBLIC ${IntelFPGAOpenCL_INCLUDE_DIRS})
@@ -15,3 +15,5 @@ else()
 endif()
 
 target_include_directories(hpcc_fpga_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../extern/cxxopts/include)
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
