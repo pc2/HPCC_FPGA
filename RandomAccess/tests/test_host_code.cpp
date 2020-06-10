@@ -9,7 +9,10 @@
 
 struct RandomAccessHostCodeTest : testing::Test {
 
+    std::unique_ptr<random_access::RandomAccessBenchmark> bm;
+
     RandomAccessHostCodeTest() {
+        bm = std::unique_ptr<random_access::RandomAccessBenchmark>(new random_access::RandomAccessBenchmark(global_argc, global_argv));
         bm->getExecutionSettings().programSettings->dataSize = 1024;
     }
 

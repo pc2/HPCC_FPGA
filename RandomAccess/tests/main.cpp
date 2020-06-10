@@ -20,9 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/* Project's headers */
-#include "random_access_benchmark.hpp"
-
 #include "gtest/gtest.h"
 #include "CL/cl.hpp"
 
@@ -41,9 +38,10 @@ public:
 };
 #endif
 
-using namespace random_access;
+extern void use_hpcc_base_lib();
 
-std::shared_ptr<RandomAccessBenchmark> bm;
+int global_argc;
+char** global_argv;
 
 /**
 The program entry point for the unit tests
@@ -55,17 +53,18 @@ main(int argc, char *argv[]) {
 
     ::testing::InitGoogleTest(&argc, argv);
 
-    bm = std::shared_ptr<RandomAccessBenchmark>(new RandomAccessBenchmark(argc, argv));
-
 #ifdef _USE_MPI_
     ::testing::Environment* const mpi_env =
         ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
 #endif
 
+    global_argc = argc;
+    global_argv = argv;
+
+    use_hpcc_base_lib();
+
     bool result = RUN_ALL_TESTS();
 
-    bm = nullptr;
-
     return result;
-}
 
+}
