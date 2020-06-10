@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.1
+
+#### Added:
+- Support for Intel HBM using the USE_HBM flag. This will use the CL_MEM_HETEROGENEOUS_INTELFPGA flag to allocate OpenCL buffers.
+
 ## 2.0.3
 
 #### Changed:

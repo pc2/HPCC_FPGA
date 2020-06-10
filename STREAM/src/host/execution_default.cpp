@@ -594,36 +594,43 @@ namespace bm_execution {
     void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config, unsigned int data_per_kernel,
                             std::vector<cl::Buffer> &Buffers_A, std::vector<cl::Buffer> &Buffers_B,
                             std::vector<cl::Buffer> &Buffers_C) {
+        unsigned mem_bits = CL_MEM_READ_WRITE;
+#ifdef INTEL_FPGA
+#ifdef USE_HBM
+        mem_bits |= CL_MEM_HETEROGENEOUS_INTELFPGA;
+#endif
+#endif
+
         if (!config.programSettings->useMemoryInterleaving) {
             //Create Buffers for input and output
             for (int i=0; i < config.programSettings->kernelReplications; i++) {
-#ifdef INTEL_FPGA
+#if defined(INTEL_FPGA) && !defined(USE_HBM)
                 if (config.programSettings->useSingleKernel) {
                     //Create Buffers for input and output
-                    Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_A.push_back(cl::Buffer(*config.context, mem_bits | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_B.push_back(cl::Buffer(*config.context, mem_bits | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_C.push_back(cl::Buffer(*config.context, mem_bits | ((i + 1) << 16), sizeof(HOST_DATA_TYPE)*data_per_kernel));
                 }
                 else {
                     //Create Buffers for input and output
-                    Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | CL_CHANNEL_1_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | CL_CHANNEL_3_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                    Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE | CL_CHANNEL_2_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_A.push_back(cl::Buffer(*config.context, mem_bits | CL_CHANNEL_1_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_B.push_back(cl::Buffer(*config.context, mem_bits | CL_CHANNEL_3_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                    Buffers_C.push_back(cl::Buffer(*config.context, mem_bits | CL_CHANNEL_2_INTELFPGA, sizeof(HOST_DATA_TYPE)*data_per_kernel));
                 }
 #endif
-#ifdef XILINX_FPGA
-                Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+#if defined(XILINX_FPGA) || defined(USE_HBM)
+                Buffers_A.push_back(cl::Buffer(*config.context, mem_bits, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_B.push_back(cl::Buffer(*config.context, mem_bits, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_C.push_back(cl::Buffer(*config.context, mem_bits, sizeof(HOST_DATA_TYPE)*data_per_kernel));
 #endif
             }
 
         } else {
             for (int i=0; i < config.programSettings->kernelReplications; i++) {
                 //Create Buffers for input and output
-                Buffers_A.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_B.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
-                Buffers_C.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_A.push_back(cl::Buffer(*config.context, mem_bits, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_B.push_back(cl::Buffer(*config.context, mem_bits, sizeof(HOST_DATA_TYPE)*data_per_kernel));
+                Buffers_C.push_back(cl::Buffer(*config.context, mem_bits, sizeof(HOST_DATA_TYPE)*data_per_kernel));
             }
         }
     }

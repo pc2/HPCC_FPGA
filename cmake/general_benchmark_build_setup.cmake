@@ -11,6 +11,11 @@ set(DEFAULT_DEVICE -1 CACHE STRING "Index of the default device to use")
 set(DEFAULT_PLATFORM -1 CACHE STRING "Index of the default platform to use")
 set(USE_OPENMP ${USE_OPENMP} CACHE BOOL "Use OpenMP in the host code")
 set(USE_SVM No CACHE BOOL "Use SVM pointers instead of creating buffers on the board and transferring the data there before execution.")
+set(USE_HBM No CACHE BOOL "Use host code specific to HBM FPGAs")
+
+if (USE_SVM AND USE_HBM)
+    message(ERROR "Misconfiguration: Can not use USE_HBM and USE_SVM at the same time because they target different memory architectures")
+endif()
 
 # Set the used data type
 if (NOT DATA_TYPE)
