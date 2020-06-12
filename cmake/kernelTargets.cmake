@@ -1,5 +1,5 @@
 
-set(COMPILER_INCLUDES "-I${CMAKE_CURRENT_BINARY_DIR}/../common" "-I${CMAKE_SOURCE_DIR}/src/device")
+set(COMPILER_INCLUDES "-I${CMAKE_BINARY_DIR}/src/common/" "-I${CMAKE_CURRENT_SOURCE_DIR}")
 set(CLFLAGS --config ${XILINX_COMPILE_SETTINGS_FILE})
 
 set(Vitis_EMULATION_CONFIG_UTIL $ENV{XILINX_VITIS}/bin/emconfigutil)
@@ -9,7 +9,13 @@ set(Vitis_EMULATION_CONFIG_UTIL $ENV{XILINX_VITIS}/bin/emconfigutil)
 ##
 function(generate_kernel_targets_xilinx)
     foreach (kernel_file_name ${ARGN})
-        set(base_file "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl")
+        string(REGEX MATCH "^custom_.*" is_custom_kernel ${kernel_file_name})
+        if (is_custom_kernel) 
+                string(REPLACE "custom_" "" base_file_name ${kernel_file_name})
+                set(base_file "${CMAKE_SOURCE_DIR}/src/device/custom/${base_file_name}.cl")
+        else()
+                set(base_file "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl")
+        endif()
         if (KERNEL_REPLICATION_ENABLED)
             set(source_f "${CMAKE_BINARY_DIR}/src/device/replicated_${kernel_file_name}_xilinx.cl")
         else()
@@ -38,7 +44,7 @@ function(generate_kernel_targets_xilinx)
         )
         if (XILINX_GENERATE_LINK_SETTINGS)
             add_custom_command(OUTPUT ${xilinx_link_settings}
-                    COMMAND ${CODE_GENERATOR} -o ${xilinx_link_settings} -p num_replications=${NUM_REPLICATIONS} --comment "\"#\"" --comment-ml-start "\"$$\"" --comment-ml-end "\"$$\"" ${gen_xilinx_link_settings}
+                    COMMAND ${Python3_EXECUTABLE} ${CODE_GENERATOR} -o ${xilinx_link_settings} -p num_replications=${NUM_REPLICATIONS} --comment "\"#\"" --comment-ml-start "\"$$\"" --comment-ml-end "\"$$\"" ${gen_xilinx_link_settings}
                     MAIN_DEPENDENCY ${gen_xilinx_link_settings}
                     )
         else()
@@ -50,7 +56,7 @@ function(generate_kernel_targets_xilinx)
 
         if (KERNEL_REPLICATION_ENABLED)
                 add_custom_command(OUTPUT ${source_f}
-                        COMMAND ${CODE_GENERATOR} -o ${source_f} -p num_replications=1 ${base_file}
+                        COMMAND ${Python3_EXECUTABLE} ${CODE_GENERATOR} -o ${source_f} -p num_replications=1 ${base_file}
                         MAIN_DEPENDENCY ${base_file}
                 )
         else()
@@ -86,7 +92,7 @@ function(generate_kernel_targets_xilinx)
         add_custom_target(${kernel_file_name}_xilinx
                 DEPENDS ${bitstream_f} ${CMAKE_BINARY_DIR}/src/common/parameters.h
                 )
-        add_custom_target(${kernel_file_name}_compile_xilinx
+        add_custom_target(${kernel_file_name}_report_xilinx
                 DEPENDS ${bitstream_compile} ${CMAKE_BINARY_DIR}/src/common/parameters.h
                 )
     endforeach ()
@@ -99,11 +105,17 @@ endfunction()
 ##
 function(generate_kernel_targets_intel)
     foreach (kernel_file_name ${ARGN})
-        set(base_file "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl")
-        if (KERNEL_REPLICATION_ENABLED)
-                set(source_f "${CMAKE_BINARY_DIR}/src/device/replicated_${kernel_file_name}.cl")
+        string(REGEX MATCH "^custom_.*" is_custom_kernel ${kernel_file_name})
+        if (is_custom_kernel) 
+                string(REPLACE "custom_" "" base_file_name ${kernel_file_name})
+                set(base_file "${CMAKE_CURRENT_SOURCE_DIR}/${base_file_name}.cl")
         else()
-                set(source_f "${CMAKE_BINARY_DIR}/src/device/copied_${kernel_file_name}_intel.cl")
+                set(base_file "${CMAKE_CURRENT_SOURCE_DIR}/${kernel_file_name}.cl")
+        endif()
+        if (KERNEL_REPLICATION_ENABLED)
+                set(source_f "${CMAKE_CURRENT_BINARY_DIR}/replicated_${kernel_file_name}.cl")
+        else()
+                set(source_f "${CMAKE_CURRENT_BINARY_DIR}/copied_${kernel_file_name}_intel.cl")
         endif()
         set(report_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_report_intel)
         set(bitstream_emulate_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.aocx)
@@ -114,7 +126,7 @@ function(generate_kernel_targets_intel)
                         list(APPEND codegen_parameters -p "\"use_file('${INTEL_CODE_GENERATION_SETTINGS}')\"")
                 endif()
                 add_custom_command(OUTPUT ${source_f}
-                        COMMAND ${CODE_GENERATOR} -o ${source_f} ${codegen_parameters} ${base_file}
+                        COMMAND ${Python3_EXECUTABLE} ${CODE_GENERATOR} -o ${source_f} ${codegen_parameters} ${base_file}
                         MAIN_DEPENDENCY ${base_file}
                         )
         else()
@@ -139,10 +151,10 @@ function(generate_kernel_targets_intel)
                 MAIN_DEPENDENCY ${source_f}
                 )
         add_custom_target(${kernel_file_name}_report_intel DEPENDS ${report_f}
-                DEPENDS ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h)
+                DEPENDS ${source_f} ${base_file} ${CMAKE_BINARY_DIR}/src/common/parameters.h)
         add_custom_target(${kernel_file_name}_intel DEPENDS ${bitstream_f}
-                DEPENDS ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h)
+                DEPENDS ${source_f} ${base_file} ${CMAKE_BINARY_DIR}/src/common/parameters.h)
         add_custom_target(${kernel_file_name}_emulate_intel DEPENDS ${bitstream_emulate_f}
-                DEPENDS ${source_f} "${CMAKE_SOURCE_DIR}/src/device/${kernel_file_name}.cl" ${CMAKE_BINARY_DIR}/src/common/parameters.h)
+                DEPENDS ${source_f} ${base_file} ${CMAKE_BINARY_DIR}/src/common/parameters.h)
     endforeach ()
 endfunction()

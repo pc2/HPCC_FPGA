@@ -1,0 +1,22 @@
+
+include(${CMAKE_SOURCE_DIR}/../cmake/kernelTargets.cmake)
+
+file(GLOB custom_kernel_files
+    RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+    "*.cl"
+)
+
+set(custom_kernel_targets "")
+foreach(file_name ${custom_kernel_files})
+    string(REPLACE ".cl" "" target_name ${file_name})
+    string(PREPEND target_name "custom_")
+    list(APPEND custom_kernel_targets ${target_name})
+endforeach(file_name)
+
+if (INTELFPGAOPENCL_FOUND)
+    generate_kernel_targets_intel(${custom_kernel_targets})
+endif()
+
+if (Vitis_FOUND)
+    generate_kernel_targets_xilinx(${custom_kernel_targets})
+endif()

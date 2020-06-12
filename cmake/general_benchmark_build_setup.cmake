@@ -47,9 +47,14 @@ if (USE_OPENMP)
 endif()
 find_package(IntelFPGAOpenCL)
 find_package(Vitis)
+find_package(Python3)
 
 if (NOT VITIS_FOUND AND NOT INTELFPGAOPENCL_FOUND)
     message(ERROR "Xilinx Vitis or Intel FPGA OpenCL SDK required!")
+endif()
+
+if (NOT Python3_Interpreter_FOUND)
+    message(WARNING "Python 3 interpreter could not be found! It might be necessary to generate the final kernel source code!")
 endif()
 
 # Find Xilinx settings files
@@ -111,9 +116,24 @@ if (INTELFPGAOPENCL_FOUND)
 endif()
 
 set(CODE_GENERATOR "${CMAKE_SOURCE_DIR}/../scripts/code_generator/generator.py" CACHE FILEPATH "Path to the code generator executable")
+set(CUSTOM_KERNEL_FOLDER ${CMAKE_SOURCE_DIR}/src/device/custom/)
+
+add_custom_command(OUTPUT ${CUSTOM_KERNEL_FOLDER}/CMakeLists.txt
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CUSTOM_KERNEL_FOLDER}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/../cmake/Custom_kernel_CMakeLists.txt ${CUSTOM_KERNEL_FOLDER}/CMakeLists.txt
+    MAIN_DEPENDENCY ${CUSTOM_KERNEL_FOLDER}/CMakeLists.txt
+)
 
 # Add subdirectories of the project
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/device)
+
+if (EXISTS ${CUSTOM_KERNEL_FOLDER}/CMakeLists.txt)
+    message(STATUS "Custom kernel folder recognized.")
+    add_subdirectory(${CUSTOM_KERNEL_FOLDER})
+else()
+    add_custom_target(setup_custom_kernel_dir DEPENDS ${CUSTOM_KERNEL_FOLDER}/CMakeLists.txt)
+endif()
+
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/host)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     add_subdirectory(${CMAKE_SOURCE_DIR}/tests)
