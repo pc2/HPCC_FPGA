@@ -38,8 +38,7 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
   |  Target  | Description                                    |
   | -------- | ---------------------------------------------- |
   | gemm_cannon_`VENDOR`         | Synthesizes the kernel (takes several hours!)  |
-  | gemm_cannon_report_intel   | Create an HTML report for the kernel    |
-  | gemm_cannon_compile_xilinx  | Just compile kernel and create reports    |
+  | gemm_cannon_report_`VENDOR`  | Just compile kernel and create reports    |
   | gemm_cannon_emulate_`VENDOR`  | Create a n emulation kernel             |
  
  You can build for example the host application by running

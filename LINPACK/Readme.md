@@ -33,8 +33,7 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
   |  Target                        | Description                                    |
   | ------------------------------ | ---------------------------------------------- |
   | lu_blocked_pvt_`VENDOR`                | Synthesizes the kernel (takes several hours!)  |
-  | lu_blocked_pvt_report_intel          | Create an HTML report for the kernel           |
-    | lu_blocked_pvt_compile_xilinx         | Just compile kernel and create reports         |
+  | lu_blocked_pvt_report_`VENDOR`         | Just compile kernel and create reports         |
   | lu_blocked_pvt_emulate_`VENDOR`          | Create a n emulation kernel                    |
 
  You can build for example the host application by running
