@@ -12,6 +12,7 @@ set(DEFAULT_PLATFORM -1 CACHE STRING "Index of the default platform to use")
 set(USE_OPENMP ${USE_OPENMP} CACHE BOOL "Use OpenMP in the host code")
 set(USE_SVM No CACHE BOOL "Use SVM pointers instead of creating buffers on the board and transferring the data there before execution.")
 set(USE_HBM No CACHE BOOL "Use host code specific to HBM FPGAs")
+set(USE_CUSTOM_KERNEL_TARGETS No CACHE BOOL "Enable build targets for custom kernels")
 
 if (USE_SVM AND USE_HBM)
     message(ERROR "Misconfiguration: Can not use USE_HBM and USE_SVM at the same time because they target different memory architectures")
@@ -118,21 +119,19 @@ endif()
 set(CODE_GENERATOR "${CMAKE_SOURCE_DIR}/../scripts/code_generator/generator.py" CACHE FILEPATH "Path to the code generator executable")
 set(CUSTOM_KERNEL_FOLDER ${CMAKE_SOURCE_DIR}/src/device/custom/)
 
-add_custom_command(OUTPUT ${CUSTOM_KERNEL_FOLDER}/CMakeLists.txt
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CUSTOM_KERNEL_FOLDER}
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/../cmake/Custom_kernel_CMakeLists.txt ${CUSTOM_KERNEL_FOLDER}/CMakeLists.txt
-    MAIN_DEPENDENCY ${CUSTOM_KERNEL_FOLDER}/CMakeLists.txt
-)
+
+set(kernel_emulation_targets_intel "" CACHE INTERNAL "")
+set(kernel_emulation_targets_xilinx "" CACHE INTERNAL "")
 
 # Add subdirectories of the project
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/device)
 
-if (EXISTS ${CUSTOM_KERNEL_FOLDER}/CMakeLists.txt)
-    message(STATUS "Custom kernel folder recognized.")
+if (USE_CUSTOM_KERNEL_TARGETS)
+    message(STATUS "Create custom kernel targets.")
     add_subdirectory(${CUSTOM_KERNEL_FOLDER})
-else()
-    add_custom_target(setup_custom_kernel_dir DEPENDS ${CUSTOM_KERNEL_FOLDER}/CMakeLists.txt)
 endif()
+
+message(STATUS "Kernel emulation targets: ${kernel_emulation_targets_intel} ${kernel_emulation_targets_xilinx}")
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/host)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
