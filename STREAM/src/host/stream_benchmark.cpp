@@ -37,7 +37,7 @@ SOFTWARE.
 stream::StreamProgramSettings::StreamProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     streamArraySize(results["s"].as<uint>()),
     kernelReplications(results["r"].as<uint>()),
-    useSingleKernel(static_cast<bool>(results.count("single-kernel"))) {
+    useSingleKernel(!static_cast<bool>(results.count("multi-kernel"))) {
 
 }
 
@@ -103,7 +103,7 @@ stream::StreamBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ARRAY_LENGTH)))
             ("r", "Number of kernel replications used",
              cxxopts::value<uint>()->default_value(std::to_string(NUM_KERNEL_REPLICATIONS)))
-            ("single-kernel", "Use the single kernel implementation");
+            ("multi-kernel", "Use the legacy multi kernel implementation");
 }
 
 std::unique_ptr<stream::StreamExecutionTimings>
