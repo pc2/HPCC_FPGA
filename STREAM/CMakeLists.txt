@@ -9,6 +9,8 @@ set(NUM_REPLICATIONS 4 CACHE STRING "Number of times the kernels will be replica
 set(DEVICE_BUFFER_SIZE 512 CACHE STRING "Buffer size in number of values that is used within the single kernel implementation.")
 set(INNER_LOOP_BUFFERS ON CACHE BOOL "Put the local memory buffers inside the outer loop in the kernel code")
 
+mark_as_advanced(INNER_LOOP_BUFFERS)
+
 # Set the data type since optional vector types are used
 set(DATA_TYPE float)
 set(HOST_DATA_TYPE cl_${DATA_TYPE})
