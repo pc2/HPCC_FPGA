@@ -54,10 +54,7 @@ class FpgaSetupException : public std::exception
      * 
      * @param message The message that is printed by the what() function
      */
-    explicit FpgaSetupException(std::string message)
-    : error_message(std::move(message))
-    {
-    }
+    FpgaSetupException(std::string message);
 
     /**
      * @brief Return the contained error message
@@ -65,10 +62,7 @@ class FpgaSetupException : public std::exception
      * @return const char* the error message as C string
      */
     const char*
-    what() const noexcept override
-    {
-        return error_message.c_str();
-    }
+    what() const noexcept override;
 
     private:
     std::string error_message;
@@ -88,10 +82,7 @@ class OpenClException : public FpgaSetupException
      * @param error_name The string representation of the 
      *                      OpenCL error
      */
-    explicit OpenClException(std::string  error_name)
-    : FpgaSetupException("An OpenCL error occured: " + error_name)
-    {
-    }
+    OpenClException(std::string  error_name);
 };
 
     /**
