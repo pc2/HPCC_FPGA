@@ -20,9 +20,5 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/* Project's headers */
-#include "linpack_benchmark.hpp"
-
-
 extern int global_argc;
 extern char** global_argv;

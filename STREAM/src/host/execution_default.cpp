@@ -43,7 +43,7 @@ namespace bm_execution {
                             std::vector<cl::Buffer> &Buffers_A, std::vector<cl::Buffer> &Buffers_B,
                             std::vector<cl::Buffer> &Buffers_C);
 
-    void initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -52,7 +52,7 @@ namespace bm_execution {
                                        std::vector<cl::Kernel> &triad_kernels,
                                        std::vector<cl::CommandQueue> &command_queues);
 
-    void initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -94,15 +94,19 @@ namespace bm_execution {
         //
         // Setup kernels
         //
+        bool success = false;
         if (config.programSettings->useSingleKernel) {
-            initialize_queues_and_kernels_single(config, data_per_kernel, Buffers_A, Buffers_B, Buffers_C, test_kernels,
+            success = initialize_queues_and_kernels_single(config, data_per_kernel, Buffers_A, Buffers_B, Buffers_C, test_kernels,
                                           copy_kernels, scale_kernels,
                                           add_kernels, triad_kernels, A, B, C, command_queues);
         }
         else {
-            initialize_queues_and_kernels(config, data_per_kernel, Buffers_A, Buffers_B, Buffers_C, test_kernels,
+            success = initialize_queues_and_kernels(config, data_per_kernel, Buffers_A, Buffers_B, Buffers_C, test_kernels,
                                           copy_kernels, scale_kernels,
                                           add_kernels, triad_kernels, command_queues);
+        }
+        if (!success) {
+            return std::unique_ptr<stream::StreamExecutionTimings>(nullptr);
         }
 
         //
@@ -335,7 +339,7 @@ namespace bm_execution {
         return result;
     }
 
-    void initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -412,9 +416,11 @@ namespace bm_execution {
             add_kernels.push_back(addkernel);
             triad_kernels.push_back(triadkernel);
         }
+
+        return true;
     }
 
-    void initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -589,6 +595,8 @@ namespace bm_execution {
             add_kernels.push_back(addkernel);
             triad_kernels.push_back(triadkernel);
         }
+
+        return true;
     }
 
     void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config, unsigned int data_per_kernel,

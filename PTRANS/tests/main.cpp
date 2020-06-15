@@ -20,9 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/* Project's headers */
-#include "transpose_benchmark.hpp"
-
 #include "gtest/gtest.h"
 #include "CL/cl.hpp"
 
@@ -41,9 +38,10 @@ public:
 };
 #endif
 
-using namespace transpose;
+extern void use_hpcc_base_lib();
 
-std::unique_ptr<TransposeBenchmark> bm;
+int global_argc;
+char** global_argv;
 
 /**
 The program entry point for the unit tests
@@ -55,18 +53,18 @@ main(int argc, char *argv[]) {
 
     ::testing::InitGoogleTest(&argc, argv);
 
-    bm = std::unique_ptr<TransposeBenchmark>(new TransposeBenchmark(argc, argv));
-
 #ifdef _USE_MPI_
     ::testing::Environment* const mpi_env =
         ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
 #endif
 
-    bool result = RUN_ALL_TESTS();
+    global_argc = argc;
+    global_argv = argv;
 
-    bm = nullptr;
+    use_hpcc_base_lib();
+
+    bool result = RUN_ALL_TESTS();
 
     return result;
 
 }
-

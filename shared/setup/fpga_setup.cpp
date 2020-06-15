@@ -94,13 +94,7 @@ Converts the reveived OpenCL error to a string
         }
     }
 
-/**
-Check the OpenCL return code for errors.
-If an error is detected, it will be printed and the programm execution is
-stopped.
 
-@param err The OpenCL error code
-*/
     void
     handleClReturnCode(cl_int const err, std::string const file,
                        int const line) {
@@ -109,7 +103,7 @@ stopped.
             std::cerr << "ERROR in OpenCL library detected! Aborting."
                       << std::endl << file << ":" << line << ": " << err_string
                       << std::endl;
-            exit(err);
+            throw fpga_setup::OpenClException(err_string);
         }
     }
 
@@ -121,7 +115,7 @@ Sets up the given FPGA with the kernel in the provided file.
 @param usedKernelFile The path to the kernel file
 @return The program that is used to create the benchmark kernels
 */
-    cl::Program
+    std::unique_ptr<cl::Program>
     fpgaSetup(const cl::Context *context, std::vector<cl::Device> deviceList,
               const std::string *usedKernelFile) {
         int err;
@@ -142,6 +136,7 @@ Sets up the given FPGA with the kernel in the provided file.
         std::ifstream aocxStream(usedKernelFile->c_str(), std::ifstream::binary);
         if (!aocxStream.is_open()) {
             std::cerr << "Not possible to open from given file!" << std::endl;
+            throw FpgaSetupException("Not possible to open from given file: " + *usedKernelFile);
         }
 
         // Read in file contents and create program from binaries
@@ -158,13 +153,13 @@ Sets up the given FPGA with the kernel in the provided file.
 
         // Create the Program from the AOCX file.
         cl::Program program(*context, deviceList, mybinaries, NULL, &err);
-        ASSERT_CL(err);
+        ASSERT_CL(err)
         if (world_rank == 0) {
             std::cout << "Prepared FPGA successfully for global Execution!" <<
                       std::endl;
             std::cout << HLINE;
         }
-        return program;
+        return std::unique_ptr<cl::Program>(new cl::Program(program));
     }
 
 /**
@@ -204,7 +199,7 @@ choose a device.
 
 @return A list containing a single selected device
 */
-    cl::Device
+    std::unique_ptr<cl::Device>
     selectFPGADevice(int defaultPlatform, int defaultDevice) {
         // Integer used to store return codes of OpenCL library calls
         int err;
@@ -219,7 +214,7 @@ choose a device.
 
         std::vector<cl::Platform> platformList;
         err = cl::Platform::get(&platformList);
-        ASSERT_CL(err);
+        ASSERT_CL(err)
 
         // Choose the target platform
         int chosenPlatformId = 0;
@@ -230,7 +225,7 @@ choose a device.
                 std::cerr << "Default platform " << defaultPlatform
                           << " can not be used. Available platforms: "
                           << platformList.size() << std::endl;
-                exit(1);
+                throw FpgaSetupException("Invalid platform index specified: " + std::to_string(defaultPlatform) + "/" + std::to_string(platformList.size() - 1));
             }
         } else if (platformList.size() > 1 && world_size == 1) {
             std::cout <<
@@ -253,7 +248,7 @@ choose a device.
         }
         std::vector<cl::Device> deviceList;
         err = platform.getDevices(CL_DEVICE_TYPE_ACCELERATOR, &deviceList);
-        ASSERT_CL(err);
+        ASSERT_CL(err)
 
         // Choose taget device
         int chosenDeviceId = 0;
@@ -264,7 +259,7 @@ choose a device.
                 std::cerr << "Default device " << defaultDevice
                           << " can not be used. Available devices: "
                           << deviceList.size() << std::endl;
-                exit(1);
+                throw FpgaSetupException("Invalid device index specified: " + std::to_string(defaultDevice) + "/" + std::to_string(deviceList.size() - 1));
             }
         } else if (deviceList.size() > 1) {
             if (world_size == 1) {
@@ -296,7 +291,7 @@ choose a device.
             std::cout << HLINE;
         }
 
-        return deviceList[chosenDeviceId];
+        return std::unique_ptr<cl::Device>(new cl::Device(deviceList[chosenDeviceId]));
     }
 
 }  // namespace fpga_setup

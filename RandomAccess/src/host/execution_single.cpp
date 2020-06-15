@@ -52,8 +52,8 @@ namespace bm_execution {
         /* --- Prepare kernels --- */
 
         for (int r=0; r < config.programSettings->kernelReplications; r++) {
-            compute_queue.push_back(cl::CommandQueue(*config.context, *config.device));
-
+            compute_queue.push_back(cl::CommandQueue(*config.context, *config.device, 0, &err));
+            ASSERT_CL(err);
             int memory_bank_info = 0;
 #ifdef INTEL_FPGA
 #ifdef USE_HBM
@@ -106,18 +106,19 @@ namespace bm_execution {
 #pragma omp for
                 for (int r = 0; r < config.programSettings->kernelReplications; r++) {
 #ifdef USE_SVM
-                    clEnqueueSVMMap(compute_queue[r](), CL_TRUE,
+                    err = clEnqueueSVMMap(compute_queue[r](), CL_TRUE,
                                     CL_MAP_READ | CL_MAP_WRITE,
                                     reinterpret_cast<void *>(&data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]),
                                     sizeof(HOST_DATA_TYPE) *
                                     (config.programSettings->dataSize / config.programSettings->kernelReplications), 0,
                                     NULL, NULL);
 #else
-                    compute_queue[r].enqueueWriteBuffer(Buffer_data[r], CL_TRUE, 0,
+                    err = compute_queue[r].enqueueWriteBuffer(Buffer_data[r], CL_TRUE, 0,
                                                         sizeof(HOST_DATA_TYPE) *
                                                         (config.programSettings->dataSize / config.programSettings->kernelReplications),
                                                         &data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]);
 #endif
+                    ASSERT_CL(err)
                 }
 #pragma omp master
                 {
@@ -147,14 +148,15 @@ namespace bm_execution {
         /* --- Read back results from Device --- */
         for (int r=0; r < config.programSettings->kernelReplications; r++) {
 #ifdef USE_SVM
-            clEnqueueSVMUnmap(compute_queue[r](),
+            err = clEnqueueSVMUnmap(compute_queue[r](),
                                 reinterpret_cast<void *>(&data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]), 0,
                                 NULL, NULL);
 #else
-            compute_queue[r].enqueueReadBuffer(Buffer_data[r], CL_TRUE, 0,
+            err = compute_queue[r].enqueueReadBuffer(Buffer_data[r], CL_TRUE, 0,
                     sizeof(HOST_DATA_TYPE)*(config.programSettings->dataSize / config.programSettings->kernelReplications), 
                     &data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]);
 #endif
+            ASSERT_CL(err)
         }
 
         return std::unique_ptr<random_access::RandomAccessExecutionTimings>(new random_access::RandomAccessExecutionTimings{executionTimes});

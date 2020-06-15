@@ -51,7 +51,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     int err;
 
     // Create Command queue
-    cl::CommandQueue compute_queue(*config.context, *config.device);
+    cl::CommandQueue compute_queue(*config.context, *config.device, 0, &err);
+    ASSERT_CL(err)
 
     // Create Buffers for input and output
     cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE,
@@ -76,8 +77,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
     err = clSetKernelArgSVMPointer(gefakernel(), 0,
                                     reinterpret_cast<void*>(A_tmp));
+    ASSERT_CL(err)
     err = clSetKernelArgSVMPointer(gefakernel(), 1,
                                     reinterpret_cast<void*>(ipvt));
+    ASSERT_CL(err)
 #else
     err = gefakernel.setArg(0, Buffer_a);
     ASSERT_CL(err);
@@ -97,27 +100,31 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             A_tmp[k] = A[k];
         }
 
-        clEnqueueSVMMap(compute_queue(), CL_TRUE,
+        err = clEnqueueSVMMap(compute_queue(), CL_TRUE,
                         CL_MAP_READ | CL_MAP_WRITE,
                         reinterpret_cast<void *>(A_tmp),
                         sizeof(HOST_DATA_TYPE) *
                         (config.programSettings->matrixSize * config.programSettings->matrixSize), 0,
                         NULL, NULL);
-        clEnqueueSVMMap(compute_queue(), CL_TRUE,
+        ASSERT_CL(err)
+        err = clEnqueueSVMMap(compute_queue(), CL_TRUE,
                         CL_MAP_READ,
                         reinterpret_cast<void *>(b),
                         sizeof(HOST_DATA_TYPE) *
                         (config.programSettings->matrixSize), 0,
                         NULL, NULL);
-        clEnqueueSVMMap(compute_queue(), CL_TRUE,
+        ASSERT_CL(err)
+        err = clEnqueueSVMMap(compute_queue(), CL_TRUE,
                         CL_MAP_WRITE,
                         reinterpret_cast<void *>(ipvt),
                         sizeof(cl_int) *
                         (config.programSettings->matrixSize), 0,
                         NULL, NULL);
+        ASSERT_CL(err)
 #else
-        compute_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
+        err = compute_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
+        ASSERT_CL(err)
         compute_queue.finish();
 #endif
         auto t1 = std::chrono::high_resolution_clock::now();
@@ -133,15 +140,18 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     /* --- Read back results from Device --- */
 
 #ifdef USE_SVM
-    clEnqueueSVMUnmap(compute_queue(),
+    err = clEnqueueSVMUnmap(compute_queue(),
                         reinterpret_cast<void *>(A), 0,
                         NULL, NULL);
-    clEnqueueSVMUnmap(compute_queue(),
+    ASSERT_CL(err)
+    err = clEnqueueSVMUnmap(compute_queue(),
                         reinterpret_cast<void *>(b), 0,
                         NULL, NULL);
-    clEnqueueSVMUnmap(compute_queue(),
+    ASSERT_CL(err)
+    err = clEnqueueSVMUnmap(compute_queue(),
                         reinterpret_cast<void *>(ipvt), 0,
                         NULL, NULL);
+    ASSERT_CL(err)
     
     // read back result from temporary buffer
     for (int k=0; k < config.programSettings->matrixSize * config.programSettings->matrixSize; k++) {

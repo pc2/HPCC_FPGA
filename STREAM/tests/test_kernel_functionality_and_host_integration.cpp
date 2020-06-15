@@ -9,6 +9,11 @@
 
 struct StreamKernelTest :public  ::testing::Test {
     std::shared_ptr<stream::StreamData> data;
+    std::unique_ptr<stream::StreamBenchmark> bm;
+
+    StreamKernelTest() {
+        bm = std::unique_ptr<stream::StreamBenchmark>(new stream::StreamBenchmark(global_argc, global_argv));
+    }
 
     void SetUp( ) { 
         bm->getExecutionSettings().programSettings->streamArraySize = VECTOR_COUNT * UNROLL_COUNT * NUM_KERNEL_REPLICATIONS * BUFFER_SIZE;

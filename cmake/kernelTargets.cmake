@@ -29,7 +29,6 @@ function(generate_kernel_targets_xilinx)
             set(xilinx_link_settings ${CMAKE_BINARY_DIR}/settings/settings.link.xilinx.${kernel_file_name}.ini)
         endif()
         set(xilinx_report_folder "--report_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_reports")
-        file(MAKE_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports)
         set(local_CLFLAGS ${CLFLAGS} -DXILINX_FPGA)
         list(APPEND local_CLFLAGS ${xilinx_report_folder} --log_dir=${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile)
 

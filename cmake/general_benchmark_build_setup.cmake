@@ -86,10 +86,12 @@ else()
 endif()
 
 # Set FPGA board name if specified in the environment
-if (DEFINED ENV{FPGA_BOARD_NAME})
-    set(FPGA_BOARD_NAME $ENV{FPGA_BOARD_NAME})
-else()
-    set(FPGA_BOARD_NAME p520_hpc_sg280l)
+if (NOT DEFINED FPGA_BOARD_NAME)
+    if (DEFINED ENV{FPGA_BOARD_NAME})
+        set(FPGA_BOARD_NAME $ENV{FPGA_BOARD_NAME})
+    else()
+        set(FPGA_BOARD_NAME p520_hpc_sg280l)
+    endif()
 endif()
 
 

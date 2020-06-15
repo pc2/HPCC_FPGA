@@ -40,6 +40,60 @@ Source: https://gist.github.com/allanmac/9328bb2d6a99b86883195f8f78fd1b93
 
 namespace fpga_setup {
 
+/**
+ * @brief Base expection for all exception that
+ *          are thrown by the fpga setup functions
+ * 
+ */
+class FpgaSetupException : public std::exception
+{
+    public:
+
+    /**
+     * @brief Construct a new Fpga Setup Exception object
+     * 
+     * @param message The message that is printed by the what() function
+     */
+    explicit FpgaSetupException(std::string message)
+    : error_message(std::move(message))
+    {
+    }
+
+    /**
+     * @brief Return the contained error message
+     * 
+     * @return const char* the error message as C string
+     */
+    const char*
+    what() const noexcept override
+    {
+        return error_message.c_str();
+    }
+
+    private:
+    std::string error_message;
+};
+
+/**
+ * @brief Exception that is thrown if the ASSERT_CL failed
+ * 
+ */
+class OpenClException : public FpgaSetupException
+{
+    public:
+
+    /**
+     * @brief Construct a new Open Cl Exception object
+     * 
+     * @param error_name The string representation of the 
+     *                      OpenCL error
+     */
+    explicit OpenClException(std::string  error_name)
+    : FpgaSetupException("An OpenCL error occured: " + error_name)
+    {
+    }
+};
+
     /**
 Converts the reveived OpenCL error to a string
 
@@ -51,11 +105,15 @@ Converts the reveived OpenCL error to a string
     getCLErrorString(cl_int const err);
 
 /**
-Check the OpenCL return code for errors.
-If an error is detected, it will be printed and the programm execution is
-stopped.
-
-@param err The OpenCL error code
+* Check the OpenCL return code for errors.
+* If an error is detected, it will be printed and the programm execution is
+* stopped.
+*
+* @param err The OpenCL error code
+* @param file Name of the file that is checking the CL error
+* @param line Line number in the file that is checking the CL error
+*
+* @throw OpenClException if the return code differs from CL_SUCCESS
 */
     void
     handleClReturnCode(cl_int const err, std::string const file,
@@ -65,7 +123,7 @@ stopped.
 Makro that enables checks for OpenCL errors with handling of the file and
 line number.
 */
-#define ASSERT_CL(err) fpga_setup::handleClReturnCode(err, __FILE__, __LINE__)
+#define ASSERT_CL(err) fpga_setup::handleClReturnCode(err, __FILE__, __LINE__);
 
 /**
 Sets up the given FPGA with the kernel in the provided file.
@@ -75,7 +133,7 @@ Sets up the given FPGA with the kernel in the provided file.
 @param usedKernelFile The path to the kernel file
 @return The program that is used to create the benchmark kernels
 */
-    cl::Program
+    std::unique_ptr<cl::Program>
     fpgaSetup(const cl::Context *context, std::vector<cl::Device> deviceList,
               const std::string *usedKernelFile);
 
@@ -101,7 +159,7 @@ choose a device.
 
 @return A list containing a single selected device
 */
-    cl::Device
+    std::unique_ptr<cl::Device>
     selectFPGADevice(int defaultPlatform, int defaultDevice);
 
 }  // namespace fpga_setup

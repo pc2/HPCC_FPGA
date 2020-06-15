@@ -44,19 +44,28 @@ namespace bm_execution {
     std::shared_ptr<network::ExecutionTimings>
     calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength) {
 
+        int err;
 
-        cl::Kernel sendKernel(*config.program, SEND_KERNEL_NAME);
+        cl::Kernel sendKernel(*config.program, SEND_KERNEL_NAME, &err);
+        ASSERT_CL(err)
 
-        sendKernel.setArg(0, messageSize);
-        sendKernel.setArg(1, looplength);
+        err = sendKernel.setArg(0, messageSize);
+        ASSERT_CL(err)
+        err = sendKernel.setArg(1, looplength);
+        ASSERT_CL(err)
 
-        cl::Kernel recvKernel(*config.program, RECV_KERNEL_NAME);
+        cl::Kernel recvKernel(*config.program, RECV_KERNEL_NAME, &err);
+        ASSERT_CL(err)
 
-        recvKernel.setArg(0, messageSize);
-        recvKernel.setArg(1, looplength);
+        err = recvKernel.setArg(0, messageSize);
+        ASSERT_CL(err)
+        err = recvKernel.setArg(1, looplength);
+        ASSERT_CL(err)
 
-        cl::CommandQueue sendQueue(*config.context);
-        cl::CommandQueue recvQueue(*config.context);
+        cl::CommandQueue sendQueue(*config.context, *config.device, 0, &err);
+        ASSERT_CL(err)
+        cl::CommandQueue recvQueue(*config.context, *config.device, 0, &err);
+        ASSERT_CL(err)
 
         std::vector<double> calculationTimings;
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {

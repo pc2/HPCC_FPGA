@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 #include "parameters.h"
 #include "test_program_settings.h"
+#include "linpack_benchmark.hpp"
 #ifdef _INTEL_MKL_
 #include "mkl.h"
 #endif

@@ -20,9 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/* Project's headers */
-#include "stream_benchmark.hpp"
-
 #include "gtest/gtest.h"
 #include "CL/cl.hpp"
 
@@ -41,9 +38,10 @@ public:
 };
 #endif
 
-using namespace stream;
+extern void use_hpcc_base_lib();
 
-std::unique_ptr<StreamBenchmark> bm;
+int global_argc;
+char** global_argv;
 
 /**
 The program entry point for the unit tests
@@ -60,13 +58,13 @@ main(int argc, char *argv[]) {
         ::testing::AddGlobalTestEnvironment(new MPIEnvironment(&argc, &argv));
 #endif
 
-    bm = std::unique_ptr<StreamBenchmark>(new StreamBenchmark(argc, argv));
+    global_argc = argc;
+    global_argv = argv;
+
+    use_hpcc_base_lib();
 
     bool result = RUN_ALL_TESTS();
-
-    bm = nullptr;
 
     return result;
 
 }
-
