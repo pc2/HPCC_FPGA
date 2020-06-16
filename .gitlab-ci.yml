@@ -11,12 +11,11 @@ stages:
 build:STREAM:
   stage: build
   script:
-    - git submodule update --init --recursive
     - rm -rf build
     - mkdir -p build
     - cd build
     - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make all
+    - make -j 40 all
   artifacts:
     paths:
       - build/bin/stream_kernels_single_emulate.aocx
@@ -28,12 +27,11 @@ build:STREAM:
 build:RandomAccess:
   stage: build
   script:
-    - git submodule update --init --recursive
     - rm -rf build
     - mkdir -p build
     - cd build
     - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make all
+    - make -j 40 all
   artifacts:
     paths:
       - build/bin/random_access_kernels_single_emulate.aocx
@@ -44,12 +42,11 @@ build:RandomAccess:
 build:PTRANS:
   stage: build
   script:
-    - git submodule update --init --recursive
     - rm -rf build
     - mkdir -p build
     - cd build
     - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make all
+    - make -j 40 all
   artifacts:
     paths:
       - build/bin/transpose_optimized_emulate.aocx
@@ -60,12 +57,11 @@ build:PTRANS:
 build:LINPACK:
   stage: build
   script:
-    - git submodule update --init --recursive
     - rm -rf build
     - mkdir -p build
     - cd build
     - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
-    - make all
+    - make -j 40 all
   artifacts:
     paths:
       - build/bin/lu_blocked_pvt_emulate.aocx
@@ -76,12 +72,11 @@ build:LINPACK:
 build:GEMM:
   stage: build
   script:
-    - git submodule update --init --recursive
     - rm -rf build
     - mkdir -p build
     - cd build
     - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
-    - make all
+    - make -j 40 all
   artifacts:
     paths:
       - build/bin/gemm_base_emulate.aocx
@@ -91,12 +86,11 @@ build:GEMM:
 build:FFT:
   stage: build
   script:
-    - git submodule update --init --recursive
     - rm -rf build
     - mkdir -p build
     - cd build
     - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make all
+    - make -j 40 all
   artifacts:
     paths:
       - build/bin/fft1d_float_8_emulate.aocx
@@ -106,12 +100,11 @@ build:FFT:
 build:b_eff:
   stage: build
   script:
-    - git submodule update --init --recursive
     - rm -rf build
     - mkdir -p build
     - cd build
     - cmake ../b_eff -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make all
+    - make -j 40 all
   artifacts:
     paths:
       - build/bin/communication_bw520n_emulate.aocx

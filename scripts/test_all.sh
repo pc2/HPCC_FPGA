@@ -31,11 +31,6 @@ mkdir -p $TEST_DIR
 rm -f $BUILD_LOG_FILE
 rm -f $TEST_LOG_FILE
 
-cd $PROJECT_ROOT
-
-echo "Updating git submodules..."
-git submodule update --init --recursive
-
 cd $TEST_DIR
 
 echo "Start building hosts code, tests and emulation kernel for all benchmarks."
@@ -48,7 +43,7 @@ for bm in ${BENCHMARKS[@]}; do
     cd $bm
     cmake ${PROJECT_ROOT}/$bm -DDEFAULT_DEVICE=0 -DDEFAULT_PLATFORM=0 -DBLOCK_SIZE=32 $@ &>> $BUILD_LOG_FILE
     ret=$(($ret + $?))
-    make VERBOSE=1 all &>> $BUILD_LOG_FILE
+    make -j 40 VERBOSE=1 all &>> $BUILD_LOG_FILE
     ret=$(($ret + $?))
     if [ $ret -ne 0 ]; then
         echo "Failed building $bm"

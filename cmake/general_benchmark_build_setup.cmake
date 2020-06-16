@@ -1,3 +1,4 @@
+cmake_policy(VERSION 3.13)
 
 set (CMAKE_CXX_STANDARD 11)
 
@@ -33,6 +34,26 @@ if (NOT HOST_DATA_TYPE OR NOT DEVICE_DATA_TYPE)
     set(DEVICE_DATA_TYPE ${DATA_TYPE})
 endif()
 
+# Check out git submodules
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/../.git")
+# Update submodules as needed
+    option(GIT_SUBMODULE "Check submodules during build" ON)
+    if(GIT_SUBMODULE)
+        message(STATUS "Submodule update")
+        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../
+                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+        endif()
+    endif()
+endif()
+
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/../extern/googletest/CMakeLists.txt")
+    message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
+endif()
+
 
 # Setup CMake environment
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/../extern/hlslib/cmake)
@@ -52,6 +73,7 @@ endif()
 if (USE_MPI)
     find_package(MPI REQUIRED)
     add_definitions(-D_USE_MPI_)
+    include_directories(${MPI_CXX_INCLUDE_PATH})
 endif()
 find_package(IntelFPGAOpenCL)
 find_package(Vitis)

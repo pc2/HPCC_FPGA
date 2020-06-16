@@ -36,7 +36,7 @@ Every benchmark comes with a separate CMake project with host and device code.
 
 All benchmarks come with the following build dependencies:
 
-- CMake >= 3.12
+- CMake >= 3.13
 - C++ compiler with C++11 support
 - Intel OpenCL FPGA SDK or Xilinx Vitis
 - Python 3 for code generation and with [pandas](https://pandas.pydata.org) installed for the evaluation scripts
