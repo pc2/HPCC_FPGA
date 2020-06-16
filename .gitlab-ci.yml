@@ -108,6 +108,8 @@ build:b_eff:
   artifacts:
     paths:
       - build/bin/communication_bw520n_emulate.aocx
+      - build/bin/communication_bw520n_combined_loops_emulate.aocx
+      - build/bin/communication_bw520n_disable_pipelining_emulate.aocx
       - build/bin/Network_intel
       - build/bin/Network_test_intel
 
