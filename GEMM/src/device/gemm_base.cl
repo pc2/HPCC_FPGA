@@ -35,7 +35,58 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
                     const DEVICE_DATA_TYPE b[GEMM_BLOCK][GEMM_BLOCK],
                     DEVICE_DATA_TYPE c_out[GEMM_BLOCK][GEMM_BLOCK],
                     const bool do_acc) {
+#ifdef INTEL_FPGA
+    /* 
+     * For Intel devices do a cannon matrix multiplication. 
+     * This leads to higher kernel frequencies and thus performance.
+     * For Xilinx, this type of optimization does not work well, so a 
+     * standard matrix multiplication is used instead
+     */
 
+    DEVICE_DATA_TYPE a_block[GEMM_BLOCK][GEMM_BLOCK + 1];
+    DEVICE_DATA_TYPE b_block[GEMM_BLOCK + 1][GEMM_BLOCK];
+    DEVICE_DATA_TYPE c_block[GEMM_BLOCK][GEMM_BLOCK];
+
+    // Load block of matrix A and B and init C and reorder values
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+    for (int y=0; y<GEMM_BLOCK; y++) {
+__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+        for (int x=0; x<GEMM_BLOCK; x++) {
+            int k = (x + y) % GEMM_BLOCK;
+            a_block[y][x] = a[y][k];
+            b_block[y][x] = b[k][x];
+            c_block[y][x] = 0;
+        }
+    }
+
+    // Calculate result for 8x8 matrix
+    __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+    for (int i=0;i<GEMM_BLOCK; i++) {
+        __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+        for (int x=0; x<GEMM_BLOCK;x++) {
+            a_block[x][GEMM_BLOCK] = a_block[x][0];
+            b_block[GEMM_BLOCK][x] = b_block[0][x];
+        }
+        __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+        for(int y=0; y < GEMM_BLOCK; y++) {
+            __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+            for (int x=0; x<GEMM_BLOCK;x++) {
+                c_block[y][x] += a_block[y][x] * b_block[y][x];
+                a_block[y][x] = a_block[y][x + 1];
+                b_block[y][x] = b_block[y + 1][x];
+            }
+        }
+    }
+    // Write back to BRAM and accumulate
+    __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+    for(int y=0; y < GEMM_BLOCK; y++) {
+        __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+        for (int x=0; x<GEMM_BLOCK; x++) {
+            c_out[y][x] += c_block[y][x];
+        }
+    }
+
+#else
     DEVICE_DATA_TYPE a_block[GEMM_BLOCK][GEMM_BLOCK]; // automatically in regs
     DEVICE_DATA_TYPE b_block[GEMM_BLOCK][GEMM_BLOCK]; // automatically in regs
     DEVICE_DATA_TYPE c_block[GEMM_BLOCK][GEMM_BLOCK]; // automatically in regs
@@ -55,7 +106,7 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
     for (int y=0; y<GEMM_BLOCK; y++) {
         __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK; x++) {
-            DEVICE_DATA_TYPE sum = 0.f;
+            DEVICE_DATA_TYPE sum = do_acc ? c_out[y][x]  : 0.f;
             __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
             for (int i=0; i<GEMM_BLOCK; i++) {
                 sum += a_block[y][i] * b_block[i][x];
@@ -64,14 +115,15 @@ void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
         }
     }
 
-    // Write back to BRAM and accumulate
+    // Write back to BRAM
     __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
     for(int y=0; y < GEMM_BLOCK; y++) {
         __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK; x++) {
-            c_out[y][x] = do_acc ? c_out[y][x] + c_block[y][x] : c_block[y][x];
+            c_out[y][x] = c_block[y][x];
         }
     }
+#endif
 }
 
 
@@ -109,6 +161,14 @@ to BRAM.
             // For Intel FPGA accumulate all partial results in registers
             // tmp_mul and only write back to BRAM once 
             DEVICE_DATA_TYPE tmp_mul[GEMM_BLOCK][GEMM_BLOCK];
+            __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+            for (int ii = 0; ii < GEMM_BLOCK; ii++) {
+                __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+                for (int jj = 0; jj < GEMM_BLOCK; jj++) {
+                    tmp_mul[ii][jj] = 0;
+                }
+            }
+
             // For each diagonal element in left block
             for (int k=0; k < BLOCK_SIZE / GEMM_BLOCK; k++) {
                 // accumulate when working on following ks
