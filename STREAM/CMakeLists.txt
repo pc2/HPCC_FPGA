@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.13)
 project(STREAM VERSION 2.3)
 
 # Additional benchmark specific build parameters

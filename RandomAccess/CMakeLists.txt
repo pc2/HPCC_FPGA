@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.13)
 project(RandomAccess VERSION 2.2)
 
 # Additional benchmark specific build parameters
