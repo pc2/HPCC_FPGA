@@ -88,14 +88,14 @@ function(generate_kernel_targets_xilinx)
                 DEPENDS ${xilinx_link_settings}
                 )
         add_custom_target(${kernel_file_name}_emulate_xilinx 
-                MAIN_DEPENDENCY ${bitstream_emulate_f} 
+		DEPENDS ${bitstream_emulate_f} 
                 DEPENDS ${source_f} ${CMAKE_BINARY_DIR}/src/common/parameters.h ${EXECUTABLE_OUTPUT_PATH}/emconfig.json)
         add_custom_target(${kernel_file_name}_xilinx
-                MAIN_DEPENDENCY ${bitstream_f} 
+		DEPENDS ${bitstream_f} 
                 DEPENDS ${CMAKE_BINARY_DIR}/src/common/parameters.h
                 )
         add_custom_target(${kernel_file_name}_report_xilinx
-                MAIN_DEPENDENCY ${bitstream_compile} 
+		DEPENDS ${bitstream_compile} 
                 DEPENDS ${CMAKE_BINARY_DIR}/src/common/parameters.h
                 )
         list(APPEND kernel_emulation_targets_xilinx ${kernel_file_name}_emulate_xilinx)
