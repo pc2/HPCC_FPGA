@@ -2,6 +2,12 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.1
+
+#### Added:
+- Base implementation tests are now build and linked with the unit test binary
+- Support for custom kernel designs
+
 ## 1.0.2
 
 #### Changed:
