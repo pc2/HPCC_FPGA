@@ -1,3 +1,4 @@
+cmake_policy(VERSION 3.13)
 
 set (CMAKE_CXX_STANDARD 11)
 
@@ -10,8 +11,12 @@ set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
 set(DEFAULT_DEVICE -1 CACHE STRING "Index of the default device to use")
 set(DEFAULT_PLATFORM -1 CACHE STRING "Index of the default platform to use")
 set(USE_OPENMP ${USE_OPENMP} CACHE BOOL "Use OpenMP in the host code")
+set(USE_MPI ${USE_MPI} CACHE BOOL "Compile the host code with MPI support. This has to be supported by the host code.")
 set(USE_SVM No CACHE BOOL "Use SVM pointers instead of creating buffers on the board and transferring the data there before execution.")
 set(USE_HBM No CACHE BOOL "Use host code specific to HBM FPGAs")
+set(USE_CUSTOM_KERNEL_TARGETS No CACHE BOOL "Enable build targets for custom kernels")
+
+mark_as_advanced(USE_MPI)
 
 if (USE_SVM AND USE_HBM)
     message(ERROR "Misconfiguration: Can not use USE_HBM and USE_SVM at the same time because they target different memory architectures")
@@ -29,6 +34,26 @@ if (NOT HOST_DATA_TYPE OR NOT DEVICE_DATA_TYPE)
     set(DEVICE_DATA_TYPE ${DATA_TYPE})
 endif()
 
+# Check out git submodules
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/../.git")
+# Update submodules as needed
+    option(GIT_SUBMODULE "Check submodules during build" ON)
+    if(GIT_SUBMODULE)
+        message(STATUS "Submodule update")
+        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../
+                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+        endif()
+    endif()
+endif()
+
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/../extern/googletest/CMakeLists.txt")
+    message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
+endif()
+
 
 # Setup CMake environment
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/../extern/hlslib/cmake)
@@ -43,13 +68,23 @@ include_directories(${CMAKE_BINARY_DIR}/src/common)
 
 # Search for general dependencies
 if (USE_OPENMP)
-    find_package(OpenMP)
+    find_package(OpenMP REQUIRED)
+endif()
+if (USE_MPI)
+    find_package(MPI REQUIRED)
+    add_definitions(-D_USE_MPI_)
+    include_directories(${MPI_CXX_INCLUDE_PATH})
 endif()
 find_package(IntelFPGAOpenCL)
 find_package(Vitis)
+find_package(Python3)
 
 if (NOT VITIS_FOUND AND NOT INTELFPGAOPENCL_FOUND)
     message(ERROR "Xilinx Vitis or Intel FPGA OpenCL SDK required!")
+endif()
+
+if (NOT Python3_Interpreter_FOUND)
+    message(WARNING "Python 3 interpreter could not be found! It might be necessary to generate the final kernel source code!")
 endif()
 
 # Find Xilinx settings files
@@ -111,9 +146,22 @@ if (INTELFPGAOPENCL_FOUND)
 endif()
 
 set(CODE_GENERATOR "${CMAKE_SOURCE_DIR}/../scripts/code_generator/generator.py" CACHE FILEPATH "Path to the code generator executable")
+set(CUSTOM_KERNEL_FOLDER ${CMAKE_SOURCE_DIR}/src/device/custom/)
+
+
+set(kernel_emulation_targets_intel "" CACHE INTERNAL "")
+set(kernel_emulation_targets_xilinx "" CACHE INTERNAL "")
 
 # Add subdirectories of the project
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/device)
+
+if (USE_CUSTOM_KERNEL_TARGETS)
+    message(STATUS "Create custom kernel targets.")
+    add_subdirectory(${CUSTOM_KERNEL_FOLDER})
+endif()
+
+message(STATUS "Kernel emulation targets: ${kernel_emulation_targets_intel} ${kernel_emulation_targets_xilinx}")
+
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/host)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     add_subdirectory(${CMAKE_SOURCE_DIR}/tests)

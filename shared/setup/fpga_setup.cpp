@@ -20,6 +20,17 @@
 
 namespace fpga_setup {
 
+FpgaSetupException::FpgaSetupException(std::string message) : error_message(message) {}
+
+const char*
+FpgaSetupException::what() const noexcept
+{
+    return error_message.c_str();
+}
+
+OpenClException::OpenClException(std::string error_name)
+    : FpgaSetupException("An OpenCL error occured: " + error_name) {}
+
 /**
 Converts the reveived OpenCL error to a string
 

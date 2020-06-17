@@ -1,5 +1,5 @@
 
-set(HPCC_BASE_TEST_SOURCES  hpcc_base_benchmark_test.cpp)
+set(HPCC_BASE_TEST_SOURCES  main.cpp hpcc_base_benchmark_test.cpp)
 
 add_library(hpcc_fpga_base_test STATIC ${HPCC_BASE_TEST_SOURCES})
 target_link_libraries(hpcc_fpga_base_test gtest gmock hpcc_fpga_base)

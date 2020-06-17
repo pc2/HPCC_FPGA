@@ -27,12 +27,10 @@ The targets below can be used to build the benchmark and its kernels:
   |  Target                        | Description                                    |
   | ------------------------------ | ---------------------------------------------- |
   | stream_kernels_`VENDOR`                | Synthesizes the kernel (takes several hours!)  |
-  | stream_kernels_report_intel          | Create an HTML report for the kernel           |
-  | stream_kernels_compile_xilinx          | Just compile kernel and create logs and reports |
+  | stream_kernels_report_`VENDOR`         | Just compile kernel and create logs and reports |
   | stream_kernels_emulate_`VENDOR`          | Create a n emulation kernel                    |
   | stream_kernels_single_`VENDOR`                | Synthesizes the kernel (takes several hours!)  |
-  | stream_kernels_single_report_intel          | Create an HTML report for the kernel           |
-  | stream_kernels_single_compile_xilinx          | Just compile kernel and create logs and reports |
+  | stream_kernels_single_report_`VENDOR`          | Just compile kernel and create logs and reports |
   | stream_kernels_single_emulate_`VENDOR`          | Create a n emulation kernel                    |
   
 For the host code as well as the kernels `VENDOR` can be `intel` or `xilinx`.
@@ -83,7 +81,7 @@ For more information on available input parameters run
     -n, arg              Number of repetitions (default: 10)
     -s, arg              Size of the data arrays (default: 134217728)
     -r, arg              Number of kernel replications used (default: 1)
-        --single-kernel  Use the single kernel implementation
+        --multi-kernel  Use the legacy multi-kernel implementation
         --device arg     Index of the device that has to be used. If not given
                         you will be asked which device to use if there are
                         multiple devices available. (default: -1)

@@ -28,8 +28,7 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
   |  Target  | Description                                    |
   | -------- | ---------------------------------------------- |
   | fft1d_float_8_`VENDOR`         | Synthesizes the kernel (takes several hours!)  |
-  | fft1d_float_8_report_intel   | Create an HTML report for the kernel    |
-  | fft1d_float_8_compile_xilinx   | Create a report for the kernel    |
+  | fft1d_float_8_report_`VENDOR`   | Create a report for the kernel    |
   | fft1d_float_8_emulate_`VENDOR`  | Create a n emulation kernel             |
   
  

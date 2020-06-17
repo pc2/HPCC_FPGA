@@ -2,6 +2,15 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.3
+
+#### Added:
+- Base implementation tests are now build and linked with the unit test binary
+- Support for custom kernel designs
+
+#### Changed:
+- Replaced flag `single-kernel` with `multi-kernel`. Now the single kernel implementation is considered the default. The legacy multi kernel implementation can be executed using the new flag.
+
 ## 2.2
 
 #### Added:

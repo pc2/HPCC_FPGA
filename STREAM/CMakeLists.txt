@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.1)
-project(STREAM VERSION 2.2)
+cmake_minimum_required(VERSION 3.13)
+project(STREAM VERSION 2.3)
 
 # Additional benchmark specific build parameters
 set(DEFAULT_ARRAY_LENGTH 134217728 CACHE STRING "Default size of the data arrays")
@@ -8,6 +8,8 @@ set(GLOBAL_MEM_UNROLL 1 CACHE STRING "Unrolling factor that is used for all loop
 set(NUM_REPLICATIONS 4 CACHE STRING "Number of times the kernels will be replicated")
 set(DEVICE_BUFFER_SIZE 512 CACHE STRING "Buffer size in number of values that is used within the single kernel implementation.")
 set(INNER_LOOP_BUFFERS ON CACHE BOOL "Put the local memory buffers inside the outer loop in the kernel code")
+
+mark_as_advanced(INNER_LOOP_BUFFERS)
 
 # Set the data type since optional vector types are used
 set(DATA_TYPE float)

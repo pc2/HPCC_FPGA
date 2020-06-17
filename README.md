@@ -36,7 +36,7 @@ Every benchmark comes with a separate CMake project with host and device code.
 
 All benchmarks come with the following build dependencies:
 
-- CMake >= 3.1
+- CMake >= 3.13
 - C++ compiler with C++11 support
 - Intel OpenCL FPGA SDK or Xilinx Vitis
 - Python 3 for code generation and with [pandas](https://pandas.pydata.org) installed for the evaluation scripts
@@ -180,6 +180,23 @@ To generate the documentation, execute the following commands:
 
 The generated documentation will be placed in `docs/html` and `docs/latex`.
 To view the HTML documentation, open `docs/html/index.html` with a internet browser.
+
+## Custom Kernels
+
+The benchmark suite also allows to use custom kernels for measurements.
+Some basic setup is already done for all benchmarks to ensure an easier integration of custom kernels into the build system.
+Every benchmark comes with an folder `src/device/custom` that is meant to be used for customized or own kernel designs.
+The folder already contains a `CMakeLists.txt` file that creates build targets for all OpenCL files (*.cl) in this folder and also creates tests for each custom kernel using CTest.
+Place the custom kernel design in this folder to use it within the build system of the benchmark suite.
+To enable custom kernel builds the build environment has to be configured using the `USE_CUSTOM_KERNEL_TARGETS` flag.
+As an example, the following call will create a build environment that supports custom kernels for STREAM:
+
+    mkdir build; cd build
+    cmake ../STREAM -DUSE_CUSTOM_KERNEL_TARGETS=Yes
+
+After adding a new custom kernel to the folder, rerun CMake to generate build targets and tests for this kernel.
+Now the same build commands that are used for the base impementations can be used for the custom implementations.
+This also means that the kernels will also be tested within the `make test` command.
 
 
 ## Notes on Xilinx Vitis Compatibility
