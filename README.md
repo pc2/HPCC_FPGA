@@ -199,23 +199,58 @@ Now the same build commands that are used for the base impementations can be use
 This also means that the kernels will also be tested within the `make test` command.
 
 
-## Notes on Xilinx Vitis Compatibility
+## Notes on Vendor Compatibility
 
-Currently not all benchmarks fully support the Xilinx Vitis toolchain.
-In this section the limitations of the benchmarks with regards to Xilinx Vitis are listed to give an overview:
+Current FPGA boards come with different types of memory that need specific support in the device or host code.
+The most common memory types that this overview is focusing on are:
 
-- **Full Support:** STREAM, RandomAccess
-- **Not optimized:** PTRANS, LINPACK, GEMM, FFT
-- **No or limited testing and emulation:** LINPACK, FFT
-- **Not compatible:** b_eff
+- *Shared Virtual Memory (SVM)*: The FPGA directly accesses the data on the host's memory over the PCIe connection. No copying by the host is necessary, but the memory bandwidth of the FPGA is limited by the PCIe connection.
+- *DDR*: The FPGA board is equipped with one or more DDR memory banks and the host is in charge of copying the data forth and back over the PCIe connection.
+This allows higher memory bandwidths during kernel execution.
+- *High Bandwidth Memory (HBM)*: The FPGA fabric itself is equipped with memory banks that can be accessed by the host to copy data. Compared to DDR, this memory type consists of more, but smaller memory banks so that the host needs to split the data between all memory banks to achieve the best performance. Still, the total achievable memory bandwidth is much higher compared to DDR.
 
-*Full Support* means that the benchmarks work for the toolchain as expected.
-*Not optimized* inidcates, that build, emulation and testing works, but the kernels are not optimized for the toolchain which might lead to poor performnce.
-*No or limited testing and emulation* means that there are problems with the creation of the emulation kernels.
-Thus the tests can not be executed for the benchmarks.
-Compilation and synthesis of the kernels works for these benchmarks.
-The benchmarks listed under *Not compatible* are not compatible with the Xilinx toolchain.
+The following three tables contain an overview of the compatibility of all benchmarks that use global memory with the three mentioned memory types.
+b_eff is not included since it does not use global memory.
+Full support of the benchmark is indicated with a **Yes**, functionally correct behavior but performance limitations are indicated with **(Yes)**, no support is indicated with **No**.
+For Xilinx, all benchmarks need a compatible compile- and link-settings-file to map the kernel memory ports to the available memory banks.
 
+#### DDR memory
+
+| Benchmark    | Intel      | Xilinx       |
+|--------------|------------|--------------|
+| STREAM       | Yes        |  Yes         |            
+| RandomAccess | Yes        |  Yes         |      
+| PTRANS       | Yes        |  Yes         |      
+| LINPACK      | (Yes)      |  (Yes)       |           
+| GEMM         | Yes        |  Yes         |      
+| FFT          | Yes        |  No          |       
+
+
+#### HBM
+
+*(Yes)* indicates, that the benchmarks can be excuted with HBM, but not all available memory banks can be used. For Intel, the device code has to be modified to make it compatible with HBM.
+
+| Benchmark    | Intel      | Xilinx       |
+|--------------|------------|--------------|
+| STREAM       | Yes        |  Yes         |            
+| RandomAccess | Yes        |  Yes         |      
+| PTRANS       | No         |  (Yes)       |      
+| LINPACK      | No         |  (Yes)       |           
+| GEMM         | No         |  (Yes)       |      
+| FFT          | No         |  No          | 
+
+#### SVM
+
+SVM could not be tested with Xilinx-based boards, yet. Thus, they are considered as not working.
+
+| Benchmark    | Intel      | Xilinx       |
+|--------------|------------|--------------|
+| STREAM       | Yes        |  No          |            
+| RandomAccess | Yes        |  No          |      
+| PTRANS       | Yes        |  No          |      
+| LINPACK      | Yes        |  No          |           
+| GEMM         | Yes        |  No          |      
+| FFT          | Yes        |  No          | 
 
 ## Publications
 
