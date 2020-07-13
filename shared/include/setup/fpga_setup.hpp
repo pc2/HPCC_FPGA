@@ -28,6 +28,7 @@ SOFTWARE.
 #include <iomanip>
 #include <chrono>
 #include <fstream>
+#include <memory>
 
 /* External libraries */
 #include "CL/cl.hpp"
