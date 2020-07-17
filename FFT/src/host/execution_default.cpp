@@ -67,7 +67,7 @@ namespace bm_execution {
         err = fetchKernel.setArg(0, inBuffer);
         ASSERT_CL(err)
         #ifdef XILINX_FPGA
-        fetchKernel.setArg(1, iterations);
+        err = fetchKernel.setArg(1, iterations);
         ASSERT_CL(err)
         #endif
         err = fftKernel.setArg(0, outBuffer);
@@ -111,7 +111,7 @@ namespace bm_execution {
             #ifdef XILINX_FPGA
             fetchQueue.enqueueTask(fetchKernel);
             #endif
-            // fftQueue.enqueueTask(fftKernel);
+            fftQueue.enqueueTask(fftKernel);
             fetchQueue.finish();
             fftQueue.finish();
             auto endCalculation = std::chrono::high_resolution_clock::now();
