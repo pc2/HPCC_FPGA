@@ -147,8 +147,9 @@ uint permute_gid (uint gid) {
 
 #ifdef INTEL_FPGA
 // group dimension (N/(8*CONT_FACTOR), num_iterations)
+__kernel
 __attribute__((reqd_work_group_size(CONT_FACTOR * POINTS, 1, 1)))
-kernel void fetch (global float2 * restrict src) {
+void fetch (global float2 * restrict src) {
 
   const int N = (1 << LOGN);
   // Each thread will fetch POINTS points. Need POINTS times to pass to FFT.
@@ -196,6 +197,8 @@ __attribute__((opencl_unroll_hint(POINTS)))
   buf2x8.i5 = buf2[5];
   buf2x8.i6 = buf2[6];
   buf2x8.i7 = buf2[7];
+  // printf("Send: %f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",buf2x8.i0.x, buf2x8.i1.x, buf2x8.i2.x, buf2x8.i3.x, buf2x8.i4.x, buf2x8.i5.x, buf2x8.i6.x, buf2x8.i7.x
+  //                                                                 ,buf2x8.i0.y, buf2x8.i1.y, buf2x8.i2.y, buf2x8.i3.y, buf2x8.i4.y, buf2x8.i5.y, buf2x8.i6.y, buf2x8.i7.y);
   write_pipe_block(chanin, &buf2x8);
   #endif
 }
@@ -210,27 +213,23 @@ void fetch(__global float2 * restrict src, int iter) {
 
   for(unsigned k = 0; k < iter; k++){ 
 
-    float2 buf[BUF_SIZE/POINTS][POINTS] __attribute__((xcl_array_partition(complete, 2)));
+    float2 buf[POINTS][BUF_SIZE / POINTS] __attribute__((xcl_array_partition(complete, 1), xcl_array_partition(cyclic, POINTS, 2)));
 
-    for(int i = 0; i < N / POINTS; i++){
-      __attribute__((opencl_unroll_hint(POINTS)))
-      for(int j = 0; j < POINTS; j++){
-        buf[i][(j + i) & (POINTS-1)] = src[k * N + i * POINTS + j];   
-      } 
+    for(int i = 0; i < N; i++){
+      buf[i >> (LOGN - LOGPOINTS)][i & (N / POINTS - 1)] = src[(k << LOGN) + i];  
     }
 
     for(unsigned j = 0; j < (N / POINTS); j++){
       float2x8 buf2x8;
-      const unsigned offset = N / POINTS + j;
-      buf2x8.i0 = buf[(j) / POINTS][(j + j/POINTS) & (POINTS - 1)];
-      buf2x8.i1 = buf[(4 * offset) / POINTS][((4 * offset) + (4 * offset)/POINTS)  & (POINTS - 1)];
-      buf2x8.i2 = buf[(2 * offset) / POINTS][((2 * offset) + (2 * offset)/POINTS) & (POINTS - 1)];
-      buf2x8.i3 = buf[(6 * offset) / POINTS][((6 * offset) + (6 * offset)/POINTS) & (POINTS - 1)];
-      buf2x8.i4 = buf[(offset) / POINTS][(offset + offset/POINTS) & (POINTS - 1)];
-      buf2x8.i5 = buf[(5 * offset) / POINTS][((5 * offset) + (5 * offset)/POINTS) & (POINTS - 1)];
-      buf2x8.i6 = buf[(3 * offset) / POINTS][((3 * offset) + (3 * offset)/POINTS) & (POINTS - 1)];
-      buf2x8.i7 = buf[(7 * offset) / POINTS][((7 * offset) + (7 * offset)/POINTS) & (POINTS - 1)];
-      printf("Send data %d/%d\n", j, (N/POINTS - 1));
+      buf2x8.i0 = buf[0][j];                // 0
+      buf2x8.i1 = buf[4][j];   // 32
+      buf2x8.i2 = buf[2][j];   // 16
+      buf2x8.i3 = buf[6][j];   // 48
+      buf2x8.i4 = buf[1][j];       // 8
+      buf2x8.i5 = buf[5][j];   // 40
+      buf2x8.i6 = buf[3][j];   // 24
+      buf2x8.i7 = buf[7][j];   // 54
+
       write_pipe_block(chanin, &buf2x8);
     }
   }
@@ -295,9 +294,11 @@ kernel void fft1d(global float2 * restrict dest,
       data.i6 = read_channel_intel(chanin[6]);
       data.i7 = read_channel_intel(chanin[7]);
       #else
-      printf("Wait for data \n");
+      // printf("Wait for data \n");
       read_pipe_block(chanin, &data);
-      printf("Received data \n");
+      // printf("Recv: %f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",data.i0.x, data.i1.x, data.i2.x, data.i3.x, data.i4.x, data.i5.x, data.i6.x, data.i7.x
+      //                                                                 ,data.i0.y, data.i1.y, data.i2.y, data.i3.y, data.i4.y, data.i5.y, data.i6.y, data.i7.y);
+      // printf("Received data \n");
       #endif
     } else {
       data.i0 = data.i1 = data.i2 = data.i3 = 
