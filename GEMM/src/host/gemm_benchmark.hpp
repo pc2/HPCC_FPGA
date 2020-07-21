@@ -34,7 +34,7 @@ SOFTWARE.
 #ifdef _USE_BLAS_
 
 extern "C" void sgemm_(char*, char*, int*, int*,int*, float*, float*, int*, float*, int*, float*, float*, int*);
-
+extern "C" void dgemm_(char*, char*, int*, int*,int*, double*, double*, int*, double*, int*, double*, double*, int*);
 #endif
 
 

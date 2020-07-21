@@ -181,21 +181,29 @@ gemm::gemm_ref(HOST_DATA_TYPE* a,HOST_DATA_TYPE* b, HOST_DATA_TYPE* c,
 #ifdef _USE_BLAS_
     char ta = 'N';
     char tb = 'N';
-    
-    sgemm_(&ta, &tb, &n, &n, &n, &alpha, b, &n, a, &n, &beta, c, &n);
-#else
-    for (int i=0; i < n; i++) {
-        for (int j=0; j < n; j++) {
-            c[i * n + j] = beta * c[i*n + j];
-        }
-    }
-
-    for (int i=0; i < n; i++) {
-        for (int j=0; j < n; j++) {
-            for (int k=0; k < n; k++) {
-                c[i*n + j] += alpha * a[i*n + k] * b[k*n + j];
+#endif
+#if (defined(_USE_BLAS_) && DATA_TYPE_SIZE == 4) 
+        // Use single precision for validation
+        sgemm_(&ta, &tb, &n, &n, &n, &alpha, b, &n, a, &n, &beta, c, &n);
+#endif
+#if (defined(_USE_BLAS_) && DATA_TYPE_SIZE == 8) 
+        // use double precision for validation
+        dgemm_(&ta, &tb, &n, &n, &n, &alpha, b, &n, a, &n, &beta, c, &n);
+#endif
+#if (!defined(_USE_BLAS_) || (DATA_TYPE_SIZE != 4 && DATA_TYPE_SIZE != 8)) 
+        // Caclulate manually. Thisi s the default, if BLAS is not found
+        for (int i=0; i < n; i++) {
+            for (int j=0; j < n; j++) {
+                c[i * n + j] = beta * c[i*n + j];
             }
         }
-    }
+
+        for (int i=0; i < n; i++) {
+            for (int j=0; j < n; j++) {
+                for (int k=0; k < n; k++) {
+                    c[i*n + j] += alpha * a[i*n + k] * b[k*n + j];
+                }
+            }
+        }
 #endif
 }

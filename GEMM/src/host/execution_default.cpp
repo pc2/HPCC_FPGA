@@ -56,20 +56,20 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
     cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_1_INTELFPGA),
                         sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
     cl::Buffer Buffer_b(*config.context, CL_MEM_READ_WRITE | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_2_INTELFPGA),
-                        sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
     cl::Buffer Buffer_c_in(*config.context, CL_MEM_READ_WRITE | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_3_INTELFPGA),
-                           sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+                           sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
     cl::Buffer Buffer_c_out(*config.context, CL_MEM_READ_WRITE | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_4_INTELFPGA),
-                            sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+                            sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
 #else
     cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE,
                         sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
     cl::Buffer Buffer_b(*config.context, CL_MEM_READ_WRITE,
-                        sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
     cl::Buffer Buffer_c_in(*config.context, CL_MEM_READ_WRITE,
-                           sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+                           sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
     cl::Buffer Buffer_c_out(*config.context, CL_MEM_READ_WRITE,
-                            sizeof(cl_int)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+                            sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
 #endif
 
 
