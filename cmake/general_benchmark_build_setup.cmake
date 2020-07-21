@@ -1,4 +1,5 @@
 cmake_policy(VERSION 3.13)
+INCLUDE (CheckTypeSize)
 
 set (CMAKE_CXX_STANDARD 11)
 
@@ -34,37 +35,9 @@ if (NOT HOST_DATA_TYPE OR NOT DEVICE_DATA_TYPE)
     set(DEVICE_DATA_TYPE ${DATA_TYPE})
 endif()
 
-# Check out git submodules
-find_package(Git QUIET)
-if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/../.git")
-# Update submodules as needed
-    option(GIT_SUBMODULE "Check submodules during build" ON)
-    if(GIT_SUBMODULE)
-        message(STATUS "Submodule update")
-        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
-                        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../
-                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
-        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
-            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
-        endif()
-    endif()
-endif()
-
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/../extern/googletest/CMakeLists.txt")
-    message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
-endif()
-
-
 # Setup CMake environment
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/../extern/hlslib/cmake)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
-
-# Configure the header file with definitions used by the host code
-configure_file(
-        "${CMAKE_SOURCE_DIR}/src/common/parameters.h.in"
-        "${CMAKE_BINARY_DIR}/src/common/parameters.h"
-)
-include_directories(${CMAKE_BINARY_DIR}/src/common)
 
 # Search for general dependencies
 if (USE_OPENMP)
@@ -86,6 +59,40 @@ endif()
 if (NOT Python3_Interpreter_FOUND)
     message(WARNING "Python 3 interpreter could not be found! It might be necessary to generate the final kernel source code!")
 endif()
+
+# Set the size of the used data type
+list(APPEND CMAKE_REQUIRED_INCLUDES ${IntelFPGAOpenCL_INCLUDE_DIRS} ${Vitis_INCLUDE_DIRS})
+list(APPEND CMAKE_EXTRA_INCLUDE_FILES "CL/opencl.h")
+message(STATUS ${CMAKE_REQUIRED_INCLUDES})
+check_type_size("${HOST_DATA_TYPE}" DATA_TYPE_SIZE)
+
+# Check out git submodules
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/../.git")
+# Update submodules as needed
+    option(GIT_SUBMODULE "Check submodules during build" ON)
+    if(GIT_SUBMODULE)
+        message(STATUS "Submodule update")
+        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../
+                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+        endif()
+    endif()
+endif()
+
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/../extern/googletest/CMakeLists.txt")
+    message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
+endif()
+
+# Configure the header file with definitions used by the host code
+configure_file(
+        "${CMAKE_SOURCE_DIR}/src/common/parameters.h.in"
+        "${CMAKE_BINARY_DIR}/src/common/parameters.h"
+)
+include_directories(${CMAKE_BINARY_DIR}/src/common)
+
 
 # Find Xilinx settings files
 file(GLOB POSSIBLE_XILINX_LINK_FILES ${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx*.ini)
