@@ -22,6 +22,8 @@ SOFTWARE.
 
 #include "parameters.h"
 
+#define INTEL_MUL_SHIFT_REG 8
+
 /**
 Calculate for the Level 2 block:
 
@@ -33,7 +35,11 @@ Calculation itself is fully unrolled.
  */
 void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
                     const DEVICE_DATA_TYPE b[GEMM_BLOCK][GEMM_BLOCK],
+#ifdef INTEL_FPGA
+                    DEVICE_DATA_TYPE c_out[INTEL_MUL_SHIFT_REG + 1][GEMM_BLOCK][GEMM_BLOCK],
+#else
                     DEVICE_DATA_TYPE c_out[GEMM_BLOCK][GEMM_BLOCK],
+#endif
                     const bool do_acc) {
 #ifdef INTEL_FPGA
     /* 
@@ -82,7 +88,7 @@ __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
     for(int y=0; y < GEMM_BLOCK; y++) {
         __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
         for (int x=0; x<GEMM_BLOCK; x++) {
-            c_out[y][x] += c_block[y][x];
+            c_out[INTEL_MUL_SHIFT_REG][y][x] = c_out[0][y][x] + c_block[y][x];
         }
     }
 
@@ -153,6 +159,7 @@ GEMM_BLOCKxGEMM_BLOCK matrix block and write the partial result directly back
 to BRAM.
  */
 #ifdef INTEL_FPGA
+
     #pragma loop_coalesce 2
     // For each column in top block
     for (int i = 0; i < BLOCK_SIZE / GEMM_BLOCK; i++) {
@@ -160,12 +167,15 @@ to BRAM.
         for (int j = 0; j < BLOCK_SIZE / GEMM_BLOCK; j++) {
             // For Intel FPGA accumulate all partial results in registers
             // tmp_mul and only write back to BRAM once 
-            DEVICE_DATA_TYPE tmp_mul[GEMM_BLOCK][GEMM_BLOCK];
-            __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-            for (int ii = 0; ii < GEMM_BLOCK; ii++) {
+            DEVICE_DATA_TYPE tmp_mul[INTEL_MUL_SHIFT_REG+1][GEMM_BLOCK][GEMM_BLOCK];
+            __attribute__((opencl_unroll_hint(INTEL_MUL_SHIFT_REG + 1)))
+            for (int kk = 0; kk <= INTEL_MUL_SHIFT_REG; kk++) {
                 __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-                for (int jj = 0; jj < GEMM_BLOCK; jj++) {
-                    tmp_mul[ii][jj] = 0;
+                for (int ii = 0; ii < GEMM_BLOCK; ii++) {
+                    __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+                    for (int jj = 0; jj < GEMM_BLOCK; jj++) {
+                        tmp_mul[kk][ii][jj] = 0;
+                    }
                 }
             }
 
@@ -174,13 +184,37 @@ to BRAM.
                 // accumulate when working on following ks
                 register_gemm(a_block[i][k], b_block[k][j],
                     tmp_mul, (k>0));
+                __attribute__((opencl_unroll_hint(INTEL_MUL_SHIFT_REG)))
+                for (int kk = 0; kk < INTEL_MUL_SHIFT_REG; kk++) {
+                    __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+                    for (int ii = 0; ii < GEMM_BLOCK; ii++) {
+                        __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+                        for (int jj = 0; jj < GEMM_BLOCK; jj++) {
+                            tmp_mul[kk][ii][jj] = tmp_mul[kk + 1][ii][jj];
+                        }
+                    }
+                }  
             }
+
+            DEVICE_DATA_TYPE tmp_mul_sum[GEMM_BLOCK][GEMM_BLOCK];
+            __attribute__((opencl_unroll_hint(INTEL_MUL_SHIFT_REG)))
+            for (int kk = 0; kk < INTEL_MUL_SHIFT_REG; kk++) {
+                __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+                for (int ii = 0; ii < GEMM_BLOCK; ii++) {
+                    __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+                    for (int jj = 0; jj < GEMM_BLOCK; jj++) {
+                        tmp_mul_sum[ii][jj] = (kk == 0) ? tmp_mul[kk][ii][jj] : tmp_mul_sum[ii][jj] + tmp_mul[kk][ii][jj];
+                    }
+                }
+            } 
+
+
             // Write back accumulated result to BRAM and accumulate if requested from outside
             __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
             for(int y=0; y < GEMM_BLOCK; y++) {
                 __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                 for (int x=0; x<GEMM_BLOCK; x++) {
-                    c_block[i][j][y][x] = do_acc ? c_block[i][j][y][x] + tmp_mul[y][x] : tmp_mul[y][x];
+                    c_block[i][j][y][x] = do_acc ? c_block[i][j][y][x] + tmp_mul_sum[y][x] : tmp_mul_sum[y][x];
                 }
             }    
         }
