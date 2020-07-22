@@ -197,44 +197,64 @@ __attribute__((opencl_unroll_hint(POINTS)))
   buf2x8.i5 = buf2[5];
   buf2x8.i6 = buf2[6];
   buf2x8.i7 = buf2[7];
-  // printf("Send: %f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",buf2x8.i0.x, buf2x8.i1.x, buf2x8.i2.x, buf2x8.i3.x, buf2x8.i4.x, buf2x8.i5.x, buf2x8.i6.x, buf2x8.i7.x
-  //                                                                 ,buf2x8.i0.y, buf2x8.i1.y, buf2x8.i2.y, buf2x8.i3.y, buf2x8.i4.y, buf2x8.i5.y, buf2x8.i6.y, buf2x8.i7.y);
   write_pipe_block(chanin, &buf2x8);
   #endif
 }
 #endif
 
+#define BUFFER_REPLICATION 4
+
 #ifdef XILINX_FPGA
 __kernel
+__attribute__ ((max_global_work_dim(0), reqd_work_group_size(1,1,1)))
 void fetch(__global float2 * restrict src, int iter) {
 
   const int N = (1 << LOGN);
-  const int BUF_SIZE = N;
 
-  for(unsigned k = 0; k < iter; k++){ 
+  // Duplicated input buffer. One will be used to write and buffer data from global memory
+  // The other will be used to read and forward the data over the channels.
+  // Read and write buffers will be swapped in every iteration
+  float2 buf[BUFFER_REPLICATION][POINTS][N / POINTS] __attribute__((xcl_array_partition(cyclic, 2, 1), xcl_array_partition(complete, 2), xcl_array_partition(cyclic, POINTS, 3)));
 
-    float2 buf[POINTS][BUF_SIZE / POINTS] __attribute__((xcl_array_partition(complete, 1), xcl_array_partition(cyclic, POINTS, 2)));
+  // for iter iterations and one additional iteration to empty the last buffer
+  __attribute__((xcl_loop_tripcount(2*(N / POINTS),5000*(N / POINTS),100*(N / POINTS))))
+  for(unsigned k = 0; k < (iter + 1) * (N / POINTS); k++){ 
 
-    for(int i = 0; i < N; i++){
-      buf[i >> (LOGN - LOGPOINTS)][i & (N / POINTS - 1)] = src[(k << LOGN) + i];  
+    // Read the next 8 values from global memory
+    // in the last iteration just read garbage, but the data will not be forwarded over the pipes.
+    // This allows the use of memory bursts here.
+    __attribute__((opencl_unroll_hint(POINTS)))
+    for(int j = 0; j < POINTS; j++){
+      unsigned local_i = ((k << LOGPOINTS) + j) & (N - 1);
+      buf[(k >> (LOGN - LOGPOINTS)) & (BUFFER_REPLICATION - 1)][local_i >> (LOGN - LOGPOINTS)][local_i & ((1 << (LOGN - LOGPOINTS)) - 1)] = src[(k << LOGPOINTS) + j];
     }
 
-    for(unsigned j = 0; j < (N / POINTS); j++){
+    // Start in the second iteration to forward the buffered data over the pipe
+    if (k >= (N / POINTS)) {
+#ifdef INTEL_FPGA
+      __attribute__((opencl_unroll_hint(POINTS)))
+      for (uint j = 0; j < POINTS; j++) {
+        write_channel_intel (chanin[j], buf[((k >> LOGN) - 1) & (BUFFER_REPLICATION - 1)][bit_reversed(j,LOGPOINTS)][k & ((1 << (LOGN - LOGPOINTS)) - 1)]);
+      }
+#endif
+#ifdef XILINX_FPGA
       float2x8 buf2x8;
-      buf2x8.i0 = buf[0][j];                // 0
-      buf2x8.i1 = buf[4][j];   // 32
-      buf2x8.i2 = buf[2][j];   // 16
-      buf2x8.i3 = buf[6][j];   // 48
-      buf2x8.i4 = buf[1][j];       // 8
-      buf2x8.i5 = buf[5][j];   // 40
-      buf2x8.i6 = buf[3][j];   // 24
-      buf2x8.i7 = buf[7][j];   // 54
+      buf2x8.i0 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][0][k & ((1 << (LOGN - LOGPOINTS)) - 1)];          
+      buf2x8.i1 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][4][k & ((1 << (LOGN - LOGPOINTS)) - 1)];  
+      buf2x8.i2 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][2][k & ((1 << (LOGN - LOGPOINTS)) - 1)];  
+      buf2x8.i3 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][6][k & ((1 << (LOGN - LOGPOINTS)) - 1)]; 
+      buf2x8.i4 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][1][k & ((1 << (LOGN - LOGPOINTS)) - 1)]; 
+      buf2x8.i5 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][5][k & ((1 << (LOGN - LOGPOINTS)) - 1)];
+      buf2x8.i6 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][3][k & ((1 << (LOGN - LOGPOINTS)) - 1)];
+      buf2x8.i7 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][7][k & ((1 << (LOGN - LOGPOINTS)) - 1)];
 
       write_pipe_block(chanin, &buf2x8);
+#endif
     }
   }
 }
 #endif
+
 
 
 /* Attaching the attribute 'task' to the top level kernel to indicate 
@@ -247,6 +267,7 @@ void fetch(__global float2 * restrict src, int iter) {
  */
 
 __attribute__ ((max_global_work_dim(0)))
+__attribute__((reqd_work_group_size(1,1,1)))
 kernel void fft1d(global float2 * restrict dest,
                   int count, int inverse) {
 
@@ -268,7 +289,6 @@ kernel void fft1d(global float2 * restrict dest,
    * The compiler leverages pipeline parallelism by overlapping the 
    * iterations of this loop - launching one iteration every clock cycle
    */
-
   for (unsigned i = 0; i < count * (N / POINTS) + N / POINTS - 1; i++) {
 
     /* As required by the FFT engine, gather input data from 8 distinct 
@@ -294,11 +314,7 @@ kernel void fft1d(global float2 * restrict dest,
       data.i6 = read_channel_intel(chanin[6]);
       data.i7 = read_channel_intel(chanin[7]);
       #else
-      // printf("Wait for data \n");
       read_pipe_block(chanin, &data);
-      // printf("Recv: %f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",data.i0.x, data.i1.x, data.i2.x, data.i3.x, data.i4.x, data.i5.x, data.i6.x, data.i7.x
-      //                                                                 ,data.i0.y, data.i1.y, data.i2.y, data.i3.y, data.i4.y, data.i5.y, data.i6.y, data.i7.y);
-      // printf("Received data \n");
       #endif
     } else {
       data.i0 = data.i1 = data.i2 = data.i3 = 
