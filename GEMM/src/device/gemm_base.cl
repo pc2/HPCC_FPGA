@@ -22,6 +22,10 @@ SOFTWARE.
 
 #include "parameters.h"
 
+#if DATA_TYPE_SIZE == 2
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
 #define INTEL_MUL_SHIFT_REG 8
 
 /**
@@ -251,12 +255,24 @@ calculates C_OUT = alpha * A.dot(B) + beta * C
 */
 __attribute__((uses_global_work_offset(0)))
 __kernel
-void gemm(__global const DEVICE_DATA_TYPE* restrict a,
+void gemm(
+#if DATA_TYPE_SIZE < 4
+        // If a smaller data type is used (half precision)
+        // convert the values accordingly from single precision
+            __global const float* restrict a,
+          __global const float* restrict b,
+          __global const float* restrict c,
+          __global float* restrict c_out,
+          const float alpha,
+          const float beta,
+#else
+            __global const DEVICE_DATA_TYPE* restrict a,
           __global const DEVICE_DATA_TYPE* restrict b,
           __global const DEVICE_DATA_TYPE* restrict c,
           __global DEVICE_DATA_TYPE* restrict c_out,
           const DEVICE_DATA_TYPE alpha,
           const DEVICE_DATA_TYPE beta,
+#endif
           const uint a_size) {
 
     const unsigned size = a_size * BLOCK_SIZE;
@@ -284,10 +300,17 @@ void gemm(__global const DEVICE_DATA_TYPE* restrict a,
                         DEVICE_DATA_TYPE b_reorder_buffer[GLOBAL_MEM_UNROLL];
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                         for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
+#if DATA_TYPE_SIZE == 2
+                            vstore_half(a[(y_block * size + diagonal_block) * BLOCK_SIZE +
+                                j + u + i * size], 0, &a_reorder_buffer[u]);
+                             vstore_half(b[(diagonal_block * size + x_block) * BLOCK_SIZE +
+                                                          j + u + i * size], 0 , &b_reorder_buffer[u]);
+#else
                             a_reorder_buffer[u] = a[(y_block * size + diagonal_block) * BLOCK_SIZE +
                                 j + u + i * size];
                             b_reorder_buffer[u] = b[(diagonal_block * size + x_block) * BLOCK_SIZE +
                                                           j + u + i * size];
+#endif
                         }
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/GEMM_BLOCK)))
                         for (int b = 0; b < GLOBAL_MEM_UNROLL/GEMM_BLOCK; b++) {
@@ -303,13 +326,22 @@ __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                 local_gemm(a_block, b_block, c_block, diagonal_block);
             }
 
+#ifdef INTEL_FPGA
 #pragma loop_coalesce
+#endif
+#ifdef XILINX_FPGA
+__attribute__((xcl_pipeline_loop(1)))
+#endif
             for (int i = 0; i < BLOCK_SIZE; i++) {
                 for (int j = 0; j < BLOCK_SIZE/GLOBAL_MEM_UNROLL; j++) {
                     DEVICE_DATA_TYPE c_reorder_buffer[GLOBAL_MEM_UNROLL];
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
+#if DATA_TYPE_SIZE == 2
+                        vstore_half(c[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + i * size + u], 0 , &c_reorder_buffer[u]);
+#else
                         c_reorder_buffer[u] = c[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + i * size + u];
+#endif
                     }
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {

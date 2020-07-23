@@ -66,6 +66,10 @@ list(APPEND CMAKE_EXTRA_INCLUDE_FILES "CL/opencl.h")
 message(STATUS ${CMAKE_REQUIRED_INCLUDES})
 check_type_size("${HOST_DATA_TYPE}" DATA_TYPE_SIZE)
 
+if (${DATA_TYPE_SIZE} EQUAL "2")
+    set(HOST_DATA_TYPE cl_float)
+endif()
+
 # Check out git submodules
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/../.git")
