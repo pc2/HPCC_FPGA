@@ -64,6 +64,12 @@ public:
     uint blockSize;
 
     /**
+     * @brief Number of times the kernel is replicated
+     * 
+     */
+    uint kernelReplications;
+
+    /**
      * @brief Construct a new GEMM Program Settings object
      * 
      * @param results the result map from parsing the program input parameters

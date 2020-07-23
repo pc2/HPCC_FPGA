@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 gemm::GEMMProgramSettings::GEMMProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()) {
+    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()), kernelReplications(results["r"].as<uint>()) {
 
 }
 
@@ -43,6 +43,7 @@ std::map<std::string, std::string>
 gemm::GEMMProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["Matrix Size"] = std::to_string(matrixSize);
+        map["Kernel Replications"] = std::to_string(kernelReplications);
         return map;
 }
 
@@ -94,7 +95,9 @@ gemm::GEMMBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
             ("m", "Matrix size in number of blocks in a single dimension",
              cxxopts::value<cl_uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
             ("b", "Block size in number of values in one dimension",
-             cxxopts::value<cl_uint>()->default_value(std::to_string(BLOCK_SIZE)));
+             cxxopts::value<cl_uint>()->default_value(std::to_string(BLOCK_SIZE)))
+            ("r", "Number of used kernel replications",
+             cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)));
 }
 
 std::unique_ptr<gemm::GEMMExecutionTimings>

@@ -22,11 +22,13 @@ SOFTWARE.
 
 #include "parameters.h"
 
+#if DATA_TYPE_SIZE == 8
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#endif
+
 #if DATA_TYPE_SIZE == 2
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
-
-#define INTEL_MUL_SHIFT_REG 8
 
 /**
 Calculate for the Level 2 block:
@@ -188,6 +190,7 @@ to BRAM.
                 // accumulate when working on following ks
                 register_gemm(a_block[i][k], b_block[k][j],
                     tmp_mul, (k>0));
+#if INTEL_MUL_SHIFT_REG > 0
                 __attribute__((opencl_unroll_hint(INTEL_MUL_SHIFT_REG)))
                 for (int kk = 0; kk < INTEL_MUL_SHIFT_REG; kk++) {
                     __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
@@ -198,8 +201,9 @@ to BRAM.
                         }
                     }
                 }  
+#endif
             }
-
+#if INTEL_MUL_SHIFT_REG > 0
             DEVICE_DATA_TYPE tmp_mul_sum[GEMM_BLOCK][GEMM_BLOCK];
             __attribute__((opencl_unroll_hint(INTEL_MUL_SHIFT_REG)))
             for (int kk = 0; kk < INTEL_MUL_SHIFT_REG; kk++) {
@@ -211,14 +215,18 @@ to BRAM.
                     }
                 }
             } 
-
+#endif
 
             // Write back accumulated result to BRAM and accumulate if requested from outside
             __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
             for(int y=0; y < GEMM_BLOCK; y++) {
                 __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                 for (int x=0; x<GEMM_BLOCK; x++) {
+#if INTEL_MUL_SHIFT_REG > 0
                     c_block[i][j][y][x] = do_acc ? c_block[i][j][y][x] + tmp_mul_sum[y][x] : tmp_mul_sum[y][x];
+#else
+                    c_block[i][j][y][x] = do_acc ? c_block[i][j][y][x] + tmp_mul[0][y][x] : tmp_mul[0][y][x];
+#endif
                 }
             }    
         }
@@ -240,6 +248,8 @@ to BRAM.
 }
 
 
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+
 /**
 Two level blocked GEMM kernel
 
@@ -255,7 +265,7 @@ calculates C_OUT = alpha * A.dot(B) + beta * C
 */
 __attribute__((uses_global_work_offset(0)))
 __kernel
-void gemm(
+void gemm/*PY_CODE_GEN i*/(
 #if DATA_TYPE_SIZE < 4
         // If a smaller data type is used (half precision)
         // convert the values accordingly from single precision
@@ -280,12 +290,12 @@ void gemm(
     // Level 1 Matrix Multiplication
 #pragma loop_coalesce 2
 #pragma disable_loop_pipelining
-    for (int x_block = 0; x_block < a_size; x_block++) {
+    for (int x_block = /* PY_CODE_GEN str(i) + " * a_size / " + str(num_replications)*/; x_block < /* PY_CODE_GEN "min(" + str(i + 1) + " * a_size / " + str(num_replications) + ",a_size)"*/; x_block++) {
 #pragma disable_loop_pipelining
         for (int y_block = 0; y_block < a_size; y_block++) {
             DEVICE_DATA_TYPE c_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
             [GEMM_BLOCK][GEMM_BLOCK]  __attribute((numbanks(GEMM_BLOCK * GEMM_BLOCK),xcl_array_partition(complete, 3),xcl_array_partition(complete, 4)));
-
+#pragma disable_loop_pipelining
             for (int diagonal_block=0; diagonal_block < a_size; diagonal_block++) {
                 DEVICE_DATA_TYPE a_block[BLOCK_SIZE / GEMM_BLOCK][BLOCK_SIZE / GEMM_BLOCK]
                                         [GEMM_BLOCK][GEMM_BLOCK]  __attribute((numbanks(GEMM_BLOCK * GEMM_BLOCK),xcl_array_partition(complete, 3),xcl_array_partition(complete, 4)));
@@ -296,28 +306,31 @@ void gemm(
 #pragma loop_coalesce 2
                 for (int i = 0; i < BLOCK_SIZE ; i++) {
                     for (int j = 0; j < BLOCK_SIZE; j += GLOBAL_MEM_UNROLL) {
+#if DATA_TYPE_SIZE == 2
+                        float a_reorder_buffer[GLOBAL_MEM_UNROLL];
+                        float b_reorder_buffer[GLOBAL_MEM_UNROLL];
+#else
                         DEVICE_DATA_TYPE a_reorder_buffer[GLOBAL_MEM_UNROLL];
                         DEVICE_DATA_TYPE b_reorder_buffer[GLOBAL_MEM_UNROLL];
+#endif
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                         for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
-#if DATA_TYPE_SIZE == 2
-                            vstore_half(a[(y_block * size + diagonal_block) * BLOCK_SIZE +
-                                j + u + i * size], 0, &a_reorder_buffer[u]);
-                             vstore_half(b[(diagonal_block * size + x_block) * BLOCK_SIZE +
-                                                          j + u + i * size], 0 , &b_reorder_buffer[u]);
-#else
                             a_reorder_buffer[u] = a[(y_block * size + diagonal_block) * BLOCK_SIZE +
                                 j + u + i * size];
                             b_reorder_buffer[u] = b[(diagonal_block * size + x_block) * BLOCK_SIZE +
                                                           j + u + i * size];
-#endif
                         }
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/GEMM_BLOCK)))
                         for (int b = 0; b < GLOBAL_MEM_UNROLL/GEMM_BLOCK; b++) {
 __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                             for (int u = 0; u < GEMM_BLOCK; u++) {
+#if DATA_TYPE_SIZE == 2
+                                vstore_half(a_reorder_buffer[b * GEMM_BLOCK + u], 0, &a_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u]);
+                                vstore_half(b_reorder_buffer[b * GEMM_BLOCK + u], 0 , &b_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u]);
+#else
                                 a_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = a_reorder_buffer[b * GEMM_BLOCK + u];
                                 b_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = b_reorder_buffer[b * GEMM_BLOCK + u];
+#endif
                             }
                         }
                     }
@@ -335,10 +348,17 @@ __attribute__((xcl_pipeline_loop(1)))
             for (int i = 0; i < BLOCK_SIZE; i++) {
                 for (int j = 0; j < BLOCK_SIZE/GLOBAL_MEM_UNROLL; j++) {
                     DEVICE_DATA_TYPE c_reorder_buffer[GLOBAL_MEM_UNROLL];
+#if DATA_TYPE_SIZE == 2
+                    float c_reorder_buffer_sp[GLOBAL_MEM_UNROLL];
+                    __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+                    for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
+                        c_reorder_buffer_sp[u] = c[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + i * size + u];
+                    }
+#endif
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
 #if DATA_TYPE_SIZE == 2
-                        vstore_half(c[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + i * size + u], 0 , &c_reorder_buffer[u]);
+                        vstore_half(c_reorder_buffer_sp[u], 0 , &c_reorder_buffer[u]);
 #else
                         c_reorder_buffer[u] = c[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + i * size + u];
 #endif
@@ -354,3 +374,5 @@ __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
         }
     }
 }
+
+// PY_CODE_GEN block_end

@@ -50,8 +50,11 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
     int err;
 
     // Create Command queue
-    cl::CommandQueue compute_queue(*config.context, *config.device, 0, &err);
-    ASSERT_CL(err)
+    std::vector<cl::CommandQueue> compute_queues;
+    for (int i=0; i < config.programSettings->kernelReplications; i++) {
+        compute_queues.push_back(cl::CommandQueue(*config.context, *config.device, 0, &err));
+        ASSERT_CL(err)
+    }
 #ifdef INTEL_FPGA
     cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_1_INTELFPGA),
                         sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
@@ -72,43 +75,48 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
                             sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
 #endif
 
+    std::vector<cl::Kernel> gemmkernels;
 
-    // create the kernels
-    cl::Kernel gemmkernel(*config.program, KERNEL_NAME,
-                                    &err);
-    ASSERT_CL(err);
+    for (int i=0; i < config.programSettings->kernelReplications; i++) {
+        // create the kernels
+        cl::Kernel gemmkernel(*config.program, (KERNEL_NAME + std::to_string(i)).c_str(),
+                                        &err);
+        ASSERT_CL(err);
 
 
-    // prepare kernels
-#ifdef USE_SVM
-    err = clSetKernelArgSVMPointer(gemmkernel(), 0,
-                                    reinterpret_cast<void*>(a));
-    ASSERT_CL(err)
-    err = clSetKernelArgSVMPointer(gemmkernel(), 1,
-                                    reinterpret_cast<void*>(b));
-    ASSERT_CL(err)
-    err = clSetKernelArgSVMPointer(gemmkernel(), 2,
-                                    reinterpret_cast<void*>(c));
-    ASSERT_CL(err)
-    err = clSetKernelArgSVMPointer(gemmkernel(), 3,
-                                    reinterpret_cast<void*>(c_out));
-    ASSERT_CL(err)
-#else
-    err = gemmkernel.setArg(0, Buffer_a);
-    ASSERT_CL(err);
-    err = gemmkernel.setArg(1, Buffer_b);
-    ASSERT_CL(err);
-    err = gemmkernel.setArg(2, Buffer_c_in);
-    ASSERT_CL(err);
-    err = gemmkernel.setArg(3, Buffer_c_out);
-    ASSERT_CL(err);
-#endif
-    err = gemmkernel.setArg(4, alpha);
-    ASSERT_CL(err);
-    err = gemmkernel.setArg(5, beta);
-    ASSERT_CL(err);
-    err = gemmkernel.setArg(6, config.programSettings->matrixSize / config.programSettings->blockSize);
-    ASSERT_CL(err);
+        // prepare kernels
+    #ifdef USE_SVM
+        err = clSetKernelArgSVMPointer(gemmkernel(), 0,
+                                        reinterpret_cast<void*>(a));
+        ASSERT_CL(err)
+        err = clSetKernelArgSVMPointer(gemmkernel(), 1,
+                                        reinterpret_cast<void*>(b));
+        ASSERT_CL(err)
+        err = clSetKernelArgSVMPointer(gemmkernel(), 2,
+                                        reinterpret_cast<void*>(c));
+        ASSERT_CL(err)
+        err = clSetKernelArgSVMPointer(gemmkernel(), 3,
+                                        reinterpret_cast<void*>(c_out));
+        ASSERT_CL(err)
+    #else
+        err = gemmkernel.setArg(0, Buffer_a);
+        ASSERT_CL(err);
+        err = gemmkernel.setArg(1, Buffer_b);
+        ASSERT_CL(err);
+        err = gemmkernel.setArg(2, Buffer_c_in);
+        ASSERT_CL(err);
+        err = gemmkernel.setArg(3, Buffer_c_out);
+        ASSERT_CL(err);
+    #endif
+        err = gemmkernel.setArg(4, alpha);
+        ASSERT_CL(err);
+        err = gemmkernel.setArg(5, beta);
+        ASSERT_CL(err);
+        err = gemmkernel.setArg(6, config.programSettings->matrixSize / config.programSettings->blockSize);
+        ASSERT_CL(err);
+
+        gemmkernels.push_back(gemmkernel);
+    }
 
     /* --- Execute actual benchmark kernels --- */
 
@@ -116,28 +124,28 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
     std::vector<double> executionTimes;
     for (int i = 0; i < config.programSettings->numRepetitions; i++) {
 #ifdef USE_SVM
-        err = clEnqueueSVMMap(compute_queue(), CL_TRUE,
+        err = clEnqueueSVMMap(compute_queues[0](), CL_TRUE,
                         CL_MAP_READ,
                         reinterpret_cast<void *>(a),
                         sizeof(HOST_DATA_TYPE) *
                         (config.programSettings->matrixSize * config.programSettings->matrixSize), 0,
                         NULL, NULL);
         ASSERT_CL(err)
-        err = clEnqueueSVMMap(compute_queue(), CL_TRUE,
+        err = clEnqueueSVMMap(compute_queues[0](), CL_TRUE,
                         CL_MAP_READ,
                         reinterpret_cast<void *>(b),
                         sizeof(HOST_DATA_TYPE) *
                         (config.programSettings->matrixSize * config.programSettings->matrixSize), 0,
                         NULL, NULL);
         ASSERT_CL(err)
-        err = clEnqueueSVMMap(compute_queue(), CL_TRUE,
+        err = clEnqueueSVMMap(compute_queues[0](), CL_TRUE,
                         CL_MAP_READ,
                         reinterpret_cast<void *>(c),
                         sizeof(HOST_DATA_TYPE) *
                         (config.programSettings->matrixSize * config.programSettings->matrixSize), 0,
                         NULL, NULL);
         ASSERT_CL(err)
-        err = clEnqueueSVMMap(compute_queue(), CL_TRUE,
+        err = clEnqueueSVMMap(compute_queues[0](), CL_TRUE,
                         CL_MAP_WRITE,
                         reinterpret_cast<void *>(c_out),
                         sizeof(HOST_DATA_TYPE) *
@@ -145,20 +153,25 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
                         NULL, NULL);
         ASSERT_CL(err)
 #else
-        err = compute_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
+        err = compute_queues[0].enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, a);
         ASSERT_CL(err)
-        err = compute_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
+        err = compute_queues[0].enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, b);
         ASSERT_CL(err)
-        err = compute_queue.enqueueWriteBuffer(Buffer_c_in, CL_TRUE, 0,
+        err = compute_queues[0].enqueueWriteBuffer(Buffer_c_in, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, c);
         ASSERT_CL(err)
-        compute_queue.finish();
+        compute_queues[0].finish();
 #endif
         auto t1 = std::chrono::high_resolution_clock::now();
-        compute_queue.enqueueTask(gemmkernel);
-        compute_queue.finish();
+        for (int i=0; i < config.programSettings->kernelReplications; i++) {
+            compute_queues[i].enqueueTask(gemmkernels[i]);
+        }
+        for (int i=0; i < config.programSettings->kernelReplications; i++) {
+            compute_queues[i].finish();
+        }
+        compute_queues[0].finish();
         auto t2 = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> timespan = t2 - t1;
         executionTimes.push_back(timespan.count());
@@ -166,24 +179,24 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
 
     /* --- Read back results from Device --- */
 #ifdef USE_SVM
-            err = clEnqueueSVMUnmap(compute_queue(),
+            err = clEnqueueSVMUnmap(compute_queues[0](),
                                 reinterpret_cast<void *>(a), 0,
                                 NULL, NULL);
             ASSERT_CL(err)
-            err = clEnqueueSVMUnmap(compute_queue(),
+            err = clEnqueueSVMUnmap(compute_queues[0](),
                                 reinterpret_cast<void *>(b), 0,
                                 NULL, NULL);
             ASSERT_CL(err)
-            err = clEnqueueSVMUnmap(compute_queue(),
+            err = clEnqueueSVMUnmap(compute_queues[0](),
                                 reinterpret_cast<void *>(c), 0,
                                 NULL, NULL);
             ASSERT_CL(err)
-            err = clEnqueueSVMUnmap(compute_queue(),
+            err = clEnqueueSVMUnmap(compute_queues[0](),
                                 reinterpret_cast<void *>(c_out), 0,
                                 NULL, NULL);
             ASSERT_CL(err)
 #else
-    err = compute_queue.enqueueReadBuffer(Buffer_c_out, CL_TRUE, 0,
+    err = compute_queues[0].enqueueReadBuffer(Buffer_c_out, CL_TRUE, 0,
                                      sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, c_out);
     ASSERT_CL(err)
 #endif
