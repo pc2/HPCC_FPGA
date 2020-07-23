@@ -73,6 +73,13 @@ public:
     bool useMemoryInterleaving;
 
     /**
+     * @brief Boolean showing if the output data of the benchmark kernel
+     *          should be validated or not
+     * 
+     */
+    bool skipValidation;
+
+    /**
      * @brief The default platform that should be used for execution. 
      *          A number representing the index in the list of available platforms
      * 
@@ -99,6 +106,7 @@ public:
      */
     BaseSettings(cxxopts::ParseResult &results) : numRepetitions(results["n"].as<uint>()),
             useMemoryInterleaving(static_cast<bool>(results.count("i"))), 
+            skipValidation(static_cast<bool>(results.count("skip-validation"))), 
             defaultPlatform(results["platform"].as<int>()),
             defaultDevice(results["device"].as<int>()),
             kernelFileName(results["f"].as<std::string>()) {}
@@ -265,6 +273,7 @@ public:
                 ("n", "Number of repetitions",
                 cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_REPETITIONS)))
                 ("i", "Use memory Interleaving")
+                ("skip-validation", "Skip the validation of the output data. This will speed up execution and helps when working with special data types.")
                 ("device", "Index of the device that has to be used. If not given you "\
             "will be asked which device to use if there are multiple devices "\
             "available.", cxxopts::value<int>()->default_value(std::to_string(DEFAULT_DEVICE)))
@@ -433,13 +442,21 @@ public:
                         << HLINE;
             }
 
-            auto eval_start = std::chrono::high_resolution_clock::now();
-            bool validateSuccess = validateOutputAndPrintError(*data);
-            std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
+            bool validateSuccess = false;
+            if (!executionSettings->programSettings->skipValidation) {
+                auto eval_start = std::chrono::high_resolution_clock::now();
+                validateSuccess = validateOutputAndPrintError(*data);
+                std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
 
-            if (world_rank == 0) {
-                printResults(*output);
-                std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
+                if (world_rank == 0) {
+                    printResults(*output);
+                    std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
+                }
+            }
+            else {
+                if (world_rank == 0) {
+                    printResults(*output);
+                }
             }
 
             return validateSuccess;
