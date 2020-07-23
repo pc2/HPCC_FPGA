@@ -1,9 +1,22 @@
+# MacOS temporary files
 */.DS_Store
 .DS_Store
-cmake-*
+
+# IDE specific directories
 .vscode
+.idea
+
+# Python virtual environments
+.venv
+
+# CMake build directories should be created in the following folder
 *._*
 build/*
-.idea
-.venv
+
+# Generated documentation
 docs/*
+
+# Other temporary files
+*.out
+*.txt
+*.csv
