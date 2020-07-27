@@ -303,7 +303,19 @@ void gemm/*PY_CODE_GEN i*/(
                                         [GEMM_BLOCK][GEMM_BLOCK]  __attribute((numbanks(GEMM_BLOCK * GEMM_BLOCK),xcl_array_partition(complete, 3),xcl_array_partition(complete, 4)));
                 // Load all needed level 1 blocks
 
+#ifdef INTEL_FPGA
+// Coalesce both loops to generate single loop
 #pragma loop_coalesce 2
+#endif
+#ifdef XILINX_FPGA
+// pipeline the outer loop and unroll the inner loop with an II=BLOCK_SIZE/GLOBAL_MEM_UNROLL since this loop will be executed quite often.
+// This heavily decreases the overall runtime of this loop. There are these two options:
+// 1. pipeline outer loop and unroll inner loop. This leads to wide memory bursts over a whole block row
+//        with no loop overhead between the rows. Resource usage will be increased
+// 2. pipeline inner loop. Will lead to a pipeline over a single row. There will be a loop overhead for every new row,
+//        so the execution time will increase. Lesser resources will be used.
+__attribute__((xcl_pipeline_loop(1)))
+#endif
                 for (int i = 0; i < BLOCK_SIZE ; i++) {
                     for (int j = 0; j < BLOCK_SIZE; j += GLOBAL_MEM_UNROLL) {
 #if DATA_TYPE_SIZE == 2
@@ -339,11 +351,21 @@ __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                 local_gemm(a_block, b_block, c_block, diagonal_block);
             }
 
+#if DATA_TYPE_SIZE == 2
+// If half precision is used convert scalars to half precision
+    DEVICE_DATA_TYPE alpha_hp;
+    DEVICE_DATA_TYPE beta_hp;
+    vstore_half(alpha, 0 , &alpha_hp);
+    vstore_half(beta, 0 , &beta_hp);
+#endif
+
 #ifdef INTEL_FPGA
 #pragma loop_coalesce
 #endif
 #ifdef XILINX_FPGA
-__attribute__((xcl_pipeline_loop(1)))
+// leave it to the compiler how to optimize this loop since it is not that performance critical:
+// 1. pipeline outer loop and unroll inner loop --> higher resource usage, but faster
+// 2. pipeline inner loop --> lesser resource usage, but slower
 #endif
             for (int i = 0; i < BLOCK_SIZE; i++) {
                 for (int j = 0; j < BLOCK_SIZE/GLOBAL_MEM_UNROLL; j++) {
@@ -354,14 +376,20 @@ __attribute__((xcl_pipeline_loop(1)))
                     for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
                         c_reorder_buffer_sp[u] = c[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + i * size + u];
                     }
-#endif
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
-#if DATA_TYPE_SIZE == 2
                         vstore_half(c_reorder_buffer_sp[u], 0 , &c_reorder_buffer[u]);
+                    }
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+                    for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
+                        c_out[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + u
+                                + i * size] = beta_hp * c_reorder_buffer[u] +
+                                alpha_hp * c_block[i/GEMM_BLOCK][(j * GLOBAL_MEM_UNROLL + u)/GEMM_BLOCK][i & (GEMM_BLOCK - 1)][(j * GLOBAL_MEM_UNROLL + u) & (GEMM_BLOCK - 1)];
+                    }
 #else
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+                    for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
                         c_reorder_buffer[u] = c[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + i * size + u];
-#endif
                     }
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
@@ -369,6 +397,7 @@ __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                                 + i * size] = beta * c_reorder_buffer[u] +
                                 alpha * c_block[i/GEMM_BLOCK][(j * GLOBAL_MEM_UNROLL + u)/GEMM_BLOCK][i & (GEMM_BLOCK - 1)][(j * GLOBAL_MEM_UNROLL + u) & (GEMM_BLOCK - 1)];
                     }
+#endif
                 }
             }
         }
