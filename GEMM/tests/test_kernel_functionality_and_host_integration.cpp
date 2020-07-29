@@ -12,10 +12,10 @@ void
 ref_matmul(HOST_DATA_TYPE* A, HOST_DATA_TYPE* B, HOST_DATA_TYPE* C, int size) {
     for (int i=0; i< size; i++) {
         for (int j=0; j< size; j++) {
-            C[i * size + j] = 0;
+            C[i * size + j] = OPTIONAL_CAST(0.0);
         }
     }
-    gemm::gemm_ref(A,B,C,size,1.0,0.0);
+    gemm::gemm_ref(A,B,C,size,OPTIONAL_CAST(1.0),OPTIONAL_CAST(0.0));
 }
 
 
@@ -59,9 +59,9 @@ TEST_P(GEMMKernelTest, FPGACorrectNumberOfRepetitionsIs3) {
 TEST_P(GEMMKernelTest, FPGACorrectCtimesBeta) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            data->A[i * matrix_size + j] = 0.0;
-            data->B[i * matrix_size + j] = 0.0;
-            data->C[i * matrix_size + j] = 1.0;
+            data->A[i * matrix_size + j] = OPTIONAL_CAST(0.0);
+            data->B[i * matrix_size + j] = OPTIONAL_CAST(0.0);
+            data->C[i * matrix_size + j] = OPTIONAL_CAST(1.0);
         }
     }
     auto result = bm->executeKernel(*data);
@@ -78,8 +78,8 @@ TEST_P(GEMMKernelTest, FPGACorrectCtimesBeta) {
 TEST_P(GEMMKernelTest, FPGACorrectAtimesAlpha) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            data->B[i * matrix_size + j] = i == j ? 1.0 : 0.0;
-            data->C[i * matrix_size + j] = 0.0;
+            data->B[i * matrix_size + j] = i == j ? OPTIONAL_CAST(1.0) : OPTIONAL_CAST(0.0);
+            data->C[i * matrix_size + j] = OPTIONAL_CAST(0.0);
         }
     }
     data->alpha = 2.0;
@@ -99,8 +99,8 @@ TEST_P(GEMMKernelTest, FPGACorrectAtimesAlpha) {
 TEST_P(GEMMKernelTest, FPGACorrectBtimesAlpha) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            data->A[i * matrix_size + j] = i == j ? 1.0 : 0.0;
-            data->C[i * matrix_size + j] = 0.0;
+            data->A[i * matrix_size + j] = i == j ? OPTIONAL_CAST(1.0) : OPTIONAL_CAST(0.0);
+            data->C[i * matrix_size + j] = OPTIONAL_CAST(0.0);
         }
     }
     data->alpha = 2.0;
@@ -119,9 +119,9 @@ TEST_P(GEMMKernelTest, FPGACorrectBtimesAlpha) {
 TEST_P(GEMMKernelTest, FPGACorrectAmulB) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            data->C[i * matrix_size + j] = 0.0;
-            data->A[i * matrix_size + j] = j % 10;
-            data->B[i * matrix_size + j] = i % 10;
+            data->C[i * matrix_size + j] = OPTIONAL_CAST(0.0);
+            data->A[i * matrix_size + j] = OPTIONAL_CAST(j % 10);
+            data->B[i * matrix_size + j] = OPTIONAL_CAST(i % 10);
         }
     }
     data->alpha = 1.0;
@@ -171,7 +171,7 @@ TEST_P(GEMMKernelTest, FPGACorrectbetaCplusalphaAB) {
            c_ref_out[i * matrix_size + j] = data->C[i * matrix_size + j];
         }
     }
-    gemm::gemm_ref(data->A,data->B,c_ref_out,matrix_size,0.5,2.0);
+    gemm::gemm_ref(data->A,data->B,c_ref_out,matrix_size,OPTIONAL_CAST(0.5),OPTIONAL_CAST(2.0));
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             EXPECT_NEAR(data->C_out[i * matrix_size + j], c_ref_out[i * matrix_size + j], 0.001);

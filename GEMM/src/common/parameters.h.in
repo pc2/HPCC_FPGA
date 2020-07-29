@@ -22,6 +22,8 @@
 #define DATA_TYPE_SIZE @DATA_TYPE_SIZE@
 
 #cmakedefine USE_SVM
+#cmakedefine XILINX_UNROLL_GLOBAL_MEM_PIPELINE
+#cmakedefine ENABLE_MIXED_PRECISION
 
 /*
 Short description of the program
@@ -34,5 +36,16 @@ Short description of the program
 Output separator
 */
 #define HLINE "-------------------------------------------------------------\n"
+
+#if DATA_TYPE_SIZE == 2
+#ifdef ENABLE_MIXED_PRECISION
+// In mixed precision the host uses single precision per default
+#define HOST_DATA_TYPE cl_float
+#else
+// use a custom half precision data tpe that also allows basic arithmetic. The validation will still
+// be done in single precision using BLAS - if available
+#define HOST_DATA_TYPE half_float::half
+#endif
+#endif
 
 #endif // SRC_COMMON_PARAMETERS_H_
