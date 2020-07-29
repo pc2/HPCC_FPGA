@@ -267,9 +267,9 @@ calculates C_OUT = alpha * A.dot(B) + beta * C
 __attribute__((uses_global_work_offset(0)))
 __kernel
 void gemm/*PY_CODE_GEN i*/(
-#if DATA_TYPE_SIZE < 4
-        // If a smaller data type is used (half precision)
-        // convert the values accordingly from single precision
+#ifdef ENABLE_MIXED_PRECISION
+        // In mixed precision convert the values accordingly 
+        // from single precision to the target precision on the FPGA
             __global const float* restrict a,
           __global const float* restrict b,
           __global const float* restrict c,
@@ -326,11 +326,21 @@ void gemm/*PY_CODE_GEN i*/(
 //        with no loop overhead between the rows. Resource usage will be increased
 // 2. pipeline inner loop. Will lead to a pipeline over a single row. There will be a loop overhead for every new row,
 //        so the execution time will increase. Lesser resources will be used.
+//
+// If the block size is getting too large, pipeline the inner loop instead
+#ifdef XILINX_UNROLL_GLOBAL_MEM_PIPELINE
 __attribute__((xcl_pipeline_loop(1)))
 #endif
+#endif
                 for (unsigned i = 0; i < BLOCK_SIZE ; i++) {
+#ifdef XILINX_FPGA
+#ifndef XILINX_UNROLL_GLOBAL_MEM_PIPELINE
+__attribute__((xcl_pipeline_loop(1)))
+#endif
+#endif
                     for (unsigned j = 0; j < BLOCK_SIZE; j += GLOBAL_MEM_UNROLL) {
-#if DATA_TYPE_SIZE == 2
+
+#ifdef ENABLE_MIXED_PRECISION
                         float a_reorder_buffer[GLOBAL_MEM_UNROLL];
                         float b_reorder_buffer[GLOBAL_MEM_UNROLL];
 #else
@@ -348,9 +358,9 @@ __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/GEMM_BLOCK)))
                         for (unsigned b = 0; b < GLOBAL_MEM_UNROLL/GEMM_BLOCK; b++) {
 __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                             for (unsigned u = 0; u < GEMM_BLOCK; u++) {
-#if DATA_TYPE_SIZE == 2
-                                vstore_half(a_reorder_buffer[b * GEMM_BLOCK + u], 0, &a_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u]);
-                                vstore_half(b_reorder_buffer[b * GEMM_BLOCK + u], 0 , &b_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u]);
+#ifdef ENABLE_MIXED_PRECISION
+                                vstore_half(a_reorder_buffer[b * GEMM_BLOCK + u], u, &a_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][0]);
+                                vstore_half(b_reorder_buffer[b * GEMM_BLOCK + u], u , &b_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][0]);
 #else
                                 a_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = a_reorder_buffer[b * GEMM_BLOCK + u];
                                 b_block[i / GEMM_BLOCK][j / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = b_reorder_buffer[b * GEMM_BLOCK + u];
@@ -375,11 +385,21 @@ __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 //        with no loop overhead between the rows. Resource usage will be increased
 // 2. pipeline inner loop. Will lead to a pipeline over a single row. There will be a loop overhead for every new row,
 //        so the execution time will increase. Lesser resources will be used.
+//
+// If the block size is getting too large, pipeline the inner loop instead
+#ifdef XILINX_UNROLL_GLOBAL_MEM_PIPELINE
 __attribute__((xcl_pipeline_loop(1)))
 #endif
+#endif
             for (unsigned i = 0; i < BLOCK_SIZE; i++) {
+#ifdef XILINX_FPGA
+#ifndef XILINX_UNROLL_GLOBAL_MEM_PIPELINE
+__attribute__((xcl_pipeline_loop(1)))
+#endif
+#endif
                 for (unsigned j = 0; j < BLOCK_SIZE/GLOBAL_MEM_UNROLL; j++) {
-#if DATA_TYPE_SIZE == 2
+
+#ifdef ENABLE_MIXED_PRECISION
                     // With half precision data type this algorithm still uses single precision for the last addition
                     // to get rid of additional conversions
                     float c_reorder_buffer[GLOBAL_MEM_UNROLL];
@@ -387,12 +407,12 @@ __attribute__((xcl_pipeline_loop(1)))
                     __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (unsigned u = 0; u < GLOBAL_MEM_UNROLL; u++) {
                         c_reorder_buffer[u] = c[(y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + i * size + u];
-                        matrix_block_part[u] = vload_half(0, &c_block[i/GEMM_BLOCK][(j * GLOBAL_MEM_UNROLL + u)/GEMM_BLOCK][i & (GEMM_BLOCK - 1)][(j * GLOBAL_MEM_UNROLL + u) & (GEMM_BLOCK - 1)]);
+                        matrix_block_part[u] = vload_half(0, &c_block[i/GEMM_BLOCK][(j * GLOBAL_MEM_UNROLL + u)/GEMM_BLOCK][i & (GEMM_BLOCK - 1)][u & (GEMM_BLOCK - 1)]);
                     }
 __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
                     for (unsigned u = 0; u < GLOBAL_MEM_UNROLL; u++) {
                         c_out[(moved_y_block * size + x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + u
-                                + i * size] = beta * c_reorder_buffer[u] + alpha * matrix_block_part[u];
+                                + i * size] = beta * c_reorder_buffer[u] + alpha * c_block[i/GEMM_BLOCK][j * GLOBAL_MEM_UNROLL/ GEMM_BLOCK][i & (GEMM_BLOCK - 1)][u];
                     }
 #else
                     DEVICE_DATA_TYPE c_reorder_buffer[GLOBAL_MEM_UNROLL];
