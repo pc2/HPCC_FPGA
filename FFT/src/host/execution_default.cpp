@@ -55,32 +55,36 @@ namespace bm_execution {
         ASSERT_CL(err)
         cl::Kernel fftKernel(*config.program, FFT_KERNEL_NAME, &err);
         ASSERT_CL(err)
+        cl::Kernel storeKernel(*config.program, STORE_KERNEL_NAME, &err);
+        ASSERT_CL(err)
 
 #ifdef USE_SVM
         err = clSetKernelArgSVMPointer(fetchKernel(), 0,
                                         reinterpret_cast<void*>(data));
         ASSERT_CL(err)
-        err = clSetKernelArgSVMPointer(fftKernel(), 0,
+        err = clSetKernelArgSVMPointer(storeKernel(), 0,
                                         reinterpret_cast<void*>(data_out));
         ASSERT_CL(err)
 #else
         err = fetchKernel.setArg(0, inBuffer);
         ASSERT_CL(err)
-        #ifdef XILINX_FPGA
-        err = fetchKernel.setArg(1, iterations);
-        ASSERT_CL(err)
-        #endif
-        err = fftKernel.setArg(0, outBuffer);
+        err = storeKernel.setArg(0, outBuffer);
         ASSERT_CL(err)
 #endif
-        err = fftKernel.setArg(1, iterations);
+        err = fetchKernel.setArg(1, iterations);
         ASSERT_CL(err)
-        err = fftKernel.setArg(2, static_cast<cl_int>(inverse));
+        err = storeKernel.setArg(1, iterations);
+        ASSERT_CL(err)
+        err = fftKernel.setArg(0, iterations);
+        ASSERT_CL(err)
+        err = fftKernel.setArg(1, static_cast<cl_int>(inverse));
         ASSERT_CL(err)
 
         cl::CommandQueue fetchQueue(*config.context, *config.device, 0, &err);
         ASSERT_CL(err)
         cl::CommandQueue fftQueue(*config.context, *config.device, 0, &err);
+        ASSERT_CL(err)
+        cl::CommandQueue storeQueue(*config.context, *config.device, 0, &err);
         ASSERT_CL(err)
 
 #ifdef USE_SVM
@@ -104,16 +108,12 @@ namespace bm_execution {
         std::vector<double> calculationTimings;
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             auto startCalculation = std::chrono::high_resolution_clock::now();
-            #ifdef INTEL_FPGA
-            fetchQueue.enqueueNDRangeKernel(fetchKernel, cl::NullRange, cl::NDRange((1 << LOG_FFT_SIZE)/ FFT_UNROLL * iterations),
-                    cl::NDRange((1 << LOG_FFT_SIZE)/ FFT_UNROLL));
-            #endif
-            #ifdef XILINX_FPGA
             fetchQueue.enqueueTask(fetchKernel);
-            #endif
             fftQueue.enqueueTask(fftKernel);
+            storeQueue.enqueueTask(storeKernel);
             fetchQueue.finish();
             fftQueue.finish();
+            storeQueue.finish();
             auto endCalculation = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> calculationTime =
                     std::chrono::duration_cast<std::chrono::duration<double>>
@@ -130,7 +130,7 @@ namespace bm_execution {
                                 NULL, NULL);
         ASSERT_CL(err)
 #else
-        err = fetchQueue.enqueueReadBuffer(outBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data_out);
+        err = storeQueue.enqueueReadBuffer(outBuffer,CL_TRUE,0, (1 << LOG_FFT_SIZE) * iterations * 2 * sizeof(HOST_DATA_TYPE), data_out);
         ASSERT_CL(err)
 #endif
 
