@@ -59,13 +59,13 @@
 // Need some depth to our channels to accommodate their bursty filling.
 #ifdef INTEL_FPGA
 #pragma OPENCL EXTENSION cl_intel_channels : enable
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
 channel float2 chanin/*PY_CODE_GEN i*/[POINTS] __attribute__((depth(POINTS)));
 // PY_CODE_GEN block_end
 #endif
 #ifdef XILINX_FPGA
 // Compiler states, that the pipe depth needs at least to be 16
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
 pipe float2x8 chanin/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(2 * POINTS)));
 pipe float2x8 chanout/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(2 * POINTS)));
 // PY_CODE_GEN block_end
@@ -85,7 +85,7 @@ __attribute__((opencl_unroll_hint()))
   return y;
 }
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
 
 __kernel
 __attribute__ ((max_global_work_dim(0), reqd_work_group_size(1,1,1)))
