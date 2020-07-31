@@ -56,6 +56,12 @@ public:
     bool inverse;
 
     /**
+     * @brief The number of used kernel replications
+     * 
+     */
+    uint kernelReplications;
+
+    /**
      * @brief Construct a new FFT Program Settings object
      * 
      * @param results the result map from parsing the program input parameters

@@ -9,6 +9,7 @@ set(FETCH_KERNEL_NAME fetch CACHE STRING "Name of the kernel that is used to fet
 set(STORE_KERNEL_NAME store CACHE STRING "Name of the kernel that is used to store data to global memory")
 set(LOG_FFT_SIZE 12 CACHE STRING "Log2 of the used FFT size")
 set(FFT_UNROLL 8 CACHE STRING "Amount of global memory unrolling of the kernel. Will be used by the host to calculate NDRange sizes")
+set(NUM_REPLICATIONS 1 CACHE STRING "Number of times the kernels will be replicated")
 
 set(DATA_TYPE float)
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)

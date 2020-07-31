@@ -1,3 +1,4 @@
+set(KERNEL_REPLICATION_ENABLED Yes CACHE INTERNAL "Enables kernel replication in the CMake target genertion function")
 
 include(${CMAKE_SOURCE_DIR}/../cmake/kernelTargets.cmake)
 

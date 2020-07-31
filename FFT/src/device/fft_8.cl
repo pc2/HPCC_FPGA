@@ -44,6 +44,8 @@
 // than instantiating 'cos' or 'sin' hardware
 #include "twid_radix4_8.cl" 
 
+#include "parameters.h"
+
 // Convenience struct representing the 8 data points processed each step
 // Each member is a float2 representing a complex number
 typedef struct {
@@ -132,9 +134,10 @@ float2x8 swap(float2x8 data) {
 // This function "delays" the input by 'depth' steps
 // Input 'data' from invocation N would be returned in invocation N + depth
 // The 'shift_reg' sliding window is shifted by 1 element at every invocation 
-float2 delay(float2 data, const int depth, float2 *shift_reg) {
-   shift_reg[depth] = data;
-   return shift_reg[0];
+__attribute__((always_inline))
+float2 delay(float2 data, const int depth, float2 shift_reg[(1 << LOG_FFT_SIZE) + 8 * (LOG_FFT_SIZE - 2)], unsigned offset) {
+   shift_reg[offset + depth] = data;
+   return shift_reg[offset];
 }
 
 // FFT data reordering building block. Implements the reordering depicted below 
@@ -143,14 +146,14 @@ float2 delay(float2 data, const int depth, float2 *shift_reg) {
 // data.i0         : GECA...   ---->      DBCA...
 // data.i1         : HFDB...   ---->      HFGE...
 
-float2x8 reorder_data(float2x8 data, const int depth, float2 * shift_reg, bool toggle) {
+float2x8 reorder_data(float2x8 data, const int depth, float2 shift_reg[(1 << LOG_FFT_SIZE) + 8 * (LOG_FFT_SIZE - 2)], unsigned head_index, bool toggle) {
    // Use disconnected segments of length 'depth + 1' elements starting at 
    // 'shift_reg' to implement the delay elements. At the end of each FFT step, 
    // the contents of the entire buffer is shifted by 1 element
-   data.i1 = delay(data.i1, depth, shift_reg);
-   data.i3 = delay(data.i3, depth, shift_reg + depth + 1);
-   data.i5 = delay(data.i5, depth, shift_reg + 2 * (depth + 1));
-   data.i7 = delay(data.i7, depth, shift_reg + 3 * (depth + 1));
+   data.i1 = delay(data.i1, depth, shift_reg, head_index);
+   data.i3 = delay(data.i3, depth, shift_reg, head_index + depth + 1);
+   data.i5 = delay(data.i5, depth, shift_reg, head_index + 2 * (depth + 1));
+   data.i7 = delay(data.i7, depth, shift_reg, head_index + 3 * (depth + 1));
  
    if (toggle) {
       float2 tmp = data.i0;
@@ -167,10 +170,10 @@ float2x8 reorder_data(float2x8 data, const int depth, float2 * shift_reg, bool t
       data.i7 = tmp;
    }
 
-   data.i0 = delay(data.i0, depth, shift_reg + 4 * (depth + 1));
-   data.i2 = delay(data.i2, depth, shift_reg + 5 * (depth + 1));
-   data.i4 = delay(data.i4, depth, shift_reg + 6 * (depth + 1));
-   data.i6 = delay(data.i6, depth, shift_reg + 7 * (depth + 1));
+   data.i0 = delay(data.i0, depth, shift_reg, head_index + 4 * (depth + 1));
+   data.i2 = delay(data.i2, depth, shift_reg, head_index + 5 * (depth + 1));
+   data.i4 = delay(data.i4, depth, shift_reg, head_index + 6 * (depth + 1));
+   data.i6 = delay(data.i6, depth, shift_reg, head_index + 7 * (depth + 1));
 
    return data;
 }
@@ -189,25 +192,10 @@ float2 comp_mult(float2 a, float2 b) {
 // If there are precomputed twiddle factors for the given FFT size, uses them
 // This saves hardware resources, because it avoids evaluating 'cos' and 'sin'
 // functions
-
+__attribute__((always_inline))
 float2 twiddle(int index, int stage, int size, int stream) {
    float2 twid;
-   // Coalesces the twiddle tables for indexed access
-   constant float * twiddles_cos[TWID_STAGES][6] = {
-                        {tc00, tc01, tc02, tc03, tc04, tc05}, 
-                        {tc10, tc11, tc12, tc13, tc14, tc15}, 
-                        {tc20, tc21, tc22, tc23, tc24, tc25}, 
-                        {tc30, tc31, tc32, tc33, tc34, tc35}, 
-                        {tc40, tc41, tc42, tc43, tc44, tc45}
-   };
-   constant float * twiddles_sin[TWID_STAGES][6] = {
-                        {ts00, ts01, ts02, ts03, ts04, ts05}, 
-                        {ts10, ts11, ts12, ts13, ts14, ts15}, 
-                        {ts20, ts21, ts22, ts23, ts24, ts25}, 
-                        {ts30, ts31, ts32, ts33, ts34, ts35}, 
-                        {ts40, ts41, ts42, ts43, ts44, ts45}
-   };
-
+   // Twiddle facotr array taken from twid_radix4_8.cl!
    // Use the precomputed twiddle factors, if available - otherwise, compute them
    int twid_stage = stage >> 1;
    if (size <= (1 << (TWID_STAGES * 2 + 2))) {
@@ -238,8 +226,8 @@ float2 twiddle(int index, int stage, int size, int stream) {
       int pos = (1 << (stage - 1)) * multiplier * ((index + (size / 8) * phase) 
                                           & (size / 4 / (1 << (stage - 1)) - 1));
       float theta = -1.0f * TWOPI / size * (pos & (size - 1));
-      twid.x = cos(theta);
-      twid.y = sin(theta);
+      twid.x = native_cos(theta);
+      twid.y = native_sin(theta);
    }
    return twid;
 }
@@ -269,8 +257,9 @@ float2x8 complex_rotate(float2x8 data, int index, int stage, int size) {
 // 'logN' should be a COMPILE TIME constant evaluating log(N) - the constant is 
 //        propagated throughout the code to achieve efficient hardware
 //
-float2x8 fft_step(float2x8 data, int step, float2 *fft_delay_elements, 
+float2x8 fft_step(float2x8 data, int step, float2 fft_delay_elements[(1 << LOG_FFT_SIZE) + 8 * (LOG_FFT_SIZE - 2)], 
                   bool inverse, const int logN) {
+
     const int size = 1 << logN;
     // Swap real and imaginary components if doing an inverse transform
     if (inverse) {
@@ -292,7 +281,7 @@ float2x8 fft_step(float2x8 data, int step, float2 *fft_delay_elements,
     // the loop to increase the  amount of pipeline parallelism and allow feed 
     // forward execution
 
-#pragma unroll
+   __attribute__((opencl_unroll_hint(LOG_FFT_SIZE - 3)))
     for (int stage = 2; stage < logN - 1; stage++) {
         bool complex_stage = stage & 1; // stages 3, 5, ...
 
@@ -315,11 +304,9 @@ float2x8 fft_step(float2x8 data, int step, float2 *fft_delay_elements,
         // Reordering multiplexers must toggle every 'delay' steps
         bool toggle = data_index & delay;
 
-        // Assign unique sections of the buffer for the set of delay elements at
-        // each stage
-        float2 *head_buffer = fft_delay_elements + 
-                              size - (1 << (logN - stage + 2)) + 8 * (stage - 2);
-        data = reorder_data(data, delay, head_buffer, toggle);
+        // Base index of the reordered data
+        unsigned head_index = size - (1 << (logN - stage + 2)) + 8 * (stage - 2);
+        data = reorder_data(data, delay, fft_delay_elements, head_index, toggle);
 
         if (!complex_stage) {
             data = trivial_rotate(data);
