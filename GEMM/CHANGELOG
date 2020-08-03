@@ -2,6 +2,13 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.0
+
+#### Added:
+- Support for kernel replication for an arbitrary number of kernels (-r flag, NUM_REPLICATIONS)
+- Support for double precision (fp64) and half precision (fp16) (DATA_TYPE compile option)
+- Mixed precision support for single precision on host and half precision on device (ENABLE_MIXED_PRECISION)
+
 ## 0.4
 
 #### Added:
