@@ -60,9 +60,9 @@ namespace bm_execution {
         unsigned iterations_per_kernel = iterations / config.programSettings->kernelReplications;
 
         for (int r=0; r < config.programSettings->kernelReplications; r++) {
-                inBuffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY, (1 << LOG_FFT_SIZE) * iterations_per_kernel * 2 * sizeof(HOST_DATA_TYPE), NULL, &err));
+                inBuffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 : (((2 * r) + 1) << 16)), (1 << LOG_FFT_SIZE) * iterations_per_kernel * 2 * sizeof(HOST_DATA_TYPE), NULL, &err));
                 ASSERT_CL(err)
-                outBuffers.push_back(cl::Buffer(*config.context, CL_MEM_WRITE_ONLY, (1 << LOG_FFT_SIZE) * iterations_per_kernel * 2 * sizeof(HOST_DATA_TYPE), NULL, &err));
+                outBuffers.push_back(cl::Buffer(*config.context, CL_MEM_WRITE_ONLY | (config.programSettings->useMemoryInterleaving ? 0 : (((2 * r) + 2) << 16)), (1 << LOG_FFT_SIZE) * iterations_per_kernel * 2 * sizeof(HOST_DATA_TYPE), NULL, &err));
                 ASSERT_CL(err)
 
         #ifdef INTEL_FPGA
@@ -90,11 +90,11 @@ namespace bm_execution {
         #endif
 
         #ifdef XILINX_FPGA
-                cl::Kernel fetchKernel(*config.program, (std::string(FETCH_KERNEL_NAME) + "0:{" + FETCH_KERNEL_NAME + "0_" + std::to_string(r + 1) + "}").c_str(), &err);
+                cl::Kernel fetchKernel(*config.program, (std::string(FETCH_KERNEL_NAME) + std::to_string(r) + ":{" + FETCH_KERNEL_NAME + std::to_string(r) + "_1"  + "}").c_str(), &err);
                 ASSERT_CL(err)
-                cl::Kernel fftKernel(*config.program, (std::string(FFT_KERNEL_NAME) + "0:{" + FFT_KERNEL_NAME + "0_" + std::to_string(r + 1) + "}").c_str(), &err);
+                cl::Kernel fftKernel(*config.program, (std::string(FFT_KERNEL_NAME) + std::to_string(r) + ":{" + FFT_KERNEL_NAME + std::to_string(r) + "_1" + "}").c_str(), &err);
                 ASSERT_CL(err)
-                cl::Kernel storeKernel(*config.program, (std::string(STORE_KERNEL_NAME) + "0:{" + STORE_KERNEL_NAME + "0_" + std::to_string(r + 1) + "}").c_str(), &err);
+                cl::Kernel storeKernel(*config.program, (std::string(STORE_KERNEL_NAME) + std::to_string(r) + ":{" + STORE_KERNEL_NAME + std::to_string(r) + "_1" + "}").c_str(), &err);
                 ASSERT_CL(err)
                 err = storeKernel.setArg(0, outBuffers[r]);
                 ASSERT_CL(err)
