@@ -22,6 +22,12 @@ build:STREAM:
       - build/bin/stream_kernels_emulate.aocx
       - build/bin/STREAM_FPGA_intel
       - build/bin/STREAM_FPGA_test_intel
+  only:
+    changes:
+      - STREAM/*
+      - shared/*
+      - scripts/*
+      - cmake/*
       
       
 build:RandomAccess:
@@ -37,6 +43,12 @@ build:RandomAccess:
       - build/bin/random_access_kernels_single_emulate.aocx
       - build/bin/RandomAccess_intel
       - build/bin/RandomAccess_test_intel
+  only:
+    changes:
+      - RandomAccess/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 
 build:PTRANS:
@@ -53,6 +65,12 @@ build:PTRANS:
       - build/bin/transpose_default_emulate.aocx
       - build/bin/Transpose_intel
       - build/bin/Transpose_test_intel
+  only:
+    changes:
+      - PTRANS/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 build:LINPACK:
   stage: build
@@ -68,6 +86,12 @@ build:LINPACK:
       - build/bin/lu_blocked_pvt_test_emulate.aocx
       - build/bin/Linpack_intel
       - build/bin/Linpack_test_intel
+  only:
+    changes:
+      - LINPACK/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 build:GEMM:
   stage: build
@@ -82,6 +106,32 @@ build:GEMM:
       - build/bin/gemm_base_emulate.aocx
       - build/bin/GEMM_intel
       - build/bin/GEMM_test_intel
+  only:
+    changes:
+      - GEMM/*
+      - shared/*
+      - scripts/*
+      - cmake/*
+
+build:GEMM_HP_REP2:
+  stage: build
+  script:
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../GEMM -DDATA_SIZE=half -DNUM_REPLICATIONS=2 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - make -j 40 all
+  artifacts:
+    paths:
+      - build/bin/gemm_base_emulate.aocx
+      - build/bin/GEMM_intel
+      - build/bin/GEMM_test_intel
+  only:
+    changes:
+      - GEMM/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 build:FFT:
   stage: build
@@ -96,6 +146,12 @@ build:FFT:
       - build/bin/fft1d_float_8_emulate.aocx
       - build/bin/FFT_intel
       - build/bin/FFT_test_intel
+  only:
+    changes:
+      - FFT/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 build:b_eff:
   stage: build
@@ -112,6 +168,12 @@ build:b_eff:
       - build/bin/communication_bw520n_disable_pipelining_emulate.aocx
       - build/bin/Network_intel
       - build/bin/Network_test_intel
+  only:
+    changes:
+      - b_eff/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 ###
 #
@@ -131,6 +193,12 @@ test:STREAM:
     when: on_failure
     paths:
       - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - STREAM/*
+      - shared/*
+      - scripts/*
+      - cmake/*
     
 test:RandomAccess:
   stage: test
@@ -144,6 +212,12 @@ test:RandomAccess:
     when: on_failure
     paths:
       - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - RandomAccess/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 test:PTRANS:
   stage: test
@@ -157,6 +231,12 @@ test:PTRANS:
     when: on_failure
     paths:
       - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - PTRANS/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 test:LINPACK:
   stage: test
@@ -170,6 +250,12 @@ test:LINPACK:
     when: on_failure
     paths:
       - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - LINPACK/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 test:GEMM:
   stage: test
@@ -183,6 +269,31 @@ test:GEMM:
     when: on_failure
     paths:
       - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - GEMM/*
+      - shared/*
+      - scripts/*
+      - cmake/*
+
+test:GEMM_HP_REP2:
+  stage: test
+  script:
+    - cd build
+    - cmake ../GEMM -DNUM_REPLICATIONS=2 -DATA_TYPE=half -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:GEMM_HP_REP2
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - GEMM/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 test:FFT:
   stage: test
@@ -196,6 +307,12 @@ test:FFT:
     when: on_failure
     paths:
       - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - FFT/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 test:b_eff:
   stage: test
@@ -219,5 +336,11 @@ test:b_eff:
     when: on_failure
     paths:
       - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - b_eff/*
+      - shared/*
+      - scripts/*
+      - cmake/*
 
 
