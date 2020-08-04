@@ -53,12 +53,13 @@ Next to the common configuration options given in the [README](../README.md) of 
 
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
- `DATA_TYPE`     | float       | Data type used for calculation       |
-`DEFAULT_MATRIX_SIZE` | 4096      | The default size of the quadratic matrices |
-`KERNEL_NAME`| gemm | Name of the kernel (only needed for own implementations) |
-`BLOCK_SIZE`    | 512          | Block size used by the kernel to transpose the matrix |
-`GEMM_SIZE`    | 8             | Block size of the fully unrolled cannon block if cannon kernel is used |
+ `DATA_TYPE`     | float (also supported: half, double)      | Data type used for calculation       |
+`DEFAULT_MATRIX_SIZE` | 8      | The default size of the quadratic matrices in blocks |
+`BLOCK_SIZE`    | 512          | Block size used by the kernel for calculation |
+`GEMM_SIZE`    | 8             | Block size of the fully unrolled matrix multiplication in registers |
 `GLOBAL_MEM_UNROLL`| 16        | Unrolling factor for the global memory access |
+`INTEL_MUL_SHIFT_REG`| 0       | Size of the shift register that can be optionally used by the Intel implementation to relax data dependencies (defaults to 0, which means that no shift register is used) |
+`NUM_REPLICATIONS` | 4         | Number of kernel replications. Every kernel will calculate a part of the output matrix |
 
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.
@@ -77,20 +78,30 @@ For more information on available input parameters run
     Usage:
     ./GEMM_intel [OPTION...]
 
-    -f, --file arg      Kernel file name
-    -n, arg             Number of repetitions (default: 10)
-    -i,                 Use memory Interleaving
-        --device arg    Index of the device that has to be used. If not given
-                        you will be asked which device to use if there are
-                        multiple devices available. (default: -1)
-        --platform arg  Index of the platform that has to be used. If not given
-                        you will be asked which platform to use if there are
-                        multiple platforms available. (default: -1)
-    -h, --help          Print this help
-    -m, arg             Matrix size in number of blocks in a single dimension
-                        (default: 8)
-    -b, arg             Block size in number of values in one dimension
-                        (default: 256)
+Implementation of the GEMM benchmark proposed in the HPCC benchmark adapted for FPGA
+Version: 1.0
+
+Usage:
+  bin/GEMM_intel [OPTION...]
+
+    -f, --file arg         Kernel file name
+    -n, arg                Number of repetitions (default: 10)
+    -i,                    Use memory Interleaving
+        --skip-validation  Skip the validation of the output data. This will
+                            speed up execution and helps when working with special
+                            data types.
+        --device arg       Index of the device that has to be used. If not
+                            given you will be asked which device to use if there are
+                            multiple devices available. (default: -1)
+        --platform arg     Index of the platform that has to be used. If not
+                            given you will be asked which platform to use if there
+                            are multiple platforms available. (default: -1)
+    -h, --help             Print this help
+    -m, arg                Matrix size in number of blocks in a single
+                            dimension (default: 8)
+    -b, arg                Block size in number of values in one dimension
+                            (default: 256)
+    -r, arg                Number of used kernel replications (default: 4)
     
 To execute the unit and integration tests run
 

@@ -31,10 +31,18 @@ SOFTWARE.
 #include "hpcc_benchmark.hpp"
 #include "parameters.h"
 
+#include "half.hpp"
+
+#if DATA_TYPE_SIZE == 2
+#define OPTIONAL_CAST(x) half_float::half_cast<half_float::half,cl_float>((x))
+#else
+#define OPTIONAL_CAST(x) x
+#endif
+
 #ifdef _USE_BLAS_
 
 extern "C" void sgemm_(char*, char*, int*, int*,int*, float*, float*, int*, float*, int*, float*, float*, int*);
-
+extern "C" void dgemm_(char*, char*, int*, int*,int*, double*, double*, int*, double*, int*, double*, double*, int*);
 #endif
 
 
@@ -62,6 +70,12 @@ public:
      * 
      */
     uint blockSize;
+
+    /**
+     * @brief Number of times the kernel is replicated
+     * 
+     */
+    uint kernelReplications;
 
     /**
      * @brief Construct a new GEMM Program Settings object

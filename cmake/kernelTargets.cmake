@@ -57,7 +57,7 @@ function(generate_kernel_targets_xilinx)
 
         if (KERNEL_REPLICATION_ENABLED)
                 add_custom_command(OUTPUT ${source_f}
-                        COMMAND ${Python3_EXECUTABLE} ${CODE_GENERATOR} -o ${source_f} -p num_replications=1 ${base_file}
+                        COMMAND ${Python3_EXECUTABLE} ${CODE_GENERATOR} -o ${source_f} -p num_replications=1 -p num_total_replications=${NUM_REPLICATIONS} ${base_file}
                         MAIN_DEPENDENCY ${base_file}
                 )
         else()
@@ -127,7 +127,7 @@ function(generate_kernel_targets_intel)
         set(bitstream_emulate_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.aocx)
         set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.aocx)
         if (KERNEL_REPLICATION_ENABLED)
-                set(codegen_parameters -p num_replications=${NUM_REPLICATIONS})
+                set(codegen_parameters -p num_replications=${NUM_REPLICATIONS} -p num_total_replications=${NUM_REPLICATIONS})
                 if (INTEL_CODE_GENERATION_SETTINGS)
                         list(APPEND codegen_parameters -p "\"use_file('${INTEL_CODE_GENERATION_SETTINGS}')\"")
                 endif()

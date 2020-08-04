@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 gemm::GEMMProgramSettings::GEMMProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()) {
+    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()), kernelReplications(results["r"].as<uint>()) {
 
 }
 
@@ -43,6 +43,7 @@ std::map<std::string, std::string>
 gemm::GEMMProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["Matrix Size"] = std::to_string(matrixSize);
+        map["Kernel Replications"] = std::to_string(kernelReplications);
         return map;
 }
 
@@ -94,7 +95,9 @@ gemm::GEMMBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
             ("m", "Matrix size in number of blocks in a single dimension",
              cxxopts::value<cl_uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
             ("b", "Block size in number of values in one dimension",
-             cxxopts::value<cl_uint>()->default_value(std::to_string(BLOCK_SIZE)));
+             cxxopts::value<cl_uint>()->default_value(std::to_string(BLOCK_SIZE)))
+            ("r", "Number of used kernel replications",
+             cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)));
 }
 
 std::unique_ptr<gemm::GEMMExecutionTimings>
@@ -137,10 +140,10 @@ gemm::GEMMBenchmark::generateInputData() {
     std::uniform_real_distribution<> dis(-1.0, 1.0);
     for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
         for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
-            d->A[executionSettings->programSettings->matrixSize*i+j] = dis(gen);
-            d->B[executionSettings->programSettings->matrixSize*i+j] = dis(gen);
-            d->C[executionSettings->programSettings->matrixSize*i+j] = dis(gen);
-            d->C_out[executionSettings->programSettings->matrixSize*i+j] = 0.0;
+            d->A[executionSettings->programSettings->matrixSize*i+j] = OPTIONAL_CAST(static_cast<double>(dis(gen)));
+            d->B[executionSettings->programSettings->matrixSize*i+j] = OPTIONAL_CAST(static_cast<double>(dis(gen)));
+            d->C[executionSettings->programSettings->matrixSize*i+j] = OPTIONAL_CAST(static_cast<double>(dis(gen)));
+            d->C_out[executionSettings->programSettings->matrixSize*i+j] = OPTIONAL_CAST(0.0);
             d->normtotal = std::max(std::max(d->normtotal, d->A[executionSettings->programSettings->matrixSize*i+j]), 
                                         std::max(d->B[executionSettings->programSettings->matrixSize*i+j], 
                                         d->C[executionSettings->programSettings->matrixSize*i+j]));
@@ -153,10 +156,10 @@ bool
 gemm::GEMMBenchmark::validateOutputAndPrintError(gemm::GEMMData &data) {
     auto ref_data = generateInputData();
 
-    gemm_ref(ref_data->A, ref_data->B, ref_data->C, executionSettings->programSettings->matrixSize, 0.5, 2.0);
+    gemm_ref(ref_data->A, ref_data->B, ref_data->C, executionSettings->programSettings->matrixSize, OPTIONAL_CAST(0.5), OPTIONAL_CAST(2.0));
 
-    HOST_DATA_TYPE resid = 0.0;
-    HOST_DATA_TYPE normx = 0.0;
+    HOST_DATA_TYPE resid = OPTIONAL_CAST(0.0);
+    HOST_DATA_TYPE normx = OPTIONAL_CAST(0.0);
 
     for (int i = 0; i < executionSettings->programSettings->matrixSize * executionSettings->programSettings->matrixSize; i++) {
         resid = (resid > fabs(data.C_out[i] - ref_data->C[i])) ? resid : fabs(data.C_out[i] - ref_data->C[i]);
@@ -164,7 +167,7 @@ gemm::GEMMBenchmark::validateOutputAndPrintError(gemm::GEMMData &data) {
     }
 
     HOST_DATA_TYPE eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
-    HOST_DATA_TYPE residn = resid / (executionSettings->programSettings->matrixSize*executionSettings->programSettings->matrixSize*ref_data->normtotal*normx*eps);
+    HOST_DATA_TYPE residn = OPTIONAL_CAST(resid / (executionSettings->programSettings->matrixSize*executionSettings->programSettings->matrixSize*ref_data->normtotal*normx*eps));
 
     std::cout << "  norm. resid        resid       "\
                  "machep" << std::endl;
@@ -181,21 +184,52 @@ gemm::gemm_ref(HOST_DATA_TYPE* a,HOST_DATA_TYPE* b, HOST_DATA_TYPE* c,
 #ifdef _USE_BLAS_
     char ta = 'N';
     char tb = 'N';
-    
-    sgemm_(&ta, &tb, &n, &n, &n, &alpha, b, &n, a, &n, &beta, c, &n);
-#else
-    for (int i=0; i < n; i++) {
-        for (int j=0; j < n; j++) {
-            c[i * n + j] = beta * c[i*n + j];
-        }
-    }
-
-    for (int i=0; i < n; i++) {
-        for (int j=0; j < n; j++) {
-            for (int k=0; k < n; k++) {
-                c[i*n + j] += alpha * a[i*n + k] * b[k*n + j];
+#endif
+#if (defined(_USE_BLAS_) && DATA_TYPE_SIZE == 2) 
+        // convert matrices to single precision to allow the use of BLAS routine
+        std::unique_ptr<float[]> temp_a = std::unique_ptr<float[]>(new float[n * n]);
+        std::unique_ptr<float[]> temp_b = std::unique_ptr<float[]>(new float[n * n]);
+        std::unique_ptr<float[]> temp_c = std::unique_ptr<float[]>(new float[n * n]);
+        for (int i=0; i < n; i++) {
+            for (int j=0; j < n; j++) {
+                temp_a[i * n + j] = half_float::half_cast<float, half_float::half>(a[i*n + j]);
+                temp_b[i * n + j] = half_float::half_cast<float, half_float::half>(b[i*n + j]);
+                temp_c[i * n + j] = half_float::half_cast<float, half_float::half>(c[i*n + j]);
             }
         }
-    }
+        float alpha_sp = half_float::half_cast<float, half_float::half>(alpha);
+        float beta_sp = half_float::half_cast<float, half_float::half>(beta);
+        // Use single precision for validation
+        sgemm_(&ta, &tb, &n, &n, &n, &alpha_sp, temp_b.get(), &n, temp_a.get(), &n, &beta_sp, temp_c.get(), &n);
+        // convert the result back to half precision
+        for (int i=0; i < n; i++) {
+            for (int j=0; j < n; j++) {
+                c[i * n + j] = half_float::half_cast<half_float::half, float>(temp_c[i*n + j]);
+            }
+        }
+#endif
+#if (defined(_USE_BLAS_) && DATA_TYPE_SIZE == 4) 
+        // Use single precision for validation
+        sgemm_(&ta, &tb, &n, &n, &n, &alpha, b, &n, a, &n, &beta, c, &n);
+#endif
+#if (defined(_USE_BLAS_) && DATA_TYPE_SIZE == 8) 
+        // use double precision for validation
+        dgemm_(&ta, &tb, &n, &n, &n, &alpha, b, &n, a, &n, &beta, c, &n);
+#endif
+#if (!defined(_USE_BLAS_) || (DATA_TYPE_SIZE != 2 && DATA_TYPE_SIZE != 4 && DATA_TYPE_SIZE != 8)) 
+        // Caclulate manually. Thisi s the default, if BLAS is not found
+        for (int i=0; i < n; i++) {
+            for (int j=0; j < n; j++) {
+                c[i * n + j] = beta * c[i*n + j];
+            }
+        }
+
+        for (int i=0; i < n; i++) {
+            for (int j=0; j < n; j++) {
+                for (int k=0; k < n; k++) {
+                    c[i*n + j] += alpha * a[i*n + k] * b[k*n + j];
+                }
+            }
+        }
 #endif
 }
