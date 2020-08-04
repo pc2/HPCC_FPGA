@@ -199,6 +199,7 @@ test:STREAM:
       - shared/*
       - scripts/*
       - cmake/*
+  needs: ["build:STREAM"]
     
 test:RandomAccess:
   stage: test
@@ -218,6 +219,7 @@ test:RandomAccess:
       - shared/*
       - scripts/*
       - cmake/*
+  needs: ["build:RandomAccess"]
 
 test:PTRANS:
   stage: test
@@ -237,6 +239,7 @@ test:PTRANS:
       - shared/*
       - scripts/*
       - cmake/*
+  needs: ["build:PTRANS"]
 
 test:LINPACK:
   stage: test
@@ -256,6 +259,7 @@ test:LINPACK:
       - shared/*
       - scripts/*
       - cmake/*
+  needs: ["build:LINPACK"]
 
 test:GEMM:
   stage: test
@@ -275,6 +279,7 @@ test:GEMM:
       - shared/*
       - scripts/*
       - cmake/*
+  needs: ["build:GEMM"]
 
 test:GEMM_HP_REP2:
   stage: test
@@ -294,6 +299,7 @@ test:GEMM_HP_REP2:
       - shared/*
       - scripts/*
       - cmake/*
+  needs: ["build:GEMM_HP_REP2"]
 
 test:FFT:
   stage: test
@@ -313,6 +319,7 @@ test:FFT:
       - shared/*
       - scripts/*
       - cmake/*
+  needs: ["build:FFT"]
 
 test:b_eff:
   stage: test
@@ -342,5 +349,6 @@ test:b_eff:
       - shared/*
       - scripts/*
       - cmake/*
+  needs: ["build:b_eff"]
 
 
