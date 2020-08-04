@@ -24,10 +24,10 @@ build:STREAM:
       - build/bin/STREAM_FPGA_test_intel
   only:
     changes:
-      - STREAM/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - STREAM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
       
       
 build:RandomAccess:
@@ -45,10 +45,10 @@ build:RandomAccess:
       - build/bin/RandomAccess_test_intel
   only:
     changes:
-      - RandomAccess/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - RandomAccess/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
 
 
 build:PTRANS:
@@ -67,10 +67,10 @@ build:PTRANS:
       - build/bin/Transpose_test_intel
   only:
     changes:
-      - PTRANS/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - PTRANS/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
 
 build:LINPACK:
   stage: build
@@ -88,10 +88,10 @@ build:LINPACK:
       - build/bin/Linpack_test_intel
   only:
     changes:
-      - LINPACK/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - LINPACK/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
 
 build:GEMM:
   stage: build
@@ -108,10 +108,10 @@ build:GEMM:
       - build/bin/GEMM_test_intel
   only:
     changes:
-      - GEMM/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - GEMM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
 
 build:GEMM_HP_REP2:
   stage: build
@@ -128,10 +128,10 @@ build:GEMM_HP_REP2:
       - build/bin/GEMM_test_intel
   only:
     changes:
-      - GEMM/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - GEMM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
 
 build:FFT:
   stage: build
@@ -148,10 +148,10 @@ build:FFT:
       - build/bin/FFT_test_intel
   only:
     changes:
-      - FFT/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - FFT/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
 
 build:b_eff:
   stage: build
@@ -170,10 +170,10 @@ build:b_eff:
       - build/bin/Network_test_intel
   only:
     changes:
-      - b_eff/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - b_eff/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
 
 ###
 #
@@ -195,10 +195,10 @@ test:STREAM:
       - build/Testing/Temporary/LastTest.log
   only:
     changes:
-      - STREAM/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - STREAM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
   needs: ["build:STREAM"]
     
 test:RandomAccess:
@@ -215,10 +215,10 @@ test:RandomAccess:
       - build/Testing/Temporary/LastTest.log
   only:
     changes:
-      - RandomAccess/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - RandomAccess/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
   needs: ["build:RandomAccess"]
 
 test:PTRANS:
@@ -235,10 +235,10 @@ test:PTRANS:
       - build/Testing/Temporary/LastTest.log
   only:
     changes:
-      - PTRANS/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - PTRANS/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
   needs: ["build:PTRANS"]
 
 test:LINPACK:
@@ -255,10 +255,10 @@ test:LINPACK:
       - build/Testing/Temporary/LastTest.log
   only:
     changes:
-      - LINPACK/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - LINPACK/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
   needs: ["build:LINPACK"]
 
 test:GEMM:
@@ -275,10 +275,10 @@ test:GEMM:
       - build/Testing/Temporary/LastTest.log
   only:
     changes:
-      - GEMM/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - GEMM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
   needs: ["build:GEMM"]
 
 test:GEMM_HP_REP2:
@@ -295,10 +295,10 @@ test:GEMM_HP_REP2:
       - build/Testing/Temporary/LastTest.log
   only:
     changes:
-      - GEMM/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - GEMM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
   needs: ["build:GEMM_HP_REP2"]
 
 test:FFT:
@@ -315,10 +315,10 @@ test:FFT:
       - build/Testing/Temporary/LastTest.log
   only:
     changes:
-      - FFT/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - FFT/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
   needs: ["build:FFT"]
 
 test:b_eff:
@@ -345,10 +345,10 @@ test:b_eff:
       - build/Testing/Temporary/LastTest.log
   only:
     changes:
-      - b_eff/*
-      - shared/*
-      - scripts/*
-      - cmake/*
+      - b_eff/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
   needs: ["build:b_eff"]
 
 
