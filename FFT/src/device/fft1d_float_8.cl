@@ -69,8 +69,6 @@ channel float2 chanin/*PY_CODE_GEN i*/[POINTS] __attribute__((depth(POINTS)));
 pipe float2x8 chanin/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(2 * POINTS)));
 pipe float2x8 chanout/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(2 * POINTS)));
 // PY_CODE_GEN block_end
-// Buffer replication that is used to achieve double buffering in the fetch kernel
-#define BUFFER_REPLICATION 4
 #endif
 
 uint bit_reversed(uint x, uint bits) {
@@ -119,36 +117,56 @@ void fetch/*PY_CODE_GEN i*/(__global float2 * restrict src, int iter) {
 #endif
 #ifdef XILINX_FPGA
 
-  // Duplicated input buffer. One will be used to write and buffer data from global memory
-  // The other will be used to read and forward the data over the channels.
-  // Read and write buffers will be swapped in every iteration
-  float2 buf[BUFFER_REPLICATION][POINTS][N / POINTS] __attribute__((xcl_array_partition(cyclic, 2, 1), xcl_array_partition(complete, 2), xcl_array_partition(cyclic, POINTS, 3)));
+  // Input buffer that can hold the data for two FFTs
+  float2 buf[2*N/POINTS][POINTS] __attribute__((xcl_array_partition(block, N/POINTS, 1), xcl_array_partition(complete, 2)));
 
   // for iter iterations and one additional iteration to empty the last buffer
   __attribute__((xcl_loop_tripcount(2*(N / POINTS),5000*(N / POINTS),100*(N / POINTS))))
   for(unsigned k = 0; k < (iter + 1) * (N / POINTS); k++){ 
 
+    float2 read_chunk[POINTS];
+
     // Read the next 8 values from global memory
     // in the last iteration just read garbage, but the data will not be forwarded over the pipes.
     // This allows the use of memory bursts here.
+    // Also the data is shifted  every N/POINTS/POINTS iterations
     __attribute__((opencl_unroll_hint(POINTS)))
     for(int j = 0; j < POINTS; j++){
-      unsigned local_i = ((k << LOGPOINTS) + j) & (N - 1);
-      buf[(k >> (LOGN - LOGPOINTS)) & (BUFFER_REPLICATION - 1)][local_i >> (LOGN - LOGPOINTS)][local_i & ((1 << (LOGN - LOGPOINTS)) - 1)] = src[(k << LOGPOINTS) + j];
+      unsigned shifts = (k << LOGPOINTS) >> (LOGN - LOGPOINTS);
+      unsigned final_buffer_pos = (j + shifts) & (POINTS - 1);
+      read_chunk[final_buffer_pos] = src[(k << LOGPOINTS) + j];
     }
+
+    // Write the shifted data into the memory buffer
+    __attribute__((opencl_unroll_hint(POINTS)))
+    for(int j = 0; j < POINTS; j++){
+      unsigned local_i = ((k)) & (2* N/POINTS - 1);
+      buf[local_i][j] = read_chunk[j];
+    }
+
+    float2x8 buf2x8;
+
+    unsigned offset = (((k - (N / POINTS)) >> (LOGN - LOGPOINTS)) << (LOGN - LOGPOINTS)) & (2*N/POINTS - 1);
+
+    
+    float2 write_chunk[POINTS];
+    // Write the shifted data into the memory buffer
+    __attribute__((opencl_unroll_hint(POINTS)))
+    for(int j = 0; j < POINTS; j++){
+      write_chunk[bit_reversed(j, LOGPOINTS)] = buf[offset + (j * (N/POINTS/POINTS) + ((k >> LOGPOINTS) & (N/POINTS/POINTS - 1)))][((k + j)     & (POINTS - 1))];
+    }
+
+    buf2x8.i0 = write_chunk[0];          
+    buf2x8.i1 = write_chunk[1];  
+    buf2x8.i2 = write_chunk[2];  
+    buf2x8.i3 = write_chunk[3]; 
+    buf2x8.i4 = write_chunk[4]; 
+    buf2x8.i5 = write_chunk[5];
+    buf2x8.i6 = write_chunk[6];
+    buf2x8.i7 = write_chunk[7];
 
     // Start in the second iteration to forward the buffered data over the pipe
     if (k >= (N / POINTS)) {
-      float2x8 buf2x8;
-      buf2x8.i0 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][0][k & ((1 << (LOGN - LOGPOINTS)) - 1)];          
-      buf2x8.i1 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][4][k & ((1 << (LOGN - LOGPOINTS)) - 1)];  
-      buf2x8.i2 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][2][k & ((1 << (LOGN - LOGPOINTS)) - 1)];  
-      buf2x8.i3 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][6][k & ((1 << (LOGN - LOGPOINTS)) - 1)]; 
-      buf2x8.i4 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][1][k & ((1 << (LOGN - LOGPOINTS)) - 1)]; 
-      buf2x8.i5 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][5][k & ((1 << (LOGN - LOGPOINTS)) - 1)];
-      buf2x8.i6 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][3][k & ((1 << (LOGN - LOGPOINTS)) - 1)];
-      buf2x8.i7 = buf[((k >> (LOGN - LOGPOINTS)) - 1) & (BUFFER_REPLICATION - 1)][7][k & ((1 << (LOGN - LOGPOINTS)) - 1)];
-
       write_pipe_block(chanin/*PY_CODE_GEN i*/, &buf2x8);
     }
   }
