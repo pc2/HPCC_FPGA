@@ -73,3 +73,16 @@ This time the block size is defined by the parameter ``GEMM_SIZE``.
 The matrix multiplication for this block will be fully unrolled which allows to initiate the multiplication of a whole block every clock cycle.
 Both pipelines will be executed sequentially to calculate a result of a single block of A + B.
 A third pipeline loads a block of C and calculates the final result for a block of C'.
+
+--------------------
+Configuration Hints
+--------------------
+
+In general, the parameters for the GEMM benchmark should be choosen after the following criteria:
+
+1. Choose the data type with the ``DATA_TYPE`` parameter.
+2. Scale ``GEMM_SIZE`` to the largest power of two that fits onto the FPGA since this parameters sets the actual amount of calculations that will be done in parallel. The size might depend on the chosen data type, since DSPs might not be usable for all precisions.
+3. Set ``BLOCK_SIZE`` to the largest power of two that fits into the local memory of the FPGA. This will lead to a better utilization of the calculation pipeline.
+4. The ``GLOBAL_MEM_UNROLL`` parameter should be set to match the optimal width of the memory interface depending on the used data type. Check the reports how the load pipeline will be synthesized. In some cases it might be better to set ``GLOBAL_MEM_UNROLL`` to the same value as ``GEMM_SIZE`` since there will be no performance gain for higher values.
+5. For Intel devices, check the estimated kernel frequency in the report. If it is too low or the calculation pipeline shows an II larger than 1, the shift register should be used. CHoose a vlue larger 0 for ``INTEL_MUL_SHIFT_REG`` until frequency and II are in an acceptable range.
+6. Replicate the kernel using the ``NUM_REPLICATIONS`` parameter to fill the FPGA. It might be better to pick smaller block sizes and instead replicate the kernel to make placing and routing easier.

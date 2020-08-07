@@ -72,3 +72,12 @@ Data will get delayed in the fetch and fft1d kernel but batched execution allows
 The number of FLOP for this calculation is defined to be :math:`5*n*ld(n)` for an FFT of dimension :math:`n`.
 The result of the calculation is checked by calculating the residual :math:`\frac{||d - d'||}{\epsilon ld(n)}` where :math:`\epsilon` is the machine epsilon, :math:`d'` the result from the reference implementation and :math:`n` the FFT size.
 
+--------------------
+Configuration Hints
+--------------------
+
+The parameters for the FFT benchmark should be choosen after the following criteria to achieve the best performance:
+
+1. Choose the largest number for ``LOG_FFT_SIZE`` that produces a calculation kernel with a single pipeline with an II=1. The calculation kernel uses a shift register to store intermediate data and the size of the shift register might be limited depending on the used hardware and tools.
+2. Replicate the kernels using the ``NUM_REPLICATIONS`` parameter to fill the FPGA.
+
