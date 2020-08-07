@@ -94,9 +94,6 @@ Name             | Default     | Description                          |
 `XILINX_LINK_SETTINGS_FILE` | First `settings.link.xilinx.*.ini` file found in the `settings` folder of the benchmark | Path to the file containing link settings like the mapping of the memory banks to the kernel parameters |
 `XILINX_GENERATE_LINK_SETTINGS` | `Yes` if the link settings file ends on `.generator.ini`, `No` otherwise | Boolean flag indicating if the link settings file will be used as a source to generate a link settings file e.g. for a given number of kernel replications |
 
-For an overview of the current limitations of the benchmarks with regards to the Xilinx Vitis toolchain refer to the subsection [Notes on Xilinx Vitis Compatibility](#notes-on-xilinx-vitis-compatibility).
-
-For the other benchmarks, the Xilinx configuration options will have no effect.
 When building a benchmark for Xilinx FPGAs double check the path to the settings files and if they match to the target board.
 The settings files follow the name convention:
 
@@ -113,6 +110,8 @@ or after configuration using the UI with
 
     ccmake ../../RandomAccess
 
+
+For an overview of the current limitations of the benchmarks refer to the subsection [Notes on Vendor Vitis Compatibility](#notes-on-vendor-compatibility).
 In the following the configuration and build steps are shown with a more specific example.
 
 #### Build and Test Example: STREAM for Intel OpenCL FPGA SDK and the Nallatech 520N
@@ -176,6 +175,13 @@ To generate the documentation, execute the following commands:
 
 The generated documentation will be placed in `docs/html` and `docs/latex`.
 To view the HTML documentation, open `docs/html/index.html` with a internet browser.
+
+A more general documentation is maintained using Sphinx. It can be generated using the makefile provided in the `docs/` folder.
+In this documentation a more general description of the benchmarks and how to use them is given.
+To generate the HTML documentation, execute the commands below:
+
+    cd docs
+    make html
 
 ## Custom Kernels
 
