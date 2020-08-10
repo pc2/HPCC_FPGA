@@ -249,7 +249,7 @@ to BRAM.
 
 // Here we use the total replications. This will also create three kernels for the Xilinx compiler because they all
 // use different hard-coded ranges in the outer loop
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
 
 /**
 Two level blocked GEMM kernel
