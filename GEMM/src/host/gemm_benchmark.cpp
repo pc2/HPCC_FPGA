@@ -35,7 +35,8 @@ SOFTWARE.
 #include "parameters.h"
 
 gemm::GEMMProgramSettings::GEMMProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()), kernelReplications(results["r"].as<uint>()) {
+    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()), kernelReplications(results["r"].as<uint>()),
+    replicateInputBuffers(results["replicate-inputs"].count() > 0) {
 
 }
 
@@ -44,6 +45,7 @@ gemm::GEMMProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["Matrix Size"] = std::to_string(matrixSize);
         map["Kernel Replications"] = std::to_string(kernelReplications);
+        map["Replicate Inputs"] = replicateInputBuffers ? "Yes" : "No";
         return map;
 }
 
@@ -97,7 +99,8 @@ gemm::GEMMBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
             ("b", "Block size in number of values in one dimension",
              cxxopts::value<cl_uint>()->default_value(std::to_string(BLOCK_SIZE)))
             ("r", "Number of used kernel replications",
-             cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)));
+             cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)))
+            ("replicate-inputs", "Also replicates the input buffer for each kernel");
 }
 
 std::unique_ptr<gemm::GEMMExecutionTimings>

@@ -61,40 +61,45 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
     size_t out_buffer_size = config.programSettings->matrixSize * 
                                 (number_blocks_per_kernel) * config.programSettings->blockSize;
 
-#ifdef INTEL_FPGA
-    cl::Buffer Buffer_a(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_1_INTELFPGA),
-                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err);
-    ASSERT_CL(err)
-    cl::Buffer Buffer_b(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_2_INTELFPGA),
-                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err);
-    ASSERT_CL(err)
-    cl::Buffer Buffer_c_in(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_3_INTELFPGA),
-                           sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err);
-    ASSERT_CL(err)
+    std::vector<cl::Buffer> a_buffers;
+    std::vector<cl::Buffer> b_buffers;
+    std::vector<cl::Buffer> c_buffers;
+    std::vector<cl::Buffer> out_buffers;
 
+#ifdef INTEL_FPGA
     // Create an output buffer for every kernel to still allow restrict optimizations
     // For the other buffers this is not necessary, since they are read only
-    std::vector<cl::Buffer> out_buffers;
     for (int i=0; i < config.programSettings->kernelReplications; i++) {
+        if (i == 0 || config.programSettings->replicateInputBuffers) {
+            a_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_1_INTELFPGA),
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
+            ASSERT_CL(err)
+            b_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_2_INTELFPGA),
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
+            ASSERT_CL(err)
+            c_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_3_INTELFPGA),
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
+            ASSERT_CL(err)
+        }
         out_buffers.push_back(cl::Buffer(*config.context, CL_MEM_WRITE_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_4_INTELFPGA),
                                     sizeof(HOST_DATA_TYPE)*out_buffer_size, NULL, &err));
         ASSERT_CL(err)
     }
 #else
-    cl::Buffer Buffer_a(*config.context, CL_MEM_READ_ONLY,
-                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err);
-    ASSERT_CL(err)
-    cl::Buffer Buffer_b(*config.context, CL_MEM_READ_ONLY,
-                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err);
-    ASSERT_CL(err)
-    cl::Buffer Buffer_c_in(*config.context, CL_MEM_READ_ONLY,
-                           sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err);
-    ASSERT_CL(err)
-
     // Create an output buffer for every kernel to still allow restrict optimizations
     // For the other buffers this is not necessary, since they are read only
-    std::vector<cl::Buffer> out_buffers;
     for (int i=0; i < config.programSettings->kernelReplications; i++) {
+        if (i == 0 || config.programSettings->replicateInputBuffers) {
+            a_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY,
+                                sizeof(HOST_DATA_TYPE) *config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
+            ASSERT_CL(err)
+            b_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY,
+                                sizeof(HOST_DATA_TYPE) *config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
+            ASSERT_CL(err)
+            c_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY,
+                                sizeof(HOST_DATA_TYPE) *config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
+            ASSERT_CL(err)
+        }
         out_buffers.push_back(cl::Buffer(*config.context, CL_MEM_WRITE_ONLY,
                                     sizeof(HOST_DATA_TYPE) * out_buffer_size, NULL, &err));
         ASSERT_CL(err)
@@ -125,11 +130,11 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
                                         reinterpret_cast<void*>(&c_out[i * out_buffer_size]));
         ASSERT_CL(err)
     #else
-        err = gemmkernel.setArg(0, Buffer_a);
+        err = gemmkernel.setArg(0, a_buffers[config.programSettings->replicateInputBuffers ? i : 0]);
         ASSERT_CL(err);
-        err = gemmkernel.setArg(1, Buffer_b);
+        err = gemmkernel.setArg(1, b_buffers[config.programSettings->replicateInputBuffers ? i : 0]);
         ASSERT_CL(err);
-        err = gemmkernel.setArg(2, Buffer_c_in);
+        err = gemmkernel.setArg(2, c_buffers[config.programSettings->replicateInputBuffers ? i : 0]);
         ASSERT_CL(err);
         err = gemmkernel.setArg(3, out_buffers[i]);
         ASSERT_CL(err);
@@ -139,6 +144,10 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
         err = gemmkernel.setArg(5, beta);
         ASSERT_CL(err);
         err = gemmkernel.setArg(6, size_in_blocks);
+        ASSERT_CL(err);
+        err = gemmkernel.setArg(7, static_cast<cl_uint>(i * number_blocks_per_kernel));
+        ASSERT_CL(err);
+        err = gemmkernel.setArg(8, static_cast<cl_uint>(std::min<cl_uint>(i * number_blocks_per_kernel + number_blocks_per_kernel, size_in_blocks)));
         ASSERT_CL(err);
 
         gemmkernels.push_back(gemmkernel);
@@ -179,16 +188,21 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
                         NULL, NULL);
         ASSERT_CL(err)
 #else
-        err = compute_queues[0].enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, a);
-        ASSERT_CL(err)
-        err = compute_queues[0].enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, b);
-        ASSERT_CL(err)
-        err = compute_queues[0].enqueueWriteBuffer(Buffer_c_in, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, c);
-        ASSERT_CL(err)
-        compute_queues[0].finish();
+
+        for (int i=0; i < (config.programSettings->replicateInputBuffers ? config.programSettings->kernelReplications : 1); i++) {
+            err = compute_queues[i].enqueueWriteBuffer(a_buffers[i], CL_TRUE, 0,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, a);
+            ASSERT_CL(err)
+            err = compute_queues[i].enqueueWriteBuffer(b_buffers[i], CL_TRUE, 0,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, b);
+            ASSERT_CL(err)
+            err = compute_queues[i].enqueueWriteBuffer(c_buffers[i], CL_TRUE, 0,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, c);
+            ASSERT_CL(err)
+        }
+        for (int i=0; i < config.programSettings->kernelReplications; i++) {
+            compute_queues[i].finish();
+        }
 #endif
         auto t1 = std::chrono::high_resolution_clock::now();
         for (int i=0; i < config.programSettings->kernelReplications; i++) {
