@@ -109,10 +109,18 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
     std::vector<cl::Kernel> gemmkernels;
 
     for (int i=0; i < config.programSettings->kernelReplications; i++) {
+#ifdef INTEL_FPGA
         // create the kernels
         cl::Kernel gemmkernel(*config.program, (KERNEL_NAME + std::to_string(i)).c_str(),
                                         &err);
         ASSERT_CL(err);
+#endif
+#ifdef XILINX_FPGA
+        // create the kernels
+        cl::Kernel gemmkernel(*config.program, (std::string(KERNEL_NAME) + "0_" + std::to_string(r + 1) + ":{" + KERNEL_NAME + "0_" +  std::to_string(r + 1) + "}").c_str().c_str(),
+                                        &err);
+        ASSERT_CL(err);
+#endif
 
 
         // prepare kernels
