@@ -117,7 +117,7 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
 #endif
 #ifdef XILINX_FPGA
         // create the kernels
-        cl::Kernel gemmkernel(*config.program, (std::string(KERNEL_NAME) + "0_" + std::to_string(r + 1) + ":{" + KERNEL_NAME + "0_" +  std::to_string(r + 1) + "}").c_str().c_str(),
+        cl::Kernel gemmkernel(*config.program, (std::string(KERNEL_NAME) + "0:{" + KERNEL_NAME + "0_" +  std::to_string(i + 1) + "}").c_str(),
                                         &err);
         ASSERT_CL(err);
 #endif
