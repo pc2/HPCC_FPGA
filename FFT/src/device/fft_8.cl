@@ -60,6 +60,7 @@ typedef struct {
 } float2x8;
 
 // FFT butterfly building block
+__attribute__((always_inline))
 float2x8 butterfly(float2x8 data) {
    float2x8 res;
    res.i0 = data.i0 + data.i1;
@@ -74,6 +75,7 @@ float2x8 butterfly(float2x8 data) {
 }
 
 // Swap real and imaginary components in preparation for inverse transform
+__attribute__((always_inline))
 float2x8 swap_complex(float2x8 data) {
    float2x8 res;
    res.i0.x = data.i0.y;
@@ -96,6 +98,7 @@ float2x8 swap_complex(float2x8 data) {
 }
 
 // FFT trivial rotation building block
+__attribute__((always_inline))
 float2x8 trivial_rotate(float2x8 data) {
    float2 tmp = data.i3;
    data.i3.x = tmp.y;
@@ -107,6 +110,7 @@ float2x8 trivial_rotate(float2x8 data) {
 }
 
 // FFT data swap building block associated with trivial rotations
+__attribute__((always_inline))
 float2x8 trivial_swap(float2x8 data) {
    float2 tmp = data.i1;
    data.i1 = data.i2;
@@ -118,6 +122,7 @@ float2x8 trivial_swap(float2x8 data) {
 }
 
 // FFT data swap building block associated with complex rotations
+__attribute__((always_inline))
 float2x8 swap(float2x8 data) {
    float2 tmp = data.i1;
    data.i1 = data.i4;
@@ -145,7 +150,7 @@ float2 delay(float2 data, const int depth, float2 shift_reg[(1 << LOG_FFT_SIZE) 
 // Invocation count: 0123...          01234567...
 // data.i0         : GECA...   ---->      DBCA...
 // data.i1         : HFDB...   ---->      HFGE...
-
+__attribute__((always_inline))
 float2x8 reorder_data(float2x8 data, const int depth, float2 shift_reg[(1 << LOG_FFT_SIZE) + 8 * (LOG_FFT_SIZE - 2)], unsigned head_index, bool toggle) {
    // Use disconnected segments of length 'depth + 1' elements starting at 
    // 'shift_reg' to implement the delay elements. At the end of each FFT step, 
@@ -179,6 +184,7 @@ float2x8 reorder_data(float2x8 data, const int depth, float2 shift_reg[(1 << LOG
 }
 
 // Implements a complex number multiplication
+__attribute__((always_inline))
 float2 comp_mult(float2 a, float2 b) {
    float2 res;
    res.x = a.x * b.x - a.y * b.y;
@@ -233,6 +239,7 @@ float2 twiddle(int index, int stage, int size, int stream) {
 }
 
 // FFT complex rotation building block
+__attribute__((always_inline))
 float2x8 complex_rotate(float2x8 data, int index, int stage, int size) {
    data.i1 = comp_mult(data.i1, twiddle(index, stage, size, 0));
    data.i2 = comp_mult(data.i2, twiddle(index, stage, size, 1));
