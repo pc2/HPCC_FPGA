@@ -64,10 +64,13 @@ channel float2 chanin/*PY_CODE_GEN i*/[POINTS] __attribute__((depth(POINTS)));
 // PY_CODE_GEN block_end
 #endif
 #ifdef XILINX_FPGA
+#define XILINX_PIPE_DEPTH 16
+//#define XILINX_PIPE_DEPTH ((1 << (LOGN - LOGPOINTS) < 16) ? 16 : (1 << (LOGN - LOGPOINTS)))
+
 // Compiler states, that the pipe depth needs at least to be 16
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
-pipe float2x8 chanin/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(2 * POINTS)));
-pipe float2x8 chanout/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(2 * POINTS)));
+pipe float2x8 chanin/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(XILINX_PIPE_DEPTH)));
+pipe float2x8 chanout/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(XILINX_PIPE_DEPTH)));
 // PY_CODE_GEN block_end
 #endif
 
@@ -91,34 +94,8 @@ void fetch/*PY_CODE_GEN i*/(__global float2 * restrict src, int iter) {
 
   const int N = (1 << LOGN);
 
-#ifdef INTEL_FPGA
-  // SWI fetch kernel for Intel fft1d written by Arjun Ramaswami, Paderborn University, PC2
-  // Source can be found under https://git.uni-paderborn.de/arjunr/fft1d-fpga/-/blob/master/fft1d/device/fft1d.cl
-
-  for(unsigned k = 0; k < iter; k++){ 
-
-    float2 buf[N];
-    #pragma unroll POINTS
-    for(int i = 0; i < N; i++){
-      buf[i & ((1<<LOGN)-1)] = src[(k << LOGN) + i];    
-    }
-
-    for(unsigned j = 0; j < (N / POINTS); j++){
-      write_channel_intel(chanin/*PY_CODE_GEN i*/[0], buf[j]);               // 0
-      write_channel_intel(chanin/*PY_CODE_GEN i*/[1], buf[4 * N / 8 + j]);   // 32
-      write_channel_intel(chanin/*PY_CODE_GEN i*/[2], buf[2 * N / 8 + j]);   // 16
-      write_channel_intel(chanin/*PY_CODE_GEN i*/[3], buf[6 * N / 8 + j]);   // 48
-      write_channel_intel(chanin/*PY_CODE_GEN i*/[4], buf[N / 8 + j]);       // 8
-      write_channel_intel(chanin/*PY_CODE_GEN i*/[5], buf[5 * N / 8 + j]);   // 40
-      write_channel_intel(chanin/*PY_CODE_GEN i*/[6], buf[3 * N / 8 + j]);   // 24
-      write_channel_intel(chanin/*PY_CODE_GEN i*/[7], buf[7 * N / 8 + j]);   // 54
-    }
-  }
-#endif
-#ifdef XILINX_FPGA
-
   // Input buffer that can hold the data for two FFTs
-  float2 buf[2*N/POINTS][POINTS] __attribute__((xcl_array_partition(block, N/POINTS, 1), xcl_array_partition(complete, 2)));
+  float2 buf[2*N/POINTS][POINTS] __attribute__((numbanks(POINTS),xcl_array_partition(block, N/POINTS, 1), xcl_array_partition(complete, 2)));
 
   // for iter iterations and one additional iteration to empty the last buffer
   __attribute__((xcl_loop_tripcount(2*(N / POINTS),5000*(N / POINTS),100*(N / POINTS))))
@@ -144,33 +121,42 @@ void fetch/*PY_CODE_GEN i*/(__global float2 * restrict src, int iter) {
       buf[local_i][j] = read_chunk[j];
     }
 
-    float2x8 buf2x8;
-
-    unsigned offset = (((k - (N / POINTS)) >> (LOGN - LOGPOINTS)) << (LOGN - LOGPOINTS)) & (2*N/POINTS - 1);
-
-    
-    float2 write_chunk[POINTS];
-    // Write the shifted data into the memory buffer
-    __attribute__((opencl_unroll_hint(POINTS)))
-    for(int j = 0; j < POINTS; j++){
-      write_chunk[bit_reversed(j, LOGPOINTS)] = buf[offset + (j * (N/POINTS/POINTS) + ((k >> LOGPOINTS) & (N/POINTS/POINTS - 1)))][((k + j)     & (POINTS - 1))];
-    }
-
-    buf2x8.i0 = write_chunk[0];          
-    buf2x8.i1 = write_chunk[1];  
-    buf2x8.i2 = write_chunk[2];  
-    buf2x8.i3 = write_chunk[3]; 
-    buf2x8.i4 = write_chunk[4]; 
-    buf2x8.i5 = write_chunk[5];
-    buf2x8.i6 = write_chunk[6];
-    buf2x8.i7 = write_chunk[7];
-
-    // Start in the second iteration to forward the buffered data over the pipe
     if (k >= (N / POINTS)) {
+      float2x8 buf2x8;
+
+      unsigned offset = (((k - (N / POINTS)) >> (LOGN - LOGPOINTS)) << (LOGN - LOGPOINTS)) & (2*N/POINTS - 1);
+      
+      float2 write_chunk[POINTS];
+      // Write the shifted data into the memory buffer
+      __attribute__((opencl_unroll_hint(POINTS)))
+      for(int j = 0; j < POINTS; j++){
+        write_chunk[bit_reversed(j, LOGPOINTS)] = buf[offset + (j * (N/POINTS/POINTS) + ((k >> LOGPOINTS) & (N/POINTS/POINTS - 1)))][((k + j)     & (POINTS - 1))];
+      }
+#ifdef XILINX_FPGA
+      buf2x8.i0 = write_chunk[0];          
+      buf2x8.i1 = write_chunk[1];  
+      buf2x8.i2 = write_chunk[2];  
+      buf2x8.i3 = write_chunk[3]; 
+      buf2x8.i4 = write_chunk[4]; 
+      buf2x8.i5 = write_chunk[5];
+      buf2x8.i6 = write_chunk[6];
+      buf2x8.i7 = write_chunk[7];
+
+      // Start in the second iteration to forward the buffered data over the pipe
       write_pipe_block(chanin/*PY_CODE_GEN i*/, &buf2x8);
+#endif
+#ifdef INTEL_FPGA
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[0], write_chunk[0]); 
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[1], write_chunk[1]);  
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[2], write_chunk[2]);  
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[3], write_chunk[3]);  
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[4], write_chunk[4]);  
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[5], write_chunk[5]); 
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[6], write_chunk[6]);  
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[7], write_chunk[7]);  
+#endif
     }
   }
-#endif
 }
 
 
