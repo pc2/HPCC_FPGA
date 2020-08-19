@@ -98,7 +98,6 @@ void fetch/*PY_CODE_GEN i*/(__global float2 * restrict src, int iter) {
   float2 buf[2*N/POINTS][POINTS] __attribute__((numbanks(POINTS),xcl_array_partition(block, N/POINTS, 1), xcl_array_partition(complete, 2)));
 
   // for iter iterations and one additional iteration to empty the last buffer
-  __attribute__((xcl_loop_tripcount(2*(N / POINTS),5000*(N / POINTS),100*(N / POINTS))))
   for(unsigned k = 0; k < (iter + 1) * (N / POINTS); k++){ 
 
     float2 read_chunk[POINTS];
@@ -109,28 +108,32 @@ void fetch/*PY_CODE_GEN i*/(__global float2 * restrict src, int iter) {
     // Also the data is shifted  every N/POINTS/POINTS iterations
     __attribute__((opencl_unroll_hint(POINTS)))
     for(int j = 0; j < POINTS; j++){
-      unsigned shifts = (k << LOGPOINTS) >> (LOGN - LOGPOINTS);
-      unsigned final_buffer_pos = (j + shifts) & (POINTS - 1);
+      // Shift the data depending on the total FFT size
+      // Shifts every new chunk by one. If N/POINTS is a multiple of POINTS, the shifting is reduced to prevent mappings to the same bank.
+      unsigned shift = ((LOGN - LOGPOINTS - LOGPOINTS > 0) ? (k & (N/POINTS - 1)) >> (LOGN - LOGPOINTS - LOGPOINTS) : (k & (N/POINTS - 1)));
+      unsigned final_buffer_pos = (j + shift) & (POINTS - 1);
       read_chunk[final_buffer_pos] = src[(k << LOGPOINTS) + j];
     }
 
     // Write the shifted data into the memory buffer
     __attribute__((opencl_unroll_hint(POINTS)))
     for(int j = 0; j < POINTS; j++){
-      unsigned local_i = ((k)) & (2* N/POINTS - 1);
+      unsigned local_i = k & (2 * N/POINTS - 1);
       buf[local_i][j] = read_chunk[j];
     }
 
-    if (k >= (N / POINTS)) {
+    if (k >= ( N / POINTS)) {
       float2x8 buf2x8;
 
-      unsigned offset = (((k - (N / POINTS)) >> (LOGN - LOGPOINTS)) << (LOGN - LOGPOINTS)) & (2*N/POINTS - 1);
+      unsigned offset = (((k >> (LOGN - LOGPOINTS)) & 1) == 0) ? (N / POINTS) : 0;
       
       float2 write_chunk[POINTS];
-      // Write the shifted data into the memory buffer
+      // Read the shifted data from the memory buffer
       __attribute__((opencl_unroll_hint(POINTS)))
       for(int j = 0; j < POINTS; j++){
-        write_chunk[bit_reversed(j, LOGPOINTS)] = buf[offset + (j * (N/POINTS/POINTS) + ((k >> LOGPOINTS) & (N/POINTS/POINTS - 1)))][((k + j)     & (POINTS - 1))];
+        unsigned current_index = j * N/POINTS + (k & (N/POINTS - 1));
+        unsigned shift = ((LOGPOINTS - LOGN + LOGPOINTS > 0) ? j >> (LOGPOINTS - LOGN + LOGPOINTS) : j);
+        write_chunk[bit_reversed(j, LOGPOINTS)] = buf[offset + (current_index >> LOGPOINTS)][(current_index + shift) & (POINTS - 1)];
       }
 #ifdef XILINX_FPGA
       buf2x8.i0 = write_chunk[0];          

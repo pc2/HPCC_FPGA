@@ -153,6 +153,26 @@ build:FFT:
       - scripts/**/*
       - cmake/**/*
 
+build:FFT_small:
+  stage: build
+  script:
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
+    - make -j 40 all
+  artifacts:
+    paths:
+      - build/bin/fft1d_float_8_emulate.aocx
+      - build/bin/FFT_intel
+      - build/bin/FFT_test_intel
+  only:
+    changes:
+      - FFT/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+
 build:b_eff:
   stage: build
   script:
@@ -320,6 +340,26 @@ test:FFT:
       - scripts/**/*
       - cmake/**/*
   needs: ["build:FFT"]
+
+test:FFT_small:
+  stage: test
+  script:
+    - cd build
+    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
+    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:FFT_small
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - FFT/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+  needs: ["build:FFT_small"]
 
 test:b_eff:
   stage: test
