@@ -127,7 +127,7 @@ namespace bm_execution {
                 fftKernels.push_back(fftKernel);
 
 #ifdef USE_SVM
-                err = clEnqueueSVMMap(fetchQueue[r](), CL_TRUE,
+                err = clEnqueueSVMMap(fetchQueues[r](), CL_TRUE,
                                 CL_MAP_READ,
                                 reinterpret_cast<void *>(&data[r * (1 << LOG_FFT_SIZE) * iterations_per_kernel]),
                                 (1 << LOG_FFT_SIZE) * iterations_per_kernel * 2 * sizeof(HOST_DATA_TYPE), 0,
