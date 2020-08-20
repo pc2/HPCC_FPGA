@@ -111,7 +111,7 @@ or after configuration using the UI with
     ccmake ../../RandomAccess
 
 
-For an overview of the current limitations of the benchmarks refer to the subsection [Notes on Vendor Vitis Compatibility](#notes-on-vendor-compatibility).
+For an overview of the current limitations of the benchmarks refer to the subsection [Notes on Vendor Compatibility](#notes-on-vendor-compatibility).
 In the following the configuration and build steps are shown with a more specific example.
 
 #### Build and Test Example: STREAM for Intel OpenCL FPGA SDK and the Nallatech 520N
