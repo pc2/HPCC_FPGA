@@ -20,3 +20,6 @@ docs/*
 *.out
 *.txt
 *.csv
+
+# Except CMake files are important!
+!CMakeLists.txt

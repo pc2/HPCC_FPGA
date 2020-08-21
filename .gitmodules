@@ -1,9 +1,0 @@
-[submodule "extern/cxxopts"]
-	path = extern/cxxopts
-	url = https://github.com/jarro2783/cxxopts.git
-[submodule "extern/hlslib"]
-	path = extern/hlslib
-	url = https://github.com/definelicht/hlslib.git
-[submodule "extern/googletest"]
-	path = extern/googletest
-	url = https://github.com/google/googletest.git

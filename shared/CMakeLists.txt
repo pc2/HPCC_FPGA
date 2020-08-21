@@ -14,6 +14,7 @@ else()
     message(ERROR "No OpenCL header found on system!")
 endif()
 
-target_include_directories(hpcc_fpga_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../extern/cxxopts/include)
+target_include_directories(hpcc_fpga_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(hpcc_fpga_base cxxopts)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
