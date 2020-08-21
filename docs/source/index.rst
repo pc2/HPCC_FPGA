@@ -14,10 +14,30 @@ and resource usage, and performance results for selected FPGAs with the used con
 
 .. toctree::
    :maxdepth: 1
-   :caption: Table of Contents:
+   :caption: Benchmark Descriptions:
    :glob:
 
-   */index
+   STREAM/*
+   RandomAccess/*
+   FFT/*
+   GEMM/*
+   PTRANS/*
+   LINPACK/*
+   b_eff/*
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Other Topics:
+   :glob:
+
+   Basic Setup/*
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Benchmark Results:
+   :glob:
+
+   */results/index
    
 
 Or use the :ref:`search`.
