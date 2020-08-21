@@ -78,6 +78,11 @@ public:
     uint kernelReplications;
 
     /**
+     * @brief If True, replicate input buffers for each kernel replication
+     */
+    bool replicateInputBuffers;
+
+    /**
      * @brief Construct a new GEMM Program Settings object
      * 
      * @param results the result map from parsing the program input parameters

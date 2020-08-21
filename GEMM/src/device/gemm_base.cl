@@ -249,7 +249,7 @@ to BRAM.
 
 // Here we use the total replications. This will also create three kernels for the Xilinx compiler because they all
 // use different hard-coded ranges in the outer loop
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
 
 /**
 Two level blocked GEMM kernel
@@ -284,10 +284,11 @@ void gemm/*PY_CODE_GEN i*/(
           const DEVICE_DATA_TYPE alpha,
           const DEVICE_DATA_TYPE beta,
 #endif
-          const uint a_size) {
+          const uint a_size,
+          const uint out_offset,
+          const uint max_block) {
 
     const unsigned size = a_size * BLOCK_SIZE;
-    const unsigned out_offset = /* PY_CODE_GEN i */ * ((a_size + /* PY_CODE_GEN num_total_replications - 1*/) / /* PY_CODE_GEN num_total_replications */);
 
     // Level 1 Matrix Multiplication
 #ifdef INTEL_FPGA
@@ -298,7 +299,7 @@ void gemm/*PY_CODE_GEN i*/(
 // These two loops will not be coalesced, but should not produce much overhead because the outer loop does 
 // not do a lot of iterations
 #endif
-    for (unsigned y_block = out_offset; y_block < min(/* PY_CODE_GEN i+1*/ * ((a_size + /* PY_CODE_GEN num_total_replications - 1*/) / /* PY_CODE_GEN num_total_replications */),a_size); y_block++) {
+    for (unsigned y_block = out_offset; y_block < max_block; y_block++) {
 #ifdef INTEL_FPGA
 #pragma disable_loop_pipelining
 #endif

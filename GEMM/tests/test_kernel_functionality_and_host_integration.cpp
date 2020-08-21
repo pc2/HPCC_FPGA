@@ -67,7 +67,7 @@ TEST_P(GEMMKernelTest, FPGACorrectCtimesBeta) {
     auto result = bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(data->C_out[i * matrix_size + j], 2.0 * data->C[i * matrix_size + j]);
+            EXPECT_NEAR(data->C_out[i * matrix_size + j], 2.0 * data->C[i * matrix_size + j], std::numeric_limits<HOST_DATA_TYPE>::epsilon());
         }
     }
 }
@@ -88,7 +88,7 @@ TEST_P(GEMMKernelTest, FPGACorrectAtimesAlpha) {
     auto result = bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(data->C_out[i * matrix_size + j], 2.0 * data->A[i * matrix_size + j]);
+            EXPECT_NEAR(data->C_out[i * matrix_size + j], 2.0 * data->A[i * matrix_size + j], std::numeric_limits<HOST_DATA_TYPE>::epsilon());
         }
     }
 }
@@ -108,7 +108,7 @@ TEST_P(GEMMKernelTest, FPGACorrectBtimesAlpha) {
     auto result = bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(data->C_out[i * matrix_size + j], 2.0 * data->B[i * matrix_size + j]);
+            EXPECT_NEAR(data->C_out[i * matrix_size + j], 2.0 * data->B[i * matrix_size + j], std::numeric_limits<HOST_DATA_TYPE>::epsilon());
         }
     }
 }
@@ -174,7 +174,7 @@ TEST_P(GEMMKernelTest, FPGACorrectbetaCplusalphaAB) {
     gemm::gemm_ref(data->A,data->B,c_ref_out,matrix_size,OPTIONAL_CAST(0.5),OPTIONAL_CAST(2.0));
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_NEAR(data->C_out[i * matrix_size + j], c_ref_out[i * matrix_size + j], 0.001);
+            EXPECT_NEAR(data->C_out[i * matrix_size + j], c_ref_out[i * matrix_size + j], std::numeric_limits<HOST_DATA_TYPE>::epsilon() * matrix_size * matrix_size);
         }
     }
 }

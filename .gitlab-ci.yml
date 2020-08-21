@@ -119,7 +119,7 @@ build:GEMM_HP_REP2:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../GEMM -DDATA_SIZE=half -DNUM_REPLICATIONS=2 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - cmake ../GEMM -DDATA_TYPE=half -DNUM_REPLICATIONS=2 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
     - make -j 40 all
   artifacts:
     paths:
