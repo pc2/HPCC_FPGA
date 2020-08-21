@@ -1,7 +1,5 @@
-add_subdirectory(../../extern/googletest ${CMAKE_BINARY_DIR}/lib/googletest)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 include_directories(${CMAKE_BINARY_DIR}/src/common)
-
 
 if (INTELFPGAOPENCL_FOUND)
     include_directories(SYSTEM ${IntelFPGAOpenCL_INCLUDE_DIRS})
