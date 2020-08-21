@@ -26,3 +26,5 @@ docs/xml
 
 # Except CMake files are important!
 !CMakeLists.txt
+# Do not ignore CSVs included in documentation
+!docs/source/**/*.csv
