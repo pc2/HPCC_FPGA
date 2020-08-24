@@ -41,18 +41,14 @@ All benchmarks come with the following build dependencies:
 - Intel OpenCL FPGA SDK or Xilinx Vitis
 - Python 3 for code generation and with [pandas](https://pandas.pydata.org) installed for the evaluation scripts
 
-Moreover the host code and the build system use additional libraries included as git submodules:
+Moreover, additional libraries are fetched by the build system during configuration:
 
 - [cxxopts](https://github.com/jarro2783/cxxopts) for option parsing
 - [hlslib](https://github.com/definelicht/hlslib) for CMake FindPackages
 - [Googletest](https://github.com/google/googletest) for unit testing
 
-Make sure to initialize and update the submodules before building a benchmark with:
-
-    git submodule update --init --recursive
-
-After that please follow the instructions given in the README of the individual benchmark to configure and build the FPGA bitstream and host code.
-Also some benchmarks might need additional dependencies.
+These dependencies will be downloaded automatically when configuring a benchmark for the first time.
+Besides that, some benchmarks might need additional dependencies.
 More information on that can be found in the README located in the subfolder for each benchmark.
 One key feature of all benchmarks of this suite is that they come with individual **configuration options**.
 They can be used to adjust the OpenCL base implementations of a benchmark for a specific FPGA architecture and optimize the performance and resource usage.
@@ -223,7 +219,7 @@ For Xilinx, all benchmarks need a compatible compile- and link-settings-file to 
 | PTRANS       | Yes        |  Yes         |      
 | LINPACK      | (Yes)      |  (Yes)       |           
 | GEMM         | Yes        |  Yes         |      
-| FFT          | Yes        |  No          |       
+| FFT          | Yes        |  Yes         |       
 
 
 #### HBM
@@ -236,8 +232,8 @@ For Xilinx, all benchmarks need a compatible compile- and link-settings-file to 
 | RandomAccess | Yes        |  Yes         |      
 | PTRANS       | No         |  (Yes)       |      
 | LINPACK      | No         |  (Yes)       |           
-| GEMM         | No         |  (Yes)       |      
-| FFT          | No         |  No          | 
+| GEMM         | No         |  Yes         |      
+| FFT          | No         |  Yes         | 
 
 #### SVM
 
