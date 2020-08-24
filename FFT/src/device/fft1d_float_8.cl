@@ -45,11 +45,9 @@
 
 // Include source code for an engine that produces 8 points each step
 #include "fft_8.cl"
+
 #include "parameters.h"
 
-#ifdef INTEL_FPGA
-#pragma OPENCL EXTENSION cl_intel_channels : enable
-#endif
 
 #define min(a,b) (a<b?a:b)
 
@@ -58,21 +56,22 @@
 #define LOGPOINTS       3
 #define POINTS          (1 << LOGPOINTS)
 
-// Log of how much to fetch at once for one area of input buffer.
-// LOG_CONT_FACTOR_LIMIT computation makes sure that C_LEN below
-// is non-negative. Keep it bounded by 6, as going larger will waste
-// on-chip resources but won't give performance gains.
-#define LOG_CONT_FACTOR_LIMIT1 (LOGN - (2 * (LOGPOINTS)))
-#define LOG_CONT_FACTOR_LIMIT2 (((LOG_CONT_FACTOR_LIMIT1) >= 0) ? (LOG_CONT_FACTOR_LIMIT1) : 0)
-#define LOG_CONT_FACTOR        (((LOG_CONT_FACTOR_LIMIT2) <= 6) ? (LOG_CONT_FACTOR_LIMIT1) : 6)
-#define CONT_FACTOR            (1 << LOG_CONT_FACTOR)
-
 // Need some depth to our channels to accommodate their bursty filling.
 #ifdef INTEL_FPGA
-channel float2 chanin[POINTS] __attribute__((depth(CONT_FACTOR*POINTS)));
+#pragma OPENCL EXTENSION cl_intel_channels : enable
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
+channel float2 chanin/*PY_CODE_GEN i*/[POINTS] __attribute__((depth(POINTS)));
+// PY_CODE_GEN block_end
 #endif
 #ifdef XILINX_FPGA
-pipe float2x8 chanin __attribute__((xcl_reqd_pipe_depth(CONT_FACTOR*POINTS)));
+#define XILINX_PIPE_DEPTH 16
+//#define XILINX_PIPE_DEPTH ((1 << (LOGN - LOGPOINTS) < 16) ? 16 : (1 << (LOGN - LOGPOINTS)))
+
+// Compiler states, that the pipe depth needs at least to be 16
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
+pipe float2x8 chanin/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(XILINX_PIPE_DEPTH)));
+pipe float2x8 chanout/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(XILINX_PIPE_DEPTH)));
+// PY_CODE_GEN block_end
 #endif
 
 uint bit_reversed(uint x, uint bits) {
@@ -87,117 +86,82 @@ __attribute__((opencl_unroll_hint()))
   return y;
 }
 
-// fetch N points as follows:
-// - each thread will load 8 consecutive values
-// - load CONT_FACTOR consecutive loads (8 values each), then jump by N/8, and load next
-//   CONT_FACTOR consecutive values.
-// - Once load CONT_FACTOR values starting at 7N/8, send CONT_FACTOR values
-//   into the channel to the fft kernel.
-// - start process again. 
-// This way, only need 8xCONT_FACTOR local memory buffer, instead of 8xN.
-//
-// Group index is used as follows ( 0 to CONT_FACTOR, iteration num )
-//
-//  64K values = 2^16, num_fetches=2^13, 2^6 = CONT_FACTOR, 2^7=num_Fetches / cont_factor
-//
-// <   C ><B><  A >
-// 5432109876543210
-//  A -- fetch within contiguous block
-//  B -- B * N/8 region selector
-//  C -- num times fetch cont_factor * 8 values (or num times fill the buffer)
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
 
-// INPUT GID POINTS
-// C_LEN must be at least 0. Can't be negative.
-#define A_START 0
-#define A_END   (LOG_CONT_FACTOR + LOGPOINTS - 1)
-
-#define B_START (A_END + 1)
-#define B_END   (B_START + LOGPOINTS - 1)
-
-#define C_START (B_END + 1)
-#define C_END   (LOGN - 1)
-
-#define D_START (C_END + 1)
-#define D_END   31
-
-#define A_LEN   (A_END - A_START + 1)
-#define B_LEN   (B_END - B_START + 1)
-#define C_LEN   (C_END - C_START + 1)
-#define D_LEN   (D_END - D_START + 1)
-#define EXTRACT(id,start,len) ((id >> start) & ((1 << len) - 1))
-
-uint permute_gid (uint gid) {
-  uint result = 0;
-  // result[31:16]= gid[31:16] = D
-  // result[15:13] = gid[10:8] = C
-  // result[12:8]  = gid[15:11] = B
-  // result[7:0]  = gid[10:0] = A
-
-  uint A = EXTRACT(gid, A_START, A_LEN);
-  uint B = EXTRACT(gid, B_START, B_LEN);
-  uint C = EXTRACT(gid, C_START, C_LEN);
-  uint D = EXTRACT(gid, D_START, D_LEN);
-    
-  // swap B and C
-  uint new_c_start = A_END + 1;
-  uint new_b_start = new_c_start + C_LEN;
-  result = (D << D_START) | (B << new_b_start) | (C << new_c_start) | (A << A_START);
-  return result;
-}
-
-// group dimension (N/(8*CONT_FACTOR), num_iterations)
-__attribute__((reqd_work_group_size(CONT_FACTOR * POINTS, 1, 1)))
-kernel void fetch (global float2 * restrict src) {
+__kernel
+__attribute__ ((max_global_work_dim(0), reqd_work_group_size(1,1,1)))
+void fetch/*PY_CODE_GEN i*/(__global float2 * restrict src, int iter) {
 
   const int N = (1 << LOGN);
-  // Each thread will fetch POINTS points. Need POINTS times to pass to FFT.
-  const int BUF_SIZE = 1 << (LOG_CONT_FACTOR + LOGPOINTS + LOGPOINTS);
 
-  // Local memory for CONT_FACTOR * POINTS points
-  local float2 buf[BUF_SIZE];
+  // Input buffer that can hold the data for two FFTs
+  float2 buf[2*N/POINTS][POINTS] __attribute__((numbanks(POINTS),xcl_array_partition(block, N/POINTS, 1), xcl_array_partition(complete, 2)));
 
-  uint iteration = get_global_id(1);
-  uint group_per_iter = get_global_id(0);
-  
-  // permute global addr but not the local addr
-  uint global_addr = iteration * N + group_per_iter;
-  global_addr = permute_gid (global_addr << LOGPOINTS);
-  uint lid = get_local_id(0);
-  uint local_addr = lid << LOGPOINTS;
+  // for iter iterations and one additional iteration to empty the last buffer
+  for(unsigned k = 0; k < (iter + 1) * (N / POINTS); k++){ 
 
-__attribute__((opencl_unroll_hint(POINTS)))
-  for (uint k = 0; k < POINTS; k++) {
-    buf[local_addr + k] = src[global_addr + k];
-  }
+    float2 read_chunk[POINTS];
 
-  barrier (CLK_LOCAL_MEM_FENCE);
+    // Read the next 8 values from global memory
+    // in the last iteration just read garbage, but the data will not be forwarded over the pipes.
+    // This allows the use of memory bursts here.
+    // Also the data is shifted  every N/POINTS/POINTS iterations
+    __attribute__((opencl_unroll_hint(POINTS)))
+    for(int j = 0; j < POINTS; j++){
+      // Shift the data depending on the total FFT size
+      // Shifts every new chunk by one. If N/POINTS is a multiple of POINTS, the shifting is reduced to prevent mappings to the same bank.
+      unsigned shift = ((LOGN - LOGPOINTS - LOGPOINTS > 0) ? (k & (N/POINTS - 1)) >> (LOGN - LOGPOINTS - LOGPOINTS) : (k & (N/POINTS - 1)));
+      unsigned final_buffer_pos = (j + shift) & (POINTS - 1);
+      read_chunk[final_buffer_pos] = src[(k << LOGPOINTS) + j];
+    }
 
+    // Write the shifted data into the memory buffer
+    __attribute__((opencl_unroll_hint(POINTS)))
+    for(int j = 0; j < POINTS; j++){
+      unsigned local_i = k & (2 * N/POINTS - 1);
+      buf[local_i][j] = read_chunk[j];
+    }
+
+    if (k >= ( N / POINTS)) {
+      float2x8 buf2x8;
+
+      unsigned offset = (((k >> (LOGN - LOGPOINTS)) & 1) == 0) ? (N / POINTS) : 0;
+      
+      float2 write_chunk[POINTS];
+      // Read the shifted data from the memory buffer
+      __attribute__((opencl_unroll_hint(POINTS)))
+      for(int j = 0; j < POINTS; j++){
+        unsigned current_index = j * N/POINTS + (k & (N/POINTS - 1));
+        unsigned shift = ((LOGPOINTS - LOGN + LOGPOINTS > 0) ? j >> (LOGPOINTS - LOGN + LOGPOINTS) : j);
+        write_chunk[bit_reversed(j, LOGPOINTS)] = buf[offset + (current_index >> LOGPOINTS)][(current_index + shift) & (POINTS - 1)];
+      }
 #ifdef XILINX_FPGA
-  float2 buf2[POINTS];
-  float2x8 buf2x8;
-#endif
+      buf2x8.i0 = write_chunk[0];          
+      buf2x8.i1 = write_chunk[1];  
+      buf2x8.i2 = write_chunk[2];  
+      buf2x8.i3 = write_chunk[3]; 
+      buf2x8.i4 = write_chunk[4]; 
+      buf2x8.i5 = write_chunk[5];
+      buf2x8.i6 = write_chunk[6];
+      buf2x8.i7 = write_chunk[7];
 
-__attribute__((opencl_unroll_hint(POINTS)))
-  for (uint k = 0; k < POINTS; k++) {
-    uint buf_addr = bit_reversed(k,LOGPOINTS) * CONT_FACTOR * POINTS + lid;
-    #ifdef INTEL_FPGA
-    write_channel_intel (chanin[k], buf[buf_addr]);
-    #else
-    buf2[k] = buf[buf_addr];
-    #endif
+      // Start in the second iteration to forward the buffered data over the pipe
+      write_pipe_block(chanin/*PY_CODE_GEN i*/, &buf2x8);
+#endif
+#ifdef INTEL_FPGA
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[0], write_chunk[0]); 
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[1], write_chunk[1]);  
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[2], write_chunk[2]);  
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[3], write_chunk[3]);  
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[4], write_chunk[4]);  
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[5], write_chunk[5]); 
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[6], write_chunk[6]);  
+        write_channel_intel(chanin/*PY_CODE_GEN i*/[7], write_chunk[7]);  
+#endif
+    }
   }
-  #ifdef XILINX_FPGA
-  buf2x8.i0 = buf2[0];
-  buf2x8.i1 = buf2[1];
-  buf2x8.i2 = buf2[2];
-  buf2x8.i3 = buf2[3];
-  buf2x8.i4 = buf2[4];
-  buf2x8.i5 = buf2[5];
-  buf2x8.i6 = buf2[6];
-  buf2x8.i7 = buf2[7];
-  write_pipe_block(chanin, &buf2x8);
-  #endif
 }
+
 
 
 /* Attaching the attribute 'task' to the top level kernel to indicate 
@@ -210,8 +174,13 @@ __attribute__((opencl_unroll_hint(POINTS)))
  */
 
 __attribute__ ((max_global_work_dim(0)))
-kernel void fft1d(global float2 * restrict dest,
-                  int count, int inverse) {
+__attribute__((reqd_work_group_size(1,1,1)))
+kernel void fft1d/*PY_CODE_GEN i*/(
+#ifdef INTEL_FPGA
+                // Intel does not need a store kernel and directly writes back the result to global memory
+                __global float2 * restrict dest,
+#endif
+                int count, int inverse) {
 
   const int N = (1 << LOGN);
 
@@ -221,7 +190,7 @@ kernel void fft1d(global float2 * restrict dest,
    * this array are simple transfers between adjacent array elements
    */
 
-  float2 fft_delay_elements[N + POINTS * (LOGN - 2)];
+  float2 fft_delay_elements[N + POINTS * (LOGN - 2)] __attribute__((xcl_array_partition(complete, 0)));
 
   /* This is the main loop. It runs 'count' back-to-back FFT transforms
    * In addition to the 'count * (N / 8)' iterations, it runs 'N / 8 - 1'
@@ -231,7 +200,7 @@ kernel void fft1d(global float2 * restrict dest,
    * The compiler leverages pipeline parallelism by overlapping the 
    * iterations of this loop - launching one iteration every clock cycle
    */
-
+   __attribute__((xcl_pipeline_loop(1)))
   for (unsigned i = 0; i < count * (N / POINTS) + N / POINTS - 1; i++) {
 
     /* As required by the FFT engine, gather input data from 8 distinct 
@@ -247,18 +216,19 @@ kernel void fft1d(global float2 * restrict dest,
     float2x8 data;
     // Perform memory transfers only when reading data in range
     if (i < count * (N / POINTS)) {
-      #ifdef INTEL_FPGA
-      data.i0 = read_channel_intel(chanin[0]);
-      data.i1 = read_channel_intel(chanin[1]);
-      data.i2 = read_channel_intel(chanin[2]);
-      data.i3 = read_channel_intel(chanin[3]);
-      data.i4 = read_channel_intel(chanin[4]);
-      data.i5 = read_channel_intel(chanin[5]);
-      data.i6 = read_channel_intel(chanin[6]);
-      data.i7 = read_channel_intel(chanin[7]);
-      #else
-      read_pipe_block(chanin, &data);
-      #endif
+#ifdef INTEL_FPGA
+      data.i0 = read_channel_intel(chanin/*PY_CODE_GEN i*/[0]);
+      data.i1 = read_channel_intel(chanin/*PY_CODE_GEN i*/[1]);
+      data.i2 = read_channel_intel(chanin/*PY_CODE_GEN i*/[2]);
+      data.i3 = read_channel_intel(chanin/*PY_CODE_GEN i*/[3]);
+      data.i4 = read_channel_intel(chanin/*PY_CODE_GEN i*/[4]);
+      data.i5 = read_channel_intel(chanin/*PY_CODE_GEN i*/[5]);
+      data.i6 = read_channel_intel(chanin/*PY_CODE_GEN i*/[6]);
+      data.i7 = read_channel_intel(chanin/*PY_CODE_GEN i*/[7]);
+#endif
+#ifdef XILINX_FPGA
+      read_pipe_block(chanin/*PY_CODE_GEN i*/, &data);
+#endif
     } else {
       data.i0 = data.i1 = data.i2 = data.i3 = 
                 data.i4 = data.i5 = data.i6 = data.i7 = 0;
@@ -270,12 +240,12 @@ kernel void fft1d(global float2 * restrict dest,
     /* Store data back to memory. FFT engine outputs are delayed by 
      * N / 8 - 1 steps, hence gate writes accordingly
      */
-
     if (i >= N / POINTS - 1) {
+#ifdef INTEL_FPGA
       int base = POINTS * (i - (N / POINTS - 1));
  
       // These consecutive accesses will be coalesced by the compiler
-      dest[base] = data.i0;
+      dest[base]     = data.i0;
       dest[base + 1] = data.i1;
       dest[base + 2] = data.i2;
       dest[base + 3] = data.i3;
@@ -283,7 +253,41 @@ kernel void fft1d(global float2 * restrict dest,
       dest[base + 5] = data.i5;
       dest[base + 6] = data.i6;
       dest[base + 7] = data.i7;
+#endif
+#ifdef XILINX_FPGA
+    // For Xilinx send the data to the store kernel to enable memory bursts
+      write_pipe_block(chanout/*PY_CODE_GEN i*/, &data);
+#endif
     }
   }
 }
 
+#ifdef XILINX_FPGA
+/**
+The store kernel just reads from the output channel and writes the data to the global memory.
+This kernel works without conditional branches which enables memory bursts.
+ */
+__kernel
+__attribute__ ((max_global_work_dim(0), reqd_work_group_size(1,1,1)))
+void store/*PY_CODE_GEN i*/(__global float2 * restrict dest, int iter) {
+
+  const int N = (1 << LOGN);
+
+  // write the data back to global memory using memory bursts
+  for(unsigned k = 0; k < iter * (N / POINTS); k++){ 
+      float2x8 buf2x8;
+      read_pipe_block(chanout/*PY_CODE_GEN i*/, &buf2x8);
+
+      dest[(k << LOGPOINTS)]     = buf2x8.i0;    
+      dest[(k << LOGPOINTS) + 1] = buf2x8.i1; 
+      dest[(k << LOGPOINTS) + 2] = buf2x8.i2; 
+      dest[(k << LOGPOINTS) + 3] = buf2x8.i3; 
+      dest[(k << LOGPOINTS) + 4] = buf2x8.i4; 
+      dest[(k << LOGPOINTS) + 5] = buf2x8.i5; 
+      dest[(k << LOGPOINTS) + 6] = buf2x8.i6; 
+      dest[(k << LOGPOINTS) + 7] = buf2x8.i7;    
+  }
+}
+#endif
+
+//PY_CODE_GEN block_end

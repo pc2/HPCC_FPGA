@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 fft::FFTProgramSettings::FFTProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    iterations(results["b"].as<uint>()), inverse(results.count("inverse")) {
+    iterations(results["b"].as<uint>()), inverse(results.count("inverse")), kernelReplications(results["r"].as<uint>()) {
 
 }
 
@@ -44,6 +44,7 @@ fft::FFTProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["FFT Size"] = std::to_string(1 << LOG_FFT_SIZE);
         map["Batch Size"] = std::to_string(iterations);
+        map["Kernel Replications"] = std::to_string(kernelReplications);
         return map;
 }
 
@@ -82,7 +83,9 @@ fft::FFTBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
             ("b", "Number of batched FFT calculations (iterations)",
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ITERATIONS)))
-            ("inverse", "If set, the inverse FFT is calculated instead");
+            ("inverse", "If set, the inverse FFT is calculated instead")
+            ("r", "Number of kernel replications used for calculation",
+             cxxopts::value<uint>()->default_value(std::to_string(NUM_REPLICATIONS)));
 }
 
 std::unique_ptr<fft::FFTExecutionTimings>
@@ -93,7 +96,7 @@ fft::FFTBenchmark::executeKernel(FFTData &data) {
 
 void
 fft::FFTBenchmark::printResults(const fft::FFTExecutionTimings &output) {
-    double gflop = 5 * (1 << LOG_FFT_SIZE) * LOG_FFT_SIZE * executionSettings->programSettings->iterations * 1.0e-9;
+    double gflop = static_cast<double>(5 * (1 << LOG_FFT_SIZE) * LOG_FFT_SIZE) * executionSettings->programSettings->iterations * 1.0e-9;
 
     double minTime = *min_element(output.timings.begin(), output.timings.end());
     double avgTime = accumulate(output.timings.begin(), output.timings.end(), 0.0)

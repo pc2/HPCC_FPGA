@@ -2,6 +2,12 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.2
+
+#### Added:
+- Optimized for Xilinx Vitis (Shift register implementation works for sizes <= 2^9)
+- Kernel replication support (-r flag, NUM_REPLICATIONS)
+
 ## 1.1
 
 #### Added:

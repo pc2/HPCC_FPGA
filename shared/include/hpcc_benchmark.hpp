@@ -105,7 +105,11 @@ public:
      * @param results The resulting map from parsing the program input parameters
      */
     BaseSettings(cxxopts::ParseResult &results) : numRepetitions(results["n"].as<uint>()),
+#ifdef INTEL_FPGA
             useMemoryInterleaving(static_cast<bool>(results.count("i"))), 
+#else
+            useMemoryInterleaving(true),
+#endif
             skipValidation(static_cast<bool>(results.count("skip-validation"))), 
             defaultPlatform(results["platform"].as<int>()),
             defaultDevice(results["device"].as<int>()),
@@ -272,7 +276,9 @@ public:
                 ("f,file", "Kernel file name", cxxopts::value<std::string>())
                 ("n", "Number of repetitions",
                 cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_REPETITIONS)))
+#ifdef INTEL_FPGA
                 ("i", "Use memory Interleaving")
+#endif
                 ("skip-validation", "Skip the validation of the output data. This will speed up execution and helps when working with special data types.")
                 ("device", "Index of the device that has to be used. If not given you "\
             "will be asked which device to use if there are multiple devices "\

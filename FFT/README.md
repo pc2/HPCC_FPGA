@@ -46,6 +46,7 @@ Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
 `DEFAULT_ITERATIONS`| 100          | Default number of iterations that is done with a single kernel execution|
 `LOG_FFT_SIZE`   | 12          | Log2 of the FFT Size that has to be used i.e. 3 leads to a FFT Size of 2^3=8|
+`NUM_REPLICATIONS` | 1         | Number of kernel replications. The whole FFT batch will be divided by the number of compute kernels. |
 
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.
@@ -61,22 +62,28 @@ For more information on available input parameters run
     $./FFT_intel -h
     
     Implementation of the FFT benchmark proposed in the HPCC benchmark suite for FPGA.
-    Version: "1.0"
+    Version: 1.2
     Usage:
       ./FFT_intel [OPTION...]
     
-      -f, --file arg      Kernel file name
-      -n, arg             Number of repetitions (default: 10)
-      -b, arg             Multiplier for the used data size that will be i *
-                          FFT_SIZE (default: 100)
-          --inverse       If set, the inverse FFT is calculated instead
-          --device arg    Index of the device that has to be used. If not given
-                          you will be asked which device to use if there are
-                          multiple devices available. (default: -1)
-          --platform arg  Index of the platform that has to be used. If not given
-                          you will be asked which platform to use if there are
-                          multiple platforms available. (default: -1)
-      -h, --help          Print this help
+        -f, --file arg         Kernel file name
+        -n, arg                Number of repetitions (default: 10)
+        -i,                    Use memory Interleaving
+            --skip-validation  Skip the validation of the output data. This will
+                                speed up execution and helps when working with special
+                                data types.
+            --device arg       Index of the device that has to be used. If not
+                                given you will be asked which device to use if there are
+                                multiple devices available. (default: -1)
+            --platform arg     Index of the platform that has to be used. If not
+                                given you will be asked which platform to use if there
+                                are multiple platforms available. (default: -1)
+        -h, --help             Print this help
+        -b, arg                Number of batched FFT calculations (iterations)
+                                (default: 100)
+            --inverse          If set, the inverse FFT is calculated instead
+        -r, arg                Number of kernel replications used for calculation
+                                (default: 1)
     
 To execute the unit and integration tests run
 
