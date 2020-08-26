@@ -72,12 +72,25 @@ Data will get delayed in the fetch and fft1d kernel but batched execution allows
 The number of FLOP for this calculation is defined to be :math:`5*n*ld(n)` for an FFT of dimension :math:`n`.
 The result of the calculation is checked by calculating the residual :math:`\frac{||d - d'||}{\epsilon ld(n)}` where :math:`\epsilon` is the machine epsilon, :math:`d'` the result from the reference implementation and :math:`n` the FFT size.
 
---------------------
-Configuration Hints
---------------------
+---------------------
+Expected Bottlenecks
+---------------------
 
-The parameters for the FFT benchmark should be choosen after the following criteria to achieve the best performance:
+In general the benchmark can be both memory bandwidth and compute bound.
+The implementation in a single pipeline allow to contiously read and write from global memory.
+Since reads and writes are symmetric and the memory bandwidth is unidrectional, we need two memory banks per replication.
+Besides that, the size of the FFT has an impact on the number of floating point operations that are done per data item.
 
-1. Choose the largest number for ``LOG_FFT_SIZE`` that produces a calculation kernel with a single pipeline with an II=1. The calculation kernel uses a shift register to store intermediate data and the size of the shift register might be limited depending on the used hardware and tools.
-2. Replicate the kernels using the ``NUM_REPLICATIONS`` parameter to fill the FPGA.
+FFT Size:
+  A larger FFT size will lead to more calulations per data item (:math:`5 * ld(n)` single precision floating point operations for FFT size n).
+  Also, the shift register size depends on the used FFT size, so BRAM and logic usage will increase for larger sizes.
+
+Kernel Replications:
+  Allow to utilize more memory banks. Since the benchmark is not solely memory bound, it might be better for the overall benchmark performance to increase the FFT size instead of adding more kernel replications.
+  The expected performance can be calculated using the formula blow.
+
+:math:`5 * LOG_FFT_SIZE * NUM_REPLICATIONS * 8 * f`
+
+where f is the minimum of the kernel frequency and the frequency of the mmeory interface.
+
 
