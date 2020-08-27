@@ -3,7 +3,7 @@ GEMM
 ======
 
 This section contains all information related to the GEMM benchmark.
-This benchmark calculates the result for :math:`C' = \beta * C + \alpha * A * B` where :math:`A,B,C,C' \in \Bbb R^{n \times n}` and :math:`\alpha, \beta \in \Bbb R`.
+This benchmark calculates the result for :math:`C' = \beta \cdot C + \alpha \cdot A \cdot B` where :math:`A,B,C,C' \in \Bbb R^{n \times n}` and :math:`\alpha, \beta \in \Bbb R`.
 The kernel uses a two-leveled blocked approach that can be individually scaled to the target hardware.
 
 .. toctree::
@@ -45,9 +45,9 @@ Detailed Description
 --------------------
 
 The GEMM benchmark implements a matrix-matrix multiplication similar to the GEMM routines in the BLAS library.
-It calculates :math:`C' = \beta * C + \alpha * A * B` where :math:`A,B,C,C' \in \Bbb R^{n \times n}` and :math:`\alpha, \beta \in \Bbb R`.
-The number of FLOP for the performance calculation is defined to be :math:`2 * n^3`.
-The result is verified by calculating the residual :math:`\frac{||C - C'||}{\epsilon n ||C||_F}` where :math:`\epsilon` is the machine epsilon and :math:`C'` the result of the reference implementation.
+It calculates :math:`C' = \beta \cdot C + \alpha \cdot A \cdot B` where :math:`A,B,C,C' \in \Bbb R^{n \times n}` and :math:`\alpha, \beta \in \Bbb R`.
+The number of FLOP for the performance calculation is defined to be :math:`2 \cdot n^3`.
+The result is verified by calculating the residual :math:`\frac{||C - C'||}{\epsilon \cdot n \cdot ||C||_F}` where :math:`\epsilon` is the machine epsilon and :math:`C'` the result of the reference implementation.
 The implementation is based on a matrix multiplication design for Intel Stratix 10 and generalized to make it compatible with a broader range of devices.
 The kernel creates a memory hierarchy by doing the following data movements:
 
@@ -78,11 +78,14 @@ A third pipeline loads a block of C and calculates the final result for a block 
 Configuration Hints
 --------------------
 
+The benchmark is mainly calculation bound.
+The most stressed resources are DSPs and BRAM, since they are needed to increase parallelism of the calculation and the pipeline depth.
+A larger local memory buffer leads to lesser reads and writes to global memory and thus reduces the overhead these operations are introducing.
 In general, the parameters for the GEMM benchmark should be choosen after the following criteria:
 
 1. Choose the data type with the ``DATA_TYPE`` parameter.
 2. Scale ``GEMM_SIZE`` to the largest power of two that fits onto the FPGA since this parameters sets the actual amount of calculations that will be done in parallel. The size might depend on the chosen data type, since DSPs might not be usable for all precisions.
 3. Set ``BLOCK_SIZE`` to the largest power of two that fits into the local memory of the FPGA. This will lead to a better utilization of the calculation pipeline.
 4. The ``GLOBAL_MEM_UNROLL`` parameter should be set to match the optimal width of the memory interface depending on the used data type. Check the reports how the load pipeline will be synthesized. In some cases it might be better to set ``GLOBAL_MEM_UNROLL`` to the same value as ``GEMM_SIZE`` since there will be no performance gain for higher values.
-5. For Intel devices, check the estimated kernel frequency in the report. If it is too low or the calculation pipeline shows an II larger than 1, the shift register should be used. CHoose a vlue larger 0 for ``INTEL_MUL_SHIFT_REG`` until frequency and II are in an acceptable range.
+5. For Intel devices, check the estimated kernel frequency in the report. If it is too low or the calculation pipeline shows an II larger than 1, the shift register should be used. Choose a value larger 0 for ``INTEL_MUL_SHIFT_REG`` until frequency and II are in an acceptable range.
 6. Replicate the kernel using the ``NUM_REPLICATIONS`` parameter to fill the FPGA. It might be better to pick smaller block sizes and instead replicate the kernel to make placing and routing easier.

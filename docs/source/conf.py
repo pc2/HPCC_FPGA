@@ -23,7 +23,7 @@ copyright = '2020, Marius Meyer'
 author = 'Marius Meyer'
 
 # The short X.Y version
-version = '0.2'
+version = '0.3'
 # The full version, including alpha/beta/rc tags
 release = ''
 
@@ -46,6 +46,9 @@ extensions = [
 
 # Enable Figure numbering and referencing
 numfig = True
+math_numfig = True
+numfig_secnum_depth = 2
+math_eqref_format = "Eq.{number}"
 
 # Disable the show source link on the top of the page
 html_show_sourcelink = False

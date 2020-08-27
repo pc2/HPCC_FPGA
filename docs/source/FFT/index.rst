@@ -87,10 +87,12 @@ FFT Size:
 
 Kernel Replications:
   Allow to utilize more memory banks. Since the benchmark is not solely memory bound, it might be better for the overall benchmark performance to increase the FFT size instead of adding more kernel replications.
-  The expected performance can be calculated using the formula blow.
+  The expected performance can be calculated using :eq:`eq_fft_performance`.
 
-:math:`5 * LOG_FFT_SIZE * NUM_REPLICATIONS * 8 * f`
+.. math::
+  gflops = 5 \cdot LOG\_FFT\_SIZE \cdot NUM\_REPLICATIONS \cdot 8 \cdot f
+  :label: eq_fft_performance
 
-where f is the minimum of the kernel frequency and the frequency of the mmeory interface.
+where f is the minimum of the kernel frequency and the frequency of the memory interface.
 
 
