@@ -40,7 +40,7 @@ release = ''
 extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
-    'breathe',
+ #   'breathe',
     'sphinx_rtd_theme',
 ]
 
