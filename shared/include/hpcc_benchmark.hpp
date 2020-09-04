@@ -216,6 +216,18 @@ protected:
     virtual void
     addAdditionalParseOptions(cxxopts::Options &options) {}
 
+    /**
+     * @brief The communication rank of a MPI setup
+     * 
+     */
+    int mpi_comm_rank = 0;
+
+    /**
+     * @brief The size of the MPI communication world
+     * 
+     */
+    int mpi_comm_size = 1;
+
 public:
 
     /**
@@ -246,12 +258,13 @@ public:
     validateOutputAndPrintError(TData &data) = 0;
 
     /**
-     * @brief Prints the measurement results of the benchmark to std::cout
+     * @brief Collects the measurment results from all MPI ranks and 
+     *      prints the measurement results of the benchmark to std::cout
      * 
      * @param output  The measurement data of the kernel execution
      */
     virtual void
-    printResults(const TOutput &output) = 0;
+    collectAndPrintResults(const TOutput &output) = 0;
 
     /**
     * Parses and returns program options using the cxxopts library.
@@ -332,7 +345,11 @@ public:
     */
     void 
     printFinalConfiguration(ExecutionSettings<TSettings> const& executionSettings) {
-        std::cout << PROGRAM_DESCRIPTION << std::endl;
+        std::cout << PROGRAM_DESCRIPTION;
+#ifdef _USE_MPI_
+        std::cout << "MPI Version: " << MPI_VERSION << "." << MPI_SUBVERSION << std::endl;
+#endif
+        std::cout << std::endl;
         std::cout << "Summary:" << std::endl;
         std::cout << executionSettings << std::endl;
     }
@@ -377,13 +394,8 @@ public:
 
             executionSettings = std::unique_ptr<ExecutionSettings<TSettings>>(new ExecutionSettings<TSettings>(std::move(programSettings), std::move(usedDevice), 
                                                                 std::move(context), std::move(program)));
-            // Get the rank of the process
-            int world_rank = 0;
 
-#ifdef _USE_MPI_
-            MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-#endif
-            if (world_rank == 0) {
+            if (mpi_comm_rank == 0) {
                 printFinalConfiguration(*executionSettings);
             }
         }
@@ -412,18 +424,12 @@ public:
      */
     bool
     executeBenchmark() {
-        // Get the rank of the process
-        int world_rank = 0;
-
-#ifdef _USE_MPI_
-        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-#endif
 
         if (!executionSettings.get()) {
             std::cerr << "Benchmark execution started without running the benchmark setup!" << std::endl;
             return false;
         }
-        if (world_rank == 0) {
+        if (mpi_comm_rank == 0) {
             std::cout << HLINE << "Start benchmark using the given configuration. Generating data..." << std::endl
                     << HLINE;
         }
@@ -432,7 +438,7 @@ public:
             std::unique_ptr<TData> data = generateInputData();
             std::chrono::duration<double> gen_time = std::chrono::high_resolution_clock::now() - gen_start;
             
-            if (world_rank == 0) {
+            if (mpi_comm_rank == 0) {
                 std::cout << "Generation Time: " << gen_time.count() << " s"  << std::endl;
                 std::cout << HLINE << "Execute benchmark kernel..." << std::endl
                         << HLINE;
@@ -442,7 +448,7 @@ public:
             std::unique_ptr<TOutput> output =  executeKernel(*data);
             std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
 
-            if (world_rank == 0) {
+            if (mpi_comm_rank == 0) {
                 std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
                 std::cout << HLINE << "Validate output..." << std::endl
                         << HLINE;
@@ -454,16 +460,11 @@ public:
                 validateSuccess = validateOutputAndPrintError(*data);
                 std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
 
-                if (world_rank == 0) {
-                    printResults(*output);
+                if (mpi_comm_rank == 0) {
                     std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
                 }
             }
-            else {
-                if (world_rank == 0) {
-                    printResults(*output);
-                }
-            }
+            collectAndPrintResults(*output);
 
             return validateSuccess;
        }
@@ -483,8 +484,19 @@ public:
         return *executionSettings;
     }
 
-    HpccFpgaBenchmark() {
+    HpccFpgaBenchmark(int argc, char* argv[]) {
+#ifdef _USE_MPI_
+        MPI_Init(&argc, &argv);
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
+#endif
         fpga_setup::setupEnvironmentAndClocks();
+    }
+
+    virtual ~HpccFpgaBenchmark() {
+#ifdef _USE_MPI_
+        MPI_Finalize();
+#endif        
     }
 
 };

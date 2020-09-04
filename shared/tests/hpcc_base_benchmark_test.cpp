@@ -39,7 +39,7 @@ public:
     validateOutputAndPrintError(int &data) override { return returnValidate;}
 
     void
-    printResults(const int &output) override {}
+    collectAndPrintResults(const int &output) override {}
 
     MinimalBenchmark() {}
 
@@ -127,7 +127,7 @@ public:
     }
 
     void
-    printResults(const int &output) override {}
+    collectAndPrintResults(const int &output) override {}
 
     SuccessBenchmark() {}
 
