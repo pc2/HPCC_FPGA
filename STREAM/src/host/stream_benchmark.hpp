@@ -195,7 +195,7 @@ public:
      * @param output 
      */
     void
-    printResults(const StreamExecutionTimings &output) override;
+    collectAndPrintResults(const StreamExecutionTimings &output) override;
 
     /**
      * @brief Construct a new Stream Benchmark object

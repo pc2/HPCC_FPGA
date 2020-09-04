@@ -90,11 +90,9 @@ stream::StreamData::~StreamData() {
 #endif
 }
 
-stream::StreamBenchmark::StreamBenchmark(int argc, char* argv[]) {
+stream::StreamBenchmark::StreamBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
 }
-
-stream::StreamBenchmark::StreamBenchmark() {}
 
 void
 stream::StreamBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
@@ -115,28 +113,42 @@ stream::StreamBenchmark::executeKernel(StreamData &data) {
 }
 
 void
-stream::StreamBenchmark::printResults(const stream::StreamExecutionTimings &output) {
+stream::StreamBenchmark::collectAndPrintResults(const stream::StreamExecutionTimings &output) {
 
-    std::cout << std::setw(ENTRY_SPACE) << "Function";
-    std::cout << std::setw(ENTRY_SPACE) << "Best Rate MB/s";
-    std::cout << std::setw(ENTRY_SPACE) << "Avg time s";
-    std::cout << std::setw(ENTRY_SPACE) << "Min time" ;
-    std::cout << std::setw(ENTRY_SPACE) << "Max time" << std::endl;
-
+    std::map<std::string,std::vector<double>> totalTimingsMap;
     for (auto v : output.timings) {
-        double minTime = *min_element(v.second.begin(), v.second.end());
-        double avgTime = accumulate(v.second.begin(), v.second.end(), 0.0)
-                         / v.second.size();
-        double maxTime = *max_element(v.second.begin(), v.second.end());
-
-        std::cout << std::setw(ENTRY_SPACE) << v.first;
-        std::cout << std::setw(ENTRY_SPACE)
-        << (static_cast<double>(sizeof(HOST_DATA_TYPE)) * output.arraySize * bm_execution::multiplicatorMap[v.first] / minTime) * 1.0e-6
-                << std::setw(ENTRY_SPACE) << avgTime
-                << std::setw(ENTRY_SPACE) << minTime
-                << std::setw(ENTRY_SPACE) << maxTime << std::endl;
+        uint number_measurements = v.second.size();
+        std::vector<double> avg_measures(number_measurements);
+#ifdef _USE_MPI_
+        MPI_Reduce(v.second.data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        std::accumulate(avg_measures.begin(), avg_measures.end(),number_measurements, std::divides<double>());
+#else
+        std::copy(v.second.begin(), v.second.end(), avg_measures.begin());
+#endif
+        totalTimingsMap.insert({v.first,avg_measures});
     }
 
+    if (mpi_comm_rank == 0) {
+        std::cout << std::setw(ENTRY_SPACE) << "Function";
+        std::cout << std::setw(ENTRY_SPACE) << "Best Rate MB/s";
+        std::cout << std::setw(ENTRY_SPACE) << "Avg time s";
+        std::cout << std::setw(ENTRY_SPACE) << "Min time" ;
+        std::cout << std::setw(ENTRY_SPACE) << "Max time" << std::endl;
+
+        for (auto v : totalTimingsMap) {
+            double minTime = *min_element(v.second.begin(), v.second.end());
+            double avgTime = accumulate(v.second.begin(), v.second.end(), 0.0)
+                            / v.second.size();
+            double maxTime = *max_element(v.second.begin(), v.second.end());
+
+            std::cout << std::setw(ENTRY_SPACE) << v.first;
+            std::cout << std::setw(ENTRY_SPACE)
+            << (static_cast<double>(sizeof(HOST_DATA_TYPE)) * output.arraySize * bm_execution::multiplicatorMap[v.first] / minTime) * 1.0e-6
+                    << std::setw(ENTRY_SPACE) << avgTime
+                    << std::setw(ENTRY_SPACE) << minTime
+                    << std::setw(ENTRY_SPACE) << maxTime << std::endl;
+        }
+    }
 }
 
 std::unique_ptr<stream::StreamData>
@@ -190,59 +202,74 @@ stream::StreamBenchmark::validateOutputAndPrintError(stream::StreamData &data) {
     bAvgErr = bSumErr / (HOST_DATA_TYPE) executionSettings->programSettings->streamArraySize;
     cAvgErr = cSumErr / (HOST_DATA_TYPE) executionSettings->programSettings->streamArraySize;
 
-    if (sizeof(HOST_DATA_TYPE) == 4) {
-        epsilon = 1.e-6;
-    }
-    else if (sizeof(HOST_DATA_TYPE) == 8) {
-        epsilon = 1.e-13;
-    }
-    else {
-        printf("WEIRD: sizeof(STREAM_TYPE) = %lu\n",sizeof(executionSettings->programSettings->streamArraySize));
-        epsilon = 1.e-6;
-    }
+#ifdef _USE_MPI_
+    double totalAAvgErr = 0.0;
+    double totalBAvgErr = 0.0;
+    double totalCAvgErr = 0.0;
+    MPI_Reduce(&aAvgErr, &totalAAvgErr, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&bAvgErr, &totalAAvgErr, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&cAvgErr, &totalAAvgErr, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    aAvgErr = totalAAvgErr / mpi_comm_size;
+    bAvgErr = totalBAvgErr / mpi_comm_size;
+    bAvgErr = totalBAvgErr / mpi_comm_size;
+#endif
 
-    err = 0;
-    if (abs(aAvgErr/aj) > epsilon) {
-        err++;
-        printf ("Failed Validation on array a[], AvgRelAbsErr > epsilon (%e)\n",epsilon);
-        printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",aj,aAvgErr,abs(aAvgErr)/aj);
-        ierr = 0;
-        for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
-            if (abs(data.A[j]/aj-1.0) > epsilon) {
-                ierr++;
-            }
+    if (mpi_comm_rank == 0) {
+        if (sizeof(HOST_DATA_TYPE) == 4) {
+            epsilon = 1.e-6;
         }
-        printf("     For array a[], %d errors were found.\n",ierr);
-    }
-    if (abs(bAvgErr/bj) > epsilon) {
-        err++;
-        printf ("Failed Validation on array b[], AvgRelAbsErr > epsilon (%e)\n",epsilon);
-        printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",bj,bAvgErr,abs(bAvgErr)/bj);
-        printf ("     AvgRelAbsErr > Epsilon (%e)\n",epsilon);
-        ierr = 0;
-        for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
-            if (abs(data.B[j]/bj-1.0) > epsilon) {
-                ierr++;
-            }
+        else if (sizeof(HOST_DATA_TYPE) == 8) {
+            epsilon = 1.e-13;
         }
-        printf("     For array b[], %d errors were found.\n",ierr);
-    }
-    if (abs(cAvgErr/cj) > epsilon) {
-        err++;
-        printf ("Failed Validation on array c[], AvgRelAbsErr > epsilon (%e)\n",epsilon);
-        printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",cj,cAvgErr,abs(cAvgErr)/cj);
-        printf ("     AvgRelAbsErr > Epsilon (%e)\n",epsilon);
-        ierr = 0;
-        for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
-            if (abs(data.C[j]/cj-1.0) > epsilon) {
-                ierr++;
-            }
+        else {
+            printf("WEIRD: sizeof(STREAM_TYPE) = %lu\n",sizeof(executionSettings->programSettings->streamArraySize));
+            epsilon = 1.e-6;
         }
-        printf("     For array c[], %d errors were found.\n",ierr);
+
+        err = 0;
+        if (abs(aAvgErr/aj) > epsilon) {
+            err++;
+            printf ("Failed Validation on array a[], AvgRelAbsErr > epsilon (%e)\n",epsilon);
+            printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",aj,aAvgErr,abs(aAvgErr)/aj);
+            ierr = 0;
+            for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
+                if (abs(data.A[j]/aj-1.0) > epsilon) {
+                    ierr++;
+                }
+            }
+            printf("     For array a[], %d errors were found.\n",ierr);
+        }
+        if (abs(bAvgErr/bj) > epsilon) {
+            err++;
+            printf ("Failed Validation on array b[], AvgRelAbsErr > epsilon (%e)\n",epsilon);
+            printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",bj,bAvgErr,abs(bAvgErr)/bj);
+            printf ("     AvgRelAbsErr > Epsilon (%e)\n",epsilon);
+            ierr = 0;
+            for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
+                if (abs(data.B[j]/bj-1.0) > epsilon) {
+                    ierr++;
+                }
+            }
+            printf("     For array b[], %d errors were found.\n",ierr);
+        }
+        if (abs(cAvgErr/cj) > epsilon) {
+            err++;
+            printf ("Failed Validation on array c[], AvgRelAbsErr > epsilon (%e)\n",epsilon);
+            printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",cj,cAvgErr,abs(cAvgErr)/cj);
+            printf ("     AvgRelAbsErr > Epsilon (%e)\n",epsilon);
+            ierr = 0;
+            for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
+                if (abs(data.C[j]/cj-1.0) > epsilon) {
+                    ierr++;
+                }
+            }
+            printf("     For array c[], %d errors were found.\n",ierr);
+        }
+        if (err == 0) {
+            printf ("Solution Validates: avg error less than %e on all three arrays\n",epsilon);
+            return true;
+        }
+        return false;
     }
-    if (err == 0) {
-        printf ("Solution Validates: avg error less than %e on all three arrays\n",epsilon);
-        return true;
-    }
-    return false;
+    return true;
 }

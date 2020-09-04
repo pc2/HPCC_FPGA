@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.4
+
+#### Added:
+- MPI support for EP execution
+
 ## 2.3
 
 #### Added:

@@ -12,7 +12,7 @@ The program entry point
 int
 main(int argc, char *argv[]) {
     // Setup benchmark
-    auto bm = StreamBenchmark(argc, argv);
+    StreamBenchmark bm(argc, argv);
     bool success = bm.executeBenchmark();
     if (success) {
         return 0;
