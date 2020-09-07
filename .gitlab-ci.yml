@@ -14,7 +14,7 @@ build:STREAM:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DUSE_MPI=No
     - make -j 40 all
   artifacts:
     paths:
@@ -36,7 +36,7 @@ build:RandomAccess:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DUSE_MPI=No
     - make -j 40 all
   artifacts:
     paths:
@@ -57,7 +57,7 @@ build:PTRANS:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DUSE_MPI=No
     - make -j 40 all
   artifacts:
     paths:
@@ -78,7 +78,7 @@ build:LINPACK:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32 -DUSE_MPI=No
     - make -j 40 all
   artifacts:
     paths:
@@ -99,7 +99,7 @@ build:GEMM:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32 -DUSE_MPI=No
     - make -j 40 all
   artifacts:
     paths:
@@ -119,7 +119,7 @@ build:GEMM_HP_REP2:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../GEMM -DDATA_TYPE=half -DNUM_REPLICATIONS=2 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - cmake ../GEMM -DDATA_TYPE=half -DNUM_REPLICATIONS=2 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32 -DUSE_MPI=No
     - make -j 40 all
   artifacts:
     paths:
@@ -139,7 +139,7 @@ build:FFT:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DUSE_MPI=No
     - make -j 40 all
   artifacts:
     paths:
@@ -159,7 +159,7 @@ build:FFT_small:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
+    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2 -DUSE_MPI=No
     - make -j 40 all
   artifacts:
     paths:
@@ -205,7 +205,7 @@ test:STREAM:
   stage: test
   script:
     - cd build
-    - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DUSE_MPI=No
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:STREAM
@@ -225,7 +225,7 @@ test:RandomAccess:
   stage: test
   script:
     - cd build
-    - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DUSE_MPI=No
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:RandomAccess
@@ -245,7 +245,7 @@ test:PTRANS:
   stage: test
   script:
     - cd build
-    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DUSE_MPI=No
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:PTRANS
@@ -265,7 +265,7 @@ test:LINPACK:
   stage: test
   script:
     - cd build
-    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32 -DUSE_MPI=No
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:LINPACK
@@ -285,7 +285,7 @@ test:GEMM:
   stage: test
   script:
     - cd build
-    - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32 -DUSE_MPI=No
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:GEMM
@@ -305,7 +305,7 @@ test:GEMM_HP_REP2:
   stage: test
   script:
     - cd build
-    - cmake ../GEMM -DNUM_REPLICATIONS=2 -DATA_TYPE=half -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - cmake ../GEMM -DNUM_REPLICATIONS=2 -DATA_TYPE=half -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32 -DUSE_MPI=No
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:GEMM_HP_REP2
@@ -325,7 +325,7 @@ test:FFT:
   stage: test
   script:
     - cd build
-    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DUSE_MPI=No
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:FFT
@@ -345,7 +345,7 @@ test:FFT_small:
   stage: test
   script:
     - cd build
-    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
+    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2 -DUSE_MPI=No
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:FFT_small
