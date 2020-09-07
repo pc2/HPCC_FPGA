@@ -41,7 +41,7 @@ public:
     void
     collectAndPrintResults(const int &output) override {}
 
-    MinimalBenchmark() {}
+    MinimalBenchmark() : HpccFpgaBenchmark(0, { nullptr}) {}
 
 };
 
@@ -129,7 +129,7 @@ public:
     void
     collectAndPrintResults(const int &output) override {}
 
-    SuccessBenchmark() {}
+    SuccessBenchmark() : HpccFpgaBenchmark(0, { nullptr}) {}
 
 };
 

@@ -122,7 +122,15 @@ public:
      * @return std::map<std::string,std::string> 
      */
     virtual std::map<std::string,std::string> getSettingsMap() {
-        return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel File", kernelFileName}};
+    int mpi_size = 0;
+#ifdef _USE_MPI_
+     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+#endif
+    std::string str_mpi_ranks = "None";
+    if (mpi_size > 0) {
+        str_mpi_ranks = std::to_string(mpi_size);
+    }
+        return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}};
     }
 
 };
@@ -398,7 +406,7 @@ public:
                 printFinalConfiguration(*executionSettings);
             }
         }
-        catch (fpga_setup::FpgaSetupException e) {
+        catch (std::exception& e) {
             std::cerr << "An error occured while setting up the benchmark: " << std::endl;
             std::cerr << "\t" << e.what() << std::endl;
             success = false;

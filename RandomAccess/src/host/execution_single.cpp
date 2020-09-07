@@ -40,7 +40,7 @@ namespace bm_execution {
      @copydoc bm_execution::calculate()
     */
     std::unique_ptr<random_access::RandomAccessExecutionTimings>
-    calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data, int mpi_rank) {
+    calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data, int mpi_rank, int mpi_size) {
         // int used to check for OpenCL errors
         int err;
 
@@ -86,7 +86,7 @@ namespace bm_execution {
 #endif
 
             ASSERT_CL(err);
-            err = accesskernel[r].setArg(1, HOST_DATA_TYPE(config.programSettings->dataSize * mpi_rank));
+            err = accesskernel[r].setArg(1, HOST_DATA_TYPE(config.programSettings->dataSize * mpi_size));
             ASSERT_CL(err);
             err = accesskernel[r].setArg(2,
                                          HOST_DATA_TYPE((config.programSettings->dataSize / config.programSettings->kernelReplications)));

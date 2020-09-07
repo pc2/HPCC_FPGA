@@ -42,12 +42,16 @@ random_access::RandomAccessProgramSettings::RandomAccessProgramSettings(cxxopts:
 
 std::map<std::string, std::string>
 random_access::RandomAccessProgramSettings::getSettingsMap() {
-        auto map = hpcc_base::BaseSettings::getSettingsMap();
-        std::stringstream ss;
-        ss << dataSize << " (" << static_cast<double>(dataSize * sizeof(HOST_DATA_TYPE)) << " Byte )";
-        map["Array Size"] = ss.str();
-        map["Kernel Replications"] = std::to_string(kernelReplications);
-        return map;
+    int mpi_size = 1;
+#ifdef _USE_MPI_
+     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+#endif
+    auto map = hpcc_base::BaseSettings::getSettingsMap();
+    std::stringstream ss;
+    ss << dataSize << " (" << static_cast<double>(dataSize * sizeof(HOST_DATA_TYPE) * mpi_size) << " Byte )";
+    map["Array Size"] = ss.str();
+    map["Kernel Replications"] = std::to_string(kernelReplications);
+    return map;
 }
 
 random_access::RandomAccessData::RandomAccessData(cl::Context& context, size_t size) : context(context) {
@@ -83,16 +87,17 @@ random_access::RandomAccessBenchmark::addAdditionalParseOptions(cxxopts::Options
 
 std::unique_ptr<random_access::RandomAccessExecutionTimings>
 random_access::RandomAccessBenchmark::executeKernel(RandomAccessData &data) {
-    return bm_execution::calculate(*executionSettings, data.data, mpi_comm_rank);
+    return bm_execution::calculate(*executionSettings, data.data, mpi_comm_rank, mpi_comm_size);
 }
 
 void
 random_access::RandomAccessBenchmark::collectAndPrintResults(const random_access::RandomAccessExecutionTimings &output) {
 
-#ifdef _USE_MPI_
     std::vector<double> avgTimings(output.times.size());
+#ifdef _USE_MPI_
     MPI_Reduce(output.times.data(),avgTimings.data(),output.times.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     std::for_each(avgTimings.begin(),avgTimings.end(), [output](double& x) {x /= output.times.size();});
+    
 #else
     std::copy(output.times.begin(), output.times.end(), avgTimings.begin());
 #endif
@@ -122,6 +127,14 @@ random_access::RandomAccessBenchmark::collectAndPrintResults(const random_access
 
 std::unique_ptr<random_access::RandomAccessData>
 random_access::RandomAccessBenchmark::generateInputData() {
+    if ((mpi_comm_size == 0) || (mpi_comm_size & (mpi_comm_size - 1))) {
+        // Number of MPI ranks is not a power of 2
+        // This is not allowed, since the arithmetric on the input data works only on powers of 2
+        std::stringstream ss;
+        ss << "ERROR: Number of MPI ranks is " << mpi_comm_size << " which is not a power of two!";
+        std::cerr << ss.str() << std::endl;
+        throw std::runtime_error(ss.str());
+    }
     auto d = std::unique_ptr<RandomAccessData>(new RandomAccessData(*executionSettings->context, executionSettings->programSettings->dataSize));
     for (HOST_DATA_TYPE j=0; j < executionSettings->programSettings->dataSize ; j++) {
         d->data[j] = mpi_comm_rank * executionSettings->programSettings->dataSize + j;
@@ -140,7 +153,7 @@ random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access:
     MPI_Gather(data.data, executionSettings->programSettings->dataSize, MPI_LONG, 
             rawdata, executionSettings->programSettings->dataSize, MPI_LONG, 0, MPI_COMM_WORLD);
 #else
-    HOST_DATA_TYPE* rawdata = data.data;
+    rawdata = data.data;
 #endif
 
     if (mpi_comm_rank == 0) {
