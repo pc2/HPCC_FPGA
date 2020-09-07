@@ -284,7 +284,6 @@ public:
     parseProgramParameters(int argc, char *argv[]) {
         // Defining and parsing program options
         cxxopts::Options options(argv[0], PROGRAM_DESCRIPTION);
-        options.allow_unrecognised_options();
         options.add_options()
                 ("f,file", "Kernel file name", cxxopts::value<std::string>())
                 ("n", "Number of repetitions",
