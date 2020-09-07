@@ -121,7 +121,7 @@ stream::StreamBenchmark::collectAndPrintResults(const stream::StreamExecutionTim
         std::vector<double> avg_measures(number_measurements);
 #ifdef _USE_MPI_
         MPI_Reduce(v.second.data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-        std::accumulate(avg_measures.begin(), avg_measures.end(),number_measurements, std::divides<double>());
+        std::for_each(avg_measures.begin(),avg_measures.end(), [number_measurements](double& x) {x /= number_measurements;});
 #else
         std::copy(v.second.begin(), v.second.end(), avg_measures.begin());
 #endif
