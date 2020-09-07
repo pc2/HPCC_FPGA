@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(RandomAccess VERSION 2.2)
+project(RandomAccess VERSION 2.3)
 
 # Additional benchmark specific build parameters
 set(DEFAULT_ARRAY_LENGTH 536870912 CACHE STRING "Default size of the data arrays")
@@ -16,6 +16,13 @@ set(DEVICE_DATA_TYPE_UNSIGNED ulong)
 
 if (NUM_REPLICATIONS EQUAL 1)
     set(SINGLE_KERNEL Yes)
+endif()
+
+# Use MPI if it is available
+find_package(MPI)
+if (MPI_FOUND)
+    message(STATUS "Found MPI, so binaries will be built with MPI support")
+    set(USE_MPI Yes)
 endif()
 
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)

@@ -68,11 +68,9 @@ random_access::RandomAccessData::~RandomAccessData() {
 #endif
 }
 
-random_access::RandomAccessBenchmark::RandomAccessBenchmark(int argc, char* argv[]) {
+random_access::RandomAccessBenchmark::RandomAccessBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
 }
-
-random_access::RandomAccessBenchmark::RandomAccessBenchmark() {}
 
 void
 random_access::RandomAccessBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
@@ -85,64 +83,97 @@ random_access::RandomAccessBenchmark::addAdditionalParseOptions(cxxopts::Options
 
 std::unique_ptr<random_access::RandomAccessExecutionTimings>
 random_access::RandomAccessBenchmark::executeKernel(RandomAccessData &data) {
-    return bm_execution::calculate(*executionSettings, data.data);
+    return bm_execution::calculate(*executionSettings, data.data, mpi_comm_rank);
 }
 
 void
-random_access::RandomAccessBenchmark::printResults(const random_access::RandomAccessExecutionTimings &output) {
-    std::cout << std::setw(ENTRY_SPACE)
-              << "best" << std::setw(ENTRY_SPACE) << "mean"
-              << std::setw(ENTRY_SPACE) << "GUOPS" << std::endl;
+random_access::RandomAccessBenchmark::collectAndPrintResults(const random_access::RandomAccessExecutionTimings &output) {
 
-    // Calculate performance for kernel execution plus data transfer
-    double tmean = 0;
-    double tmin = std::numeric_limits<double>::max();
-    double gups = static_cast<double>(4 * executionSettings->programSettings->dataSize) / 1000000000;
-    for (double currentTime : output.times) {
-        tmean +=  currentTime;
-        if (currentTime < tmin) {
-            tmin = currentTime;
+#ifdef _USE_MPI_
+    std::vector<double> avgTimings(output.times.size());
+    MPI_Reduce(output.times.data(),avgTimings.data(),output.times.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    std::for_each(avgTimings.begin(),avgTimings.end(), [output](double& x) {x /= output.times.size();});
+#else
+    std::copy(output.times.begin(), output.times.end(), avgTimings.begin());
+#endif
+    if (mpi_comm_rank == 0) {
+        std::cout << std::setw(ENTRY_SPACE)
+                << "best" << std::setw(ENTRY_SPACE) << "mean"
+                << std::setw(ENTRY_SPACE) << "GUOPS" << std::endl;
+
+        // Calculate performance for kernel execution plus data transfer
+        double tmean = 0;
+        double tmin = std::numeric_limits<double>::max();
+        double gups = static_cast<double>(4 * executionSettings->programSettings->dataSize * mpi_comm_size) / 1000000000;
+        for (double currentTime : avgTimings) {
+            tmean +=  currentTime;
+            if (currentTime < tmin) {
+                tmin = currentTime;
+            }
         }
+        tmean = tmean / output.times.size();
+
+        std::cout << std::setw(ENTRY_SPACE)
+                << tmin << std::setw(ENTRY_SPACE) << tmean
+                << std::setw(ENTRY_SPACE) << gups / tmin
+                << std::endl;
     }
-    tmean = tmean / output.times.size();
-
-    std::cout << std::setw(ENTRY_SPACE)
-              << tmin << std::setw(ENTRY_SPACE) << tmean
-              << std::setw(ENTRY_SPACE) << gups / tmin
-              << std::endl;
-
 }
 
 std::unique_ptr<random_access::RandomAccessData>
 random_access::RandomAccessBenchmark::generateInputData() {
     auto d = std::unique_ptr<RandomAccessData>(new RandomAccessData(*executionSettings->context, executionSettings->programSettings->dataSize));
     for (HOST_DATA_TYPE j=0; j < executionSettings->programSettings->dataSize ; j++) {
-        d->data[j] = j;
+        d->data[j] = mpi_comm_rank * executionSettings->programSettings->dataSize + j;
     }
     return d;
 }
 
 bool  
 random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access::RandomAccessData &data) {
-    HOST_DATA_TYPE temp = 1;
-    for (HOST_DATA_TYPE i=0; i < 4L*executionSettings->programSettings->dataSize; i++) {
-        HOST_DATA_TYPE_SIGNED v = 0;
-        if (((HOST_DATA_TYPE_SIGNED)temp) < 0) {
-            v = POLY;
-        }
-        temp = (temp << 1) ^ v;
-        data.data[(temp >> 3) & (executionSettings->programSettings->dataSize - 1)] ^= temp;
-    }
 
-    double errors = 0;
+    HOST_DATA_TYPE* rawdata;
+#ifdef _USE_MPI_
+    if (mpi_comm_rank == 0) {
+        rawdata = new HOST_DATA_TYPE[executionSettings->programSettings->dataSize * mpi_comm_size];
+    }
+    MPI_Gather(data.data, executionSettings->programSettings->dataSize, MPI_LONG, 
+            rawdata, executionSettings->programSettings->dataSize, MPI_LONG, 0, MPI_COMM_WORLD);
+#else
+    HOST_DATA_TYPE* rawdata = data.data;
+#endif
+
+    if (mpi_comm_rank == 0) {
+        HOST_DATA_TYPE temp = 1;
+        for (HOST_DATA_TYPE i=0; i < 4L*executionSettings->programSettings->dataSize * mpi_comm_size; i++) {
+            HOST_DATA_TYPE_SIGNED v = 0;
+            if (((HOST_DATA_TYPE_SIGNED)temp) < 0) {
+                v = POLY;
+            }
+            temp = (temp << 1) ^ v;
+            rawdata[(temp >> 3) & (executionSettings->programSettings->dataSize * mpi_comm_size - 1)] ^= temp;
+        }
+
+        double errors = 0;
 #pragma omp parallel for reduction(+:errors)
-    for (HOST_DATA_TYPE i=0; i< executionSettings->programSettings->dataSize; i++) {
-        if (data.data[i] != i) {
-            errors++;
+        for (HOST_DATA_TYPE i=0; i< executionSettings->programSettings->dataSize * mpi_comm_size; i++) {
+            if (rawdata[i] != i) {
+                errors++;
+            }
         }
-    }
-    std::cout  << "Error: " << (static_cast<double>(errors) / executionSettings->programSettings->dataSize) * 100 
-                << "%" << std::endl;
+        double error_ratio = static_cast<double>(errors) / (executionSettings->programSettings->dataSize * mpi_comm_size);
+        std::cout  << "Error: " << error_ratio * 100 
+                    << "%" << std::endl;
 
-    return (static_cast<double>(errors) / executionSettings->programSettings->dataSize) < 0.01;
+#ifdef _USE_MPI_
+        if (mpi_comm_rank == 0) {
+            delete [] rawdata;
+        }
+#endif
+
+        return error_ratio < 0.01;
+    }
+
+    // All other ranks skip validation and always return true
+    return true;
 }
