@@ -31,6 +31,7 @@ and resource usage, and performance results for selected FPGAs with the used con
    :glob:
 
    Basic Setup/*
+   multi_fpga/*
 
 .. toctree::
    :maxdepth: 1

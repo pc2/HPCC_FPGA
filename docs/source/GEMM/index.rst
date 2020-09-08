@@ -1,3 +1,4 @@
+.. _gemm:
 ======
 GEMM
 ======
@@ -73,6 +74,31 @@ This time the block size is defined by the parameter ``GEMM_SIZE``.
 The matrix multiplication for this block will be fully unrolled which allows to initiate the multiplication of a whole block every clock cycle.
 Both pipelines will be executed sequentially to calculate a result of a single block of A + B.
 A third pipeline loads a block of C and calculates the final result for a block of C'.
+
+---------------------
+Expected Bottlenecks
+---------------------
+
+Matrix multiplications are very compute intensive, so the benchmark is expected to be mostly computation-bound.
+Nevertheless, the two main pipelines that are executed sequentially are both, memory bound (load data from global memory) and compute bound (calculate on data).
+The total execution time of the first pipeline is -- depending on the chosen block size -- considerably smaller than for the calculation pipeline.
+So the benchmark will in the end be affected by both, the memory bandwidth and the calculation performance of the unrolled multiplication.
+The calculation performance again is highly depending on the used FPGA resource and the final kernel frquency.
+In consequence, the benchmark performance is also depending on the route and place capabilities of the development tools.
+
+Together with the third pipeline, that is used to write the final result of a block back to global memory, the execution time can be modelled as given in :eq:`eq_gemm_performance`.
+
+.. math::
+    t_{exe} = \frac{b^2}{u \cdot f_{mem}} + \frac{b^3}{g^3 \cdot f_k} + \frac{b^2}{u \cdot \frac{n}{b} \cdot f_{mem}}
+    :label: eq_gemm_performance
+
+where 
+  :math:`b` equals ``BLOCK_SIZE``,
+  :math:`r` equals ``NUM_REPLICATIONS``,
+  :math:`u` equals ``GLOBAL_MEM_UNROLL`` and
+  :math:`g` equals ``GEMM_SIZE``
+
+Moreover, :math:`n` is the total matrix size, :math:`f_k` the kernel frequency and :math:`f_{mem}` the frequency of the memory interface.
 
 --------------------
 Configuration Hints
