@@ -236,6 +236,13 @@ protected:
      */
     int mpi_comm_size = 1;
 
+    /**
+     * @brief This flag indicates if MPI was initialized before the object was constructed.
+     *          In this case, no finalization will be done by the destuctor of the object.
+     * 
+     */
+    bool mpi_external_init = true;
+
 public:
 
     /**
@@ -493,16 +500,41 @@ public:
 
     HpccFpgaBenchmark(int argc, char* argv[]) {
 #ifdef _USE_MPI_
-        MPI_Init(&argc, &argv);
+        int isMpiInitialized;
+        MPI_Initialized(&isMpiInitialized);
+        if (!isMpiInitialized) {
+            MPI_Init(&argc, &argv);
+        }
         MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
         MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
 #endif
         fpga_setup::setupEnvironmentAndClocks();
     }
 
+    HpccFpgaBenchmark() {
+#ifdef _USE_MPI_
+        int isMpiInitialized;
+        MPI_Initialized(&isMpiInitialized);
+        mpi_external_init = isMpiInitialized;
+        if (!isMpiInitialized) {
+            std::cerr << "MPI needs to be initialized before constructing benchmark object or program parameters have to be given to the constructor!" << std::endl;
+            throw std::runtime_error("MPI not initialized");
+        }
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
+#endif
+        fpga_setup::setupEnvironmentAndClocks();        
+    }
+
     virtual ~HpccFpgaBenchmark() {
 #ifdef _USE_MPI_
-        MPI_Finalize();
+        if (!mpi_external_init) {
+            int isMpiFinalized;
+            MPI_Finalized(&isMpiFinalized);
+            if (!isMpiFinalized) {
+                MPI_Finalize();
+            }
+        }
 #endif        
     }
 

@@ -34,7 +34,7 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatHeader) {
     std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
     std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
-    bm->printResults(*results);
+    bm->collectAndPrintResults(*results);
 
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);
@@ -60,7 +60,7 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
     std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
     std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
-    bm->printResults(*results);
+    bm->collectAndPrintResults(*results);
 
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);

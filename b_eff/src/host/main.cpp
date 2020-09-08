@@ -15,7 +15,7 @@ main(int argc, char *argv[]) {
     // Initialize the MPI environment
     MPI_Init(&argc, &argv);
     // Setup benchmark
-    auto bm = NetworkBenchmark(argc, argv);
+    NetworkBenchmark bm(argc, argv);
     bool success = bm.executeBenchmark();
     MPI_Finalize();
     if (success) {

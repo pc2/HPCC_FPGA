@@ -146,15 +146,19 @@ bool
 random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access::RandomAccessData &data) {
 
     HOST_DATA_TYPE* rawdata;
+    if (mpi_comm_size > 1) {
 #ifdef _USE_MPI_
-    if (mpi_comm_rank == 0) {
-        rawdata = new HOST_DATA_TYPE[executionSettings->programSettings->dataSize * mpi_comm_size];
-    }
-    MPI_Gather(data.data, executionSettings->programSettings->dataSize, MPI_LONG, 
-            rawdata, executionSettings->programSettings->dataSize, MPI_LONG, 0, MPI_COMM_WORLD);
-#else
-    rawdata = data.data;
+        if (mpi_comm_rank == 0) {
+            rawdata = new HOST_DATA_TYPE[executionSettings->programSettings->dataSize * mpi_comm_size];
+        }
+        MPI_Gather(data.data, executionSettings->programSettings->dataSize, MPI_LONG, 
+                rawdata, executionSettings->programSettings->dataSize, MPI_LONG, 0, MPI_COMM_WORLD);
 #endif
+    }
+    else {
+        rawdata = data.data;
+    }
+
 
     if (mpi_comm_rank == 0) {
         HOST_DATA_TYPE temp = 1;
@@ -179,7 +183,7 @@ random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access:
                     << "%" << std::endl;
 
 #ifdef _USE_MPI_
-        if (mpi_comm_rank == 0) {
+        if (mpi_comm_rank == 0 && mpi_comm_size > 1) {
             delete [] rawdata;
         }
 #endif

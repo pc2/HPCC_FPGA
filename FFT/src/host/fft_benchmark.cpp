@@ -95,7 +95,7 @@ fft::FFTBenchmark::executeKernel(FFTData &data) {
 }
 
 void
-fft::FFTBenchmark::printResults(const fft::FFTExecutionTimings &output) {
+fft::FFTBenchmark::collectAndPrintResults(const fft::FFTExecutionTimings &output) {
     double gflop = static_cast<double>(5 * (1 << LOG_FFT_SIZE) * LOG_FFT_SIZE) * executionSettings->programSettings->iterations * 1.0e-9;
 
     double minTime = *min_element(output.timings.begin(), output.timings.end());

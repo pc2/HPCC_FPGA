@@ -81,11 +81,9 @@ transpose::TransposeData::~TransposeData() {
 #endif
 }
 
-transpose::TransposeBenchmark::TransposeBenchmark(int argc, char* argv[]) {
+transpose::TransposeBenchmark::TransposeBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
 }
-
-transpose::TransposeBenchmark::TransposeBenchmark() {}
 
 void
 transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
@@ -102,7 +100,7 @@ transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
 }
 
 void
-transpose::TransposeBenchmark::printResults(const transpose::TransposeExecutionTimings &output) {
+transpose::TransposeBenchmark::collectAndPrintResults(const transpose::TransposeExecutionTimings &output) {
     double flops = executionSettings->programSettings->matrixSize * executionSettings->programSettings->matrixSize;
 
     double avgTransferTime = accumulate(output.transferTimings.begin(), output.transferTimings.end(), 0.0)

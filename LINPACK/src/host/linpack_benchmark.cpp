@@ -76,11 +76,9 @@ linpack::LinpackData::~LinpackData() {
 #endif
 }
 
-linpack::LinpackBenchmark::LinpackBenchmark(int argc, char* argv[]) {
+linpack::LinpackBenchmark::LinpackBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
 }
-
-linpack::LinpackBenchmark::LinpackBenchmark() {}
 
 void
 linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
@@ -95,7 +93,7 @@ linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
 }
 
 void
-linpack::LinpackBenchmark::printResults(const linpack::LinpackExecutionTimings &output) {
+linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutionTimings &output) {
      std::cout << std::setw(ENTRY_SPACE)
               << "best" << std::setw(ENTRY_SPACE) << "mean"
               << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
