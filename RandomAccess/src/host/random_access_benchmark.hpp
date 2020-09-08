@@ -176,6 +176,14 @@ public:
     collectAndPrintResults(const RandomAccessExecutionTimings &output) override;
 
     /**
+     * @brief Check the given bencmark configuration and its validity
+     * 
+     * @return true if the validation is successful, false otherwise
+     */
+    bool
+    checkInputParameters() override;
+
+    /**
      * @brief Construct a new RandomAccess Benchmark object
      * 
      * @param argc the number of program input parameters

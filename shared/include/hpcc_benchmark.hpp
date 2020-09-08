@@ -282,6 +282,20 @@ public:
     collectAndPrintResults(const TOutput &output) = 0;
 
     /**
+     * @brief Method that can be overwritten by inheriting classes to check the validity of input parameters.
+     *          This can include checks of the input array sizes or if the given combination of parameters makes sense.
+     *          It will be called at the end of the benchmark setup and the protected executionSettings should be used to
+     *          do the required tests. The implementation of the function should print detailed information about possible 
+     *          errors, if the validation fails.
+     * 
+     * @return true If the validation was a success
+     * @return false If the validation failed.
+     * 
+     */
+    virtual bool
+    checkInputParameters() { return true;}
+
+    /**
     * Parses and returns program options using the cxxopts library.
     * The parsed parameters are depending on the benchmark that is implementing
     * function.
@@ -410,6 +424,10 @@ public:
                                                                 std::move(context), std::move(program)));
 
             if (mpi_comm_rank == 0) {
+                if (!checkInputParameters()) {
+                    std::cerr << "ERROR: Input parameter check failed!" << std::endl;
+                    throw std::runtime_error("Input parameter check failed!");
+                }
                 printFinalConfiguration(*executionSettings);
             }
         }

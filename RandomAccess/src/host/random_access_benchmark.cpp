@@ -125,16 +125,25 @@ random_access::RandomAccessBenchmark::collectAndPrintResults(const random_access
     }
 }
 
-std::unique_ptr<random_access::RandomAccessData>
-random_access::RandomAccessBenchmark::generateInputData() {
+bool
+random_access::RandomAccessBenchmark::checkInputParameters() {
+    bool validationResult = true;
     if ((mpi_comm_size == 0) || (mpi_comm_size & (mpi_comm_size - 1))) {
         // Number of MPI ranks is not a power of 2
         // This is not allowed, since the arithmetric on the input data works only on powers of 2
-        std::stringstream ss;
-        ss << "ERROR: Number of MPI ranks is " << mpi_comm_size << " which is not a power of two!";
-        std::cerr << ss.str() << std::endl;
-        throw std::runtime_error(ss.str());
+        std::cerr << "ERROR: Number of MPI ranks is " << mpi_comm_size << " which is not a power of two!" << std::endl;
+        validationResult = false;
     }
+    int data_per_replication = executionSettings->programSettings->dataSize / executionSettings->programSettings->kernelReplications;
+    if ((data_per_replication == 0) || (data_per_replication & (data_per_replication - 1))) {
+        std::cerr << "ERROR: Data chunk size for each kernel replication is not a power of 2!" << std::endl;
+        validationResult = false;
+    }
+    return validationResult;
+}
+
+std::unique_ptr<random_access::RandomAccessData>
+random_access::RandomAccessBenchmark::generateInputData() {
     auto d = std::unique_ptr<RandomAccessData>(new RandomAccessData(*executionSettings->context, executionSettings->programSettings->dataSize));
     for (HOST_DATA_TYPE j=0; j < executionSettings->programSettings->dataSize ; j++) {
         d->data[j] = mpi_comm_rank * executionSettings->programSettings->dataSize + j;
