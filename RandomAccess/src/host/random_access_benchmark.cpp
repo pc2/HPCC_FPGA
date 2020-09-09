@@ -106,7 +106,7 @@ random_access::RandomAccessBenchmark::collectAndPrintResults(const random_access
                 << "best" << std::setw(ENTRY_SPACE) << "mean"
                 << std::setw(ENTRY_SPACE) << "GUOPS" << std::endl;
 
-        // Calculate performance for kernel execution plus data transfer
+        // Calculate performance for kernel execution
         double tmean = 0;
         double tmin = std::numeric_limits<double>::max();
         double gups = static_cast<double>(4 * executionSettings->programSettings->dataSize * mpi_comm_size) / 1000000000;
@@ -170,6 +170,9 @@ random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access:
 
 
     if (mpi_comm_rank == 0) {
+
+        // Serially execute all pseudo random updates again
+        // This should lead to the initial values in the data array, because XOR is a involutory function
         HOST_DATA_TYPE temp = 1;
         for (HOST_DATA_TYPE i=0; i < 4L*executionSettings->programSettings->dataSize * mpi_comm_size; i++) {
             HOST_DATA_TYPE_SIGNED v = 0;
@@ -184,9 +187,12 @@ random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access:
 #pragma omp parallel for reduction(+:errors)
         for (HOST_DATA_TYPE i=0; i< executionSettings->programSettings->dataSize * mpi_comm_size; i++) {
             if (rawdata[i] != i) {
+                // If the array at index i does not contain i, it differs from the initial value and is counted as an error
                 errors++;
             }
         }
+
+        // The overall error is calculated in percent of the overall array size
         double error_ratio = static_cast<double>(errors) / (executionSettings->programSettings->dataSize * mpi_comm_size);
         std::cout  << "Error: " << error_ratio * 100 
                     << "%" << std::endl;

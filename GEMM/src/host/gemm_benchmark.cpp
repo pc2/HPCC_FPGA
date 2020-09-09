@@ -122,7 +122,7 @@ gemm::GEMMBenchmark::collectAndPrintResults(const gemm::GEMMExecutionTimings &ou
                 << "best" << std::setw(ENTRY_SPACE) << "mean"
                 << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
 
-        // Calculate performance for kernel execution plus data transfer
+        // Calculate performance for kernel execution
         double tmean = 0;
         double tmin = std::numeric_limits<double>::max();
 
@@ -177,23 +177,29 @@ gemm::GEMMBenchmark::validateOutputAndPrintError(gemm::GEMMData &data) {
         normx = (normx > fabs(data.C_out[i])) ? normx : fabs(data.C_out[i]);
     }
 
-    double eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
-    double residn = resid / (executionSettings->programSettings->matrixSize*executionSettings->programSettings->matrixSize*ref_data->normtotal*normx*eps);
-
 #ifdef _USE_MPI_
-    double max_norm_resid = 0.0;
-    MPI_Reduce(&residn, &max_norm_resid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    residn = max_norm_resid;
+    double max_resid = 0.0;
+    MPI_Reduce(&resid, &max_resid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    resid = max_resid;
 #endif
 
+    // Calculate the overall error only on rank 0
     if (mpi_comm_rank == 0) {
+        // Calculate the residual error normalized to the total matrix size, input values and machine epsilon
+        double eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+        double residn = resid / (executionSettings->programSettings->matrixSize*executionSettings->programSettings->matrixSize*ref_data->normtotal*normx*eps);
+
         std::cout << "  norm. resid        resid       "\
                     "machep" << std::endl;
         std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
                 << resid << std::setw(ENTRY_SPACE) << eps
                 << std::endl;
+
+        return residn < 1.0;
     }
-    return residn < 1.0;
+
+    // All other ranks are always reporting success of the validation
+    return true;
 }
 
 void 
