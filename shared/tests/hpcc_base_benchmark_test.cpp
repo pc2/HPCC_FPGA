@@ -28,6 +28,7 @@ public:
     bool returnInputData = true;  
     bool returnExecuteKernel = true; 
     bool returnValidate = true;
+    bool configurationCheckSucceeds = true;
 
     std::unique_ptr<int>
     generateInputData() override { return returnInputData ? std::unique_ptr<int>(new int) : std::unique_ptr<int>(nullptr);}
@@ -37,6 +38,9 @@ public:
 
     bool
     validateOutputAndPrintError(int &data) override { return returnValidate;}
+
+    bool
+    checkInputParameters() override { return configurationCheckSucceeds;}
 
     void
     collectAndPrintResults(const int &output) override {}
@@ -75,56 +79,6 @@ public:
 
     bool
     validateOutputAndPrintError(int &data) override { return returnValidate;}
-
-    bool 
-    setupBenchmark(const int argc, char const* const* argv) {
-        try {
-
-            // Create deep copies of the input parameters to prevent modification from 
-            // the cxxopts library
-            int tmp_argc = argc;
-            auto tmp_argv = new char*[argc + 1];
-            for (int i =0; i < argc; i++) {
-                int len = strlen(argv[i]) + 1;
-                tmp_argv[i] = new char[len];
-                strcpy(tmp_argv[i], argv[i]);
-            }
-            tmp_argv[argc] = nullptr;
-
-            std::unique_ptr<hpcc_base::BaseSettings> programSettings = parseProgramParameters(tmp_argc, tmp_argv);
-
-            // for (int i =0; i < argc; i++) {
-            //     delete [] tmp_argv[i];
-            // }
-            // delete [] tmp_argv;
-
-            auto usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
-                                                                programSettings->defaultDevice);
-
-            auto context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
-            auto program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
-                                                                &programSettings->kernelFileName);
-
-            executionSettings = std::unique_ptr<hpcc_base::ExecutionSettings<hpcc_base::BaseSettings>>(new hpcc_base::ExecutionSettings<hpcc_base::BaseSettings>(std::move(programSettings), std::move(usedDevice), 
-                                                                std::move(context), std::move(program)));
-            // Get the rank of the process
-            int world_rank = 0;
-
-#ifdef _USE_MPI_
-            MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-#endif
-            if (world_rank == 0) {
-                printFinalConfiguration(*executionSettings);
-            }
-
-            return true;
-        }
-        catch (fpga_setup::FpgaSetupException e) {
-            std::cerr << "An error occured while setting up the benchmark: " << std::endl;
-            std::cerr << "\t" << e.what() << std::endl;
-            return false;
-        }
-    }
 
     void
     collectAndPrintResults(const int &output) override {}
@@ -196,6 +150,25 @@ TEST_F(BaseHpccBenchmarkTest, FailedExe) {
 TEST(SetupTest, BenchmarkSetupIsSuccessful) {
     std::unique_ptr<MinimalBenchmark> bm = std::unique_ptr<MinimalBenchmark>(new MinimalBenchmark());
     EXPECT_TRUE(bm->setupBenchmark(global_argc, global_argv));
+}
+
+/**
+ * Benchmark Setup fails because of failing configuration check
+ */
+TEST(SetupTest, BenchmarkConfigurationFailsSetup) {
+    std::unique_ptr<MinimalBenchmark> bm = std::unique_ptr<MinimalBenchmark>(new MinimalBenchmark());
+    bm->configurationCheckSucceeds = false;
+    EXPECT_FALSE(bm->setupBenchmark(global_argc, global_argv));
+}
+
+/**
+ * Benchmark Execution fails if configuration check failed
+ */
+TEST(SetupTest, BenchmarkConfigurationFailsExecution) {
+    std::unique_ptr<MinimalBenchmark> bm = std::unique_ptr<MinimalBenchmark>(new MinimalBenchmark());
+    bm->configurationCheckSucceeds = false;
+    bm->setupBenchmark(global_argc, global_argv);
+    EXPECT_FALSE(bm->executeBenchmark());
 }
 
 /**
