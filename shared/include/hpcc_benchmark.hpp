@@ -207,6 +207,16 @@ public:
 template <class TSettings, class TData, class TOutput>
 class HpccFpgaBenchmark {
 
+private:
+
+    /**
+     * @brief This flag is set by the setupBenchmark() routine after successful setting up the benchmark.
+     *          It is used to prevent undefined behavior in the case executeBenchmark() is called without
+     *          a complete setup.
+     * 
+     */
+    bool benchmark_setup_succeeded = false;
+
 protected:
 
     /**
@@ -443,6 +453,7 @@ public:
         delete [] tmp_argv;
         delete [] tmp_pointer_storage;
 
+        benchmark_setup_succeeded = success;
         return success;
 
     }
@@ -457,7 +468,7 @@ public:
     bool
     executeBenchmark() {
 
-        if (!executionSettings.get()) {
+        if (!benchmark_setup_succeeded) {
             std::cerr << "Benchmark execution started without running the benchmark setup!" << std::endl;
             return false;
         }
