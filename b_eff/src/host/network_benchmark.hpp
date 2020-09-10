@@ -81,7 +81,19 @@ public:
      * @brief Initial number of sent messages per message size
      * 
      */
-    uint looplength;
+    uint maxLoopLength;
+
+    /**
+     * @brief Minimum number of sent messages per message size
+     * 
+     */
+    uint minLoopLength;
+
+    /**
+     * @brief Log2 of maximum message size
+     * 
+     */
+    uint maxMessageSize;
 
     /**
      * @brief Construct a new Network Program Settings object
@@ -154,8 +166,10 @@ public:
      * @brief Construct a new Network Data object
      * 
      * @param max_looplength The maximum number of iterations that should be done for a message size
+     * @param min_looplength The minimum number of iterations that should be done for a message size
+     * @param max_messagesize The maximum message size
      */
-    NetworkData(unsigned int max_looplength);
+    NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int max_messagesize);
 
 };
 

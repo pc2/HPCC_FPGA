@@ -35,28 +35,29 @@ SOFTWARE.
 #include "parameters.h"
 
 network::NetworkProgramSettings::NetworkProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    looplength(results["l"].as<uint>()) {
+    maxLoopLength(results["u"].as<uint>()), minLoopLength(results["l"].as<uint>()), maxMessageSize(results["m"].as<uint>()) {
 
 }
 
 std::map<std::string, std::string>
 network::NetworkProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
-        map["Loop Length"] = std::to_string(looplength);
+        map["Loop Length"] = std::to_string(minLoopLength) + " - " + std::to_string(maxLoopLength);
+        map["Message Sizes"] =  "2^0 - 2^" + std::to_string(maxMessageSize - 1) + " Bytes";
         return map;
 }
 
 network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int messageSize, unsigned int loopLength) : messageSize(messageSize), loopLength(loopLength), 
-                                                                            validationBuffer(loopLength * CHANNEL_WIDTH * 2 * 2) {
+                                                                            validationBuffer(loopLength * CHANNEL_WIDTH * 2 * 2, 0) {
                                                                                 // Validation data buffer should be big enough to fit the data of two channels
                                                                                 // for every repetition. The number of kernel replications is fixed to 2, which 
                                                                                 // also needs to be multiplied with the buffer size
                                                                             }
 
-network::NetworkData::NetworkData(unsigned int max_looplength) {
-    for (uint i = 0; i < 21; i++) {
+network::NetworkData::NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int max_messagesize) {
+    for (uint i = 0; i < max_messagesize; i++) {
         uint messageSize = (1u << i);
-        uint looplength = std::max((max_looplength) / ((messageSize + (CHANNEL_WIDTH - 1)) / (CHANNEL_WIDTH)), 1u);
+        uint looplength = std::max((max_looplength) / ((messageSize + (CHANNEL_WIDTH - 1)) / (CHANNEL_WIDTH)), min_looplength);
         this->items.push_back(NetworkDataItem(messageSize, looplength));
     }
 }
@@ -70,8 +71,12 @@ network::NetworkBenchmark::NetworkBenchmark() {}
 void
 network::NetworkBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
-        ("l", "Inital looplength of Kernel",
-             cxxopts::value<uint>()->default_value(std::to_string(1u << 15u)));
+        ("u,upper", "Maximum number of repetitions per data size",
+             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MAX_LOOP_LENGTH)))
+        ("l,lower", "Minimum number of repetitions per data size",
+             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MIN_LOOP_LENGTH)))
+        ("m", "Maximum message size",
+             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MAX_MESSAGE_SIZE)));
 }
 
 std::unique_ptr<network::NetworkExecutionTimings>
@@ -191,7 +196,9 @@ network::NetworkBenchmark::collectAndPrintResults(const network::NetworkExecutio
 
 std::unique_ptr<network::NetworkData>
 network::NetworkBenchmark::generateInputData() {
-    auto d = std::unique_ptr<network::NetworkData>(new network::NetworkData(executionSettings->programSettings->looplength));
+    auto d = std::unique_ptr<network::NetworkData>(new network::NetworkData(executionSettings->programSettings->maxLoopLength,
+                                                                            executionSettings->programSettings->minLoopLength,
+                                                                            executionSettings->programSettings->maxMessageSize));
     return d;
 }
 
@@ -202,7 +209,7 @@ network::NetworkBenchmark::validateOutputAndPrintError(network::NetworkData &dat
     // For every data size in the data set
     for (const auto& item : data.items) {
         // check if the validation buffer contains the expected data
-        HOST_DATA_TYPE expected_value = static_cast<HOST_DATA_TYPE>(item.messageSize & 255);
+        HOST_DATA_TYPE expected_value = static_cast<HOST_DATA_TYPE>(item.messageSize & 255u);
         unsigned errors = 0;
         HOST_DATA_TYPE failing_entry = 0;
         for (const auto& v: item.validationBuffer) {

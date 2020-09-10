@@ -17,14 +17,18 @@ struct NetworkKernelTest : testing::Test {
     std::string channelOutName = "kernel_output_ch";
     std::string channelInName = "kernel_input_ch";
 
-    NetworkKernelTest() {
+    NetworkKernelTest() {}
+
+    void SetUp() override {
         bm = std::unique_ptr<network::NetworkBenchmark>(new network::NetworkBenchmark(global_argc, global_argv));
         bm->getExecutionSettings().programSettings->numRepetitions = 1;
         data = bm->generateInputData();
+        createChannelFilesAndSymbolicLinks();
     }
 
-    void SetUp() override {
-        createChannelFilesAndSymbolicLinks();
+    void TearDown() override {
+        bm = nullptr;
+        data = nullptr;
     }
 
     void createChannelFilesAndSymbolicLinks() {
@@ -43,8 +47,6 @@ struct NetworkKernelTest : testing::Test {
  * Tests if calculate returns the correct execution results
  */
 TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
-    bm->getExecutionSettings().programSettings->numRepetitions = 1;
-    bm->getExecutionSettings().programSettings->looplength = 1;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(1,1));
     auto result = bm->executeKernel(*data);
@@ -58,7 +60,6 @@ TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
  */
 TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
     bm->getExecutionSettings().programSettings->numRepetitions = 2;
-    bm->getExecutionSettings().programSettings->looplength = 4;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(8,4));
     auto result = bm->executeKernel(*data);
@@ -242,5 +243,38 @@ TEST_F(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data;});
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+}
+
+TEST_F(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
+    const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
+    const unsigned looplength = 4;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    auto result = bm->executeKernel(*data);
+    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+}
+
+// This test is disabled because it does not work with the current implementation of the
+// external channels in software emulation. The different kernel executions will read 
+// the old data from the channel file, which will lead to a failing validation!
+TEST_F(NetworkKernelTest, DISABLED_ValidationDataCorrectTwoMessageSizesAfterExecution) {
+    const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
+    const unsigned looplength = 4;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize * 2,looplength));
+    auto result = bm->executeKernel(*data);
+    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+}
+
+TEST_F(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
+    const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
+    const unsigned looplength = 4;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize * 2,looplength));
+    auto result = bm->executeKernel(*data);
+    data->items[1].validationBuffer[0] = static_cast<HOST_DATA_TYPE>(0);
+    EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
 }
 
