@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(b_eff VERSION 1.2)
+project(b_eff VERSION 1.3)
 
 set(SEND_KERNEL_NAME send)
 set(RECV_KERNEL_NAME recv)
