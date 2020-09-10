@@ -149,16 +149,19 @@ Sets up the given FPGA with the kernel in the provided file.
         }
 
         // Read in file contents and create program from binaries
-        std::string prog(std::istreambuf_iterator<char>(aocxStream),
-                         (std::istreambuf_iterator<char>()));
         aocxStream.seekg(0, aocxStream.end);
         unsigned file_size = aocxStream.tellg();
         aocxStream.seekg(0, aocxStream.beg);
-        char *buf = new char[file_size];
-        aocxStream.read(buf, file_size);
+        std::vector<unsigned char> buf(file_size);
+        aocxStream.read(reinterpret_cast<char *>(buf.data()), file_size);
 
+
+#ifdef USE_DEPRECATED_HPP_HEADER
         cl::Program::Binaries mybinaries;
         mybinaries.push_back({buf, file_size});
+#else
+        cl::Program::Binaries mybinaries{buf};
+#endif
 
         // Create the Program from the AOCX file.
         cl::Program program(*context, deviceList, mybinaries, NULL, &err);

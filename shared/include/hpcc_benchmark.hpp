@@ -30,7 +30,11 @@ SOFTWARE.
 #include "parameters.h"
 
 /* External library headers */
+#ifdef USE_DEPRECATED_HPP_HEADER
 #include "CL/cl.hpp"
+#else
+#include OPENCL_HPP_HEADER
+#endif
 
 #ifdef _USE_MPI_
 #include "mpi.h"
