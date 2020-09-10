@@ -129,7 +129,7 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
 }
 
 void
-network::NetworkBenchmark::printResults(const network::NetworkExecutionTimings &output) {
+network::NetworkBenchmark::collectAndPrintResults(const network::NetworkExecutionTimings &output) {
     std::vector<double> maxBandwidths;
 
     std::cout << std::setw(ENTRY_SPACE) << "MSize" << "   "

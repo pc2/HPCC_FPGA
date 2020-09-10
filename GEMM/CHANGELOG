@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.1
+
+#### Added:
+- MPI Support for embarrassingly parallel executions. Every rank will calculate on independent matrices. Measurement results will be averaged over all ranks.
+
 ## 1.0
 
 #### Added:

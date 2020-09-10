@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.3
+
+#### Added:
+- Add MPI support for global execution
+
 ## 2.2
 
 #### Added:

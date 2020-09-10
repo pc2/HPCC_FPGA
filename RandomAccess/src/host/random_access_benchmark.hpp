@@ -173,7 +173,15 @@ public:
      * @param output The measurement values that are generated yb the kernel execution
      */
     void
-    printResults(const RandomAccessExecutionTimings &output) override;
+    collectAndPrintResults(const RandomAccessExecutionTimings &output) override;
+
+    /**
+     * @brief Check the given bencmark configuration and its validity
+     * 
+     * @return true if the validation is successful, false otherwise
+     */
+    bool
+    checkInputParameters() override;
 
     /**
      * @brief Construct a new RandomAccess Benchmark object

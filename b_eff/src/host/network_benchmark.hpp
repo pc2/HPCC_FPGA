@@ -178,7 +178,7 @@ public:
      * @param output Measured runtimes of the kernel execution
      */
     void
-    printResults(const NetworkExecutionTimings &output) override;
+    collectAndPrintResults(const NetworkExecutionTimings &output) override;
 
     /**
      * @brief Construct a new Network Benchmark object. This construtor will directly setup

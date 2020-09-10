@@ -235,7 +235,7 @@ public:
      * @param output Measured runtimes of the kernel execution
      */
     void
-    printResults(const GEMMExecutionTimings &output) override;
+    collectAndPrintResults(const GEMMExecutionTimings &output) override;
 
     /**
      * @brief Construct a new GEMM Benchmark object

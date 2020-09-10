@@ -131,11 +131,9 @@ Sets up the given FPGA with the kernel in the provided file.
               const std::string *usedKernelFile) {
         int err;
         int world_rank = 0;
-        int world_size = 0;
 
 #ifdef _USE_MPI_
         MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 #endif
 
         if (world_rank == 0) {
@@ -181,18 +179,26 @@ granularity using bm_helper::checktick()
     setupEnvironmentAndClocks() {
         std::cout << std::setprecision(5) << std::scientific;
 
-        std::cout << HLINE;
-        std::cout << "General setup:" << std::endl;
+        int world_rank = 0;
 
-        // Check clock granularity and output result
-        std::cout << "C++ high resolution clock is used." << std::endl;
-        std::cout << "The clock precision seems to be "
-                  << static_cast<double>
-                     (std::chrono::high_resolution_clock::period::num) /
-                     std::chrono::high_resolution_clock::period::den * 10e9
-                  << "ns" << std::endl;
+#ifdef _USE_MPI_
+        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+#endif
 
-        std::cout << HLINE;
+        if (world_rank == 0) {
+            std::cout << HLINE;
+            std::cout << "General setup:" << std::endl;
+
+            // Check clock granularity and output result
+            std::cout << "C++ high resolution clock is used." << std::endl;
+            std::cout << "The clock precision seems to be "
+                    << static_cast<double>
+                        (std::chrono::high_resolution_clock::period::num) /
+                        std::chrono::high_resolution_clock::period::den * 10e9
+                    << "ns" << std::endl;
+
+            std::cout << HLINE;
+        }
     }
 
 

@@ -190,7 +190,7 @@ public:
      * @param output Measured runtimes of the kernel execution
      */
     void
-    printResults(const TransposeExecutionTimings &output) override;
+    collectAndPrintResults(const TransposeExecutionTimings &output) override;
 
     /**
      * @brief Construct a new Transpose Benchmark object

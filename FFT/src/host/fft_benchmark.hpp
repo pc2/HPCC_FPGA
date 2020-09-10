@@ -184,7 +184,7 @@ public:
      * @param output Measured runtimes of the kernel execution
      */
     void
-    printResults(const FFTExecutionTimings &output) override;
+    collectAndPrintResults(const FFTExecutionTimings &output) override;
 
     /**
      * @brief Construct a new FFT Benchmark object

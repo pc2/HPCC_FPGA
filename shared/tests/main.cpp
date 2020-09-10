@@ -26,14 +26,28 @@ SOFTWARE.
 #ifdef _USE_MPI_
 #include "mpi.h"
 
+/**
+ * @brief Test environment that is used when the unit tests are compiled with MPI support
+ * 
+ */
 class MPIEnvironment : public ::testing::Environment {
 public:
     MPIEnvironment(int* argc, char** argv[]) {
-        MPI_Init(argc, argv);
+        // initialize MPI if it not already done
+        int isMPIInitialized;
+        MPI_Initialized(&isMPIInitialized);
+        if (!isMPIInitialized) {
+            MPI_Init(argc, argv);
+        }
     }
 
     ~MPIEnvironment() override {
-        MPI_Finalize();
+        // finalize MPI if it not already done
+        int isMPIFinalized;
+        MPI_Finalized(&isMPIFinalized);
+        if (!isMPIFinalized) {
+            MPI_Finalize();
+        }
     }
 };
 #endif

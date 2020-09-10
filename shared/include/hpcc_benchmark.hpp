@@ -122,7 +122,15 @@ public:
      * @return std::map<std::string,std::string> 
      */
     virtual std::map<std::string,std::string> getSettingsMap() {
-        return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel File", kernelFileName}};
+    int mpi_size = 0;
+#ifdef _USE_MPI_
+     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+#endif
+    std::string str_mpi_ranks = "None";
+    if (mpi_size > 0) {
+        str_mpi_ranks = std::to_string(mpi_size);
+    }
+        return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}};
     }
 
 };
@@ -199,6 +207,16 @@ public:
 template <class TSettings, class TData, class TOutput>
 class HpccFpgaBenchmark {
 
+private:
+
+    /**
+     * @brief This flag is set by the setupBenchmark() routine after successful setting up the benchmark.
+     *          It is used to prevent undefined behavior in the case executeBenchmark() is called without
+     *          a complete setup.
+     * 
+     */
+    bool benchmark_setup_succeeded = false;
+
 protected:
 
     /**
@@ -215,6 +233,25 @@ protected:
      */
     virtual void
     addAdditionalParseOptions(cxxopts::Options &options) {}
+
+    /**
+     * @brief The communication rank of a MPI setup
+     * 
+     */
+    int mpi_comm_rank = 0;
+
+    /**
+     * @brief The size of the MPI communication world
+     * 
+     */
+    int mpi_comm_size = 1;
+
+    /**
+     * @brief This flag indicates if MPI was initialized before the object was constructed.
+     *          In this case, no finalization will be done by the destuctor of the object.
+     * 
+     */
+    bool mpi_external_init = true;
 
 public:
 
@@ -246,12 +283,27 @@ public:
     validateOutputAndPrintError(TData &data) = 0;
 
     /**
-     * @brief Prints the measurement results of the benchmark to std::cout
+     * @brief Collects the measurment results from all MPI ranks and 
+     *      prints the measurement results of the benchmark to std::cout
      * 
      * @param output  The measurement data of the kernel execution
      */
     virtual void
-    printResults(const TOutput &output) = 0;
+    collectAndPrintResults(const TOutput &output) = 0;
+
+    /**
+     * @brief Method that can be overwritten by inheriting classes to check the validity of input parameters.
+     *          This can include checks of the input array sizes or if the given combination of parameters makes sense.
+     *          It will be called at the end of the benchmark setup and the protected executionSettings should be used to
+     *          do the required tests. The implementation of the function should print detailed information about possible 
+     *          errors, if the validation fails.
+     * 
+     * @return true If the validation was a success
+     * @return false If the validation failed.
+     * 
+     */
+    virtual bool
+    checkInputParameters() { return true;}
 
     /**
     * Parses and returns program options using the cxxopts library.
@@ -271,7 +323,6 @@ public:
     parseProgramParameters(int argc, char *argv[]) {
         // Defining and parsing program options
         cxxopts::Options options(argv[0], PROGRAM_DESCRIPTION);
-        options.allow_unrecognised_options();
         options.add_options()
                 ("f,file", "Kernel file name", cxxopts::value<std::string>())
                 ("n", "Number of repetitions",
@@ -332,7 +383,11 @@ public:
     */
     void 
     printFinalConfiguration(ExecutionSettings<TSettings> const& executionSettings) {
-        std::cout << PROGRAM_DESCRIPTION << std::endl;
+        std::cout << PROGRAM_DESCRIPTION;
+#ifdef _USE_MPI_
+        std::cout << "MPI Version: " << MPI_VERSION << "." << MPI_SUBVERSION << std::endl;
+#endif
+        std::cout << std::endl;
         std::cout << "Summary:" << std::endl;
         std::cout << executionSettings << std::endl;
     }
@@ -377,17 +432,16 @@ public:
 
             executionSettings = std::unique_ptr<ExecutionSettings<TSettings>>(new ExecutionSettings<TSettings>(std::move(programSettings), std::move(usedDevice), 
                                                                 std::move(context), std::move(program)));
-            // Get the rank of the process
-            int world_rank = 0;
 
-#ifdef _USE_MPI_
-            MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-#endif
-            if (world_rank == 0) {
+            if (mpi_comm_rank == 0) {
+                if (!checkInputParameters()) {
+                    std::cerr << "ERROR: Input parameter check failed!" << std::endl;
+                    throw std::runtime_error("Input parameter check failed!");
+                }
                 printFinalConfiguration(*executionSettings);
             }
         }
-        catch (fpga_setup::FpgaSetupException e) {
+        catch (std::exception& e) {
             std::cerr << "An error occured while setting up the benchmark: " << std::endl;
             std::cerr << "\t" << e.what() << std::endl;
             success = false;
@@ -399,6 +453,7 @@ public:
         delete [] tmp_argv;
         delete [] tmp_pointer_storage;
 
+        benchmark_setup_succeeded = success;
         return success;
 
     }
@@ -412,18 +467,12 @@ public:
      */
     bool
     executeBenchmark() {
-        // Get the rank of the process
-        int world_rank = 0;
 
-#ifdef _USE_MPI_
-        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-#endif
-
-        if (!executionSettings.get()) {
+        if (!benchmark_setup_succeeded) {
             std::cerr << "Benchmark execution started without running the benchmark setup!" << std::endl;
             return false;
         }
-        if (world_rank == 0) {
+        if (mpi_comm_rank == 0) {
             std::cout << HLINE << "Start benchmark using the given configuration. Generating data..." << std::endl
                     << HLINE;
         }
@@ -432,7 +481,7 @@ public:
             std::unique_ptr<TData> data = generateInputData();
             std::chrono::duration<double> gen_time = std::chrono::high_resolution_clock::now() - gen_start;
             
-            if (world_rank == 0) {
+            if (mpi_comm_rank == 0) {
                 std::cout << "Generation Time: " << gen_time.count() << " s"  << std::endl;
                 std::cout << HLINE << "Execute benchmark kernel..." << std::endl
                         << HLINE;
@@ -442,7 +491,7 @@ public:
             std::unique_ptr<TOutput> output =  executeKernel(*data);
             std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
 
-            if (world_rank == 0) {
+            if (mpi_comm_rank == 0) {
                 std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
                 std::cout << HLINE << "Validate output..." << std::endl
                         << HLINE;
@@ -454,16 +503,11 @@ public:
                 validateSuccess = validateOutputAndPrintError(*data);
                 std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
 
-                if (world_rank == 0) {
-                    printResults(*output);
+                if (mpi_comm_rank == 0) {
                     std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
                 }
             }
-            else {
-                if (world_rank == 0) {
-                    printResults(*output);
-                }
-            }
+            collectAndPrintResults(*output);
 
             return validateSuccess;
        }
@@ -483,8 +527,44 @@ public:
         return *executionSettings;
     }
 
-    HpccFpgaBenchmark() {
+    HpccFpgaBenchmark(int argc, char* argv[]) {
+#ifdef _USE_MPI_
+        int isMpiInitialized;
+        MPI_Initialized(&isMpiInitialized);
+        if (!isMpiInitialized) {
+            MPI_Init(&argc, &argv);
+        }
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
+#endif
         fpga_setup::setupEnvironmentAndClocks();
+    }
+
+    HpccFpgaBenchmark() {
+#ifdef _USE_MPI_
+        int isMpiInitialized;
+        MPI_Initialized(&isMpiInitialized);
+        mpi_external_init = isMpiInitialized;
+        if (!isMpiInitialized) {
+            std::cerr << "MPI needs to be initialized before constructing benchmark object or program parameters have to be given to the constructor!" << std::endl;
+            throw std::runtime_error("MPI not initialized");
+        }
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
+#endif
+        fpga_setup::setupEnvironmentAndClocks();        
+    }
+
+    virtual ~HpccFpgaBenchmark() {
+#ifdef _USE_MPI_
+        if (!mpi_external_init) {
+            int isMpiFinalized;
+            MPI_Finalized(&isMpiFinalized);
+            if (!isMpiFinalized) {
+                MPI_Finalize();
+            }
+        }
+#endif        
     }
 
 };

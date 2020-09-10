@@ -30,6 +30,22 @@ TEST_F(RandomAccessHostCodeTest, ResultValidationWorksForCorrectUpdates) {
     EXPECT_TRUE(success);
 }
 
+/**
+ * Check if invalid data size throws exception
+ */
+TEST_F(RandomAccessHostCodeTest, InvalidDataSizeAreDetected) {
+    bm->getExecutionSettings().programSettings->dataSize = 3;
+    ASSERT_FALSE(bm->checkInputParameters());
+}
+
+/**
+ * Check if invalid data size throws exception
+ */
+TEST_F(RandomAccessHostCodeTest, ValidDataSizeAreDetected) {
+    bm->getExecutionSettings().programSettings->dataSize = 4;
+    ASSERT_TRUE(bm->checkInputParameters());
+}
+
 
 /**
  * Check if the correctness test gives correct results for not updated array

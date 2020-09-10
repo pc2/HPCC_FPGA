@@ -85,11 +85,9 @@ gemm::GEMMData::~GEMMData() {
 #endif
 }
 
-gemm::GEMMBenchmark::GEMMBenchmark(int argc, char* argv[]) {
+gemm::GEMMBenchmark::GEMMBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
 }
-
-gemm::GEMMBenchmark::GEMMBenchmark() {}
 
 void
 gemm::GEMMBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
@@ -109,31 +107,41 @@ gemm::GEMMBenchmark::executeKernel(GEMMData &data) {
 }
 
 void
-gemm::GEMMBenchmark::printResults(const gemm::GEMMExecutionTimings &output) {
-    std::cout << std::setw(ENTRY_SPACE)
-              << "best" << std::setw(ENTRY_SPACE) << "mean"
-              << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
+gemm::GEMMBenchmark::collectAndPrintResults(const gemm::GEMMExecutionTimings &output) {
 
-    // Calculate performance for kernel execution plus data transfer
-    double tmean = 0;
-    double tmin = std::numeric_limits<double>::max();
+    uint number_measurements = output.timings.size();
+    std::vector<double> avg_measures(number_measurements);
+#ifdef _USE_MPI_
+    MPI_Reduce(output.timings.data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    std::for_each(avg_measures.begin(),avg_measures.end(), [number_measurements](double& x) {x /= number_measurements;});
+#else
+    std::copy(output.timings.begin(), output.timings.end(), avg_measures.begin());
+#endif
+    if (mpi_comm_rank == 0) {
+        std::cout << std::setw(ENTRY_SPACE)
+                << "best" << std::setw(ENTRY_SPACE) << "mean"
+                << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
 
-    double gflops = 2.0 * (static_cast<double>(executionSettings->programSettings->matrixSize)
-                        *static_cast<double>(executionSettings->programSettings->matrixSize)
-                        *static_cast<double>(executionSettings->programSettings->matrixSize))/1.0e9;
-    for (double currentTime : output.timings) {
-        tmean +=  currentTime;
-        if (currentTime < tmin) {
-            tmin = currentTime;
+        // Calculate performance for kernel execution
+        double tmean = 0;
+        double tmin = std::numeric_limits<double>::max();
+
+        double gflops = 2.0 * (static_cast<double>(executionSettings->programSettings->matrixSize)
+                            *static_cast<double>(executionSettings->programSettings->matrixSize)
+                            *static_cast<double>(executionSettings->programSettings->matrixSize))/1.0e9;
+        for (double currentTime : avg_measures) {
+            tmean +=  currentTime;
+            if (currentTime < tmin) {
+                tmin = currentTime;
+            }
         }
+        tmean = tmean / avg_measures.size();
+
+        std::cout << std::setw(ENTRY_SPACE)
+                << tmin << std::setw(ENTRY_SPACE) << tmean
+                << std::setw(ENTRY_SPACE) << gflops / tmin
+                << std::endl;
     }
-    tmean = tmean / output.timings.size();
-
-    std::cout << std::setw(ENTRY_SPACE)
-              << tmin << std::setw(ENTRY_SPACE) << tmean
-              << std::setw(ENTRY_SPACE) << gflops / tmin
-              << std::endl;
-
 }
 
 std::unique_ptr<gemm::GEMMData>
@@ -161,24 +169,37 @@ gemm::GEMMBenchmark::validateOutputAndPrintError(gemm::GEMMData &data) {
 
     gemm_ref(ref_data->A, ref_data->B, ref_data->C, executionSettings->programSettings->matrixSize, OPTIONAL_CAST(0.5), OPTIONAL_CAST(2.0));
 
-    HOST_DATA_TYPE resid = OPTIONAL_CAST(0.0);
-    HOST_DATA_TYPE normx = OPTIONAL_CAST(0.0);
+    double resid = OPTIONAL_CAST(0.0);
+    double normx = OPTIONAL_CAST(0.0);
 
     for (int i = 0; i < executionSettings->programSettings->matrixSize * executionSettings->programSettings->matrixSize; i++) {
         resid = (resid > fabs(data.C_out[i] - ref_data->C[i])) ? resid : fabs(data.C_out[i] - ref_data->C[i]);
         normx = (normx > fabs(data.C_out[i])) ? normx : fabs(data.C_out[i]);
     }
 
-    HOST_DATA_TYPE eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
-    HOST_DATA_TYPE residn = OPTIONAL_CAST(resid / (executionSettings->programSettings->matrixSize*executionSettings->programSettings->matrixSize*ref_data->normtotal*normx*eps));
+#ifdef _USE_MPI_
+    double max_resid = 0.0;
+    MPI_Reduce(&resid, &max_resid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    resid = max_resid;
+#endif
 
-    std::cout << "  norm. resid        resid       "\
-                 "machep" << std::endl;
-    std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
-              << resid << std::setw(ENTRY_SPACE) << eps
-              << std::endl;
+    // Calculate the overall error only on rank 0
+    if (mpi_comm_rank == 0) {
+        // Calculate the residual error normalized to the total matrix size, input values and machine epsilon
+        double eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+        double residn = resid / (executionSettings->programSettings->matrixSize*executionSettings->programSettings->matrixSize*ref_data->normtotal*normx*eps);
 
-    return residn < 1.0;
+        std::cout << "  norm. resid        resid       "\
+                    "machep" << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
+                << resid << std::setw(ENTRY_SPACE) << eps
+                << std::endl;
+
+        return residn < 1.0;
+    }
+
+    // All other ranks are always reporting success of the validation
+    return true;
 }
 
 void 

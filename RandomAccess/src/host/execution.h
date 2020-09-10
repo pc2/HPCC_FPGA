@@ -43,7 +43,7 @@ namespace bm_execution {
  * @return std::unique_ptr<random_access::RandomAccessExecutionTimings> The measured runtimes of the kernel
  */
 std::unique_ptr<random_access::RandomAccessExecutionTimings>
-calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data);
+calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data, int mpi_rank, int mpi_size);
 
 }  // namespace bm_execution
 

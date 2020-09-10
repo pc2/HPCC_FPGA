@@ -8,7 +8,7 @@ The program entry point
 int
 main(int argc, char *argv[]) {
     // Setup benchmark
-    auto bm = RandomAccessBenchmark(argc, argv);
+    RandomAccessBenchmark bm(argc, argv);
     bool success = bm.executeBenchmark();
     if (success) {
         return 0;
