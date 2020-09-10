@@ -10,6 +10,12 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     enable_testing()
 endif()
 
+if(DEFINED USE_DEPRECATED_HPP_HEADER)
+    set(header_default ${USE_DEPRECATED_HPP_HEADER})
+else()
+    set(header_default Yes)
+endif()
+
 # Host code specific options
 set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
 set(DEFAULT_DEVICE -1 CACHE STRING "Index of the default device to use")
@@ -19,7 +25,7 @@ set(USE_MPI ${USE_MPI} CACHE BOOL "Compile the host code with MPI support. This 
 set(USE_SVM No CACHE BOOL "Use SVM pointers instead of creating buffers on the board and transferring the data there before execution.")
 set(USE_HBM No CACHE BOOL "Use host code specific to HBM FPGAs")
 set(USE_CUSTOM_KERNEL_TARGETS No CACHE BOOL "Enable build targets for custom kernels")
-set(USE_DEPRECATED_HPP_HEADER Yes CACHE BOOL "Flag that indicates if the old C++ wrapper header should be used (cl.hpp) or the newer version (cl2.hpp or opencl.hpp)")
+set(USE_DEPRECATED_HPP_HEADER ${header_default} CACHE BOOL "Flag that indicates if the old C++ wrapper header should be used (cl.hpp) or the newer version (cl2.hpp or opencl.hpp)")
 
 if (USE_SVM AND USE_HBM)
     message(ERROR "Misconfiguration: Can not use USE_HBM and USE_SVM at the same time because they target different memory architectures")

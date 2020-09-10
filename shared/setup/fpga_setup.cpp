@@ -158,7 +158,7 @@ Sets up the given FPGA with the kernel in the provided file.
 
 #ifdef USE_DEPRECATED_HPP_HEADER
         cl::Program::Binaries mybinaries;
-        mybinaries.push_back({buf, file_size});
+        mybinaries.push_back({buf.data(), file_size});
 #else
         cl::Program::Binaries mybinaries{buf};
 #endif

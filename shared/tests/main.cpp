@@ -21,7 +21,6 @@ SOFTWARE.
 */
 
 #include "gtest/gtest.h"
-#include "CL/cl.hpp"
 
 #ifdef _USE_MPI_
 #include "mpi.h"

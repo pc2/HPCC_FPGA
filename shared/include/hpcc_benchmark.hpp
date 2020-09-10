@@ -513,6 +513,10 @@ public:
             }
             collectAndPrintResults(*output);
 
+            if (!validateSuccess) {
+                std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
+            }
+
             return validateSuccess;
        }
        catch (std::exception e) {
