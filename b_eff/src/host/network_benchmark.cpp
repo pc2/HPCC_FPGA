@@ -197,7 +197,28 @@ network::NetworkBenchmark::generateInputData() {
 
 bool  
 network::NetworkBenchmark::validateOutputAndPrintError(network::NetworkData &data) {
-    // TODO: Data returned from kernel is not validated!
-    return true;
+    unsigned total_error = 0;
+
+    // For every data size in the data set
+    for (const auto& item : data.items) {
+        // check if the validation buffer contains the expected data
+        HOST_DATA_TYPE expected_value = static_cast<HOST_DATA_TYPE>(item.messageSize & 255);
+        unsigned errors = 0;
+        HOST_DATA_TYPE failing_entry = 0;
+        for (const auto& v: item.validationBuffer) {
+            if (v != expected_value) {
+                errors++;
+                failing_entry = v;
+            }
+        }
+        total_error += errors;
+        if (errors > 0) {
+            std::cerr << "Validation data invalid for message size " << item.messageSize << " in " << errors << " cases! Expected: " 
+                    << static_cast<int>(expected_value) << ", Value: " << static_cast<int>(failing_entry) << std::endl;
+        }
+    }
+
+    // success only, if no error occured
+    return total_error == 0;
 }
 

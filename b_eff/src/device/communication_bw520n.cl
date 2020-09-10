@@ -54,6 +54,8 @@ channel message_part ch_out_/*PY_CODE_GEN  2*r+1*/ __attribute((io(/*PY_CODE_GEN
 channel message_part ch_out_/*PY_CODE_GEN  2*r+2*/  __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str((r + 2) % 4) + "\""*/)));
 channel message_part ch_in_/*PY_CODE_GEN  2*r+1*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(r % 4) + "\""*/)));
 channel message_part ch_in_/*PY_CODE_GEN  2*r+2*/  __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str((r + 2) % 4) + "\""*/)));
+channel message_part ch_exchange/*PY_CODE_GEN 2*r+1*/;
+channel message_part ch_exchange/*PY_CODE_GEN 2*r+2*/;
 // PY_CODE_GEN block_end
 
 
@@ -71,16 +73,24 @@ void send/*PY_CODE_GEN  r*/(const unsigned data_size,
     const unsigned send_iterations = (data_size +  2 * ITEMS_PER_CHANNEL - 1) / (2 * ITEMS_PER_CHANNEL);
     message_part send_part1;
     message_part send_part2;
+
+    // Initialize the data chunks that are sent over the external channels
     __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
     for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
         send_part1.values[d] = data_size & 255;
         send_part2.values[d] = data_size & 255;
     }
+
+    // Sent a message multiple times over the external channels
     for (unsigned i=0; i < repetitions; i++) {
+        // Send a single message sent over two channels split into multiple chunks
         for (unsigned k=0; k < send_iterations; k++) {
             write_channel_intel(ch_out_/*PY_CODE_GEN  2*r+1*/, send_part1);
             write_channel_intel(ch_out_/*PY_CODE_GEN  2*r+2*/, send_part2);
         }
+        // Introduce data dependency between loop iterations to prevent coalescing of loop
+        send_part1 = read_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+1*/);
+        send_part2 = read_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+2*/);
     }
 }
 
@@ -100,11 +110,21 @@ void recv/*PY_CODE_GEN  r*/(__global DEVICE_DATA_TYPE* validation_buffer,
     const unsigned send_iterations = (data_size +  2 * ITEMS_PER_CHANNEL - 1) / (2 * ITEMS_PER_CHANNEL);
     message_part recv_part1;
     message_part recv_part2;
+
+    // Receive a message multiple times over the external channels
     for (unsigned i=0; i < repetitions; i++) {
+        // Receive a single message sent over two channels split into multiple chunks
         for (unsigned k=0; k < send_iterations; k++) {
             recv_part1 = read_channel_intel(ch_in_/*PY_CODE_GEN  2*r+1*/);
             recv_part2 = read_channel_intel(ch_in_/*PY_CODE_GEN  2*r+2*/);
         }
+
+        // Introduce data dependency between loop iterations to prevent coalescing of loop
+        // by sending the data to the send kernel
+        write_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+1*/, recv_part1);
+        write_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+2*/, recv_part2);
+
+        // Store the last received data chunks in global memory for later validation
         __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
         for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
             validation_buffer[ITEMS_PER_CHANNEL * 2 * i + d] = recv_part1.values[d];

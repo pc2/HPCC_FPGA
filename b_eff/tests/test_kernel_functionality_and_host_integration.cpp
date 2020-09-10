@@ -213,3 +213,34 @@ TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForDiffernetMessageSize) {
     EXPECT_EQ(looplength * CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
 }
 
+TEST_F(NetworkKernelTest, ValidationDataSingleItemWrongCheckFails) {
+    const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
+    const HOST_DATA_TYPE expected_data = static_cast<HOST_DATA_TYPE>(messageSize & 255);
+    const unsigned looplength = 4;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data;});
+    data->items[0].validationBuffer[looplength] = expected_data + 1;
+    EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
+}
+
+TEST_F(NetworkKernelTest, ValidationDataWrongCheckFails) {
+    const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
+    const HOST_DATA_TYPE expected_data = static_cast<HOST_DATA_TYPE>(messageSize & 255);
+    const unsigned looplength = 4;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data - 1;});
+    EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
+}
+
+TEST_F(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
+    const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
+    const HOST_DATA_TYPE expected_data = static_cast<HOST_DATA_TYPE>(messageSize & 255);
+    const unsigned looplength = 4;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data;});
+    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+}
+
