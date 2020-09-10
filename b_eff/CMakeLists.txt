@@ -6,6 +6,7 @@ set(RECV_KERNEL_NAME recv)
 set(CHANNEL_WIDTH 32 CACHE STRING "Width of a single external channel in Byte")
 
 set(USE_MPI Yes)
+set(USE_DEPRECATED_HPP_HEADER No)
 
 set(DATA_TYPE char)
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)

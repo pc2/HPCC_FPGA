@@ -28,7 +28,6 @@ SOFTWARE.
 #include <vector>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #include "parameters.h"
 #include "network_benchmark.hpp"
 
@@ -46,7 +45,7 @@ simple exchange of the different calculation methods.
 @return The resulting matrix
 */
     std::shared_ptr<network::ExecutionTimings>
-    calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength);
+    calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength, cl::vector<HOST_DATA_TYPE> &validationData);
 
 }  // namespace bm_execution
 

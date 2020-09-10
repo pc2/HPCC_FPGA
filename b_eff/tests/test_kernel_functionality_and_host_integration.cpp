@@ -45,8 +45,8 @@ struct NetworkKernelTest : testing::Test {
 TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
     bm->getExecutionSettings().programSettings->numRepetitions = 1;
     bm->getExecutionSettings().programSettings->looplength = 1;
-    data->messageSizes.clear();
-    data->messageSizes.push_back(1);
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(1,1));
     auto result = bm->executeKernel(*data);
     EXPECT_NE(result->timings.end(), result->timings.find(1));
     EXPECT_EQ(1, result->timings.find(1)->second->at(0)->looplength);
@@ -59,8 +59,8 @@ TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
 TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
     bm->getExecutionSettings().programSettings->numRepetitions = 2;
     bm->getExecutionSettings().programSettings->looplength = 4;
-    data->messageSizes.clear();
-    data->messageSizes.push_back(8);
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(8,4));
     auto result = bm->executeKernel(*data);
     EXPECT_NE(result->timings.end(), result->timings.find(8));
     EXPECT_EQ(4, result->timings.find(8)->second->at(0)->looplength);
@@ -73,12 +73,8 @@ TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
 TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) {
     const unsigned messageSize = CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 4;
-    bm->getExecutionSettings().programSettings->numRepetitions = 1;
-    // looplength * 2 because the looplength will be recalculated in executeKernel!
-    // This should end up in looplength again
-    bm->getExecutionSettings().programSettings->looplength = looplength * 2;
-    data->messageSizes.clear();
-    data->messageSizes.push_back(messageSize);
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     auto result = bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[messageSize * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
@@ -101,12 +97,8 @@ TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel)
 TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels) {
     const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 4;
-    bm->getExecutionSettings().programSettings->numRepetitions = 1;
-    // looplength * 3 because the looplength will be recalculated in executeKernel!
-    // This should end up in looplength again
-    bm->getExecutionSettings().programSettings->looplength = looplength * 3;
-    data->messageSizes.clear();
-    data->messageSizes.push_back(messageSize);
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize, looplength));
     auto result = bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[messageSize * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
@@ -126,10 +118,8 @@ TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels
 TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoChannels) {
     const unsigned messageSize = 4 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 1;
-    bm->getExecutionSettings().programSettings->numRepetitions = 1;
-    bm->getExecutionSettings().programSettings->looplength = looplength;
-    data->messageSizes.clear();
-    data->messageSizes.push_back(messageSize);
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     auto result = bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[messageSize * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
@@ -149,12 +139,8 @@ TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwo
 TEST_F(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
     const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
     const unsigned looplength = 4;
-    bm->getExecutionSettings().programSettings->numRepetitions = 1;
-    // looplength * 3 because the looplength will be recalculated in executeKernel!
-    // This should end up in looplength again
-    bm->getExecutionSettings().programSettings->looplength = looplength * 3;
-    data->messageSizes.clear();
-    data->messageSizes.push_back(messageSize);
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     auto result = bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[messageSize * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
@@ -169,3 +155,61 @@ TEST_F(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
     }
     delete [] buffer;
 }
+
+TEST_F(NetworkKernelTest, ValidationDataIsStoredCorrectlyForTwoChannels) {
+    const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
+    const unsigned looplength = 4;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    auto result = bm->executeKernel(*data);
+    HOST_DATA_TYPE cvalue = static_cast<HOST_DATA_TYPE>(messageSize & 255);
+    EXPECT_EQ(cvalue, data->items[0].validationBuffer[0]);
+    bool all_same = true;
+    for (int i = 0; i < data->items[0].validationBuffer.size(); i++) {
+        all_same = all_same & (data->items[0].validationBuffer[0] == data->items[0].validationBuffer[i]);
+    }
+    EXPECT_TRUE(all_same);
+}
+
+TEST_F(NetworkKernelTest, ValidationDataIsStoredCorrectlyForSmallMessageSize) {
+    const unsigned messageSize = 1;
+    const unsigned looplength = 4;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    auto result = bm->executeKernel(*data);
+    HOST_DATA_TYPE cvalue = static_cast<HOST_DATA_TYPE>(messageSize & 255);
+    EXPECT_EQ(cvalue, data->items[0].validationBuffer[0]);
+    bool all_same = true;
+    for (int i = 0; i < data->items[0].validationBuffer.size(); i++) {
+        all_same = all_same & (data->items[0].validationBuffer[0] == data->items[0].validationBuffer[i]);
+    }
+    EXPECT_TRUE(all_same);
+}
+
+TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength4) {
+    const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
+    const unsigned looplength = 4;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    auto result = bm->executeKernel(*data);
+    EXPECT_EQ(looplength * CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
+}
+
+TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength1) {
+    const unsigned messageSize = 2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE);
+    const unsigned looplength = 1;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    auto result = bm->executeKernel(*data);
+    EXPECT_EQ(looplength * CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
+}
+
+TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForDiffernetMessageSize) {
+    const unsigned messageSize = 1;
+    const unsigned looplength = 1;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    auto result = bm->executeKernel(*data);
+    EXPECT_EQ(looplength * CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
+}
+

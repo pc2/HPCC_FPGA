@@ -106,11 +106,57 @@ public:
 class NetworkData {
 
 public:
+
     /**
-     * @brief Used message sizes for the benchmark execution
+     * @brief Data type that contains all information needed for the execution of the kernel with a given data size.
+     *          The class contains the data size, length of the inner loop and a buffer that takes the validatin data.
+     *          In other workds it contains the information for a single run of the benchmark.
      * 
      */
-    std::vector<uint> messageSizes;
+    class NetworkDataItem {
+
+    public:
+        /**
+         * @brief The used message size for the run.
+         * 
+         */
+        unsigned int messageSize;
+
+        /**
+         * @brief The loop length of the run (number of reptitions within the kernel). This can be used to extend the total execution time.
+         * 
+         */
+        unsigned int loopLength;
+
+        /**
+         * @brief Data buffer that is used by the kernel to store received data. It can be used for validation by the host.
+         * 
+         */
+        cl::vector<HOST_DATA_TYPE> validationBuffer;
+
+        /**
+         * @brief Construct a new Network Data Item object
+         * 
+         * @param messageSize The message size in bytes
+         * @param loopLength The number of repetitions in the kernel
+         */
+        NetworkDataItem(unsigned int messageSize, unsigned int loopLength);
+    };
+
+
+    /**
+     * @brief Data items that are used for the benchmark.
+     * 
+     */
+    std::vector<NetworkDataItem> items;
+
+    /**
+     * @brief Construct a new Network Data object
+     * 
+     * @param max_looplength The maximum number of iterations that should be done for a message size
+     */
+    NetworkData(unsigned int max_looplength);
+
 };
 
 /**

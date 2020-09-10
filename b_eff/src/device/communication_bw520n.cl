@@ -49,27 +49,24 @@ typedef struct {
 /**
  * Definition of the external channels
  */
-channel message_part ch_out_1 __attribute((io("kernel_output_ch0")));
-channel message_part ch_out_2  __attribute((io("kernel_output_ch2")));
-channel message_part ch_in_1 __attribute((io("kernel_input_ch0")));
-channel message_part ch_in_2  __attribute((io("kernel_input_ch2")));
-
-channel message_part ch_out_3 __attribute((io("kernel_output_ch1")));
-channel message_part ch_out_4  __attribute((io("kernel_output_ch3")));
-channel message_part ch_in_3 __attribute((io("kernel_input_ch1")));
-channel message_part ch_in_4  __attribute((io("kernel_input_ch3")));
+ // PY_CODE_GEN block_start [replace(local_variables=locals()) for r in range(num_replications)]
+channel message_part ch_out_/*PY_CODE_GEN  2*r+1*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(r % 4) + "\""*/)));
+channel message_part ch_out_/*PY_CODE_GEN  2*r+2*/  __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str((r + 2) % 4) + "\""*/)));
+channel message_part ch_in_/*PY_CODE_GEN  2*r+1*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(r % 4) + "\""*/)));
+channel message_part ch_in_/*PY_CODE_GEN  2*r+2*/  __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str((r + 2) % 4) + "\""*/)));
+// PY_CODE_GEN block_end
 
 
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for r in range(num_replications)]
 /**
- * Send kernel that will send messages through channel 1 and 2 and receive messages from
- * channel 1 and 2 in parallel.
+ * Send kernel that will send messages through two channels
  *
  * @param data_size Size of the used message
  * @param repetitions Number of times the message will be sent and received
  */
 __kernel
 __attribute__ ((max_global_work_dim(0)))
-void send(const unsigned data_size,
+void send/*PY_CODE_GEN  r*/(const unsigned data_size,
         const unsigned repetitions) {
     const unsigned send_iterations = (data_size +  2 * ITEMS_PER_CHANNEL - 1) / (2 * ITEMS_PER_CHANNEL);
     message_part send_part1;
@@ -81,19 +78,8 @@ void send(const unsigned data_size,
     }
     for (unsigned i=0; i < repetitions; i++) {
         for (unsigned k=0; k < send_iterations; k++) {
-            write_channel_intel(ch_out_1, send_part1);
-            write_channel_intel(ch_out_2, send_part2);
-        }
-        message_part recv_part1;
-        message_part recv_part2;
-        for (unsigned k=0; k < send_iterations; k++) {
-            recv_part1 = read_channel_intel(ch_in_1);
-            recv_part2 = read_channel_intel(ch_in_2);
-        }
-        __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
-        for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
-            send_part1.values[d] = recv_part1.values[d];
-            send_part2.values[d] = recv_part2.values[d];
+            write_channel_intel(ch_out_/*PY_CODE_GEN  2*r+1*/, send_part1);
+            write_channel_intel(ch_out_/*PY_CODE_GEN  2*r+2*/, send_part2);
         }
     }
 }
@@ -108,31 +94,26 @@ void send(const unsigned data_size,
  */
 __kernel
 __attribute__ ((max_global_work_dim(0)))
-void recv(const unsigned data_size,
-          const unsigned repetitions) {
+void recv/*PY_CODE_GEN  r*/(__global DEVICE_DATA_TYPE* validation_buffer,
+            const unsigned data_size,
+            const unsigned repetitions) {
     const unsigned send_iterations = (data_size +  2 * ITEMS_PER_CHANNEL - 1) / (2 * ITEMS_PER_CHANNEL);
-    message_part send_part1;
-    message_part send_part2;
     message_part recv_part1;
     message_part recv_part2;
-    __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
-    for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
-        send_part1.values[d] = data_size & 255;
-        send_part2.values[d] = data_size & 255;
-    }
     for (unsigned i=0; i < repetitions; i++) {
         for (unsigned k=0; k < send_iterations; k++) {
-            recv_part1 = read_channel_intel(ch_in_3);
-            recv_part2 = read_channel_intel(ch_in_4);
-        }
-        for (unsigned k=0; k < send_iterations; k++) {
-            write_channel_intel(ch_out_3, send_part1);
-            write_channel_intel(ch_out_4, send_part2);
+            recv_part1 = read_channel_intel(ch_in_/*PY_CODE_GEN  2*r+1*/);
+            recv_part2 = read_channel_intel(ch_in_/*PY_CODE_GEN  2*r+2*/);
         }
         __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
         for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
-            send_part1.values[d] = recv_part1.values[d];
-            send_part2.values[d] = recv_part2.values[d];
+            validation_buffer[ITEMS_PER_CHANNEL * 2 * i + d] = recv_part1.values[d];
+        }
+        __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
+        for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
+            validation_buffer[ITEMS_PER_CHANNEL * 2 * i + ITEMS_PER_CHANNEL + d] = recv_part2.values[d];
         }
     }
 }
+
+//PY_CODE_GEN block_end

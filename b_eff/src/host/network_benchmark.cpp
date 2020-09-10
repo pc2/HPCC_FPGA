@@ -46,6 +46,21 @@ network::NetworkProgramSettings::getSettingsMap() {
         return map;
 }
 
+network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int messageSize, unsigned int loopLength) : messageSize(messageSize), loopLength(loopLength), 
+                                                                            validationBuffer(loopLength * CHANNEL_WIDTH * 2 * 2) {
+                                                                                // Validation data buffer should be big enough to fit the data of two channels
+                                                                                // for every repetition. The number of kernel replications is fixed to 2, which 
+                                                                                // also needs to be multiplied with the buffer size
+                                                                            }
+
+network::NetworkData::NetworkData(unsigned int max_looplength) {
+    for (uint i = 0; i < 21; i++) {
+        uint messageSize = (1u << i);
+        uint looplength = std::max((max_looplength) / ((messageSize + (CHANNEL_WIDTH - 1)) / (CHANNEL_WIDTH)), 1u);
+        this->items.push_back(NetworkDataItem(messageSize, looplength));
+    }
+}
+
 network::NetworkBenchmark::NetworkBenchmark(int argc, char* argv[]) {
     setupBenchmark(argc, argv);
 }
@@ -71,12 +86,11 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
 
     std::vector<std::shared_ptr<network::ExecutionTimings>> timing_results;
 
-    for (cl_uint size : data.messageSizes) {
+    for (auto& run : data.items) {
         if (world_rank == 0) {
-            std::cout << "Measure for " << size << " Byte" << std::endl;
+            std::cout << "Measure for " << run.messageSize << " Byte" << std::endl;
         }
-        cl_uint looplength = std::max((executionSettings->programSettings->looplength) / ((size + (CHANNEL_WIDTH)) / (CHANNEL_WIDTH)), 1u);
-        timing_results.push_back(bm_execution::calculate(*executionSettings, size, looplength));
+        timing_results.push_back(bm_execution::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer));
     }
 
     std::unique_ptr<network::NetworkExecutionTimings> collected_results = std::unique_ptr<network::NetworkExecutionTimings> (new network::NetworkExecutionTimings());
@@ -95,7 +109,7 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
     } else {
         std::cout << "Collect results over MPI.";
         int k = 0;
-        for (int size : data.messageSizes) {
+        for (auto& run : data.items) {
             std::vector<std::shared_ptr<network::ExecutionTimings>> tmp_timings;
             std::cout << ".";
             for (int i=1; i < world_size; i++) {
@@ -113,14 +127,14 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
                          executionSettings->programSettings->numRepetitions,
                          MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &status);
                 tmp_timings.push_back(execution_result);
-                if (execution_result->messageSize != size) {
-                    std::cerr << "Wrong message size: " << execution_result->messageSize << " != " << size << " from rank " << i << std::endl;
-                    exit(2);
+                if (execution_result->messageSize != run.messageSize) {
+                    std::cerr << "Wrong message size: " << execution_result->messageSize << " != " << run.messageSize << " from rank " << i << std::endl;
+                    throw std::runtime_error("Wrong message size received! Something went wrong in the MPI communication");
                 }
             }
             tmp_timings.push_back(timing_results[k]);
             k++;
-            collected_results->timings.emplace(size, std::make_shared<std::vector<std::shared_ptr<network::ExecutionTimings>>>(tmp_timings));
+            collected_results->timings.emplace(run.messageSize, std::make_shared<std::vector<std::shared_ptr<network::ExecutionTimings>>>(tmp_timings));
         }
         std::cout << " done!" << std::endl;
     }
@@ -177,20 +191,13 @@ network::NetworkBenchmark::collectAndPrintResults(const network::NetworkExecutio
 
 std::unique_ptr<network::NetworkData>
 network::NetworkBenchmark::generateInputData() {
-    auto d = std::unique_ptr<network::NetworkData>(new network::NetworkData());
-    for (uint i = 0; i < 13; i++) {
-        d->messageSizes.push_back(1u << i);
-    }
-    cl_uint fourKB = 1u << 13u;
-    for (uint i=1; i <= 8; i++) {
-        d->messageSizes.push_back(fourKB * (1u << i));
-    }
+    auto d = std::unique_ptr<network::NetworkData>(new network::NetworkData(executionSettings->programSettings->looplength));
     return d;
 }
 
 bool  
 network::NetworkBenchmark::validateOutputAndPrintError(network::NetworkData &data) {
-    // TODO: No data returned from kernel to validate. Implement such a runtime validation!
+    // TODO: Data returned from kernel is not validated!
     return true;
 }
 
