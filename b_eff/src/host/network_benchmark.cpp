@@ -57,7 +57,7 @@ network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize
 network::NetworkData::NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int max_messagesize) {
     for (uint i = 0; i <= max_messagesize; i++) {
         uint messageSize = (1u << i);
-        uint looplength = std::max((max_looplength) / ((messageSize + (CHANNEL_WIDTH - 1)) / (CHANNEL_WIDTH)), min_looplength);
+        uint looplength = std::max((max_looplength) / ((messageSize + (2 * CHANNEL_WIDTH - 1)) / (2 * CHANNEL_WIDTH)), min_looplength);
         this->items.push_back(NetworkDataItem(i, looplength));
     }
 }
