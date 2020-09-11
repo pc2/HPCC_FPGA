@@ -70,7 +70,7 @@ __kernel
 __attribute__ ((max_global_work_dim(0)))
 void send/*PY_CODE_GEN  r*/(const unsigned data_size,
         const unsigned repetitions) {
-    const unsigned send_iterations = (data_size +  2 * ITEMS_PER_CHANNEL - 1) / (2 * ITEMS_PER_CHANNEL);
+    const unsigned send_iterations = ((1 << data_size) +  2 * ITEMS_PER_CHANNEL - 1) / (2 * ITEMS_PER_CHANNEL);
     message_part send_part1;
     message_part send_part2;
 
@@ -107,7 +107,7 @@ __attribute__ ((max_global_work_dim(0)))
 void recv/*PY_CODE_GEN  r*/(__global DEVICE_DATA_TYPE* validation_buffer,
             const unsigned data_size,
             const unsigned repetitions) {
-    const unsigned send_iterations = (data_size +  2 * ITEMS_PER_CHANNEL - 1) / (2 * ITEMS_PER_CHANNEL);
+    const unsigned send_iterations = ((1 << data_size) +  2 * ITEMS_PER_CHANNEL - 1) / (2 * ITEMS_PER_CHANNEL);
     message_part recv_part1;
     message_part recv_part2;
 
@@ -123,16 +123,16 @@ void recv/*PY_CODE_GEN  r*/(__global DEVICE_DATA_TYPE* validation_buffer,
         // by sending the data to the send kernel
         write_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+1*/, recv_part1);
         write_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+2*/, recv_part2);
+    }
 
-        // Store the last received data chunks in global memory for later validation
-        __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
-        for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
-            validation_buffer[ITEMS_PER_CHANNEL * 2 * i + d] = recv_part1.values[d];
-        }
-        __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
-        for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
-            validation_buffer[ITEMS_PER_CHANNEL * 2 * i + ITEMS_PER_CHANNEL + d] = recv_part2.values[d];
-        }
+    // Store the last received data chunks in global memory for later validation
+    __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
+    for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
+        validation_buffer[d] = recv_part1.values[d];
+    }
+    __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
+    for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
+        validation_buffer[ITEMS_PER_CHANNEL + d] = recv_part2.values[d];
     }
 }
 

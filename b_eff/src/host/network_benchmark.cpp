@@ -43,22 +43,22 @@ std::map<std::string, std::string>
 network::NetworkProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["Loop Length"] = std::to_string(minLoopLength) + " - " + std::to_string(maxLoopLength);
-        map["Message Sizes"] =  "2^0 - 2^" + std::to_string(maxMessageSize - 1) + " Bytes";
+        map["Message Sizes"] =  "2^0 - 2^" + std::to_string(maxMessageSize) + " Bytes";
         return map;
 }
 
 network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize, unsigned int _loopLength) : messageSize(_messageSize), loopLength(_loopLength), 
-                                                                            validationBuffer(_loopLength * CHANNEL_WIDTH * 2 * 2, 0) {
+                                                                            validationBuffer(CHANNEL_WIDTH * 2 * 2, 0) {
                                                                                 // Validation data buffer should be big enough to fit the data of two channels
                                                                                 // for every repetition. The number of kernel replications is fixed to 2, which 
                                                                                 // also needs to be multiplied with the buffer size
                                                                             }
 
 network::NetworkData::NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int max_messagesize) {
-    for (uint i = 0; i < max_messagesize; i++) {
+    for (uint i = 0; i <= max_messagesize; i++) {
         uint messageSize = (1u << i);
         uint looplength = std::max((max_looplength) / ((messageSize + (CHANNEL_WIDTH - 1)) / (CHANNEL_WIDTH)), min_looplength);
-        this->items.push_back(NetworkDataItem(messageSize, looplength));
+        this->items.push_back(NetworkDataItem(i, looplength));
     }
 }
 
@@ -93,7 +93,7 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
 
     for (auto& run : data.items) {
         if (world_rank == 0) {
-            std::cout << "Measure for " << run.messageSize << " Byte" << std::endl;
+            std::cout << "Measure for " << (1 << run.messageSize) << " Byte" << std::endl;
         }
         timing_results.push_back(bm_execution::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer));
     }
@@ -175,12 +175,12 @@ network::NetworkBenchmark::collectAndPrintResults(const network::NetworkExecutio
         // #Nodes * message_size * looplength * 2
         // the * 2 is because we have two kernels per bitstream that will send and receive simultaneously.
         // This will be divided by half of the maximum of the minimum measured runtime over all ranks.
-        double maxCalcBW = static_cast<double>(msgSizeResults.second->size() * 2 * msgSizeResults.first * looplength)
+        double maxCalcBW = static_cast<double>(msgSizeResults.second->size() * 2 * (1 << msgSizeResults.first) * looplength)
                                                             / (totalMaxMinCalculationTime[i]);
 
         maxBandwidths.push_back(maxCalcBW);
 
-        std::cout << std::setw(ENTRY_SPACE) << msgSizeResults.first << "   "
+        std::cout << std::setw(ENTRY_SPACE) << (1 << msgSizeResults.first) << "   "
                   << std::setw(ENTRY_SPACE) << looplength << "   "
                   << std::setw(ENTRY_SPACE) << totalMaxMinCalculationTime[i] << "   "
                   << std::setw(ENTRY_SPACE)  << maxCalcBW
@@ -220,7 +220,7 @@ network::NetworkBenchmark::validateOutputAndPrintError(network::NetworkData &dat
         }
         total_error += errors;
         if (errors > 0) {
-            std::cerr << "Validation data invalid for message size " << item.messageSize << " in " << errors << " cases! Expected: " 
+            std::cerr << "Validation data invalid for message size " << (1 << item.messageSize) << " in " << errors << " cases! Expected: " 
                     << static_cast<int>(expected_value) << ", Value: " << static_cast<int>(failing_entry) << std::endl;
         }
     }

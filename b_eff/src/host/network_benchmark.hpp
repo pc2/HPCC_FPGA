@@ -52,7 +52,7 @@ namespace network {
         cl_uint looplength;
 
         /**
-         * @brief The size of the messages in bytes
+         * @brief The size of the messages in bytes in log2
          * 
          */
         cl_uint messageSize;
@@ -129,7 +129,7 @@ public:
 
     public:
         /**
-         * @brief The used message size for the run.
+         * @brief The used message size for the run in log2.
          * 
          */
         unsigned int messageSize;

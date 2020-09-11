@@ -104,7 +104,8 @@ namespace bm_execution {
                             (endCalculation - startCalculation);
             calculationTimings.push_back(calculationTime.count());
         }
-        // Read validation data from FPGA
+        // Read validation data from FPGA will be placed sequentially in buffer for all replications
+        // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < 2; r++) {
             err = recvQueues[r].enqueueReadBuffer(validationBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * validationData.size() / 2, &validationData.data()[r * validationData.size() / 2]);
             ASSERT_CL(err);
