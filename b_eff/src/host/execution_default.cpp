@@ -90,13 +90,13 @@ namespace bm_execution {
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             MPI_Barrier(MPI_COMM_WORLD);
             auto startCalculation = std::chrono::high_resolution_clock::now();
-            for (int r = 0; r < 2; r++) {
-                sendQueues[r].enqueueNDRangeKernel(sendKernels[r], cl::NullRange, cl::NDRange(1));
-                recvQueues[r].enqueueNDRangeKernel(recvKernels[r], cl::NullRange, cl::NDRange(1));
+            for (int i = 0; i < 2; i++) {
+                sendQueues[i].enqueueNDRangeKernel(sendKernels[i], cl::NullRange, cl::NDRange(1));
+                recvQueues[i].enqueueNDRangeKernel(recvKernels[i], cl::NullRange, cl::NDRange(1));
             }
-            for (int r = 0; r < 2; r++) {
-                sendQueues[r].finish();
-                recvQueues[r].finish();
+            for (int i = 0; i < 2; i++) {
+                sendQueues[i].finish();
+                recvQueues[i].finish();
             }
             auto endCalculation = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> calculationTime =

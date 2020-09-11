@@ -47,8 +47,8 @@ network::NetworkProgramSettings::getSettingsMap() {
         return map;
 }
 
-network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int messageSize, unsigned int loopLength) : messageSize(messageSize), loopLength(loopLength), 
-                                                                            validationBuffer(loopLength * CHANNEL_WIDTH * 2 * 2, 0) {
+network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize, unsigned int _loopLength) : messageSize(_messageSize), loopLength(_loopLength), 
+                                                                            validationBuffer(_loopLength * CHANNEL_WIDTH * 2 * 2, 0) {
                                                                                 // Validation data buffer should be big enough to fit the data of two channels
                                                                                 // for every repetition. The number of kernel replications is fixed to 2, which 
                                                                                 // also needs to be multiplied with the buffer size
@@ -157,7 +157,7 @@ network::NetworkBenchmark::collectAndPrintResults(const network::NetworkExecutio
             << std::setw(ENTRY_SPACE) << "B/s" << std::endl;
 
     std::vector<double> totalMaxMinCalculationTime;
-    for (int i =0; i < output.timings.size(); i++) {
+    for (long unsigned int i =0; i < output.timings.size(); i++) {
         totalMaxMinCalculationTime.push_back(0.0);
     }
     int i = 0;
@@ -189,7 +189,7 @@ network::NetworkBenchmark::collectAndPrintResults(const network::NetworkExecutio
     }
 
 
-    double b_eff = accumulate(maxBandwidths.begin(), maxBandwidths.end(), 0.0) / maxBandwidths.size();
+    double b_eff = accumulate(maxBandwidths.begin(), maxBandwidths.end(), 0.0) / static_cast<double>(maxBandwidths.size());
 
     std::cout << std::endl << "b_eff = " << b_eff << " B/s" << std::endl;
 }
