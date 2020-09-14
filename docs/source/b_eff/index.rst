@@ -20,7 +20,7 @@ Configuration Parameters
 In :numref:`beff_config` the configuration parameters are shown that are used to modify the kernel. 
 All other parameters can also later be changed with the host code during runtime. 
 
-*Note: The current implementation is optimized for circuit-switched network with four channels. Packet-switched networks might need a different kernel architecture. This specialization is the reason for the low amount of configuration parameters which might change, if more systems with inter-FPGA communication are available.*
+*Note: The current implementation is optimized for circuit-switched networks with four channels. Packet-switched networks might need a different kernel architecture. This specialization is the reason for the low amount of configuration parameters which might change, if more systems with inter-FPGA communication are available.*
 
 .. _beff_config:
 .. list-table:: Configuration parameters for the Kernel
@@ -50,7 +50,7 @@ The benchmark works on 21 different message sizes :math:`L` that are defined lik
 .. math::
    L=1B,2B,4B,\dots,2kB,4kB,4kB*(a^1),4kB*(a^2),\dots,4kB*(a^8)
 
-where :math:`a` is a integer constant that is set to 2 in this implementation.
+where :math:`a` is an integer constant that is set to 2 in this implementation.
 So the final message sizes will be in the range :math:`2^0, 2^1, \dots, 2^{20}` bytes.
 The maximum message size can be adjusted during runtime using the host code flag ``-m``.
 
@@ -63,9 +63,9 @@ where b(L, rep) is the measured bandwidth for a data size :math:`L` in repetitio
     
 The `looplength` described in the original benchmark will be used to minimize measurement 
 errors caused by too short runtimes.
-It specifies the total number of message exchanges that will be done with certain message size.
+It specifies the total number of message exchanges that will be done with a certain message size.
 It may vary between message sizes to achieve similar runtimes independent of the message size.
-In the current implementation the final loop length will be calculated based on an initial maximum loop length that can be given during runtime.
+In the current implementation, the final loop length will be calculated based on an initial maximum loop length that can be given during runtime.
 The number of repetitions for each message size is then calculated with the following equation:
 
 .. math::
