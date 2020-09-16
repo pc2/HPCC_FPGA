@@ -5,9 +5,6 @@
 #include "parameters.h"
 #include "linpack_benchmark.hpp"
 #include <algorithm>
-#ifdef _INTEL_MKL_
-#include "mkl.h"
-#endif
 
 struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<std::string> {
 
@@ -26,6 +23,7 @@ struct LinpackKernelSeparateTest : testing::Test, testing::WithParamInterface<st
         bm = std::unique_ptr<linpack::LinpackBenchmark>(new linpack::LinpackBenchmark(argc, argv));
         array_size = (1 << LOCAL_MEM_BLOCK_LOG);
         bm->getExecutionSettings().programSettings->numRepetitions = 1;
+        bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
         bm->getExecutionSettings().programSettings->matrixSize = array_size;
 #ifdef USE_SVM
         A = reinterpret_cast<HOST_DATA_TYPE*>(

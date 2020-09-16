@@ -57,6 +57,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     // Create Buffers for input and output
     cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE,
                                         sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+    cl::Buffer Buffer_b(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize);
     cl::Buffer Buffer_pivot(*config.context, CL_MEM_READ_WRITE,
                                         sizeof(cl_int)*config.programSettings->matrixSize);
 
@@ -64,7 +66,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     cl::Kernel gefakernel(*config.program, "gefa",
                                     &err);
     ASSERT_CL(err);
-
+    cl::Kernel geslkernel(*config.program, "gesl",
+                                    &err);
+    ASSERT_CL(err);
 
     // prepare kernels
 #ifdef USE_SVM
@@ -78,22 +82,55 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     err = clSetKernelArgSVMPointer(gefakernel(), 0,
                                     reinterpret_cast<void*>(A_tmp));
     ASSERT_CL(err)
-    err = clSetKernelArgSVMPointer(gefakernel(), 1,
-                                    reinterpret_cast<void*>(ipvt));
-    ASSERT_CL(err)
+    if (!config.programSettings->isDiagonallyDominant) {
+        err = clSetKernelArgSVMPointer(gefakernel(), 1,
+                                        reinterpret_cast<void*>(ipvt));
+        ASSERT_CL(err)
+    }
 #else
     err = gefakernel.setArg(0, Buffer_a);
     ASSERT_CL(err);
-    err = gefakernel.setArg(1, Buffer_pivot);
-    ASSERT_CL(err);
+    if (!config.programSettings->isDiagonallyDominant) {
+        err = gefakernel.setArg(1, Buffer_pivot);
+        ASSERT_CL(err);
+    }
 #endif
-    err = gefakernel.setArg(2, static_cast<uint>(config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG));
+    err = gefakernel.setArg((config.programSettings->isDiagonallyDominant) ? 1 : 2, static_cast<uint>(config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG));
     ASSERT_CL(err);
+
+#ifdef USE_SVM
+
+    err = clSetKernelArgSVMPointer(geslkernel(), 0,
+                                    reinterpret_cast<void*>(A_tmp));
+    ASSERT_CL(err)
+    err = clSetKernelArgSVMPointer(geslkernel(), 1,
+                                    reinterpret_cast<void*>(b));
+    ASSERT_CL(err)
+    if (!config.programSettings->isDiagonallyDominant) {
+        err = clSetKernelArgSVMPointer(geslkernel(), 2,
+                                        reinterpret_cast<void*>(ipvt));
+        ASSERT_CL(err)
+    }
+#else
+    err = geslkernel.setArg(0, Buffer_a);
+    ASSERT_CL(err);
+    err = geslkernel.setArg(1, Buffer_b);
+    ASSERT_CL(err);
+    if (!config.programSettings->isDiagonallyDominant) {
+        err = geslkernel.setArg(2, Buffer_pivot);
+        ASSERT_CL(err);
+    }
+#endif
+    err = geslkernel.setArg(config.programSettings->isDiagonallyDominant ? 2 : 3, static_cast<uint>(config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG));
+    ASSERT_CL(err);
+
+
 
     /* --- Execute actual benchmark kernels --- */
 
     double t;
-    std::vector<double> executionTimes;
+    std::vector<double> gefaExecutionTimes;
+    std::vector<double> geslExecutionTimes;
     for (int i = 0; i < config.programSettings->numRepetitions; i++) {
 #ifdef USE_SVM
         for (int k=0; k < config.programSettings->matrixSize * config.programSettings->matrixSize; k++) {
@@ -125,8 +162,12 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         err = compute_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
         ASSERT_CL(err)
+        err = compute_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
+                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
+        ASSERT_CL(err)
         compute_queue.finish();
 #endif
+        // Execute GEFA
         auto t1 = std::chrono::high_resolution_clock::now();
         compute_queue.enqueueTask(gefakernel);
         compute_queue.finish();
@@ -134,7 +175,15 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         std::chrono::duration<double> timespan =
             std::chrono::duration_cast<std::chrono::duration<double>>
                                                                 (t2 - t1);
-        executionTimes.push_back(timespan.count());
+        gefaExecutionTimes.push_back(timespan.count());
+
+        // Execute GESL
+        t1 = std::chrono::high_resolution_clock::now();
+        compute_queue.enqueueTask(geslkernel);
+        compute_queue.finish();
+        t2 = std::chrono::high_resolution_clock::now();
+        timespan = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+        geslExecutionTimes.push_back(timespan.count());
     }
 
     /* --- Read back results from Device --- */
@@ -162,16 +211,14 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 #else
     compute_queue.enqueueReadBuffer(Buffer_a, CL_TRUE, 0,
                                      sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
+    compute_queue.enqueueReadBuffer(Buffer_b, CL_TRUE, 0,
+                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
     compute_queue.enqueueReadBuffer(Buffer_pivot, CL_TRUE, 0,
                                      sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
 #endif
 
-    // Solve linear equations on CPU
-    // TODO: This has to be done on FPGA
-    linpack::gesl_ref(A, b, ipvt, config.programSettings->matrixSize, config.programSettings->matrixSize);
-
     std::unique_ptr<linpack::LinpackExecutionTimings> results(
-                    new linpack::LinpackExecutionTimings{executionTimes});
+                    new linpack::LinpackExecutionTimings{gefaExecutionTimes, geslExecutionTimes});
     return results;
 }
 
