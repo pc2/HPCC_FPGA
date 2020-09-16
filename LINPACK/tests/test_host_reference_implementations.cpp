@@ -5,14 +5,6 @@
 #include "test_program_settings.h"
 #include "linpack_benchmark.hpp"
 
-#ifdef _LAPACK_
-#ifdef _DP
-extern "C" void dgesv_(int* size, int* lrhs, double* A, int* size2, int* ipvt, double* b, int* size3, int* info);
-#else
-extern "C" void sgesv_(int* size, int* lrhs, float* A, int* size2, int* ipvt, float* b, int* size3, int* info);
-#endif
-#endif
-
 
 struct LinpackHostTest : testing::Test {
     
@@ -58,6 +50,30 @@ TEST_F(LinpackHostTest, GenerateDiagonallyDominantMatrixWorksCorrectly) {
         }
         EXPECT_FLOAT_EQ(data->A[array_size*i + i], sum);
     }
+}
+
+TEST_F(LinpackHostTest, ReferenceSolveGMRES) {
+    data = bm->generateInputData();
+    auto A = std::unique_ptr<double[]>(new double[array_size * array_size]);
+    auto LU = std::unique_ptr<double[]>(new double[array_size * array_size]);
+    auto x = std::unique_ptr<double[]>(new double[array_size]);
+    auto b = std::unique_ptr<double[]>(new double[array_size]);
+    // convert generated matrix to double
+    for (int i=0; i < array_size; i++) {
+        for (int j=0; j < array_size; j++) {
+            A[i * array_size + j] = static_cast<double>(data->A[i * array_size + j]);
+        }
+        b[i] = static_cast<double>(data->b[i]);
+    }
+    gmres_ref(array_size, A.get(),array_size, x.get(), b.get(), LU.get(),array_size,50,1,0.00000001);
+    // convert result to float
+    for (int i=0; i < array_size; i++) {
+        for (int j=0; j < array_size; j++) {
+            data->A[i * array_size + j] = static_cast<float>(A[i * array_size + j]);
+        }
+        data->b[i] = static_cast<float>(b[i]);
+    }
+    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 }
 
 TEST_F(LinpackHostTest, ReferenceSolveWithoutPivoting) {

@@ -1,5 +1,4 @@
 
-# set(BLA_VENDOR Intel10_64lp)
 find_package(LAPACK)
 
 if (NOT LAPACK_FOUND)

@@ -30,6 +30,9 @@ SOFTWARE.
 /* Project's headers */
 #include "hpcc_benchmark.hpp"
 #include "parameters.h"
+extern "C" {
+    #include "gmres.h"
+}
 
 /**
  * @brief Contains all classes and methods needed by the LINPACK benchmark

@@ -391,4 +391,3 @@ linpack::gesl_ref_nopvt(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, unsigned n, unsign
         }
     delete [] b_tmp;
 }
-
