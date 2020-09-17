@@ -92,15 +92,12 @@ gmres_ref(int n, double* A, int lda, double* x, double* b, double* LU,
         norm_b = 1.0;
     }
 
-    printf("%f\n", norm_b);
-
     // r = U \ (L \ (b - A*x))
     memcpy(r, b, n * sizeof(double));
     dgemv_ref('N', n, n, -1.0, A, lda, x, 1, 1.0, r, 1);
     dtrsm_ref('L', 'L', 'N', 'U', n, 1, 1.0, LU, ldlu, r, n);
     dtrsm_ref('L', 'U', 'N', 'N', n, 1, 1.0, LU, ldlu, r, n);
 
-    // TODO Residual seems already to be wrong here!
     double error = dlange_ref('F', n, 1, r, n) / norm_b;
     printf("Residual norm at the beginning of GMRES: %e\n", error);
 

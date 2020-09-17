@@ -62,16 +62,16 @@ TEST_F(LinpackHostTest, ReferenceSolveGMRES) {
     for (int i=0; i < array_size; i++) {
         for (int j=0; j < array_size; j++) {
             A[i * array_size + j] = static_cast<double>(data->A[i * array_size + j]);
+            LU[i * array_size + j] = static_cast<double>(data->A[i * array_size + j]);
         }
         b[i] = static_cast<double>(data->b[i]);
+        x[i] = static_cast<double>(data->b[i]);
     }
+    double tol = std::numeric_limits<double>::epsilon() / 2.0 / (array_size / 4.0);
     gmres_ref(array_size, A.get(),array_size, x.get(), b.get(), LU.get(),array_size,50,1,0.00000001);
-    // convert result to float
+    // convert result vector to float
     for (int i=0; i < array_size; i++) {
-        for (int j=0; j < array_size; j++) {
-            data->A[i * array_size + j] = static_cast<float>(A[i * array_size + j]);
-        }
-        data->b[i] = static_cast<float>(b[i]);
+        data->b[i] = static_cast<float>(x[i]);
     }
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 }
