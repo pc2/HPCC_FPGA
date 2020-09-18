@@ -8,8 +8,8 @@ HPCC FPGA Documentation
 =============================================
 
 This repository contains a more detailed documentation of the HPC Challenge Benchmark for FPGA.
-In contrast to the code documentation maintained using doxygen, this documentation focuses on a broader picture for all benchmarks.
-This inculdes more detailed description of the benchmark implementations, the configuration options and their impact on performance 
+In contrast to the code documentation maintained using Doxygen, this documentation focuses on a broader picture for all benchmarks.
+This includes a more detailed description of the benchmark implementations, the configuration options and their impact on performance 
 and resource usage, and performance results for selected FPGAs with the used configurations.
 
 .. toctree::
@@ -30,8 +30,7 @@ and resource usage, and performance results for selected FPGAs with the used con
    :caption: Other Topics:
    :glob:
 
-   Basic Setup/*
-   multi_fpga/*
+   technical_support/*/*
 
 .. toctree::
    :maxdepth: 1
