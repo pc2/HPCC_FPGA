@@ -202,15 +202,15 @@ namespace bm_execution {
                                 sizeof(HOST_DATA_TYPE) * data_per_kernel, 0,
                                 NULL, NULL);
 #else
-                    command_queues[i].enqueueWriteBuffer(Buffers_A[i], CL_FALSE, 0,
+                    ASSERT_CL(command_queues[i].enqueueWriteBuffer(Buffers_A[i], CL_FALSE, 0,
                                                          sizeof(HOST_DATA_TYPE) * data_per_kernel,
-                                                         &A[data_per_kernel * i]);
-                    command_queues[i].enqueueWriteBuffer(Buffers_B[i], CL_FALSE, 0,
+                                                         &A[data_per_kernel * i]));
+                    ASSERT_CL(command_queues[i].enqueueWriteBuffer(Buffers_B[i], CL_FALSE, 0,
                                                          sizeof(HOST_DATA_TYPE) * data_per_kernel,
-                                                         &B[data_per_kernel * i]);
-                    command_queues[i].enqueueWriteBuffer(Buffers_C[i], CL_FALSE, 0,
+                                                         &B[data_per_kernel * i]));
+                    ASSERT_CL(command_queues[i].enqueueWriteBuffer(Buffers_C[i], CL_FALSE, 0,
                                                          sizeof(HOST_DATA_TYPE) * data_per_kernel,
-                                                         &C[data_per_kernel * i]);
+                                                         &C[data_per_kernel * i]));
 #endif
                 }
 #pragma omp for
@@ -228,7 +228,7 @@ namespace bm_execution {
                 }
 #pragma omp for nowait
                 for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].enqueueTask(copy_kernels[i]);
+                    ASSERT_CL(command_queues[i].enqueueTask(copy_kernels[i]));
                 }
 #pragma omp for
                 for (int i = 0; i < config.programSettings->kernelReplications; i++) {
@@ -245,7 +245,7 @@ namespace bm_execution {
                 }
 #pragma omp for nowait
                 for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].enqueueTask(scale_kernels[i]);
+                    ASSERT_CL(command_queues[i].enqueueTask(scale_kernels[i]));
                 }
 #pragma omp for
                 for (int i = 0; i < config.programSettings->kernelReplications; i++) {
@@ -262,7 +262,7 @@ namespace bm_execution {
                 }
 #pragma omp for nowait
                 for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].enqueueTask(add_kernels[i]);
+                    ASSERT_CL(command_queues[i].enqueueTask(add_kernels[i]));
                 }
 #pragma omp for
                 for (int i = 0; i < config.programSettings->kernelReplications; i++) {
@@ -279,7 +279,7 @@ namespace bm_execution {
                 }
 #pragma omp for nowait
                 for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].enqueueTask(triad_kernels[i]);
+                    ASSERT_CL(command_queues[i].enqueueTask(triad_kernels[i]));
                 }
 #pragma omp for
                 for (int i = 0; i < config.programSettings->kernelReplications; i++) {
@@ -307,15 +307,15 @@ namespace bm_execution {
                                 reinterpret_cast<void *>(&C[data_per_kernel * i]), 0,
                                 NULL, NULL);
 #else
-                    command_queues[i].enqueueReadBuffer(Buffers_A[i], CL_FALSE, 0,
+                    ASSERT_CL(command_queues[i].enqueueReadBuffer(Buffers_A[i], CL_FALSE, 0,
                                                         sizeof(HOST_DATA_TYPE) * data_per_kernel,
-                                                        &A[data_per_kernel * i]);
-                    command_queues[i].enqueueReadBuffer(Buffers_B[i], CL_FALSE, 0,
+                                                        &A[data_per_kernel * i]));
+                    ASSERT_CL(command_queues[i].enqueueReadBuffer(Buffers_B[i], CL_FALSE, 0,
                                                         sizeof(HOST_DATA_TYPE) * data_per_kernel,
-                                                        &B[data_per_kernel * i]);
-                    command_queues[i].enqueueReadBuffer(Buffers_C[i], CL_FALSE, 0,
+                                                        &B[data_per_kernel * i]));
+                    ASSERT_CL(command_queues[i].enqueueReadBuffer(Buffers_C[i], CL_FALSE, 0,
                                                         sizeof(HOST_DATA_TYPE) * data_per_kernel,
-                                                        &C[data_per_kernel * i]);
+                                                        &C[data_per_kernel * i]));
 #endif
                 }
 #pragma omp for
