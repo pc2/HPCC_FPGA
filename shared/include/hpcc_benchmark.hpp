@@ -517,6 +517,9 @@ public:
             if (!validateSuccess) {
                 std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
             }
+            else {
+                std::cout << "Validation: SUCCESS!" << std::endl;
+            }
 
             return validateSuccess;
        }
