@@ -96,6 +96,18 @@ public:
     uint maxMessageSize;
 
     /**
+     * @brief Offset that is used before the loop length will be reduced for higher message sizes
+     * 
+     */
+    uint llOffset;
+
+    /**
+     * @brief Number of steps the loop length is decreased after the offset is reached
+     * 
+     */
+    uint llDecrease;
+
+    /**
      * @brief Construct a new Network Program Settings object
      * 
      * @param results the result map from parsing the program input parameters
@@ -168,8 +180,10 @@ public:
      * @param max_looplength The maximum number of iterations that should be done for a message size
      * @param min_looplength The minimum number of iterations that should be done for a message size
      * @param max_messagesize The maximum message size
+     * @param offset The used offset to scale the loop length. The higher the offset, the later the loop lenght will be decreased
+     * @param decrease Number of steps the looplength will be decreased to the minimum
      */
-    NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int max_messagesize);
+    NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int max_messagesize, unsigned int offset, unsigned int decrease);
 
 };
 

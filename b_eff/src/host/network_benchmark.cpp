@@ -35,7 +35,8 @@ SOFTWARE.
 #include "parameters.h"
 
 network::NetworkProgramSettings::NetworkProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    maxLoopLength(results["u"].as<uint>()), minLoopLength(results["l"].as<uint>()), maxMessageSize(results["m"].as<uint>()) {
+    maxLoopLength(results["u"].as<uint>()), minLoopLength(results["l"].as<uint>()), maxMessageSize(results["m"].as<uint>()), 
+    llOffset(results["o"].as<uint>()), llDecrease(results["d"].as<uint>()) {
 
 }
 
@@ -54,10 +55,12 @@ network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize
                                                                                 // also needs to be multiplied with the buffer size
                                                                             }
 
-network::NetworkData::NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int max_messagesize) {
+network::NetworkData::NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int max_messagesize, unsigned int offset, unsigned int decrease) {
+    uint decreasePerStep = (max_looplength - min_looplength) / decrease;
     for (uint i = 0; i <= max_messagesize; i++) {
-        uint messageSize = (1u << i);
-        uint looplength = std::max((max_looplength) / ((messageSize + (2 * CHANNEL_WIDTH - 1)) / (2 * CHANNEL_WIDTH)), min_looplength);
+        uint messageSizeDivOffset = (i > offset) ? i - offset : 0u;
+        uint newLooplength = (max_looplength > messageSizeDivOffset * decreasePerStep) ? max_looplength - messageSizeDivOffset * decreasePerStep : 0u;
+        uint looplength = std::max(newLooplength, min_looplength);
         this->items.push_back(NetworkDataItem(i, looplength));
     }
 }
@@ -76,7 +79,11 @@ network::NetworkBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
         ("l,lower", "Minimum number of repetitions per data size",
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MIN_LOOP_LENGTH)))
         ("m", "Maximum message size",
-             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MAX_MESSAGE_SIZE)));
+             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MAX_MESSAGE_SIZE)))
+        ("o", "Offset used before reducing repetitions",
+            cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_OFFSET)))
+        ("d", "Number os steps the repetitions are decreased to its minimum",
+            cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_DECREASE)));
 }
 
 std::unique_ptr<network::NetworkExecutionTimings>
@@ -151,54 +158,57 @@ void
 network::NetworkBenchmark::collectAndPrintResults(const network::NetworkExecutionTimings &output) {
     std::vector<double> maxBandwidths;
 
-    std::cout << std::setw(ENTRY_SPACE) << "MSize" << "   "
-            << std::setw(ENTRY_SPACE) << "looplength" << "   "
-            << std::setw(ENTRY_SPACE) << "transfer" << "   "
-            << std::setw(ENTRY_SPACE) << "B/s" << std::endl;
-
-    std::vector<double> totalMaxMinCalculationTime;
-    for (long unsigned int i =0; i < output.timings.size(); i++) {
-        totalMaxMinCalculationTime.push_back(0.0);
-    }
-    int i = 0;
-    for (const auto& msgSizeResults : output.timings) {
-        for (const auto& r : *msgSizeResults.second) {
-            double localMinCalculationTime = *min_element(r->calculationTimings.begin(), r->calculationTimings.end());
-            totalMaxMinCalculationTime[i] = std::max(totalMaxMinCalculationTime[i], localMinCalculationTime);
+    if (mpi_comm_rank == 0) {
+        std::cout << std::setw(ENTRY_SPACE) << "MSize" << "   "
+                << std::setw(ENTRY_SPACE) << "looplength" << "   "
+                << std::setw(ENTRY_SPACE) << "transfer" << "   "
+                << std::setw(ENTRY_SPACE) << "B/s" << std::endl;
+        std::vector<double> totalMaxMinCalculationTime;
+        for (long unsigned int i =0; i < output.timings.size(); i++) {
+            totalMaxMinCalculationTime.push_back(0.0);
         }
-        i++;
+        int i = 0;
+        for (const auto& msgSizeResults : output.timings) {
+            for (const auto& r : *msgSizeResults.second) {
+                double localMinCalculationTime = *min_element(r->calculationTimings.begin(), r->calculationTimings.end());
+                totalMaxMinCalculationTime[i] = std::max(totalMaxMinCalculationTime[i], localMinCalculationTime);
+            }
+            i++;
+        }
+        i = 0;
+        for (const auto& msgSizeResults : output.timings) {
+            int looplength = msgSizeResults.second->at(0)->looplength;
+            // The total sent data in bytes will be:
+            // #Nodes * message_size * looplength * 2
+            // the * 2 is because we have two kernels per bitstream that will send and receive simultaneously.
+            // This will be divided by half of the maximum of the minimum measured runtime over all ranks.
+            double maxCalcBW = static_cast<double>(msgSizeResults.second->size() * 2 * (1 << msgSizeResults.first) * looplength)
+                                                                / (totalMaxMinCalculationTime[i]);
+
+            maxBandwidths.push_back(maxCalcBW);
+
+            std::cout << std::setw(ENTRY_SPACE) << (1 << msgSizeResults.first) << "   "
+                    << std::setw(ENTRY_SPACE) << looplength << "   "
+                    << std::setw(ENTRY_SPACE) << totalMaxMinCalculationTime[i] << "   "
+                    << std::setw(ENTRY_SPACE)  << maxCalcBW
+                    << std::endl;
+            i++;
+        }
+
+
+        double b_eff = accumulate(maxBandwidths.begin(), maxBandwidths.end(), 0.0) / static_cast<double>(maxBandwidths.size());
+
+        std::cout << std::endl << "b_eff = " << b_eff << " B/s" << std::endl;
     }
-    i = 0;
-    for (const auto& msgSizeResults : output.timings) {
-        int looplength = msgSizeResults.second->at(0)->looplength;
-        // The total sent data in bytes will be:
-        // #Nodes * message_size * looplength * 2
-        // the * 2 is because we have two kernels per bitstream that will send and receive simultaneously.
-        // This will be divided by half of the maximum of the minimum measured runtime over all ranks.
-        double maxCalcBW = static_cast<double>(msgSizeResults.second->size() * 2 * (1 << msgSizeResults.first) * looplength)
-                                                            / (totalMaxMinCalculationTime[i]);
-
-        maxBandwidths.push_back(maxCalcBW);
-
-        std::cout << std::setw(ENTRY_SPACE) << (1 << msgSizeResults.first) << "   "
-                  << std::setw(ENTRY_SPACE) << looplength << "   "
-                  << std::setw(ENTRY_SPACE) << totalMaxMinCalculationTime[i] << "   "
-                  << std::setw(ENTRY_SPACE)  << maxCalcBW
-                  << std::endl;
-        i++;
-    }
-
-
-    double b_eff = accumulate(maxBandwidths.begin(), maxBandwidths.end(), 0.0) / static_cast<double>(maxBandwidths.size());
-
-    std::cout << std::endl << "b_eff = " << b_eff << " B/s" << std::endl;
 }
 
 std::unique_ptr<network::NetworkData>
 network::NetworkBenchmark::generateInputData() {
     auto d = std::unique_ptr<network::NetworkData>(new network::NetworkData(executionSettings->programSettings->maxLoopLength,
                                                                             executionSettings->programSettings->minLoopLength,
-                                                                            executionSettings->programSettings->maxMessageSize));
+                                                                            executionSettings->programSettings->maxMessageSize,
+                                                                            executionSettings->programSettings->llOffset,
+                                                                            executionSettings->programSettings->llDecrease));
     return d;
 }
 
