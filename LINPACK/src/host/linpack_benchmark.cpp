@@ -97,6 +97,8 @@ void
 linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutionTimings &output) {
     // Calculate performance for kernel execution plus data transfer
     double tmean = 0;
+    double tlumean = 0;
+    double tslmean = 0;
     double tmin = std::numeric_limits<double>::max();
     double lu_min = std::numeric_limits<double>::max();
     double sl_min = std::numeric_limits<double>::max();
@@ -109,6 +111,8 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
     for (int i =0; i < output.gefaTimings.size(); i++) {
         double currentTime = output.gefaTimings[i] + output.geslTimings[i];
         tmean +=  currentTime;
+        tlumean +=  output.gefaTimings[i];
+        tslmean += output.geslTimings[i];
         if (currentTime < tmin) {
             tmin = currentTime;
         }
@@ -120,23 +124,27 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
         }
     }
     tmean = tmean / output.gefaTimings.size();
+    tlumean = tlumean / output.gefaTimings.size();
+    tslmean = tslmean / output.gefaTimings.size();
 
      std::cout << std::setw(ENTRY_SPACE)
               << "Method" << std::setw(ENTRY_SPACE)
               << "best" << std::setw(ENTRY_SPACE) << "mean"
               << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
 
-    std::cout << std::setw(ENTRY_SPACE)
+    std::cout << std::setw(ENTRY_SPACE) << "total" << std::setw(ENTRY_SPACE)
               << tmin << std::setw(ENTRY_SPACE) << tmean
               << std::setw(ENTRY_SPACE) << ((gflops_lu + gflops_sl) / tmin)
               << std::endl;
 
-     std::cout << std::setw(ENTRY_SPACE)<< "GEFA Time" << std::setw(ENTRY_SPACE) << "GEFA Time" 
-              << std::setw(ENTRY_SPACE) << "GESL " << std::setw(ENTRY_SPACE) << "GESL Time"
-              << std::endl;
+    std::cout << std::setw(ENTRY_SPACE) << "GEFA" << std::setw(ENTRY_SPACE)
+            << lu_min << std::setw(ENTRY_SPACE) << tlumean
+            << std::setw(ENTRY_SPACE) << ((gflops_lu) / lu_min)
+            << std::endl;
 
-    std::cout << std::setw(ENTRY_SPACE) << (gflops_lu / lu_min) << std::setw(ENTRY_SPACE) << lu_min
-              << std::setw(ENTRY_SPACE) << (gflops_sl / sl_min) << std::setw(ENTRY_SPACE) << sl_min
+    std::cout << std::setw(ENTRY_SPACE) << "GESL" << std::setw(ENTRY_SPACE)
+              << sl_min << std::setw(ENTRY_SPACE) << tslmean
+              << std::setw(ENTRY_SPACE) << (gflops_sl / sl_min)
               << std::endl;
 }
 
@@ -188,8 +196,7 @@ linpack::LinpackBenchmark::generateInputData() {
     // This will lead to a result vector x with ones on every position
     for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
         for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
-            // Uniform matrix does need maximum calculation which is more efficient over rows and is thus stored transposed!
-            d->b[j] += (executionSettings->programSettings->isDiagonallyDominant) ? d->A[executionSettings->programSettings->matrixSize*i+j] : d->A[executionSettings->programSettings->matrixSize*j+i];
+            d->b[j] += d->A[executionSettings->programSettings->matrixSize*i+j];
         }
     }
     return d;
@@ -202,7 +209,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     for (int i = 0; i < n; i++) {
         newdata->b[i] = -newdata->b[i];
     }
-    linpack::dmxpy(n, newdata->b, n, n, data.b, newdata->A, !executionSettings->programSettings->isDiagonallyDominant);
+    linpack::dmxpy(n, newdata->b, n, n, data.b, newdata->A, false);
     HOST_DATA_TYPE resid = 0.0;
     HOST_DATA_TYPE normx = 0.0;
 
@@ -239,28 +246,28 @@ linpack::gefa_ref(HOST_DATA_TYPE* a, unsigned n, unsigned lda, cl_int* ipvt) {
         HOST_DATA_TYPE max_val = fabs(a[k * lda + k]);
         int pvt_index = k;
         for (int i = k + 1; i < n; i++) {
-            if (max_val < fabs(a[i * lda + k])) {
+            if (max_val < fabs(a[k * lda + i])) {
                 pvt_index = i;
-                max_val = fabs(a[i * lda + k]);
+                max_val = fabs(a[k * lda + i]);
             }
         }
 
         for (int i = k; i < n; i++) {
-            HOST_DATA_TYPE tmp_val = a[k * lda + i];
-            a[k * lda + i] = a[pvt_index * lda + i];
-            a[pvt_index * lda + i] = tmp_val;
+            HOST_DATA_TYPE tmp_val = a[i * lda + k];
+            a[i * lda + k] = a[i * lda + pvt_index];
+            a[i * lda + pvt_index] = tmp_val;
         }
         ipvt[k] = pvt_index;
 
         // For each element below it
         for (int i = k + 1; i < n; i++) {
-            a[i * lda + k] *= -1.0 / a[k * lda + k];
+            a[k * lda + i] *= -1.0 / a[k * lda + k];
         }
         // For each column right of current diagonal element
         for (int j = k + 1; j < n; j++) {
             // For each element below it
             for (int i = k+1; i < n; i++) {
-                a[i * lda + j] += a[i * lda + k] * a[k * lda + j];
+                a[j * lda + i] += a[k * lda + i] * a[j * lda + k];
             }
         }
 
@@ -301,7 +308,7 @@ linpack::gesl_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, cl_int* ipvt, unsigned n
 #pragma omp parallel for
             for (int i = k + 1; i < n; i++) {
                 // add solved upper row to current row
-                b_tmp[i] += b_tmp[k] * a[lda * i + k];
+                b_tmp[i] += b_tmp[k] * a[lda * k + i];
             }
         }
 
@@ -311,7 +318,7 @@ linpack::gesl_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, cl_int* ipvt, unsigned n
             b_tmp[k] = b_tmp[k] / a[lda * k + k];
 #pragma omp parallel for
             for (int i = 0; i < k; i++) {
-                b_tmp[i] -= b_tmp[k] * a[lda * i + k];
+                b_tmp[i] -= b_tmp[k] * a[lda * k + i];
             }
         }
 #pragma omp for

@@ -213,8 +213,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                                      sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
     compute_queue.enqueueReadBuffer(Buffer_b, CL_TRUE, 0,
                                      sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
-    compute_queue.enqueueReadBuffer(Buffer_pivot, CL_TRUE, 0,
-                                     sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
+    if (!config.programSettings->isDiagonallyDominant) {
+        compute_queue.enqueueReadBuffer(Buffer_pivot, CL_TRUE, 0,
+                                        sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
+    }
 #endif
 
     std::unique_ptr<linpack::LinpackExecutionTimings> results(

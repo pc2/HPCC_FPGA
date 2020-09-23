@@ -57,9 +57,18 @@ TEST_F(LinpackKernelTest, FPGACorrectResultsGEFA) {
     else {
         linpack::gefa_ref(data2->A, array_size, array_size, data2->ipvt);
     }
-    for (int i = 0; i < array_size * array_size; i++) {
-        EXPECT_NEAR(data->A[i], data2->A[i], 1.0e-3);
+    int errors = 0;
+    for (int i = 0; i < array_size; i++) {
+        for (int j = 0; j < array_size; j++) {
+            if (std::fabs(data->A[i * array_size + j] - data2->A[i * array_size + j]) > 1.0e-3) {
+                // Diagonal elements might be stored as the negative inverse to speed up calculation
+                if ((std::fabs(data->A[i * array_size + j] - -1.0/ data2->A[i * array_size + j]) > 1.0e-3) || i != j) {
+                    errors++;
+                }
+            }
+        }
     }
+    EXPECT_EQ(0, errors);
 }
 
 #ifdef _LAPACK_
@@ -70,13 +79,6 @@ TEST_F(LinpackKernelTest, ValidationWorksForMKL) {
 
     int info;    
     auto data_cpu = bm->generateInputData();
-    if (!bm->getExecutionSettings().programSettings->isDiagonallyDominant) {
-        for (int i=0; i<array_size; i++) {
-            for (int j=0; j < array_size; j++) {
-                data_cpu->A[i * array_size + j] = data->A[j* array_size + i];
-            }
-        }
-    }
     int s = static_cast<int>(array_size);
     int lrhs = 1;
 #ifndef _DP

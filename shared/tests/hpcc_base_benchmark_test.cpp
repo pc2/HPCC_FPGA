@@ -21,7 +21,9 @@ class MinimalBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSett
 protected:
 
     void
-    addAdditionalParseOptions(cxxopts::Options &options) override {}
+    addAdditionalParseOptions(cxxopts::Options &options) override {
+        options.allow_unrecognised_options();
+    }
 
 public:
 
@@ -55,7 +57,9 @@ class SuccessBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSett
 protected:
 
     void
-    addAdditionalParseOptions(cxxopts::Options &options) override {}
+    addAdditionalParseOptions(cxxopts::Options &options) override {
+        options.allow_unrecognised_options();
+    }
 
 public:
 

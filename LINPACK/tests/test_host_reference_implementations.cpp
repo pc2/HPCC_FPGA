@@ -76,6 +76,15 @@ TEST_F(LinpackHostTest, ReferenceSolveGMRES) {
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 }
 
+TEST_F(LinpackHostTest, ReferenceSolveWithPivoting) {
+    bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
+    data = bm->generateInputData();
+    linpack::gefa_ref(data->A, array_size, array_size, data->ipvt);
+    linpack::gesl_ref(data->A, data->b, data->ipvt, array_size, array_size);
+    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+}
+
+
 TEST_F(LinpackHostTest, ReferenceSolveWithoutPivoting) {
     data = bm->generateInputData();
     linpack::gefa_ref_nopvt(data->A, array_size, array_size);
