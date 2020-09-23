@@ -1,0 +1,20 @@
+FPGA board,`BittWare 520N <https://www.bittware.com/fpga/520n/>`_,`Alveo U280 <https://www.xilinx.com/products/boards-and-kits/alveo/u280.html>`_,`Alveo U280 <https://www.xilinx.com/products/boards-and-kits/alveo/u280.html>`_,`PAC D5005 <https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/intel-fpga-pac-d5005/overview.html>`_
+ FPGA, Intel Stratix 10 GX2800, Xilinx XCU280, Xilinx XCU280, Intel Stratix 10 SX
+ Memory Type, DDR, DDR, HBM2 , SVM
+ SDK, 19.4.0,2019.2 ,2019.2 , 19.4.0 
+ BSP/Shell, 19.2.0_hpc, 2019.2.3, 2019.2.3, 18.1.2_svm
+ CPU, Intel Xeon Gold 6148, Intel Xeon Gold 6148, Intel Xeon Gold 6148, Intel Xeon Gold 6148
+ System, `Noctua <https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/>`_, , , 
+ DEVICE_BUFFER_SIZE,1,1024,1024,1024
+ NUM_REPLICATIONS,4,2,32,1
+ LUT,115743,7256,116096,103397
+ LUT percent,18.0,0.65,10.68,12.0
+ Register,253578,11716,187456,225293
+ Register percent,18.0,0.5,8.76,12.0
+ BRAM,489,38,608,535
+ BRAM percent,4.0,2.23,33.55,5.0
+ DSP,14,14,224,0
+ DSP percent,1.0,0.16,2.48,0.0
+ Frequency,329.17,446.0,450.0,322.0
+MUOPs,245.0,128.1,40.3,0.5
+Error,0.0099,0.0106,0.0106,0.0106
