@@ -13,8 +13,11 @@
 *._*
 build/*
 
-# Generated documentation
-docs/*
+# Generated documentation, just include source folder
+docs/build
+docs/html
+docs/latex
+docs/xml
 
 # Other temporary files
 *.out
@@ -23,3 +26,7 @@ docs/*
 
 # Except CMake files are important!
 !CMakeLists.txt
+# Except requirements.txt needed to freeze python environment
+!requirements.txt
+# Do not ignore CSVs included in documentation
+!docs/source/**/*.csv
