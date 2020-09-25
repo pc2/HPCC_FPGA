@@ -1,0 +1,12 @@
+=======
+STREAM
+=======
+
+This section contains all information related to the STREAM benchmark.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+   :glob:
+
+   */index

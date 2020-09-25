@@ -1,0 +1,13 @@
+==================
+Benchmark Results
+==================
+
+In this section we provide performance result for the benchmarks on different devices.
+It will be extended with additional results over time.
+
+.. toctree::
+   :maxdepth: 1
+   :caption: List of Benchmark results:
+   :glob:
+
+   */index

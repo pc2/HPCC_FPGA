@@ -1,0 +1,12 @@
+============
+RandomAccess
+============
+
+This section contains all information related to the RandomAccess benchmark.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+   :glob:
+
+   */index

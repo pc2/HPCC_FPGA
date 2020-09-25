@@ -1,0 +1,14 @@
+
+==========================
+HPCC FPGA Benchmark Suite
+==========================
+
+This section contains all documentation related to the HPCC FPGA Benchmark
+suite and its development and usage.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+   :glob:
+
+   */index

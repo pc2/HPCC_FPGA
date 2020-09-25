@@ -30,3 +30,6 @@ docs/xml
 !requirements.txt
 # Do not ignore CSVs included in documentation
 !docs/source/**/*.csv
+
+#include everything in the sphinx html folder
+!docs/build/html/**/*

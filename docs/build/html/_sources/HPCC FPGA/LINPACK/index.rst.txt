@@ -1,0 +1,12 @@
+=======
+LINPACK
+=======
+
+This section contains all information related to the LINPACK benchmark.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+   :glob:
+
+   */index
