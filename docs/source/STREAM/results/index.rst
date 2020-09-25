@@ -9,7 +9,7 @@ The measurements were executed 10 times and the best result is published.
 The results and the used configuration is given in :numref:`tbl_stream_2_3_results` and are also available as :download:`CSV <stream-2-3.csv>`.
 
 .. _stream_result_plot:
-.. figure:: stream_results.jpg
+.. figure:: stream_results.png
   :height: 300
   :align: center
   :alt: STREAM result plot can not be shown!

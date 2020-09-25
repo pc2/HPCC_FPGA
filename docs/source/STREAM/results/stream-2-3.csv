@@ -1,10 +1,10 @@
-FPGA board,BittWare 520N,Alveo U280 DDR,Alveo U280 HBM2,PAC D5005
-FPGA, Intel Stratix 10 GX2800, Xilinx XCU280, Xilinx XCU280, Intel Stratix 10 SX
+FPGA board,BittWare 520N,Alveo U280,Alveo U280,PAC D5005
+FPGA,Intel Stratix 10 GX2800,Xilinx XCU280,Xilinx XCU280,Intel Stratix 10 SX
 Memory Type,DDR,DDR,HBM2,SVM
-SDK,19.4.0,2019.2,2019.2,19.4.0 
+SDK,19.4.0,2019.2,2019.2,19.4.0
 BSP/Shell,19.2.0_hpc,2019.2.3,2019.2.3,18.1.2_svm
 CPU,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148
-System,`Noctua <https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/>`_,,, 
+System,`Noctua <https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/>`_,,,
 DATA_TYPE,float,float,float,float
 VECTOR_COUNT,16,16,16,16
 GLOBAL_MEM_UNROLL,1,1,1,1
