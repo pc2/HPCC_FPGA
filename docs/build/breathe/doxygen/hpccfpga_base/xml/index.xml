@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygenindex xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="index.xsd" version="1.8.18">
+  <compound refid="classhpcc__base_1_1_base_settings" kind="class"><name>hpcc_base::BaseSettings</name>
+    <member refid="classhpcc__base_1_1_base_settings_1ae528a7ad99712650ee2e45e33497d301" kind="variable"><name>numRepetitions</name></member>
+    <member refid="classhpcc__base_1_1_base_settings_1ab414a286b97a9e639922f602790b46fd" kind="variable"><name>useMemoryInterleaving</name></member>
+    <member refid="classhpcc__base_1_1_base_settings_1ae8dbaffc3e04de87ca99672cd303c940" kind="variable"><name>skipValidation</name></member>
+    <member refid="classhpcc__base_1_1_base_settings_1aeb91a2c53d073493cdeec08c874ff444" kind="variable"><name>defaultPlatform</name></member>
+    <member refid="classhpcc__base_1_1_base_settings_1a979da24a3ad0191e589cf11540f9bd88" kind="variable"><name>defaultDevice</name></member>
+    <member refid="classhpcc__base_1_1_base_settings_1a618c864b8221e98f47c4eb728a379943" kind="variable"><name>kernelFileName</name></member>
+    <member refid="classhpcc__base_1_1_base_settings_1a6df60f1a14e3176a89ed536df6452023" kind="function"><name>BaseSettings</name></member>
+    <member refid="classhpcc__base_1_1_base_settings_1aa02a85f2828a57c554200b60f7db7caa" kind="function"><name>getSettingsMap</name></member>
+  </compound>
+  <compound refid="classhpcc__base_1_1_execution_settings" kind="class"><name>hpcc_base::ExecutionSettings</name>
+    <member refid="classhpcc__base_1_1_execution_settings_1a785b56f4a0cfb444831c5ddf0138bb96" kind="variable"><name>device</name></member>
+    <member refid="classhpcc__base_1_1_execution_settings_1a35ab3d1f3153dcc33859afb3e3578f07" kind="variable"><name>context</name></member>
+    <member refid="classhpcc__base_1_1_execution_settings_1ac4220c19ba89519fb36228818f2945cc" kind="variable"><name>program</name></member>
+    <member refid="classhpcc__base_1_1_execution_settings_1a9971174ca24090e45d5d4471d8dd6e45" kind="variable"><name>programSettings</name></member>
+    <member refid="classhpcc__base_1_1_execution_settings_1a0d00a53617b6f532dc128bfc4a8811ec" kind="function"><name>ExecutionSettings</name></member>
+    <member refid="classhpcc__base_1_1_execution_settings_1a56c94e95e063d19cbdc7b4e61f952f88" kind="function"><name>~ExecutionSettings</name></member>
+  </compound>
+  <compound refid="classhpcc__base_1_1_hpcc_fpga_benchmark" kind="class"><name>hpcc_base::HpccFpgaBenchmark</name>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1a23db346fcd25c91ab72534361324761f" kind="variable"><name>executionSettings</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1afb7d60eb1d319510584e1ffaa318a68a" kind="function"><name>addAdditionalParseOptions</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1a29c978a75df4a03cc6752840d8fc6f35" kind="function"><name>generateInputData</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1aee91a00a5abe5c24441833b3cf80cfb2" kind="function"><name>executeKernel</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1aa36b24350419193b6600ff9970e36a68" kind="function"><name>validateOutputAndPrintError</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1a2a2aac08eab38e7c4c10eb757b53fe08" kind="function"><name>printResults</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1aa704967035afc28c85635f93fe52a1c7" kind="function"><name>parseProgramParameters</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1ad2856191efb352d2b2907c33a6da5243" kind="function"><name>printFinalConfiguration</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1abdfd714f0038191b244a2d61b305f56b" kind="function"><name>setupBenchmark</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1a168c0b068f17501240e32aa552b24cdf" kind="function"><name>executeBenchmark</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1a17c66b7f3cb8e69e899d3a3cc9adf5e3" kind="function"><name>getExecutionSettings</name></member>
+    <member refid="classhpcc__base_1_1_hpcc_fpga_benchmark_1a53715c47d96e7f50aad2f5290042c29b" kind="function"><name>HpccFpgaBenchmark</name></member>
+  </compound>
+  <compound refid="namespacehpcc__base" kind="namespace"><name>hpcc_base</name>
+    <member refid="namespacehpcc__base_1a11fdc05ce402c78022d04cc6d7933c6c" kind="function"><name>operator&lt;&lt;</name></member>
+  </compound>
+  <compound refid="hpcc__benchmark_8hpp" kind="file"><name>hpcc_benchmark.hpp</name>
+    <member refid="hpcc__benchmark_8hpp_1a61469a2fe6aebc934e696bde3522a763" kind="define"><name>STR_EXPAND</name></member>
+    <member refid="hpcc__benchmark_8hpp_1a05b95a47759fd66b4deab2740ba27453" kind="define"><name>STR</name></member>
+    <member refid="hpcc__benchmark_8hpp_1a9a779d5e0bd6027409fe33229d4eea9f" kind="define"><name>ENTRY_SPACE</name></member>
+  </compound>
+  <compound refid="dir_f017f8d1aea2530cee9690020bbdf1df" kind="dir"><name>/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include</name>
+  </compound>
+  <compound refid="dir_9982052f7ce695d12571567315b2fafa" kind="dir"><name>/Users/mariusme/Documents/repos/HPCC_FPGA/shared</name>
+  </compound>
+</doxygenindex>

@@ -1,0 +1,156 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.18">
+  <compounddef id="classhpcc__base_1_1_base_settings" kind="class" language="C++" prot="public">
+    <compoundname>hpcc_base::BaseSettings</compoundname>
+    <includes refid="hpcc__benchmark_8hpp" local="no">hpcc_benchmark.hpp</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="classhpcc__base_1_1_base_settings_1ae528a7ad99712650ee2e45e33497d301" prot="public" static="no" mutable="no">
+        <type>uint</type>
+        <definition>uint hpcc_base::BaseSettings::numRepetitions</definition>
+        <argsstring></argsstring>
+        <name>numRepetitions</name>
+        <briefdescription>
+<para>Number of times the kernel execution will be repeated. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="66" column="10" bodyfile="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classhpcc__base_1_1_base_settings_1ab414a286b97a9e639922f602790b46fd" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool hpcc_base::BaseSettings::useMemoryInterleaving</definition>
+        <argsstring></argsstring>
+        <name>useMemoryInterleaving</name>
+        <briefdescription>
+<para>Boolean showing if memory interleaving is used that is triggered from the host side (Intel specific) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="73" column="10" bodyfile="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" bodystart="73" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classhpcc__base_1_1_base_settings_1ae8dbaffc3e04de87ca99672cd303c940" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool hpcc_base::BaseSettings::skipValidation</definition>
+        <argsstring></argsstring>
+        <name>skipValidation</name>
+        <briefdescription>
+<para>Boolean showing if the output data of the benchmark kernel should be validated or not. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="80" column="10" bodyfile="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" bodystart="80" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classhpcc__base_1_1_base_settings_1aeb91a2c53d073493cdeec08c874ff444" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int hpcc_base::BaseSettings::defaultPlatform</definition>
+        <argsstring></argsstring>
+        <name>defaultPlatform</name>
+        <briefdescription>
+<para>The default platform that should be used for execution. A number representing the index in the list of available platforms. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="87" column="9" bodyfile="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" bodystart="87" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classhpcc__base_1_1_base_settings_1a979da24a3ad0191e589cf11540f9bd88" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int hpcc_base::BaseSettings::defaultDevice</definition>
+        <argsstring></argsstring>
+        <name>defaultDevice</name>
+        <briefdescription>
+<para>The default device that should be used for execution. A number representing the index in the list of available devices. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="94" column="9" bodyfile="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" bodystart="94" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classhpcc__base_1_1_base_settings_1a618c864b8221e98f47c4eb728a379943" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string hpcc_base::BaseSettings::kernelFileName</definition>
+        <argsstring></argsstring>
+        <name>kernelFileName</name>
+        <briefdescription>
+<para>Path to the kernel file that is used for execution. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="100" column="17" bodyfile="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" bodystart="100" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="classhpcc__base_1_1_base_settings_1a6df60f1a14e3176a89ed536df6452023" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>hpcc_base::BaseSettings::BaseSettings</definition>
+        <argsstring>(cxxopts::ParseResult &amp;results)</argsstring>
+        <name>BaseSettings</name>
+        <param>
+          <type>cxxopts::ParseResult &amp;</type>
+          <declname>results</declname>
+        </param>
+        <briefdescription>
+<para>Construct a new Base Settings object. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>results</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The resulting map from parsing the program input parameters </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="107" column="5" bodyfile="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" bodystart="107" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="function" id="classhpcc__base_1_1_base_settings_1aa02a85f2828a57c554200b60f7db7caa" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::map&lt; std::string, std::string &gt;</type>
+        <definition>virtual std::map&lt;std::string,std::string&gt; hpcc_base::BaseSettings::getSettingsMap</definition>
+        <argsstring>()</argsstring>
+        <name>getSettingsMap</name>
+        <briefdescription>
+<para>Get a map of the settings. This map will be used to print the final configuration. Derived classes should override it to add additional configuration options. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>std::map&lt;std::string,std::string&gt; </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="120" column="22" bodyfile="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" bodystart="120" bodyend="122"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>This class should be derived and extended for every benchmark. It is a pure data object containing the benchmark settings that are used to execute the benchmark kernel. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="58" column="1" bodyfile="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" bodystart="58" bodyend="124"/>
+    <listofallmembers>
+      <member refid="classhpcc__base_1_1_base_settings_1a6df60f1a14e3176a89ed536df6452023" prot="public" virt="non-virtual"><scope>hpcc_base::BaseSettings</scope><name>BaseSettings</name></member>
+      <member refid="classhpcc__base_1_1_base_settings_1a979da24a3ad0191e589cf11540f9bd88" prot="public" virt="non-virtual"><scope>hpcc_base::BaseSettings</scope><name>defaultDevice</name></member>
+      <member refid="classhpcc__base_1_1_base_settings_1aeb91a2c53d073493cdeec08c874ff444" prot="public" virt="non-virtual"><scope>hpcc_base::BaseSettings</scope><name>defaultPlatform</name></member>
+      <member refid="classhpcc__base_1_1_base_settings_1aa02a85f2828a57c554200b60f7db7caa" prot="public" virt="virtual"><scope>hpcc_base::BaseSettings</scope><name>getSettingsMap</name></member>
+      <member refid="classhpcc__base_1_1_base_settings_1a618c864b8221e98f47c4eb728a379943" prot="public" virt="non-virtual"><scope>hpcc_base::BaseSettings</scope><name>kernelFileName</name></member>
+      <member refid="classhpcc__base_1_1_base_settings_1ae528a7ad99712650ee2e45e33497d301" prot="public" virt="non-virtual"><scope>hpcc_base::BaseSettings</scope><name>numRepetitions</name></member>
+      <member refid="classhpcc__base_1_1_base_settings_1ae8dbaffc3e04de87ca99672cd303c940" prot="public" virt="non-virtual"><scope>hpcc_base::BaseSettings</scope><name>skipValidation</name></member>
+      <member refid="classhpcc__base_1_1_base_settings_1ab414a286b97a9e639922f602790b46fd" prot="public" virt="non-virtual"><scope>hpcc_base::BaseSettings</scope><name>useMemoryInterleaving</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

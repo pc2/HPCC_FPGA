@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygenindex xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="index.xsd" version="1.8.18">
+  <compound refid="namespacebm__execution" kind="namespace"><name>bm_execution</name>
+    <member refid="execution_8h_1a1d17c39ca7817ce420394a1a8d648e72" kind="function"><name>calculate</name></member>
+  </compound>
+  <compound refid="execution_8h" kind="file"><name>execution.h</name>
+  </compound>
+  <compound refid="dir_8c36d81eec5aa42eb53b54c7ebeb93cb" kind="dir"><name>/Users/mariusme/Documents/repos/HPCC_FPGA/GEMM</name>
+  </compound>
+  <compound refid="dir_83f650a2d2528cb96dd6989a5876a916" kind="dir"><name>/Users/mariusme/Documents/repos/HPCC_FPGA/GEMM/src/host</name>
+  </compound>
+  <compound refid="dir_fa79408e76d9a152d8231613e5bc6ba2" kind="dir"><name>/Users/mariusme/Documents/repos/HPCC_FPGA/GEMM/src</name>
+  </compound>
+</doxygenindex>

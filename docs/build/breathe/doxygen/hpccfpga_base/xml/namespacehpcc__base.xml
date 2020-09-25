@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.18">
+  <compounddef id="namespacehpcc__base" kind="namespace" language="C++">
+    <compoundname>hpcc_base</compoundname>
+    <innerclass refid="classhpcc__base_1_1_base_settings" prot="public">hpcc_base::BaseSettings</innerclass>
+    <innerclass refid="classhpcc__base_1_1_execution_settings" prot="public">hpcc_base::ExecutionSettings</innerclass>
+    <innerclass refid="classhpcc__base_1_1_hpcc_fpga_benchmark" prot="public">hpcc_base::HpccFpgaBenchmark</innerclass>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="namespacehpcc__base_1a11fdc05ce402c78022d04cc6d7933c6c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class TSettings</type>
+          </param>
+        </templateparamlist>
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream&amp; hpcc_base::operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;os, ExecutionSettings&lt; TSettings &gt; const &amp;printedExecutionSettings)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>os</declname>
+        </param>
+        <param>
+          <type><ref refid="classhpcc__base_1_1_execution_settings" kindref="compound">ExecutionSettings</ref>&lt; TSettings &gt; const &amp;</type>
+          <declname>printedExecutionSettings</declname>
+        </param>
+        <briefdescription>
+<para>Prints the execution settings to an output stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>TSettings</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The program settings class used to create the execution settings </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>os</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The output stream </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>printedExecutionSettings</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The execution settings that have to be printed to the stream </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>std::ostream&amp; The output stream after the execution settings are piped in </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="495" column="1" bodyfile="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" bodystart="495" bodyend="505"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Contains all classes and functions that are used as basis for all benchmarks. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/hpcc_benchmark.hpp" line="50" column="1"/>
+  </compounddef>
+</doxygen>

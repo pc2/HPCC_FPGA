@@ -1,0 +1,297 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>GEMM &mdash; HPCC FPGA Documentation  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/custom.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="LINPACK" href="../LINPACK/index.html" />
+    <link rel="prev" title="FFT" href="../FFT/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Table of Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">HPCC FPGA Benchmark Suite</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../FFT/index.html">FFT</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">GEMM</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#configuration-parameters">Configuration Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#detailed-description">Detailed Description</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../LINPACK/index.html">LINPACK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../PTRANS/index.html">PTRANS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../RandomAccess/index.html">RandomAccess</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../STREAM/index.html">STREAM</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">HPCC FPGA Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">HPCC FPGA Benchmark Suite</a> &raquo;</li>
+        
+      <li>GEMM</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="gemm">
+<h1>GEMM<a class="headerlink" href="#gemm" title="Permalink to this headline">¶</a></h1>
+<p>This section contains all information related to the GEMM benchmark.
+This benchmark calculates the result for <span class="math notranslate nohighlight">\(C' = \beta * C + \alpha * A * B\)</span> where <span class="math notranslate nohighlight">\(A,B,C,C' \in \Bbb R^{n \times n}\)</span> and <span class="math notranslate nohighlight">\(\alpha, \beta \in \Bbb R\)</span>.
+The kernel uses a two-leveled blocked approach that can be individually scaled to the target hardware.</p>
+<div class="toctree-wrapper compound">
+</div>
+<div class="section" id="configuration-parameters">
+<h2>Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Permalink to this headline">¶</a></h2>
+<table class="colwidths-given docutils align-default" id="id1">
+<caption><span class="caption-number">Table 2 </span><span class="caption-text">Configuration parameters for the Kernel</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 63%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NUM_REPLICATIONS</span></code></p></td>
+<td><p>Replicates all kernels the given number of times. This allows to simultaneously schedule multiple kernels with different input data. The data set might be split between the available kernels to speed up execution.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">BLOCK_SIZE</span></code></p></td>
+<td><p>Size of the matrix blocks that are buffered in local memory.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">GEMM_SIZE</span></code></p></td>
+<td><p>Size of the smaller matrix blocks that are multiplied in registers.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">GLOBAL_MEM_UNROLL</span></code></p></td>
+<td><p>Unrolling factor for the loops that read or write to global memory. This modifies the width of the load and store units to optimize memory accesses.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">INTEL_MUL_SHIFT_REG</span></code></p></td>
+<td><p>This parameters specifies the size of the shift register that is used within the multiplication pipeline. This allows to relax memory dependencies and increase the final kernel frequency. If the value is set to 0, no shift register will be used. This parameter is only relevant for Intel devices.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DATA_TYPE</span></code></p></td>
+<td><p>Specifies the used data type for the calculation. <code class="docutils literal notranslate"><span class="pre">half</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code> and <code class="docutils literal notranslate"><span class="pre">double</span></code> are supported.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="detailed-description">
+<h2>Detailed Description<a class="headerlink" href="#detailed-description" title="Permalink to this headline">¶</a></h2>
+<p>The GEMM benchmark implements a matrix-matrix multiplication similar to the GEMM routines in the BLAS library.
+It calculates <span class="math notranslate nohighlight">\(C' = \beta * C + \alpha * A * B\)</span> where <span class="math notranslate nohighlight">\(A,B,C,C' \in \Bbb R^{n \times n}\)</span> and <span class="math notranslate nohighlight">\(\alpha, \beta \in \Bbb R\)</span>.
+The number of FLOP for the performance calculation is defined to be <span class="math notranslate nohighlight">\(2 * n^3\)</span>.
+The result is verified by calculating the residual <span class="math notranslate nohighlight">\(\frac{||C - C'||}{\epsilon n ||C||_F}\)</span> where <span class="math notranslate nohighlight">\(\epsilon\)</span> is the machine epsilon and <span class="math notranslate nohighlight">\(C'\)</span> the result of the reference implementation.
+The implementation is based on a matrix multiplication design for Intel Stratix 10 and generalized to make it compatible with a broader range of devices.
+The kernel creates a memory hierarchy by doing the following data movements:</p>
+<ul class="simple">
+<li><p>A blocked matrix multiplication in global memory over a matrix of size n</p></li>
+<li><p>A blocked matrix multiplication in local memory (BRAM) over blocks of size <code class="docutils literal notranslate"><span class="pre">BLOCK_SIZE</span></code></p></li>
+<li><p>A fully unrolled matrix multiplication in registers over blocks of size <code class="docutils literal notranslate"><span class="pre">GEMM_SIZE</span></code></p></li>
+</ul>
+<p>The data movements and used pipelines are shown in the <a class="reference internal" href="#memory"><span class="std std-numref">Fig. 2</span></a> .</p>
+<div class="figure align-center" id="id2">
+<span id="memory"></span><a class="reference internal image-reference" href="../../_images/kernel_memory_hierarchy.drawio.png"><img alt="Impact of parameters to split the matix into blocks" src="../../_images/kernel_memory_hierarchy.drawio.png" style="width: 600px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 2 </span><span class="caption-text">Visualized data movements for the multiplication of two matrices A and B. These movements are implemented in two pipelines that will run sequentially.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</div>
+<p>The matrices are divided into blocks of a fixed size that can be modified with the <code class="docutils literal notranslate"><span class="pre">BLOCK_SIZE</span></code> parameter.
+One pipeline loads a single block of matrix A and B into the local memory of the FPGA.
+In the second pipeline the loaded blocks are used to calculate an intermediate result again with a blocked approach.
+This time the block size is defined by the parameter <code class="docutils literal notranslate"><span class="pre">GEMM_SIZE</span></code>.
+The matrix multiplication for this block will be fully unrolled which allows to initiate the multiplication of a whole block every clock cycle.
+Both pipelines will be executed sequentially to calculate a result of a single block of A + B.
+A third pipeline loads a block of C and calculates the final result for a block of C’.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../LINPACK/index.html" class="btn btn-neutral float-right" title="LINPACK" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../FFT/index.html" class="btn btn-neutral float-left" title="FFT" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Marius Meyer
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

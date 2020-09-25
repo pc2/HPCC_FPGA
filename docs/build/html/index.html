@@ -1,0 +1,275 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>HPCC FPGA Documentation &mdash; HPCC FPGA Documentation  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="STREAM" href="STREAM/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="#" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="STREAM/index.html">STREAM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RandomAccess/index.html">RandomAccess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="FFT/index.html">FFT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GEMM/index.html">GEMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PTRANS/index.html">PTRANS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LINPACK/index.html">LINPACK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="b_eff/index.html">b_eff</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Technical Support:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RandomAccess/results/index.html">RandomAccess FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">HPCC FPGA Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>HPCC FPGA Documentation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="hpcc-fpga-documentation">
+<h1>HPCC FPGA Documentation<a class="headerlink" href="#hpcc-fpga-documentation" title="Permalink to this headline">¶</a></h1>
+<p>In the last years, FPGAs with support for OpenCL-based high-level synthesis emerged as a new promising accelerator for high-performance computing applications.
+This benchmarks suite uses the benchmarks defined in the HPC Challenge benchmark suite proposed in <a class="reference internal" href="#lus05" id="id1"><span>[LUS05]</span></a> to implement parametrizable OpenCL kernels.
+The parametrization of the kernels provided by the base implementation enables a better resource utilization on a broad range of Intel and Xilinx FPGA boards without manual changes in the source code.</p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="STREAM/index.html">STREAM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RandomAccess/index.html">RandomAccess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="FFT/index.html">FFT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GEMM/index.html">GEMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PTRANS/index.html">PTRANS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LINPACK/index.html">LINPACK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="b_eff/index.html">b_eff</a></li>
+</ul>
+</div>
+<p>The benchmarks itself are described in more detail in the sections listed above.</p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Technical Support:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
+</ul>
+</div>
+<p>Technical issues regarding the build process, configuration and execution are collected here.</p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RandomAccess/results/index.html">RandomAccess FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
+</ul>
+</div>
+<p>These pages contain measurement results for the base implementations of the benchmarks. They are reported together with the used CPU and other relevant infrastructure, as well as the used configuration and resource utilization of the bitsreams.</p>
+<div class="figure align-center" id="id2">
+<span id="overall-result-plot"></span><a class="reference internal image-reference" href="_images/overall_results.png"><img alt="Results can not be shown!" src="_images/overall_results.png" style="height: 300px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 7 </span><span class="caption-text">Radar plot that contains the normalized results for the benchmarks STREAM, RandomAccess, FFT, and GEMM executed on three different boards and memory types.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</div>
+<dl class="citation">
+<dt class="label" id="lus05"><span class="brackets"><a class="fn-backref" href="#id1">LUS05</a></span></dt>
+<dd><p>LUSZCZEK, Piotr, et al. <cite>Introduction to the HPC challenge benchmark suite</cite>. Ernest Orlando Lawrence Berkeley NationalLaboratory, Berkeley, CA (US), 2005.</p>
+</dd>
+</dl>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="STREAM/index.html" class="btn btn-neutral float-right" title="STREAM" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Marius Meyer
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

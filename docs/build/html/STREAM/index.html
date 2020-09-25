@@ -1,0 +1,356 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>STREAM &mdash; HPCC FPGA Documentation  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="STREAM FPGA Benchmark Results" href="results/index.html" />
+    <link rel="prev" title="HPCC FPGA Documentation" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">STREAM</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="results/index.html">STREAM FPGA Benchmark Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-parameters">Configuration Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#detailed-description">Detailed Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-hints">Configuration Hints</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../RandomAccess/index.html">RandomAccess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../FFT/index.html">FFT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GEMM/index.html">GEMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../PTRANS/index.html">PTRANS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../LINPACK/index.html">LINPACK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../b_eff/index.html">b_eff</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Technical Support:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RandomAccess/results/index.html">RandomAccess FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results/index.html">STREAM FPGA Benchmark Results</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPCC FPGA Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>STREAM</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="id1">
+<h1>STREAM<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
+<p>This section contains all information related to the STREAM benchmark.</p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="results/index.html">STREAM FPGA Benchmark Results</a></li>
+</ul>
+</div>
+<div class="section" id="configuration-parameters">
+<h2>Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Permalink to this headline">¶</a></h2>
+<p>In <a class="reference internal" href="#stream-config"><span class="std std-numref">Table 2</span></a> the configuration parameters are shown that are used to modify the kernel.
+All other parameters can also later be changed with the host code during runtime.</p>
+<span id="stream-config"></span><table class="colwidths-given docutils align-default" id="id3">
+<caption><span class="caption-number">Table 2 </span><span class="caption-text">Configuration parameters for the Kernel</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 63%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NUM_REPLICATIONS</span></code></p></td>
+<td><p>Replicates all kernels the given number of times. This allows to simultaneously schedule multiple kernels with different input data. The data set might be split between the available kernels to speed up execution.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DEVICE_BUFFER_SIZE</span></code></p></td>
+<td><p>Size of the local memory buffer that stores intermediate values read from global memory. Used to reduce the impact of memory latency on the execution time.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DATA_TYPE</span></code></p></td>
+<td><p>Data type used for host and device code.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VECTOR_COUNT</span></code></p></td>
+<td><p>If <code class="docutils literal notranslate"><span class="pre">VECTOR_COUNT</span></code> &gt;1, OpenCL vector types of the given size are used in the devicecode instead of scalar values. Can be used to match the data size with the width of thememory interface.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">GLOBAL_MEM_UNROLL</span></code></p></td>
+<td><p>Loop unrolling factor for the inner loops in the device code. Similar effect to <code class="docutils literal notranslate"><span class="pre">VECTOR_COUNT</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="detailed-description">
+<h2>Detailed Description<a class="headerlink" href="#detailed-description" title="Permalink to this headline">¶</a></h2>
+<p>The goal of the STREAM benchmark is to measure the sustainable memory bandwidth in GB/s of a device using four different vector operations: <cite>Copy</cite>, <cite>Scale</cite>, <cite>Add</cite> and <cite>Triad</cite>.
+All kernels are taken from the <a class="reference external" href="https://www.cs.virginia.edu/stream/">STREAM benchmark</a> v5.10 and thus slightly differ from the kernels proposed in <a class="reference internal" href="../index.html#lus05" id="id2"><span>[LUS05]</span></a>.
+The benchmark will sequentially execute the operations given in <a class="reference internal" href="#stream-operations"><span class="std std-numref">Table 3</span></a> .
+<cite>PCI Read</cite> and <cite>PCI Write</cite> are no OpenCL kernels but represent the read and write of the arrays to the device memory.
+The benchmark will output the maximum, average, and minimum times measured for all of these operations.
+For the calculation of the memory bandwidth, the minimum times will be used.</p>
+<span id="stream-operations"></span><table class="docutils align-center" id="id4">
+<caption><span class="caption-number">Table 3 </span><span class="caption-text">The four STREAM operations and the PCIe reads and writes that are executed in the order they are given in the table.</span><a class="headerlink" href="#id4" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>PCI Write</p></td>
+<td><p>write arrays to device</p></td>
+</tr>
+<tr class="row-even"><td><p>Copy</p></td>
+<td><p><span class="math notranslate nohighlight">\(C[i] = A[i]\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Scale</p></td>
+<td><p><span class="math notranslate nohighlight">\(B[i] = j \cdot C[i]\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>Add</p></td>
+<td><p><span class="math notranslate nohighlight">\(C[i] = A[i] + B[i]\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Triad</p></td>
+<td><p><span class="math notranslate nohighlight">\(A[i] = j \cdot C[i] + B[i]\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>PCI Read</p></td>
+<td><p>read arrays from device</p></td>
+</tr>
+</tbody>
+</table>
+<p>The arrays A, B, and C are initialized with a constant value over the whole array.
+This allows us to validate the result by only recalculating the operations with scalar values.
+The error is calculated for every value in the arrays and must be below the machine epsilon <span class="math notranslate nohighlight">\(\epsilon &lt; ||d - d'||\)</span> to pass the validation.</p>
+<p>A flow chart of the calculation kernel that can perform all four STREAM operations is given in <a class="reference internal" href="#stream-kernel-flow"><span class="std std-numref">Fig. 2</span></a> .
+Since on FPGA the source code is translated to spatial structures that take up resources on the device, a single combined kernel allows for best reuse of those resources.
+The computation is split into blocks of a fixed length, which makes it necessary that the arrays have the length of a multiple of the block size.
+In a first loop, the input values of the first input array <em>Input1</em> are loaded into a buffer located in the local memory of the FPGA.
+The size of this local memory buffer can be specified with the <code class="docutils literal notranslate"><span class="pre">DEVICE_BUFFER_SIZE</span></code> parameter.
+While the values from the first input array are loaded, they are multiplied with a scaling factor <cite>scalar</cite>.
+This allows the execution of the <cite>Copy</cite> and <cite>Scale</cite> operation.
+In the case of <cite>Copy</cite>, the scaling factor is set to 1.0.
+In the second loop, the second input <em>Input2</em> is only added to the buffer, if a boolean flag is set.
+Together with the first loop, this makes it possible to recreate the behavior of the <cite>Add</cite> and <cite>Triad</cite> operation.
+In the third loop, the content of the buffer is stored in the output array <em>Output</em> located in global memory.
+Note, that depending on the STREAM operation, different arrays are used as input and output array with the same kernel.</p>
+<div class="figure align-center" id="id5">
+<span id="stream-kernel-flow"></span><a class="reference internal image-reference" href="../_images/stream_kernel_data_flow.drawio.png"><img alt="Flow chart of the STREAM calculation kernel is missing!" src="../_images/stream_kernel_data_flow.drawio.png" style="width: 180px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 2 </span><span class="caption-text">Flow chart of the STREAM calculation kernel that can execute all four STREAM operations. Global memory accesses are written in bold. <cite>buf</cite> is the local memory buffer and <cite>scalar</cite> a constant kernel parameter. The second input can be selected over a boolean flag, which is also a kernel parameter.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">DATA_TYPE</span></code> and <code class="docutils literal notranslate"><span class="pre">VECTOR_COUNT</span></code> can be used to define the data type used within the kernel.
+If <code class="docutils literal notranslate"><span class="pre">VECTOR_COUNT</span></code> is greater than 1, OpenCL vector types of the given length are used.
+Depending on the used data type, the loops can be unrolled with the <code class="docutils literal notranslate"><span class="pre">GLOBAL_MEM_UNROLL</span></code> parameter to achieve the optimal size for the memory interface.
+Since some of the STREAM operations show an asymmetry between reads and writes from global memory, the best performance can be achieved if a single bank is used for all three arrays.
+DDR memory bandwidth is not bidirectional, so with a sufficient memory interface width, each of the three phases can fully utilize all available bandwidth of the global memory bank.
+Intermediate results are stored in a local memory buffer that can be modified in size over a configuration parameter.
+This makes STREAM bandwidth bound by the global memory and also slightly resource bound by the BRAM.
+The kernel has to be replicated to fully utilize all available memory banks and at the same time the local memory buffer size has to be increased to achieve larger burst sizes and decrease the impact of memory latency.</p>
+</div>
+<div class="section" id="configuration-hints">
+<h2>Configuration Hints<a class="headerlink" href="#configuration-hints" title="Permalink to this headline">¶</a></h2>
+<p>For the best performance result, the kernel should be replicated for every memory bank.
+In a next step, the size of the local memory buffer should be increased as large as possible to achieve larger global memory burst sizes.
+If the kernel frequency drops below the frequency of the memory interface, it might be beneficial to reduce the buffer size slightly to achieve at least the memory interface frequency.</p>
+<dl class="citation">
+<dt class="label" id="lus05"><span class="brackets"><a class="fn-backref" href="#id2">LUS05</a></span></dt>
+<dd><p>LUSZCZEK, Piotr, et al. <cite>Introduction to the HPC challenge benchmark suite</cite>. Ernest Orlando Lawrence Berkeley NationalLaboratory, Berkeley, CA (US), 2005.</p>
+</dd>
+</dl>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="results/index.html" class="btn btn-neutral float-right" title="STREAM FPGA Benchmark Results" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../index.html" class="btn btn-neutral float-left" title="HPCC FPGA Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Marius Meyer
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

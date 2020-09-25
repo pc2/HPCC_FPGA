@@ -1,0 +1,115 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.18">
+  <compounddef id="namespacebm__execution" kind="namespace" language="C++">
+    <compoundname>bm_execution</compoundname>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="execution_8h_1a1d17c39ca7817ce420394a1a8d648e72" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unique_ptr&lt; gemm::GEMMExecutionTimings &gt;</type>
+        <definition>std::unique_ptr&lt;gemm::GEMMExecutionTimings&gt; bm_execution::calculate</definition>
+        <argsstring>(hpcc_base::ExecutionSettings&lt; gemm::GEMMProgramSettings &gt; const &amp;config, HOST_DATA_TYPE *a, HOST_DATA_TYPE *b, HOST_DATA_TYPE *c, HOST_DATA_TYPE *c_out, HOST_DATA_TYPE alpha, HOST_DATA_TYPE beta)</argsstring>
+        <name>calculate</name>
+        <param>
+          <type>hpcc_base::ExecutionSettings&lt; gemm::GEMMProgramSettings &gt; const &amp;</type>
+          <declname>config</declname>
+        </param>
+        <param>
+          <type>HOST_DATA_TYPE *</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type>HOST_DATA_TYPE *</type>
+          <declname>b</declname>
+        </param>
+        <param>
+          <type>HOST_DATA_TYPE *</type>
+          <declname>c</declname>
+        </param>
+        <param>
+          <type>HOST_DATA_TYPE *</type>
+          <declname>c_out</declname>
+        </param>
+        <param>
+          <type>HOST_DATA_TYPE</type>
+          <declname>alpha</declname>
+        </param>
+        <param>
+          <type>HOST_DATA_TYPE</type>
+          <declname>beta</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>The actual execution of the benchmark. This method can be implemented in multiple *.cpp files. This header enables simple exchange of the different calculation methods.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>OpenCL context used to create needed Buffers and queues </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>device</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The OpenCL device that is used to execute the benchmarks </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>program</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The OpenCL program containing the kernels </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>repetitions</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of times the kernels are executed </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>replications</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of times a kernel is replicated - may be used in different ways depending on the implementation of this method </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dataSize</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The size of the data array that may be used for benchmark execution in number of items </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>blockSize</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Size of a block that is calculated by the kernel</para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The time measurements and the error rate counted from the executions </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/GEMM/src/host/execution.h" line="57" column="1" declfile="/Users/mariusme/Documents/repos/HPCC_FPGA/GEMM/src/host/execution.h" declline="57" declcolumn="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/GEMM/src/host/execution.h" line="35" column="1"/>
+  </compounddef>
+</doxygen>

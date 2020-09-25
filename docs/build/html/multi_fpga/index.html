@@ -1,0 +1,273 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Multi-FPGA Benchmarking &mdash; HPCC FPGA Documentation  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Basic Build Setup" href="../Basic Setup/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../STREAM/index.html">STREAM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RandomAccess/index.html">RandomAccess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../FFT/index.html">FFT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GEMM/index.html">GEMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../PTRANS/index.html">PTRANS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../LINPACK/index.html">LINPACK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../b_eff/index.html">b_eff</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Other Topics:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Multi-FPGA Benchmarking</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#execution-of-a-multi-fpga-benchmark">Execution of a multi-FPGA benchmark</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RandomAccess/results/index.html">RandomAccess FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPCC FPGA Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Multi-FPGA Benchmarking</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="multi-fpga-benchmarking">
+<h1>Multi-FPGA Benchmarking<a class="headerlink" href="#multi-fpga-benchmarking" title="Permalink to this headline">¶</a></h1>
+<p>The benchmarks of the HPCC FPGA benchmark suite support the execution on multiple FPGAs.
+It tries to keep the execution model close to the one of the HPCC benchmark for CPU which distinguishes between <cite>global</cite> and <cite>embarrassingly parallel</cite> execution.
+The difference is, that for the global execution, the calculation of a single problem done with all available resources.
+So the FPGAs will need to communicate and exchange data during calculation.
+On the other hand, with an embarrassingly parallel execution, every FPGA works on its own data, so no communication is needed during calculation.</p>
+<p>The benchmarks can be divided as follows:</p>
+<dl class="simple">
+<dt>Global:</dt><dd><ul class="simple">
+<li><p><a class="reference internal" href="../RandomAccess/index.html#randomaccess"><span class="std std-ref">RandomAccess</span></a></p></li>
+<li><p><a class="reference internal" href="../FFT/index.html#fft"><span class="std std-ref">FFT</span></a></p></li>
+<li><p><a class="reference internal" href="../PTRANS/index.html#ptrans"><span class="std std-ref">PTRANS</span></a></p></li>
+<li><p><a class="reference internal" href="../LINPACK/index.html#hpl"><span class="std std-ref">LINPACK</span></a></p></li>
+<li><p><a class="reference internal" href="../b_eff/index.html#beff"><span class="std std-ref">b_eff</span></a></p></li>
+</ul>
+</dd>
+<dt>Embarrassingly Parallel:</dt><dd><ul class="simple">
+<li><p><a class="reference internal" href="../STREAM/index.html#stream"><span class="std std-ref">STREAM</span></a></p></li>
+<li><p><a class="reference internal" href="../GEMM/index.html#gemm"><span class="std std-ref">GEMM</span></a></p></li>
+</ul>
+</dd>
+</dl>
+<p>Independent of the used paralleization scheme, the benchmarks configuration of the benchmarks is nearly the same as described in the next section.</p>
+<div class="section" id="execution-of-a-multi-fpga-benchmark">
+<h2>Execution of a multi-FPGA benchmark<a class="headerlink" href="#execution-of-a-multi-fpga-benchmark" title="Permalink to this headline">¶</a></h2>
+<p>A host process of the benchmark will always only handle a single FPGA device.
+Nevertheless, multiple host processes can communicate over MPI to execute a benchmark in parallel and synchronize the data.
+If multiple FPGAs are available on a single host, they can be utilized by executing multiple MPI ranks on this host.
+The FPGAs will be assigned to the MPI ranks in a round robin scheme so the device ID for every MPI rank is calculated with <span class="math notranslate nohighlight">\(id = mpi\_rank\ mod\ \#devices\)</span>.</p>
+<p>As an example we execute STREAM with two MPI ranks and two kernel replications each:</p>
+<div class="highlight-Bash notranslate"><div class="highlight"><pre><span></span>mpirun -n <span class="m">2</span> .STREAM_FPGA_intel -f kernel.aocx -r <span class="m">2</span> -s <span class="m">1024</span>
+</pre></div>
+</div>
+<p>This will execute STREAM on each FPGA with array sizes of 1024 elements.
+These 1024 elements will be distributed amongst the two kernel replication such that every kernel replication will work on arrays of size 512.
+Since the execution includes two MPI ranks and the input sizes will be scaled by the number of ranls, the total size of the arrays will be <span class="math notranslate nohighlight">\(1024 \cdot 2 = 2048\)</span>.
+This also holds for all other benchmarks, so the basic rule of thumb is:</p>
+<p><em>The data size specified in the benchmark configuration will be multiplied by the number of MPI ranks and and then equally distribued to the total available kernel replications</em></p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../Basic Setup/index.html" class="btn btn-neutral float-left" title="Basic Build Setup" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Marius Meyer
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

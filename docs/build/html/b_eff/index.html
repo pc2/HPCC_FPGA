@@ -1,0 +1,442 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>b_eff &mdash; HPCC FPGA Documentation  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Basic Build Setup" href="../technical_support/Basic Setup/index.html" />
+    <link rel="prev" title="LINPACK" href="../LINPACK/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../STREAM/index.html">STREAM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RandomAccess/index.html">RandomAccess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../FFT/index.html">FFT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GEMM/index.html">GEMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../PTRANS/index.html">PTRANS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../LINPACK/index.html">LINPACK</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">b_eff</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-parameters">Configuration Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#detailed-description">Detailed Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-details">Implementation Details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-model">Performance Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#output-interpretation">Output Interpretation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-hints">Configuration Hints</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Technical Support:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RandomAccess/results/index.html">RandomAccess FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPCC FPGA Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>b_eff</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="b-eff">
+<h1>b_eff<a class="headerlink" href="#b-eff" title="Permalink to this headline">¶</a></h1>
+<p>This section contains all information related to the network bandwidth benchmark.</p>
+<div class="toctree-wrapper compound">
+</div>
+<div class="section" id="configuration-parameters">
+<h2>Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Permalink to this headline">¶</a></h2>
+<p>In <a class="reference internal" href="#beff-config"><span class="std std-numref">Table 10</span></a> the configuration parameters are shown that are used to modify the kernel.
+All other parameters can also later be changed with the host code during runtime.</p>
+<p><em>Note: The current implementation is optimized for circuit-switched networks with four channels. Packet-switched networks might need a different kernel architecture. This specialization is the reason for the low amount of configuration parameters which might change, if more systems with inter-FPGA communication are available.</em></p>
+<span id="beff-config"></span><table class="colwidths-given docutils align-center" id="id1">
+<caption><span class="caption-number">Table 10 </span><span class="caption-text">Configuration parameters for the Kernel</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 63%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CHANNEL_WIDTH</span></code></p></td>
+<td><p>Width of an external channel in bytes.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="detailed-description">
+<h2>Detailed Description<a class="headerlink" href="#detailed-description" title="Permalink to this headline">¶</a></h2>
+<p>The b_eff implementation for FPGA is based on the <a class="reference external" href="https://fs.hlrs.de/projects/par/mpi//b_eff/">effective bandwidth benchmark</a> that uses MPI to measure the network bandwidth using different message sizes.
+The basic idea behind the benchmark is to combine both, the network latency and bandwidth, into a single metric: the effective bandwidth.
+It is a metric that combines the network bandwidth measured for a wide range of message sizes to allow an estimation of how the network will react to different application scenarios.
+The benchmark works mainly within a ring topology. Positions in the ring will be assigned at random.
+For the use with a circuit-switched network, the benchmark rules were slightly adapted and simplified because routing does not take place in the network.
+Instead, the communication links between the FPGAs are set up directly before execution in the required topology.</p>
+<p>The benchmark works on 21 different message sizes <span class="math notranslate nohighlight">\(L\)</span> that are defined like this:</p>
+<div class="math notranslate nohighlight">
+\[L=1B,2B,4B,\dots,2kB,4kB,4kB*(a^1),4kB*(a^2),\dots,4kB*(a^8)\]</div>
+<p>where <span class="math notranslate nohighlight">\(a\)</span> is an integer constant that is set to 2 in this implementation.
+So the final message sizes will be in the range <span class="math notranslate nohighlight">\(2^0, 2^1, \dots, 2^{20}\)</span> bytes.
+The maximum message size can be adjusted during runtime using the host code flag <code class="docutils literal notranslate"><span class="pre">-m</span></code>.</p>
+<p>Since we only use one topology the equation for the effective bandwidth shrinks to:</p>
+<div class="math notranslate nohighlight">
+\[b_{eff} = sum_L(max_{rep}(b(L, rep))) / 21\]</div>
+<p>where b(L, rep) is the measured bandwidth for a data size <span class="math notranslate nohighlight">\(L\)</span> in repetition <span class="math notranslate nohighlight">\(rep\)</span>.</p>
+<p>The <cite>looplength</cite> described in the original benchmark will be used to minimize measurement
+errors caused by too short runtimes.
+It specifies the total number of message exchanges that will be done with a certain message size.
+It may vary between message sizes to achieve similar runtimes independent of the message size.
+In the current implementation, the final loop length will be calculated based on an initial maximum loop length that can be given during runtime.
+The number of repetitions for each message size is then calculated with the following equation:</p>
+<div class="math notranslate nohighlight">
+\[max(\frac{u}{\lceil\frac{m}{2 \cdot CHANNEL\_WIDTH}\rceil}, l)\]</div>
+<p>were <span class="math notranslate nohighlight">\(u\)</span> is the upper/maximum loop length that should be used and <span class="math notranslate nohighlight">\(l\)</span> the lowest. <span class="math notranslate nohighlight">\(m\)</span> is the current message size in bytes
+and <span class="math notranslate nohighlight">\(CHANNEL\_WIDTH\)</span> the width of the communication channel in bytes.</p>
+<p>The bandwidth will be calculated by measuring the execution time <span class="math notranslate nohighlight">\(t_{exe}\)</span> of the kernel and dividing the measured time by the total number of transmitted bytes.</p>
+<div class="math notranslate nohighlight">
+\[b(L) = \frac{L \cdot looplength}{t_{exe}}\]</div>
+<p>The aggregated bandwidth is then calculated with:</p>
+<div class="math notranslate nohighlight">
+\[b_{eff} = \frac{sum_L(b(L))}{21}\]</div>
+</div>
+<div class="section" id="implementation-details">
+<h2>Implementation Details<a class="headerlink" href="#implementation-details" title="Permalink to this headline">¶</a></h2>
+<p>The implementation consists of two different kernel types: a <cite>send</cite> kernel and a <cite>receive</cite> kernel.
+During execution, they continuously send or receive data over two external channels.
+Because the message size might exceed the width of the channels, the messages are further divided into data chunks that match the channel width.
+Thus, a message is streamed chunk-wise over two channels to the receiver in a pipelined loop.
+At kernel start, the <cite>send</cite> kernel will generate a message chunk that is filled with bytes of the value <span class="math notranslate nohighlight">\(ld(m) mod 256\)</span>.
+The message chunk will be used continuously for sending and will be stored in global memory after the last transmission.
+This allows verifying the correct transmission of the data chunk over the whole range of repetitions.</p>
+<p>A schematic view of the channel connections for the kernel implementation is given in <a class="reference internal" href="#network-kernel-flow"><span class="std std-numref">Fig. 5</span></a>.</p>
+<div class="figure align-center" id="id2">
+<span id="network-kernel-flow"></span><a class="reference internal image-reference" href="../_images/network_topology_setup.drawio.png"><img alt="Connection of external channels to FPGA kernels" src="../_images/network_topology_setup.drawio.png" style="width: 360px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 5 </span><span class="caption-text">The different kernels of the implementation are connected over bidirectional external channels to kernels running on other FPGAs. It this example two FPGAs form a bidirectional ring and will send and receive data from the other FPGA.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</div>
+<p>The host code will start all kernels simultaneously and measure the time until all kernels are finished and use this time to calculate the achieved bandwidth for the execution.
+Overall, the kernels will be executed sequentially for all message sizes and the host processes will be synchronized with an MPI barrier before every execution.</p>
+</div>
+<div class="section" id="performance-model">
+<h2>Performance Model<a class="headerlink" href="#performance-model" title="Permalink to this headline">¶</a></h2>
+<p>The following performance model is based on the implementation description given in the previous section.
+So we have two send-kernels and two receive-kernels on each device and thus can send and receive in parallel.
+They will be used to connect to the left-hand and right-hand neighbor in the ring topology.</p>
+<p>For the performance model, we first need to model the runtime of the kernel for a given data size and
+<cite>looplength</cite>.</p>
+<p>We will model the performance for the BittWare 520N cards equipped with Intel Stratix 10 FPGAs.
+From the BittWare OpenCL S10 BSP Reference Guide we get the following relevant metrics for
+external channels:</p>
+<table class="docutils align-center" id="id3">
+<caption><span class="caption-number">Table 11 </span><span class="caption-text">Relevant metrics for the external channels on the BittWare 520N board</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Description</p></th>
+<th class="head"><p>Value</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Number of external channels</p></td>
+<td><p><span class="math notranslate nohighlight">\(c = 4\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>channel latency</p></td>
+<td><p><span class="math notranslate nohighlight">\(c_{latency} = 520ns\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>channel clock frequency</p></td>
+<td><p><span class="math notranslate nohighlight">\(c_{frequency} = 156.25MHz\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>channel width</p></td>
+<td><p><span class="math notranslate nohighlight">\(c_{width} = 256bit\)</span></p></td>
+</tr>
+</tbody>
+</table>
+<p>We divide the available channels between the two kernels so every kernel will just have <cite>c = 2</cite> channels
+for transmission.
+The kernel execution time can then be calculated using the constants above and the used message size
+<span class="math notranslate nohighlight">\(L\)</span> and the number of message exchanges <span class="math notranslate nohighlight">\(i\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[t_{L, i} = \frac{\lceil\frac{L}{c * c_{width}}\rceil * i}{c_{frequency}} + i * c_{latency}\]</div>
+<p>This can be further used to calculate the bandwidth with:</p>
+<div class="math notranslate nohighlight">
+\[b_{L, i} = \frac{2 * L * i}{t_{L, i}}\]</div>
+<p>The number of iterations can be removed from the equation for the model since we do not need to care about measurement
+inaccuracy. So the equation reduces to:</p>
+<div class="math notranslate nohighlight">
+\[b_{L} = \frac{L}{\frac{\lceil\frac{L}{c * c_{width}}\rceil}{c_{frequency}} + c_{latency}}\]</div>
+<p>when inserting all constant values for the Bittware 520N board we get:</p>
+<div class="math notranslate nohighlight">
+\[b_{L} = \frac{L}{\frac{\lceil\frac{L}{64B}\rceil}{156.25MHz} + 520ns}\]</div>
+<p>where everything except <span class="math notranslate nohighlight">\(L\)</span> is constant.
+This means the bandwidth depends on the used message size which is shown for a kernel that uses two channels for transmission in <a class="reference internal" href="#network-bandwidth-model"><span class="std std-numref">Fig. 6</span></a>.</p>
+<div class="figure align-center" id="id4">
+<span id="network-bandwidth-model"></span><a class="reference internal image-reference" href="../_images/network_bandwidth_model.jpg"><img alt="Model bandwidth over used message sizes" src="../_images/network_bandwidth_model.jpg" style="width: 360px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 6 </span><span class="caption-text">Expected network bandwidth depending on the used message size based on the model.</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+</div>
+<p>The effective bandwidth for a single kernel pair is then calculated with:</p>
+<div class="math notranslate nohighlight">
+\[b_{agg} = \frac{\sum_{L} b_{L}}{21}\]</div>
+<p>over all <span class="math notranslate nohighlight">\(L\)</span>.</p>
+<p>Considering the model, the predicted effective bandwidth for the BittWare 520N card will be ~7.77  GB/s per FPGA.
+Since all additional  FPGAs will have their distinct dedicated channels for communication, the effective bandwidth is expected
+to scale linearly with the number of FPGAs <span class="math notranslate nohighlight">\(n\)</span>.
+So we can calculate the effective bandwidth for the whole network with:</p>
+<div class="math notranslate nohighlight">
+\[b_{eff,n} = n * \frac{\sum_{L} b_{L}}{21} = n * 7.77GBs^{-1}\]</div>
+<p>where <cite>n</cite> is the number of FPGA used in the network.</p>
+</div>
+<div class="section" id="output-interpretation">
+<h2>Output Interpretation<a class="headerlink" href="#output-interpretation" title="Permalink to this headline">¶</a></h2>
+<p>The benchmark will output a result table to the standard output after execution.
+This is an example output using a single rank in <em>emulation</em>, wich explains the low data rates:</p>
+<div class="highlight-Bash notranslate"><div class="highlight"><pre><span></span>        MSize      looplength            <span class="nb">time</span>            B/s
+            <span class="m">1</span>           <span class="m">16384</span>     <span class="m">5</span>.46779e-02     <span class="m">5</span>.99292e+05
+            <span class="m">2</span>            <span class="m">8192</span>     <span class="m">5</span>.19651e-02     <span class="m">6</span>.30578e+05
+            <span class="m">4</span>            <span class="m">4096</span>     <span class="m">2</span>.58565e-02     <span class="m">1</span>.26730e+06
+            <span class="m">8</span>            <span class="m">2048</span>     <span class="m">7</span>.51376e-03     <span class="m">4</span>.36107e+06
+           <span class="m">16</span>            <span class="m">1024</span>     <span class="m">3</span>.01288e-03     <span class="m">1</span>.08760e+07
+           <span class="m">32</span>             <span class="m">512</span>     <span class="m">1</span>.66958e-03     <span class="m">1</span>.96265e+07
+           <span class="m">64</span>             <span class="m">256</span>     <span class="m">4</span>.60622e-03     <span class="m">7</span>.11386e+06
+          <span class="m">128</span>             <span class="m">128</span>     <span class="m">1</span>.86568e-03     <span class="m">1</span>.75636e+07
+          <span class="m">256</span>              <span class="m">64</span>     <span class="m">3</span>.75094e-03     <span class="m">8</span>.73594e+06
+          <span class="m">512</span>              <span class="m">32</span>     <span class="m">3</span>.81549e-03     <span class="m">8</span>.58814e+06
+         <span class="m">1024</span>              <span class="m">16</span>     <span class="m">3</span>.44074e-03     <span class="m">9</span>.52354e+06
+         <span class="m">2048</span>               <span class="m">8</span>     <span class="m">3</span>.83420e-03     <span class="m">8</span>.54624e+06
+         <span class="m">4096</span>               <span class="m">4</span>     <span class="m">3</span>.34786e-03     <span class="m">9</span>.78775e+06
+        <span class="m">16384</span>               <span class="m">2</span>     <span class="m">7</span>.84717e-03     <span class="m">8</span>.35154e+06
+        <span class="m">32768</span>               <span class="m">1</span>     <span class="m">7</span>.42386e-03     <span class="m">8</span>.82775e+06
+        <span class="m">65536</span>               <span class="m">1</span>     <span class="m">1</span>.40822e-02     <span class="m">9</span>.30761e+06
+       <span class="m">131072</span>               <span class="m">1</span>     <span class="m">1</span>.28135e-02     <span class="m">2</span>.04585e+07
+       <span class="m">262144</span>               <span class="m">1</span>     <span class="m">5</span>.52680e-02     <span class="m">9</span>.48628e+06
+       <span class="m">524288</span>               <span class="m">1</span>     <span class="m">9</span>.99676e-02     <span class="m">1</span>.04892e+07
+      <span class="m">1048576</span>               <span class="m">1</span>     <span class="m">1</span>.21861e-01     <span class="m">1</span>.72094e+07
+      <span class="m">2097152</span>               <span class="m">1</span>     <span class="m">4</span>.20120e-01     <span class="m">9</span>.98360e+06
+
+<span class="nv">b_eff</span> <span class="o">=</span> <span class="m">9</span>.58731e+06 B/s
+</pre></div>
+</div>
+<p>The table contains the measurements for all tested message sizes.
+It is split into the following four columns:</p>
+<dl class="simple">
+<dt>MSize:</dt><dd><p>The size of the message in bytes</p>
+</dd>
+<dt>looplength:</dt><dd><p>The number of message exchanges that were used to measure the execution time</p>
+</dd>
+<dt>time:</dt><dd><p>Fastest execution time of the kernel with the configuration given in the first two columns overall ranks</p>
+</dd>
+<dt>GB/s:</dt><dd><p>The accumulated maximum achieved bandwidth with the current configuration using all ranks</p>
+</dd>
+</dl>
+<p>It is possible to set the number of repetitions of the experiment.
+In this case, the best measured time will be used to calculate the bandwidth.</p>
+<p>Under the table, the calculated effective bandwidth is printed.
+It is the mean of the achieved bandwidths for all used message sizes.</p>
+</div>
+<div class="section" id="configuration-hints">
+<h2>Configuration Hints<a class="headerlink" href="#configuration-hints" title="Permalink to this headline">¶</a></h2>
+<p>Configuration is currently not possible because of the still not fixed network properties.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../technical_support/Basic Setup/index.html" class="btn btn-neutral float-right" title="Basic Build Setup" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../LINPACK/index.html" class="btn btn-neutral float-left" title="LINPACK" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Marius Meyer
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

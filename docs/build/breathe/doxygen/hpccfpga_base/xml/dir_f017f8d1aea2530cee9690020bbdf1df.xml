@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.18">
+  <compounddef id="dir_f017f8d1aea2530cee9690020bbdf1df" kind="dir">
+    <compoundname>/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include</compoundname>
+    <innerfile refid="hpcc__benchmark_8hpp">hpcc_benchmark.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/shared/include/"/>
+  </compounddef>
+</doxygen>

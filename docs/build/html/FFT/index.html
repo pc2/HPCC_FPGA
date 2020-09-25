@@ -1,0 +1,326 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>FFT &mdash; HPCC FPGA Documentation  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="FFT FPGA Benchmark Results" href="results/index.html" />
+    <link rel="prev" title="RandomAccess FPGA Benchmark Results" href="../RandomAccess/results/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../STREAM/index.html">STREAM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RandomAccess/index.html">RandomAccess</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">FFT</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="results/index.html">FFT FPGA Benchmark Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-parameters">Configuration Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#detailed-description">Detailed Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#expected-bottlenecks">Expected Bottlenecks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../GEMM/index.html">GEMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../PTRANS/index.html">PTRANS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../LINPACK/index.html">LINPACK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../b_eff/index.html">b_eff</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Technical Support:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="results/index.html">FFT FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RandomAccess/results/index.html">RandomAccess FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPCC FPGA Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>FFT</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="id1">
+<h1>FFT<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
+<p>This section contains all information related to the FFT benchmark.
+The benchmark executes a batched calculation of 1d FFTs on a single FPGA.
+It is possible to specify the size of the FFT and the number of kernel replications.</p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="results/index.html">FFT FPGA Benchmark Results</a></li>
+</ul>
+</div>
+<div class="section" id="configuration-parameters">
+<h2>Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Permalink to this headline">¶</a></h2>
+<p>In <a class="reference internal" href="#fft-config"><span class="std std-numref">Table 7</span></a> the configuration parameters are shown that are used to modify the kernel.
+All other parameters can also later be changed with the host code during runtime.</p>
+<span id="fft-config"></span><table class="colwidths-given docutils align-default" id="id2">
+<caption><span class="caption-number">Table 7 </span><span class="caption-text">Configuration parameters for the Kernel</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 71%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NUM_REPLICATIONS</span></code></p></td>
+<td><p>Replicates all kernels the given number of times. This allows to simultaneously schedule multiple kernels with different input data. The data set might be split between the available kernels to speed up execution.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LOG_FFT_SIZE</span></code></p></td>
+<td><p>Size of the FFTs will be <span class="math notranslate nohighlight">\(2^{LOG\_FFT\_SIZE}\)</span> and can not be changed during runtime! Larger FFT sizes will utilize more FPGA resources and a deeper pipeline.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="detailed-description">
+<h2>Detailed Description<a class="headerlink" href="#detailed-description" title="Permalink to this headline">¶</a></h2>
+<p>In the FFT benchmark calculates a batch of 1d FFTs of a predefined size which can be specified using the <code class="docutils literal notranslate"><span class="pre">LOG_FFT_SIZE</span></code> parameter.
+The benchmark consists of up to three different kernels that are connected over channels (or pipes for Xilinx) to stream the data from
+one kernel to the other.
+<a class="reference internal" href="#fft-data-flow"><span class="std std-numref">Fig. 3</span></a> shows the data flow through these three kernels.
+For Intel devices, the <em>store</em> kernel is not needed and instead the <em>fft1d</em> kernel is directly writing to global memory.</p>
+<div class="figure align-center" id="id3">
+<span id="fft-data-flow"></span><a class="reference internal image-reference" href="../_images/kernel_data_flow.drawio.png"><img alt="../_images/kernel_data_flow.drawio.png" src="../_images/kernel_data_flow.drawio.png" style="width: 400px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">The data movement through the three kernel. The separation of the data accesses into multiple kernels allows an easier implementation of all routines in a single pipeline and the use of memory bursts to speed up global memory accesses.</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+</div>
+<dl class="simple">
+<dt>fetch:</dt><dd><p>This kernel is a single pipeline that loads data from the global memory and puts the data in bitreversed order.
+Because of that it necessary to store the whole data for an FFT in local memory which also delays the forwarding of the data.
+The data is then forwarded to the <em>fft1d</em> kernel for the actual calculation.</p>
+</dd>
+<dt>fft1d:</dt><dd><p>It is also a single pipeline that contains all stages of the FFT in an unrolled fashion.
+The data is passed to the different stages using a shift register.
+The data is then forwared to the store kernel or directly written to global memory.</p>
+</dd>
+<dt>store:</dt><dd><p>The store kernel is only used on Xilinx devices.
+The kernel reads data from a pipe and writes it without modifications to global memory.
+Since no conditionals are needed it is possible for the compiler to infer global memory bursts.</p>
+</dd>
+</dl>
+<p>It is allowed to create multiple replications of the benchmark kernels with the <code class="docutils literal notranslate"><span class="pre">NUM_REPLICATIONS</span></code> parameter and split the batch between the replications.
+The benchmark kernels are based on a reference implementation for the Intel OpenCL FPGA SDK included in version 19.4.0 and slightly modified to also allow execution on Xilinx FPGAs.
+A batch of FFTs is used to increase the overall execution time of the benchmark to decrease measurement errors.
+Also, the kernel pipeline is better utilized when calculating multiple FFTs sequentially.
+Data will get delayed in the fetch and fft1d kernel but batched execution allows to hide this latency.
+The number of FLOP for this calculation is defined to be <span class="math notranslate nohighlight">\(5*n*ld(n)\)</span> for an FFT of dimension <span class="math notranslate nohighlight">\(n\)</span>.
+The result of the calculation is checked by calculating the residual <span class="math notranslate nohighlight">\(\frac{||d - d'||}{\epsilon ld(n)}\)</span> where <span class="math notranslate nohighlight">\(\epsilon\)</span> is the machine epsilon, <span class="math notranslate nohighlight">\(d'\)</span> the result from the reference implementation and <span class="math notranslate nohighlight">\(n\)</span> the FFT size.</p>
+</div>
+<div class="section" id="expected-bottlenecks">
+<h2>Expected Bottlenecks<a class="headerlink" href="#expected-bottlenecks" title="Permalink to this headline">¶</a></h2>
+<p>In general the benchmark can be both memory bandwidth and compute bound.
+The implementation in a single pipeline allow to contiously read and write from global memory.
+Since reads and writes are symmetric and the memory bandwidth is unidrectional, we need two memory banks per replication.
+Besides that, the size of the FFT has an impact on the number of floating point operations that are done per data item.</p>
+<dl class="simple">
+<dt>FFT Size:</dt><dd><p>A larger FFT size will lead to more calulations per data item (<span class="math notranslate nohighlight">\(5 * ld(n)\)</span> single precision floating point operations for FFT size n).
+Also, the shift register size depends on the used FFT size, so BRAM and logic usage will increase for larger sizes.</p>
+</dd>
+<dt>Kernel Replications:</dt><dd><p>Allow to utilize more memory banks. Since the benchmark is not solely memory bound, it might be better for the overall benchmark performance to increase the FFT size instead of adding more kernel replications.
+The expected performance can be calculated using <a class="reference internal" href="#equation-eq-fft-performance">Eq.1</a>.</p>
+</dd>
+</dl>
+<div class="math notranslate nohighlight" id="equation-eq-fft-performance">
+<span class="eqno">(1)<a class="headerlink" href="#equation-eq-fft-performance" title="Permalink to this equation">¶</a></span>\[gflops = 5 \cdot LOG\_FFT\_SIZE \cdot NUM\_REPLICATIONS \cdot 8 \cdot f\]</div>
+<p>where f is the minimum of the kernel frequency and the frequency of the memory interface.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="results/index.html" class="btn btn-neutral float-right" title="FFT FPGA Benchmark Results" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../RandomAccess/results/index.html" class="btn btn-neutral float-left" title="RandomAccess FPGA Benchmark Results" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Marius Meyer
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

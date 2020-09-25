@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.18">
+  <compounddef id="dir_8c36d81eec5aa42eb53b54c7ebeb93cb" kind="dir">
+    <compoundname>/Users/mariusme/Documents/repos/HPCC_FPGA/GEMM</compoundname>
+    <innerdir refid="dir_fa79408e76d9a152d8231613e5bc6ba2">/Users/mariusme/Documents/repos/HPCC_FPGA/GEMM/src</innerdir>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/Users/mariusme/Documents/repos/HPCC_FPGA/GEMM/"/>
+  </compounddef>
+</doxygen>

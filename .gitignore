@@ -14,7 +14,7 @@
 build/*
 
 # Generated documentation, just include source folder
-docs/build
+#docs/build
 docs/html
 docs/latex
 docs/xml
