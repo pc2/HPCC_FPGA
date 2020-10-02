@@ -87,8 +87,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
-<ul>
+              <ul>
 <li class="toctree-l1"><a class="reference internal" href="STREAM/index.html">STREAM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="RandomAccess/index.html">RandomAccess</a></li>
 <li class="toctree-l1"><a class="reference internal" href="FFT/index.html">FFT</a></li>
@@ -97,12 +96,10 @@
 <li class="toctree-l1"><a class="reference internal" href="LINPACK/index.html">LINPACK</a></li>
 <li class="toctree-l1"><a class="reference internal" href="b_eff/index.html">b_eff</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Technical Support:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
 <li class="toctree-l1"><a class="reference internal" href="GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
@@ -176,8 +173,10 @@
 <p>In the last years, FPGAs with support for OpenCL-based high-level synthesis emerged as a new promising accelerator for high-performance computing applications.
 This benchmarks suite uses the benchmarks defined in the HPC Challenge benchmark suite proposed in <a class="reference internal" href="#lus05" id="id1"><span>[LUS05]</span></a> to implement parametrizable OpenCL kernels.
 The parametrization of the kernels provided by the base implementation enables a better resource utilization on a broad range of Intel and Xilinx FPGA boards without manual changes in the source code.</p>
+<div class="section" id="benchmark-descriptions">
+<h2>Benchmark Descriptions<a class="headerlink" href="#benchmark-descriptions" title="Permalink to this headline">¶</a></h2>
+<p>The following pages contain information about the base implementation for all benchmarks contained in the benchmark suite.</p>
 <div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="STREAM/index.html">STREAM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="RandomAccess/index.html">RandomAccess</a></li>
@@ -188,17 +187,21 @@ The parametrization of the kernels provided by the base implementation enables a
 <li class="toctree-l1"><a class="reference internal" href="b_eff/index.html">b_eff</a></li>
 </ul>
 </div>
-<p>The benchmarks itself are described in more detail in the sections listed above.</p>
+</div>
+<div class="section" id="technical-support">
+<h2>Technical Support<a class="headerlink" href="#technical-support" title="Permalink to this headline">¶</a></h2>
+<p>This section collects topics that can be useful for the configuration, build and execution of the benchmarks.</p>
 <div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Technical Support:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
 </div>
-<p>Technical issues regarding the build process, configuration and execution are collected here.</p>
+</div>
+<div class="section" id="benchmark-results">
+<h2>Benchmark Results<a class="headerlink" href="#benchmark-results" title="Permalink to this headline">¶</a></h2>
+<p>These pages contain measurement results for the base implementations of the benchmarks. They are reported together with the used CPU and other relevant infrastructure, as well as the configuration and resource utilization of the bitsreams.</p>
 <div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
 <li class="toctree-l1"><a class="reference internal" href="GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
@@ -206,7 +209,6 @@ The parametrization of the kernels provided by the base implementation enables a
 <li class="toctree-l1"><a class="reference internal" href="STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
 </ul>
 </div>
-<p>These pages contain measurement results for the base implementations of the benchmarks. They are reported together with the used CPU and other relevant infrastructure, as well as the used configuration and resource utilization of the bitsreams.</p>
 <div class="figure align-center" id="id2">
 <span id="overall-result-plot"></span><a class="reference internal image-reference" href="_images/overall_results.png"><img alt="Results can not be shown!" src="_images/overall_results.png" style="height: 300px;" /></a>
 <p class="caption"><span class="caption-number">Fig. 7 </span><span class="caption-text">Radar plot that contains the normalized results for the benchmarks STREAM, RandomAccess, FFT, and GEMM executed on three different boards and memory types.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
@@ -216,6 +218,7 @@ The parametrization of the kernels provided by the base implementation enables a
 <dd><p>LUSZCZEK, Piotr, et al. <cite>Introduction to the HPC challenge benchmark suite</cite>. Ernest Orlando Lawrence Berkeley NationalLaboratory, Berkeley, CA (US), 2005.</p>
 </dd>
 </dl>
+</div>
 </div>
 
 
