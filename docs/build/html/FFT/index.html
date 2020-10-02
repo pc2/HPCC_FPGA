@@ -88,7 +88,8 @@
               
             
             
-              <ul class="current">
+              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../STREAM/index.html">STREAM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../RandomAccess/index.html">RandomAccess</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">FFT</a><ul>
@@ -103,10 +104,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../LINPACK/index.html">LINPACK</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../b_eff/index.html">b_eff</a></li>
 </ul>
+<p class="caption"><span class="caption-text">Technical Support:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
+<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="results/index.html">FFT FPGA Benchmark Results</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
@@ -216,11 +219,11 @@ All other parameters can also later be changed with the host code during runtime
 <p>In the FFT benchmark calculates a batch of 1d FFTs of a predefined size which can be specified using the <code class="docutils literal notranslate"><span class="pre">LOG_FFT_SIZE</span></code> parameter.
 The benchmark consists of up to three different kernels that are connected over channels (or pipes for Xilinx) to stream the data from
 one kernel to the other.
-<a class="reference internal" href="#fft-data-flow"><span class="std std-numref">Fig. 3</span></a> shows the data flow through these three kernels.
+<a class="reference internal" href="#fft-data-flow"><span class="std std-numref">Fig. 4</span></a> shows the data flow through these three kernels.
 For Intel devices, the <em>store</em> kernel is not needed and instead the <em>fft1d</em> kernel is directly writing to global memory.</p>
 <div class="figure align-center" id="id3">
 <span id="fft-data-flow"></span><a class="reference internal image-reference" href="../_images/kernel_data_flow.drawio.png"><img alt="../_images/kernel_data_flow.drawio.png" src="../_images/kernel_data_flow.drawio.png" style="width: 400px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">The data movement through the three kernel. The separation of the data accesses into multiple kernels allows an easier implementation of all routines in a single pipeline and the use of memory bursts to speed up global memory accesses.</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 4 </span><span class="caption-text">The data movement through the three kernel. The separation of the data accesses into multiple kernels allows an easier implementation of all routines in a single pipeline and the use of memory bursts to speed up global memory accesses.</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
 </div>
 <dl class="simple">
 <dt>fetch:</dt><dd><p>This kernel is a single pipeline that loads data from the global memory and puts the data in bitreversed order.

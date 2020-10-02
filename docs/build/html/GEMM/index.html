@@ -88,7 +88,8 @@
               
             
             
-              <ul class="current">
+              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../STREAM/index.html">STREAM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../RandomAccess/index.html">RandomAccess</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../FFT/index.html">FFT</a></li>
@@ -104,10 +105,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../LINPACK/index.html">LINPACK</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../b_eff/index.html">b_eff</a></li>
 </ul>
+<p class="caption"><span class="caption-text">Technical Support:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
+<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
 <li class="toctree-l1"><a class="reference internal" href="results/index.html">GEMM FPGA Benchmark Results</a></li>
@@ -237,10 +240,10 @@ The kernel creates a memory hierarchy by doing the following data movements:</p>
 <li><p>A blocked matrix multiplication in local memory (BRAM) over blocks of size <code class="docutils literal notranslate"><span class="pre">BLOCK_SIZE</span></code></p></li>
 <li><p>A fully unrolled matrix multiplication in registers over blocks of size <code class="docutils literal notranslate"><span class="pre">GEMM_SIZE</span></code></p></li>
 </ul>
-<p>The data movements and used pipelines are shown in the <a class="reference internal" href="#memory"><span class="std std-numref">Fig. 4</span></a> .</p>
+<p>The data movements and used pipelines are shown in the <a class="reference internal" href="#memory"><span class="std std-numref">Fig. 5</span></a> .</p>
 <div class="figure align-center" id="id3">
 <span id="memory"></span><a class="reference internal image-reference" href="../_images/kernel_memory_hierarchy.drawio.png"><img alt="Impact of parameters to split the matix into blocks" src="../_images/kernel_memory_hierarchy.drawio.png" style="width: 600px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 4 </span><span class="caption-text">Visualized data movements for the multiplication of two matrices A and B. These movements are implemented in two pipelines that will run sequentially.</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 5 </span><span class="caption-text">Visualized data movements for the multiplication of two matrices A and B. These movements are implemented in two pipelines that will run sequentially.</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
 </div>
 <p>The matrices are divided into blocks of a fixed size that can be modified with the <code class="docutils literal notranslate"><span class="pre">BLOCK_SIZE</span></code> parameter.
 One pipeline loads a single block of matrix A and B into the local memory of the FPGA.

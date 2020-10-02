@@ -88,7 +88,8 @@
               
             
             
-              <ul class="current">
+              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+<ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">STREAM</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="results/index.html">STREAM FPGA Benchmark Results</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuration-parameters">Configuration Parameters</a></li>
@@ -103,10 +104,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../LINPACK/index.html">LINPACK</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../b_eff/index.html">b_eff</a></li>
 </ul>
+<p class="caption"><span class="caption-text">Technical Support:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
+<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
@@ -256,7 +259,7 @@ For the calculation of the memory bandwidth, the minimum times will be used.</p>
 <p>The arrays A, B, and C are initialized with a constant value over the whole array.
 This allows us to validate the result by only recalculating the operations with scalar values.
 The error is calculated for every value in the arrays and must be below the machine epsilon <span class="math notranslate nohighlight">\(\epsilon &lt; ||d - d'||\)</span> to pass the validation.</p>
-<p>A flow chart of the calculation kernel that can perform all four STREAM operations is given in <a class="reference internal" href="#stream-kernel-flow"><span class="std std-numref">Fig. 2</span></a> .
+<p>A flow chart of the calculation kernel that can perform all four STREAM operations is given in <a class="reference internal" href="#stream-kernel-flow"><span class="std std-numref">Fig. 3</span></a> .
 Since on FPGA the source code is translated to spatial structures that take up resources on the device, a single combined kernel allows for best reuse of those resources.
 The computation is split into blocks of a fixed length, which makes it necessary that the arrays have the length of a multiple of the block size.
 In a first loop, the input values of the first input array <em>Input1</em> are loaded into a buffer located in the local memory of the FPGA.
@@ -270,7 +273,7 @@ In the third loop, the content of the buffer is stored in the output array <em>O
 Note, that depending on the STREAM operation, different arrays are used as input and output array with the same kernel.</p>
 <div class="figure align-center" id="id5">
 <span id="stream-kernel-flow"></span><a class="reference internal image-reference" href="../_images/stream_kernel_data_flow.drawio.png"><img alt="Flow chart of the STREAM calculation kernel is missing!" src="../_images/stream_kernel_data_flow.drawio.png" style="width: 180px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 2 </span><span class="caption-text">Flow chart of the STREAM calculation kernel that can execute all four STREAM operations. Global memory accesses are written in bold. <cite>buf</cite> is the local memory buffer and <cite>scalar</cite> a constant kernel parameter. The second input can be selected over a boolean flag, which is also a kernel parameter.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">Flow chart of the STREAM calculation kernel that can execute all four STREAM operations. Global memory accesses are written in bold. <cite>buf</cite> is the local memory buffer and <cite>scalar</cite> a constant kernel parameter. The second input can be selected over a boolean flag, which is also a kernel parameter.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">DATA_TYPE</span></code> and <code class="docutils literal notranslate"><span class="pre">VECTOR_COUNT</span></code> can be used to define the data type used within the kernel.
 If <code class="docutils literal notranslate"><span class="pre">VECTOR_COUNT</span></code> is greater than 1, OpenCL vector types of the given length are used.
