@@ -11,9 +11,14 @@ In the last years, FPGAs with support for OpenCL-based high-level synthesis emer
 This benchmarks suite uses the benchmarks defined in the HPC Challenge benchmark suite proposed in [LUS05]_ to implement parametrizable OpenCL kernels.
 The parametrization of the kernels provided by the base implementation enables a better resource utilization on a broad range of Intel and Xilinx FPGA boards without manual changes in the source code.
 
+----------------------
+Benchmark Descriptions
+----------------------
+
+The following pages contain information about the base implementation for all benchmarks contained in the benchmark suite.
+
 .. toctree::
    :maxdepth: 1
-   :caption: Benchmark Descriptions:
    :glob:
 
    STREAM/*
@@ -24,25 +29,32 @@ The parametrization of the kernels provided by the base implementation enables a
    LINPACK/*
    b_eff/*
 
-The benchmarks itself are described in more detail in the sections listed above.
+-----------------
+Technical Support
+-----------------
+
+This section collects topics that can be useful for the configuration, build and execution of the benchmarks.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Technical Support:
    :glob:
 
    technical_support/*/*
 
-Technical issues regarding the build process, configuration and execution are collected here.
+
+-----------------
+Benchmark Results
+-----------------
+
+These pages contain measurement results for the base implementations of the benchmarks. They are reported together with the used CPU and other relevant infrastructure, as well as the configuration and resource utilization of the bitsreams.
+
 
 .. toctree::
    :maxdepth: 1
-   :caption: Benchmark Results:
    :glob:
 
    */results/index
 
-These pages contain measurement results for the base implementations of the benchmarks. They are reported together with the used CPU and other relevant infrastructure, as well as the used configuration and resource utilization of the bitsreams.
 
 .. _overall_result_plot:
 .. figure:: overall_results.png
