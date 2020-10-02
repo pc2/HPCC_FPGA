@@ -96,6 +96,12 @@ public:
     uint maxMessageSize;
 
     /**
+     * @brief Log2 of minimum message size
+     * 
+     */
+    uint minMessageSize;
+
+    /**
      * @brief Offset that is used before the loop length will be reduced for higher message sizes
      * 
      */
@@ -179,11 +185,12 @@ public:
      * 
      * @param max_looplength The maximum number of iterations that should be done for a message size
      * @param min_looplength The minimum number of iterations that should be done for a message size
+     * @param max_messagesize The minimum message size
      * @param max_messagesize The maximum message size
      * @param offset The used offset to scale the loop length. The higher the offset, the later the loop lenght will be decreased
      * @param decrease Number of steps the looplength will be decreased to the minimum
      */
-    NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int max_messagesize, unsigned int offset, unsigned int decrease);
+    NetworkData(unsigned int max_looplength, unsigned int min_looplength,  unsigned int min_messagesize, unsigned int max_messagesize, unsigned int offset, unsigned int decrease);
 
 };
 

@@ -36,7 +36,7 @@ SOFTWARE.
 
 network::NetworkProgramSettings::NetworkProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     maxLoopLength(results["u"].as<uint>()), minLoopLength(results["l"].as<uint>()), maxMessageSize(results["m"].as<uint>()), 
-    llOffset(results["o"].as<uint>()), llDecrease(results["d"].as<uint>()) {
+    minMessageSize(results["min-size"].as<uint>()), llOffset(results["o"].as<uint>()), llDecrease(results["d"].as<uint>()) {
 
 }
 
@@ -44,7 +44,7 @@ std::map<std::string, std::string>
 network::NetworkProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["Loop Length"] = std::to_string(minLoopLength) + " - " + std::to_string(maxLoopLength);
-        map["Message Sizes"] =  "2^0 - 2^" + std::to_string(maxMessageSize) + " Bytes";
+        map["Message Sizes"] =  "2^" + std::to_string(minMessageSize) + " - 2^" + std::to_string(maxMessageSize) + " Bytes";
         return map;
 }
 
@@ -55,9 +55,10 @@ network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize
                                                                                 // also needs to be multiplied with the buffer size
                                                                             }
 
-network::NetworkData::NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int max_messagesize, unsigned int offset, unsigned int decrease) {
+network::NetworkData::NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int min_messagesize, unsigned int max_messagesize, 
+                                unsigned int offset, unsigned int decrease) {
     uint decreasePerStep = (max_looplength - min_looplength) / decrease;
-    for (uint i = 0; i <= max_messagesize; i++) {
+    for (uint i = min_messagesize; i <= max_messagesize; i++) {
         uint messageSizeDivOffset = (i > offset) ? i - offset : 0u;
         uint newLooplength = (max_looplength > messageSizeDivOffset * decreasePerStep) ? max_looplength - messageSizeDivOffset * decreasePerStep : 0u;
         uint looplength = std::max(newLooplength, min_looplength);
@@ -78,6 +79,7 @@ network::NetworkBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MAX_LOOP_LENGTH)))
         ("l,lower", "Minimum number of repetitions per data size",
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MIN_LOOP_LENGTH)))
+        ("min-size", "Minimum Message Size", cxxopts::value<uint>()->default_value(std::to_string(0)))
         ("m", "Maximum message size",
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MAX_MESSAGE_SIZE)))
         ("o", "Offset used before reducing repetitions",
@@ -206,6 +208,7 @@ std::unique_ptr<network::NetworkData>
 network::NetworkBenchmark::generateInputData() {
     auto d = std::unique_ptr<network::NetworkData>(new network::NetworkData(executionSettings->programSettings->maxLoopLength,
                                                                             executionSettings->programSettings->minLoopLength,
+                                                                            executionSettings->programSettings->minMessageSize,
                                                                             executionSettings->programSettings->maxMessageSize,
                                                                             executionSettings->programSettings->llOffset,
                                                                             executionSettings->programSettings->llDecrease));

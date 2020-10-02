@@ -96,7 +96,11 @@ For more information on available input parameters run
                             (default: 32768)
     -l, --lower arg        Minimum number of repetitions per data size
                             (default: 1)
-    -m, arg                Maximum message size (default: 21)
+        --min-size arg     Minimum Message Size (default: 0)
+    -m, arg                Maximum message size (default: 20)
+    -o, arg                Offset used before reducing repetitions (default: 1)
+    -d, arg                Number os steps the repetitions are decreased to its
+                            minimum (default: 5)
 
     
 To execute the unit and integration tests run
