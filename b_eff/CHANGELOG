@@ -2,6 +2,12 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.3
+
+#### Changed:
+- Kernel design restructured to allow measurement of the whole external channel bandwidth
+- Change host parameters to allow configuration of message sizes and repetition counts
+
 ## 1.2
 
 #### Added:

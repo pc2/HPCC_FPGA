@@ -31,7 +31,12 @@ SOFTWARE.
 #include <memory>
 
 /* External libraries */
+#ifdef USE_DEPRECATED_HPP_HEADER
 #include "CL/cl.hpp"
+#else
+#include OPENCL_HPP_HEADER
+#endif
+
 
 /**
 Makro to convert the error integer representation to its string representation

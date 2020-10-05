@@ -30,7 +30,11 @@ SOFTWARE.
 #include "parameters.h"
 
 /* External library headers */
+#ifdef USE_DEPRECATED_HPP_HEADER
 #include "CL/cl.hpp"
+#else
+#include OPENCL_HPP_HEADER
+#endif
 
 #ifdef _USE_MPI_
 #include "mpi.h"
@@ -147,6 +151,12 @@ class ExecutionSettings {
 public:
 
     /**
+     * @brief Pointer to the additional program settings
+     * 
+     */
+    std::unique_ptr<TSettings> programSettings;
+
+    /**
      * @brief The OpenCL device that should be used for execution
      * 
      */
@@ -163,12 +173,6 @@ public:
      * 
      */
     std::unique_ptr<cl::Program> program;
-
-    /**
-     * @brief Pointer to the additional program settings
-     * 
-     */
-    std::unique_ptr<TSettings> programSettings;
 
     /**
      * @brief Construct a new Execution Settings object
@@ -232,7 +236,8 @@ protected:
      * @param options The options object that will be used to parse the input parameters
      */
     virtual void
-    addAdditionalParseOptions(cxxopts::Options &options) {}
+    addAdditionalParseOptions(cxxopts::Options &options) = 0;
+
 
     /**
      * @brief The communication rank of a MPI setup
@@ -366,7 +371,7 @@ public:
                     new TSettings(result));
             return sharedSettings;
         }
-        catch (cxxopts::OptionException e) {
+        catch (const cxxopts::OptionException& e) {
             std::cerr << "Error while parsing input parameters: "<< e.what() << std::endl;
             std::cout << options.help() << std::endl;
             throw fpga_setup::FpgaSetupException("Input parameters could not be parsed");
@@ -382,14 +387,14 @@ public:
     *                            context, program and device
     */
     void 
-    printFinalConfiguration(ExecutionSettings<TSettings> const& executionSettings) {
+    printFinalConfiguration() {
         std::cout << PROGRAM_DESCRIPTION;
 #ifdef _USE_MPI_
         std::cout << "MPI Version: " << MPI_VERSION << "." << MPI_SUBVERSION << std::endl;
 #endif
         std::cout << std::endl;
         std::cout << "Summary:" << std::endl;
-        std::cout << executionSettings << std::endl;
+        std::cout << *executionSettings << std::endl;
     }
 
     /**
@@ -412,7 +417,7 @@ public:
         auto tmp_argv = new char*[argc + 1];
         auto tmp_pointer_storage = new char*[argc + 1];
         for (int i =0; i < argc; i++) {
-            int len = strlen(argv[i]) + 1;
+            size_t len = strlen(argv[i]) + 1l;
             tmp_argv[i] = new char[len];
             tmp_pointer_storage[i] = tmp_argv[i];
             strcpy(tmp_argv[i], argv[i]);
@@ -438,7 +443,7 @@ public:
                     std::cerr << "ERROR: Input parameter check failed!" << std::endl;
                     throw std::runtime_error("Input parameter check failed!");
                 }
-                printFinalConfiguration(*executionSettings);
+                printFinalConfiguration();
             }
         }
         catch (std::exception& e) {
@@ -509,9 +514,16 @@ public:
             }
             collectAndPrintResults(*output);
 
+            if (!validateSuccess) {
+                std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
+            }
+            else {
+                std::cout << "Validation: SUCCESS!" << std::endl;
+            }
+
             return validateSuccess;
        }
-       catch (std::exception e) {
+       catch (const std::exception& e) {
             std::cerr << "An error occured while executing the benchmark: " << std::endl;
             std::cerr << "\t" << e.what() << std::endl;
             return false;

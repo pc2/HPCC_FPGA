@@ -55,6 +55,9 @@ Next to the common configuration options given in the [README](../README.md) of 
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
 `CHANNEL_WIDTH`  | 32          | The width of a single channel in bytes. |
+`DEFAULT_MAX_MESSAGE_SIZE`| 21 | Exclusive upper bound of the maximum message size that should be used in the benchmark. Default is 2^21=2MB|
+`DEFAULT_MAX_LOOP_LENGTH`| 32768 | Maximum number of repetitions done for a single message size |
+`DEFAULT_MIN_LOOP_LENGTH`| 1 | Minimum number of repetitions done for a single message size |
 
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.
@@ -71,20 +74,33 @@ For more information on available input parameters run
     $./Network_intel -h
     
     Implementation of the effective bandwidth benchmark proposed in the HPCC benchmark suite for FPGA.
-    Version: "1.1"
+    Version: 1.3
+
     Usage:
-      ./Network_intel [OPTION...]
-    
-      -f, --file arg      Kernel file name
-      -n, arg             Number of repetitions (default: 10)
-      -l, arg             Inital looplength of Kernel (default: 32768)
-          --device arg    Index of the device that has to be used. If not given
-                          you will be asked which device to use if there are
-                          multiple devices available. (default: -1)
-          --platform arg  Index of the platform that has to be used. If not given
-                          you will be asked which platform to use if there are
-                          multiple platforms available. (default: -1)
-      -h, --help          Print this help
+    bin/Network_intel [OPTION...]
+
+    -f, --file arg         Kernel file name
+    -n, arg                Number of repetitions (default: 10)
+    -i,                    Use memory Interleaving
+        --skip-validation  Skip the validation of the output data. This will
+                            speed up execution and helps when working with special
+                            data types.
+        --device arg       Index of the device that has to be used. If not
+                            given you will be asked which device to use if there are
+                            multiple devices available. (default: -1)
+        --platform arg     Index of the platform that has to be used. If not
+                            given you will be asked which platform to use if there
+                            are multiple platforms available. (default: -1)
+    -h, --help             Print this help
+    -u, --upper arg        Maximum number of repetitions per data size
+                            (default: 32768)
+    -l, --lower arg        Minimum number of repetitions per data size
+                            (default: 1)
+        --min-size arg     Minimum Message Size (default: 0)
+    -m, arg                Maximum message size (default: 20)
+    -o, arg                Offset used before reducing repetitions (default: 1)
+    -d, arg                Number os steps the repetitions are decreased to its
+                            minimum (default: 5)
 
     
 To execute the unit and integration tests run

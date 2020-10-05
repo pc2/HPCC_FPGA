@@ -10,6 +10,12 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     enable_testing()
 endif()
 
+if(DEFINED USE_DEPRECATED_HPP_HEADER)
+    set(header_default ${USE_DEPRECATED_HPP_HEADER})
+else()
+    set(header_default Yes)
+endif()
+
 # Host code specific options
 set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
 set(DEFAULT_DEVICE -1 CACHE STRING "Index of the default device to use")
@@ -19,8 +25,7 @@ set(USE_MPI ${USE_MPI} CACHE BOOL "Compile the host code with MPI support. This 
 set(USE_SVM No CACHE BOOL "Use SVM pointers instead of creating buffers on the board and transferring the data there before execution.")
 set(USE_HBM No CACHE BOOL "Use host code specific to HBM FPGAs")
 set(USE_CUSTOM_KERNEL_TARGETS No CACHE BOOL "Enable build targets for custom kernels")
-
-mark_as_advanced(USE_MPI)
+set(USE_DEPRECATED_HPP_HEADER ${header_default} CACHE BOOL "Flag that indicates if the old C++ wrapper header should be used (cl.hpp) or the newer version (cl2.hpp or opencl.hpp)")
 
 if (USE_SVM AND USE_HBM)
     message(ERROR "Misconfiguration: Can not use USE_HBM and USE_SVM at the same time because they target different memory architectures")
@@ -63,6 +68,26 @@ endif()
 if (NOT Python3_Interpreter_FOUND)
     message(WARNING "Python 3 interpreter could not be found! It might be necessary to generate the final kernel source code!")
 endif()
+
+# Check which C++ OpenCL header file to use
+# This is for compatability because the name of the header will change from cl2.hpp to opencl.hpp
+find_file(OPENCL_HPP "CL/opencl.hpp" PATHS ${IntelFPGAOpenCL_INCLUDE_DIRS} ${Vitis_INCLUDE_DIRS})
+if (OPENCL_HPP)
+    add_definitions(-DOPENCL_HPP_HEADER="CL/opencl.hpp")
+else()
+    add_definitions(-DOPENCL_HPP_HEADER="CL/cl2.hpp")
+endif()
+
+# use deprecated cl.hpp header if requested
+if (USE_DEPRECATED_HPP_HEADER)
+    add_definitions(-DUSE_DEPRECATED_HPP_HEADER)
+endif()
+
+# Set OpenCL version that should be used
+set(HPCC_FPGA_OPENCL_VERSION 200 CACHE STRING "OpenCL version that should be used for the host code compilation")
+mark_as_advanced(HPCC_FPGA_OPENCL_VERSION)
+add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=${HPCC_FPGA_OPENCL_VERSION})
+
 
 # Set the size of the used data type
 list(APPEND CMAKE_REQUIRED_INCLUDES ${IntelFPGAOpenCL_INCLUDE_DIRS} ${Vitis_INCLUDE_DIRS})

@@ -52,7 +52,7 @@ namespace network {
         cl_uint looplength;
 
         /**
-         * @brief The size of the messages in bytes
+         * @brief The size of the messages in bytes in log2
          * 
          */
         cl_uint messageSize;
@@ -81,7 +81,37 @@ public:
      * @brief Initial number of sent messages per message size
      * 
      */
-    uint looplength;
+    uint maxLoopLength;
+
+    /**
+     * @brief Minimum number of sent messages per message size
+     * 
+     */
+    uint minLoopLength;
+
+    /**
+     * @brief Log2 of maximum message size
+     * 
+     */
+    uint maxMessageSize;
+
+    /**
+     * @brief Log2 of minimum message size
+     * 
+     */
+    uint minMessageSize;
+
+    /**
+     * @brief Offset that is used before the loop length will be reduced for higher message sizes
+     * 
+     */
+    uint llOffset;
+
+    /**
+     * @brief Number of steps the loop length is decreased after the offset is reached
+     * 
+     */
+    uint llDecrease;
 
     /**
      * @brief Construct a new Network Program Settings object
@@ -106,11 +136,62 @@ public:
 class NetworkData {
 
 public:
+
     /**
-     * @brief Used message sizes for the benchmark execution
+     * @brief Data type that contains all information needed for the execution of the kernel with a given data size.
+     *          The class contains the data size, length of the inner loop and a buffer that takes the validatin data.
+     *          In other workds it contains the information for a single run of the benchmark.
      * 
      */
-    std::vector<uint> messageSizes;
+    class NetworkDataItem {
+
+    public:
+        /**
+         * @brief The used message size for the run in log2.
+         * 
+         */
+        unsigned int messageSize;
+
+        /**
+         * @brief The loop length of the run (number of reptitions within the kernel). This can be used to extend the total execution time.
+         * 
+         */
+        unsigned int loopLength;
+
+        /**
+         * @brief Data buffer that is used by the kernel to store received data. It can be used for validation by the host.
+         * 
+         */
+        cl::vector<HOST_DATA_TYPE> validationBuffer;
+
+        /**
+         * @brief Construct a new Network Data Item object
+         * 
+         * @param messageSize The message size in bytes
+         * @param loopLength The number of repetitions in the kernel
+         */
+        NetworkDataItem(unsigned int messageSize, unsigned int loopLength);
+    };
+
+
+    /**
+     * @brief Data items that are used for the benchmark.
+     * 
+     */
+    std::vector<NetworkDataItem> items;
+
+    /**
+     * @brief Construct a new Network Data object
+     * 
+     * @param max_looplength The maximum number of iterations that should be done for a message size
+     * @param min_looplength The minimum number of iterations that should be done for a message size
+     * @param max_messagesize The minimum message size
+     * @param max_messagesize The maximum message size
+     * @param offset The used offset to scale the loop length. The higher the offset, the later the loop lenght will be decreased
+     * @param decrease Number of steps the looplength will be decreased to the minimum
+     */
+    NetworkData(unsigned int max_looplength, unsigned int min_looplength,  unsigned int min_messagesize, unsigned int max_messagesize, unsigned int offset, unsigned int decrease);
+
 };
 
 /**
