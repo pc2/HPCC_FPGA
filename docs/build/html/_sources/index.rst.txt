@@ -10,6 +10,7 @@ HPCC FPGA Documentation
 In the last years, FPGAs with support for OpenCL-based high-level synthesis emerged as a new promising accelerator for high-performance computing applications.
 This benchmarks suite uses the benchmarks defined in the HPC Challenge benchmark suite proposed in [LUS05]_ to implement parametrizable OpenCL kernels.
 The parametrization of the kernels provided by the base implementation enables a better resource utilization on a broad range of Intel and Xilinx FPGA boards without manual changes in the source code.
+All source code for the benchmarks and this documentation are available on `GitHub <https://github.com/pc2/HPCC_FPGA>`_.
 
 .. _overall_result_plot:
 .. figure:: overall_results.png
