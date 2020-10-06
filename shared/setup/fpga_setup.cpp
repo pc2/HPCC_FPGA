@@ -149,16 +149,19 @@ Sets up the given FPGA with the kernel in the provided file.
         }
 
         // Read in file contents and create program from binaries
-        std::string prog(std::istreambuf_iterator<char>(aocxStream),
-                         (std::istreambuf_iterator<char>()));
         aocxStream.seekg(0, aocxStream.end);
-        unsigned file_size = aocxStream.tellg();
+        long file_size = aocxStream.tellg();
         aocxStream.seekg(0, aocxStream.beg);
-        char *buf = new char[file_size];
-        aocxStream.read(buf, file_size);
+        std::vector<unsigned char> buf(file_size);
+        aocxStream.read(reinterpret_cast<char *>(buf.data()), file_size);
 
+
+#ifdef USE_DEPRECATED_HPP_HEADER
         cl::Program::Binaries mybinaries;
-        mybinaries.push_back({buf, file_size});
+        mybinaries.push_back({buf.data(), file_size});
+#else
+        cl::Program::Binaries mybinaries{buf};
+#endif
 
         // Create the Program from the AOCX file.
         cl::Program program(*context, deviceList, mybinaries, NULL, &err);
@@ -234,9 +237,9 @@ choose a device.
         ASSERT_CL(err)
 
         // Choose the target platform
-        int chosenPlatformId = 0;
+        long unsigned int chosenPlatformId = 0;
         if (defaultPlatform >= 0) {
-            if (defaultPlatform < platformList.size()) {
+            if (defaultPlatform < static_cast<int>(platformList.size())) {
                 chosenPlatformId = defaultPlatform;
             } else {
                 std::cerr << "Default platform " << defaultPlatform
@@ -248,7 +251,7 @@ choose a device.
             std::cout <<
                       "Multiple platforms have been found. Select the platform by"\
             " typing a number:" << std::endl;
-            for (int platformId = 0;
+            for (long unsigned int platformId = 0;
                  platformId < platformList.size(); platformId++) {
                 std::cout << platformId << ") " <<
                           platformList[platformId].getInfo<CL_PLATFORM_NAME>() <<
@@ -268,9 +271,9 @@ choose a device.
         ASSERT_CL(err)
 
         // Choose taget device
-        int chosenDeviceId = 0;
+        long unsigned int chosenDeviceId = 0;
         if (defaultDevice >= 0) {
-            if (defaultDevice < deviceList.size()) {
+            if (defaultDevice < static_cast<int>(deviceList.size())) {
                 chosenDeviceId = defaultDevice;
             } else {
                 std::cerr << "Default device " << defaultDevice
@@ -284,7 +287,7 @@ choose a device.
                               "Multiple devices have been found. Select the device by"\
                             " typing a number:" << std::endl;
 
-                for (int deviceId = 0;
+                for (long unsigned int deviceId = 0;
                      deviceId < deviceList.size(); deviceId++) {
                     std::cout << deviceId << ") " <<
                               deviceList[deviceId].getInfo<CL_DEVICE_NAME>() <<
@@ -293,7 +296,7 @@ choose a device.
                 std::cout << "Enter device id [0-" << deviceList.size() - 1 << "]:";
                 std::cin >> chosenDeviceId;
             } else {
-                chosenDeviceId = static_cast<int>(world_rank % deviceList.size());
+                chosenDeviceId = static_cast<long unsigned int>(world_rank % deviceList.size());
             }
         }
 
