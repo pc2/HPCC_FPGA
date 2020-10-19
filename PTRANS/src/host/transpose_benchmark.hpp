@@ -107,9 +107,10 @@ public:
      * @brief Construct a new Transpose Data object
      * 
      * @param context Context that is used to allocate memory for SVM
-     * @param size Size of the allocated square matrices
+     * @param size size_x of the allocated square matrices
+     * @param size size_y of the allocated square matrices
      */
-    TransposeData(cl::Context context, uint size);
+    TransposeData(cl::Context context, uint size_x, uint size_y);
 
     /**
      * @brief Destroy the Transpose Data object. Free the allocated memory

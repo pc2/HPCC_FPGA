@@ -48,7 +48,7 @@ transpose::TransposeProgramSettings::getSettingsMap() {
         return map;
 }
 
-transpose::TransposeData::TransposeData(cl::Context context, uint size) : context(context) {
+transpose::TransposeData::TransposeData(cl::Context context, uint x_size, uint y_size) : context(context) {
 #ifdef USE_SVM
     A = reinterpret_cast<HOST_DATA_TYPE*>(
                         clSVMAlloc(context(), 0 ,
@@ -61,11 +61,11 @@ transpose::TransposeData::TransposeData(cl::Context context, uint size) : contex
                         size * size * sizeof(HOST_DATA_TYPE), 1024));
 #else
     posix_memalign(reinterpret_cast<void **>(&A), 64,
-                sizeof(HOST_DATA_TYPE) * size * size);
+                sizeof(HOST_DATA_TYPE) * x_size * y_size);
     posix_memalign(reinterpret_cast<void **>(&B), 64,
-                sizeof(HOST_DATA_TYPE) * size * size);
+                sizeof(HOST_DATA_TYPE) * x_size * y_size);
     posix_memalign(reinterpret_cast<void **>(&result), 64,
-                sizeof(HOST_DATA_TYPE) * size * size);
+                sizeof(HOST_DATA_TYPE) * x_size * y_size);
 #endif
 }
 
@@ -133,7 +133,8 @@ transpose::TransposeBenchmark::collectAndPrintResults(const transpose::Transpose
 
 std::unique_ptr<transpose::TransposeData>
 transpose::TransposeBenchmark::generateInputData() {
-    auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*executionSettings->context, executionSettings->programSettings->matrixSize));
+    //TODO exchange this by the data generation method of the new handler class
+    auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*executionSettings->context, executionSettings->programSettings->matrixSize, executionSettings->programSettings->matrixSize));
 
     std::mt19937 gen(7);
     std::uniform_real_distribution<> dis(-100.0, 100.0);
@@ -150,6 +151,7 @@ transpose::TransposeBenchmark::generateInputData() {
 
 bool  
 transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeData &data) {
+    //TODO exchange data before validation
     for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
         for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
             data.A[j * executionSettings->programSettings->matrixSize + i] -= data.result[i * executionSettings->programSettings->matrixSize + j] 
