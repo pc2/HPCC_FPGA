@@ -104,6 +104,12 @@ public:
     std::string kernelFileName;
 
     /**
+     * @brief Number of times the kernel is replicated
+     * 
+     */
+    uint kernelReplications;
+
+    /**
      * @brief Construct a new Base Settings object
      * 
      * @param results The resulting map from parsing the program input parameters
@@ -117,7 +123,8 @@ public:
             skipValidation(static_cast<bool>(results.count("skip-validation"))), 
             defaultPlatform(results["platform"].as<int>()),
             defaultDevice(results["device"].as<int>()),
-            kernelFileName(results["f"].as<std::string>()) {}
+            kernelFileName(results["f"].as<std::string>()),
+            kernelReplications(results["r"].as<uint>()) {}
 
     /**
      * @brief Get a map of the settings. This map will be used to print the final configuration.
@@ -134,7 +141,8 @@ public:
     if (mpi_size > 0) {
         str_mpi_ranks = std::to_string(mpi_size);
     }
-        return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}};
+        return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel Replications", std::to_string(kernelReplications)}, 
+                {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}};
     }
 
 };
@@ -343,6 +351,8 @@ public:
             "you will be asked which platform to use if there are multiple "\
             "platforms available.",
                 cxxopts::value<int>()->default_value(std::to_string(DEFAULT_PLATFORM)))
+                ("r", "Number of used kernel replications",
+                cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)))
                 ("h,help", "Print this help");
 
 
