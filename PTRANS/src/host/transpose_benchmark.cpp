@@ -95,14 +95,16 @@ transpose::TransposeBenchmark::generateInputData() {
 bool  
 transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeData &data) {
 
+    // exchange the data using MPI depending on the chosen distribution scheme
+    dataHandler->exchangeData(data);
+
     int block_offset = executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize;
-    //TODO exchange data before validation
     for (int r = 0; r < executionSettings->programSettings->kernelReplications; r++) {
         for (int b = 0; b < data.numBlocks; b++) {
             for (int i = 0; i < executionSettings->programSettings->blockSize; i++) {
                 for (int j = 0; j < executionSettings->programSettings->blockSize; j++) {
-                    data.A[r][b * block_offset + j * executionSettings->programSettings->matrixSize + i] -= data.result[r][b * block_offset + i * executionSettings->programSettings->matrixSize + j] 
-                                                                                - data.B[r][b * block_offset + i * executionSettings->programSettings->matrixSize + j];
+                    data.A[r][b * block_offset + j * executionSettings->programSettings->blockSize + i] -= data.result[r][b * block_offset + i * executionSettings->programSettings->blockSize + j] 
+                                                                                - data.B[r][b * block_offset + i * executionSettings->programSettings->blockSize + j];
                 }
             }
         }

@@ -79,11 +79,10 @@ public:
     /**
      * @brief Exchange the data blocks for verification
      * 
-     * @param data The data that was generated locally and will be exchanged with other MPI ranks
-     * @return std::unique_ptr<TransposeData> The data that was partially received from other MPI ranks to allow local verification of the kernel execution. 
-     *                                          Data needs to be transposed before it can be used
+     * @param data The data that was generated locally and will be exchanged with other MPI ranks. 
+     *              Exchanged data will be stored in the same object.
      */
-    virtual std::unique_ptr<TransposeData>
+    virtual void
     exchangeData(TransposeData& data) = 0;
 
     /**
@@ -94,6 +93,7 @@ public:
 
 };
 
+#ifdef _USE_MPI_
 
 /**
  * @brief Transposes the data over external channels, so every part of a pair is located on a different FPGA.
@@ -117,16 +117,17 @@ public:
     /**
      * @brief Exchange the data blocks for verification
      * 
-     * @param data The data that was generated locally and will be exchanged with other MPI ranks
-     * @return std::unique_ptr<TransposeData> The data that was partially received from other MPI ranks to allow local verification of the kernel execution. 
-     *                                          Data needs to be transposed before it can be used
+     * @param data The data that was generated locally and will be exchanged with other MPI ranks 
+     *              Exchanged data will be stored in the same object.
      */
-    std::unique_ptr<TransposeData>
+    void
     exchangeData(TransposeData& data) override;
 
-    DistributedExternalTransposeDataHandler(int mpi_rank, int mpi_size) : TransposeDataHandler(mpi_rank, mpi_size) {}
+    DistributedExternalTransposeDataHandler(int mpi_rank, int mpi_size);
 
 };
+
+#endif
 
 /**
  * @brief Generate a data handler object

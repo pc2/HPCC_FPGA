@@ -18,6 +18,7 @@ transpose::TransposeProgramSettings::getSettingsMap() {
 
 transpose::TransposeData::TransposeData(cl::Context context, uint block_size, uint y_size, uint numReplications) : context(context) {
     numBlocks = y_size;
+    blockSize = block_size;
     for (int r = 0; r < numReplications; r++) {
 #ifdef USE_SVM
         A.push_back(reinterpret_cast<HOST_DATA_TYPE*>(

@@ -22,6 +22,8 @@ struct TransposeHandlersTest : testing::Test {
     }
 };
 
+// TODO check data exchange and validation based on exchanged data
+
 
 
 /**
