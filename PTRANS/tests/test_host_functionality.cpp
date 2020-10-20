@@ -73,13 +73,14 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
  * Checks if the error is printed to stdout and the error is aggregated over the whole matrix.
  */
 TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
+    bm->getExecutionSettings().programSettings->kernelReplications = 1;
     bm->getExecutionSettings().programSettings->matrixSize = 4;
     bm->executeBenchmark();
     auto data = bm->generateInputData();
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-            data->A[i * 4 + j] = i * 4 + j;
-            data->B[i * 4 + j] = i * 4 + j;
+            data->A[0][i * 4 + j] = i * 4 + j;
+            data->B[0][i * 4 + j] = i * 4 + j;
         }
     }
 
@@ -107,8 +108,8 @@ TEST_F(TransposeHostTest, ValidationIsSuccess) {
     auto data = bm->generateInputData();
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-            data->A[i * 4 + j] = 0.0;
-            data->B[i * 4 + j] = 0.0;
+            data->A[0][i * 4 + j] = 0.0;
+            data->B[0][i * 4 + j] = 0.0;
         }
     }
 

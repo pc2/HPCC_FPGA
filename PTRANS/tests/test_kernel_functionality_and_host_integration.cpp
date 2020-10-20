@@ -21,6 +21,7 @@ struct TransposeKernelTest : testing::Test {
         matrix_size = BLOCK_SIZE;
         bm->getExecutionSettings().programSettings->matrixSize = matrix_size;
         bm->getExecutionSettings().programSettings->numRepetitions = 1;
+        bm->getExecutionSettings().programSettings->kernelReplications = 1;
         data = bm->generateInputData();
     }
 };
@@ -32,14 +33,14 @@ struct TransposeKernelTest : testing::Test {
 TEST_F(TransposeKernelTest, FPGACorrectBStaysTheSame) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            data->A[i * matrix_size + j] = 0.0;
-            data->B[i * matrix_size + j] = i * matrix_size + j;
+            data->A[0][i * matrix_size + j] = 0.0;
+            data->B[0][i * matrix_size + j] = i * matrix_size + j;
         }
     }
     bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(data->result[i * matrix_size + j], data->B[i * matrix_size + j]);
+            EXPECT_FLOAT_EQ(data->result[0][i * matrix_size + j], data->B[0][i * matrix_size + j]);
         }
     }
 }
@@ -50,14 +51,14 @@ TEST_F(TransposeKernelTest, FPGACorrectBStaysTheSame) {
 TEST_F(TransposeKernelTest, FPGAABlockIsTransposed) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            data->A[i * matrix_size + j] = i * matrix_size + j;
-            data->B[i * matrix_size + j] = 0.0;
+            data->A[0][i * matrix_size + j] = i * matrix_size + j;
+            data->B[0][i * matrix_size + j] = 0.0;
         }
     }
     bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(data->result[i * matrix_size + j], data->A[j * matrix_size + i]);
+            EXPECT_FLOAT_EQ(data->result[0][i * matrix_size + j], data->A[0][j * matrix_size + i]);
         }
     }
 }
@@ -75,14 +76,14 @@ TEST_F(TransposeKernelTest, FPGAAIsTransposed) {
 
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            data->A[i * matrix_size + j] = i * matrix_size + j;
-            data->B[i * matrix_size + j] = 0.0;
+            data->A[0][i * matrix_size + j] = i * matrix_size + j;
+            data->B[0][i * matrix_size + j] = 0.0;
         }
     }
     bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(data->result[i * matrix_size + j], data->A[j * matrix_size + i]);
+            EXPECT_FLOAT_EQ(data->result[0][i * matrix_size + j], data->A[0][j * matrix_size + i]);
         }
     }
 }
@@ -93,14 +94,14 @@ TEST_F(TransposeKernelTest, FPGAAIsTransposed) {
 TEST_F(TransposeKernelTest, FPGAAAndBAreSummedUp) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            data->A[i * matrix_size + j] = 1.0;
-            data->B[i * matrix_size + j] = i * matrix_size + j;
+            data->A[0][i * matrix_size + j] = 1.0;
+            data->B[0][i * matrix_size + j] = i * matrix_size + j;
         }
     }
     bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
-            EXPECT_FLOAT_EQ(data->result[i * matrix_size + j], data->B[i * matrix_size + j] + 1.0);
+            EXPECT_FLOAT_EQ(data->result[0][i * matrix_size + j], data->B[0][i * matrix_size + j] + 1.0);
         }
     }
 }
@@ -128,10 +129,10 @@ TEST_F(TransposeKernelTest, GenerateInputDataRange) {
     auto data = bm->generateInputData();
     for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 5; j++) {
-            EXPECT_LT(data->A[i * 5 + j], 100);
-            EXPECT_GT(data->A[i * 5 + j], -100);
-            EXPECT_LT(data->B[i * 5 + j], 101);
-            EXPECT_GT(data->B[i * 5 + j], -99);
+            EXPECT_LT(data->A[0][i * 5 + j], 100);
+            EXPECT_GT(data->A[0][i * 5 + j], -100);
+            EXPECT_LT(data->B[0][i * 5 + j], 101);
+            EXPECT_GT(data->B[0][i * 5 + j], -99);
         }
     }
 }
