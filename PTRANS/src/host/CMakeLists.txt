@@ -1,6 +1,6 @@
 
 add_subdirectory(../../../shared ${CMAKE_BINARY_DIR}/lib/hpccbase)
-set(HOST_SOURCE execution_default.cpp transpose_benchmark.cpp transpose_handlers.cpp)
+set(HOST_SOURCE execution_default.cpp transpose_benchmark.cpp transpose_handlers.cpp transpose_data.cpp)
 
 set(HOST_EXE_NAME Transpose)
 set(LIB_NAME trans)

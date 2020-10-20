@@ -29,6 +29,9 @@ SOFTWARE.
 
 /* Project's headers */
 #include "hpcc_benchmark.hpp"
+#include "transpose_data.hpp"
+#include "transpose_handlers.hpp"
+
 #include "parameters.h"
 
 /**
@@ -36,109 +39,6 @@ SOFTWARE.
  * 
  */
 namespace transpose {
-
-/**
- * @brief The Transpose specific program settings
- * 
- */
-class TransposeProgramSettings : public hpcc_base::BaseSettings {
-
-public:
-    /**
-     * @brief The size of the whole matrix
-     * 
-     */
-    uint matrixSize;
-
-    /**
-     * @brief The size of a matrix block
-     * 
-     */
-    uint blockSize;
-
-    /**
-     * @brief Construct a new Transpose Program Settings object
-     * 
-     * @param results the result map from parsing the program input parameters
-     */
-    TransposeProgramSettings(cxxopts::ParseResult &results);
-
-    /**
-     * @brief Get a map of the settings. This map will be used to print the final configuration.
-     * 
-     * @return a map of program parameters. keys are the name of the parameter.
-     */
-    std::map<std::string, std::string> getSettingsMap() override;
-
-};
-
-/**
- * @brief Data class cotnaining the data the kernel is exeucted with
- * 
- */
-class TransposeData {
-
-public:
-    /**
-     * @brief Input matrix A
-     * 
-     */
-    HOST_DATA_TYPE *A;
-
-    /**
-     * @brief Input matrix B
-     * 
-     */
-    HOST_DATA_TYPE *B;
-
-    /**
-     * @brief The result matrix
-     * 
-     */
-    HOST_DATA_TYPE *result;
-
-    /**
-     * @brief The context that is used to allocate memory in SVM mode
-     * 
-     */
-    cl::Context context;
-
-    /**
-     * @brief Construct a new Transpose Data object
-     * 
-     * @param context Context that is used to allocate memory for SVM
-     * @param size size_x of the allocated square matrices
-     * @param size size_y of the allocated square matrices
-     */
-    TransposeData(cl::Context context, uint size_x, uint size_y);
-
-    /**
-     * @brief Destroy the Transpose Data object. Free the allocated memory
-     * 
-     */
-    ~TransposeData();
-
-};
-
-/**
- * @brief Measured execution timing from the kernel execution
- * 
- */
-class TransposeExecutionTimings {
-public:
-    /**
-     * @brief A vector containing the timings for all repetitions for the data transfer
-     * 
-     */
-    std::vector<double> transferTimings;
-
-    /**
-     * @brief A vector containing the timings for all repetitions for the calculation
-     * 
-     */
-    std::vector<double> calculationTimings;
-
-};
 
 /**
  * @brief Implementation of the transpose benchmark
@@ -156,6 +56,8 @@ protected:
     void
     addAdditionalParseOptions(cxxopts::Options &options) override;
 
+    std::unique_ptr<transpose::TransposeDataHandler> dataHandler;
+
 public:
 
     /**
@@ -165,6 +67,13 @@ public:
      */
     std::unique_ptr<TransposeData>
     generateInputData() override;
+
+    /**
+     * @brief Set the data handler object by calling the function with the matching template argument
+     * 
+     */
+    void
+    setTransposeDataHandler(std::string dataHandlerIdentifier);
 
     /**
      * @brief Transpose specific implementation of the kernel execution

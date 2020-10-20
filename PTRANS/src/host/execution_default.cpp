@@ -40,8 +40,7 @@ namespace bm_execution {
      @copydoc bm_execution::calculate()
     */
     std::unique_ptr<transpose::TransposeExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, HOST_DATA_TYPE *const A,
-              HOST_DATA_TYPE *const B, HOST_DATA_TYPE *A_out) {
+    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data) {
         int err;
 
         cl::Buffer bufferA(*config.context, CL_MEM_READ_ONLY,
@@ -105,9 +104,9 @@ namespace bm_execution {
                         NULL, NULL);
 #else
             queue.enqueueWriteBuffer(bufferA, CL_FALSE, 0,
-                                     sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, A);
+                                     sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, data.A[0]);
             queue.enqueueWriteBuffer(bufferB, CL_FALSE, 0,
-                                     sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, B);
+                                     sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, data.B[0]);
 #endif
             queue.finish();
             auto endTransfer = std::chrono::high_resolution_clock::now();
@@ -137,7 +136,7 @@ namespace bm_execution {
                                 NULL, NULL);
 #else
             queue.enqueueReadBuffer(bufferA_out, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, A_out);
+                                    sizeof(HOST_DATA_TYPE) * config.programSettings->matrixSize * config.programSettings->matrixSize, data.result[0]);
 #endif
             endTransfer = std::chrono::high_resolution_clock::now();
             transferTime +=
