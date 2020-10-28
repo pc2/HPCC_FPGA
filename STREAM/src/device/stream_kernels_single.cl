@@ -7,6 +7,14 @@ KERNEL_NUMBER will be replaced by the build script with the ID of the current re
 */
 #include "parameters.h"
 
+#if DATA_TYPE_SIZE == 8
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#endif
+
+#if DATA_TYPE_SIZE == 2
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
 /* PY_CODE_GEN 
 try:
     kernel_param_attributes = generate_attributes(num_replications)
