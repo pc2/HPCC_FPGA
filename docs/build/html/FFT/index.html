@@ -250,20 +250,20 @@ The result of the calculation is checked by calculating the residual <span class
 </div>
 <div class="section" id="expected-bottlenecks">
 <h2>Expected Bottlenecks<a class="headerlink" href="#expected-bottlenecks" title="Permalink to this headline">¶</a></h2>
-<p>In general the benchmark can be both memory bandwidth and compute bound.
-The implementation in a single pipeline allow to contiously read and write from global memory.
-Since reads and writes are symmetric and the memory bandwidth is unidrectional, we need two memory banks per replication.
-Besides that, the size of the FFT has an impact on the number of floating point operations that are done per data item.</p>
+<p>In general, the benchmark can be both memory bandwidth and compute-bound.
+The implementation in a single pipeline allows to continously read and write from global memory.
+Since reads and writes are symmetric and the memory bandwidth is uni-directional, we need two memory banks per replication.
+Besides that, the size of the FFT has an impact on the number of floating-point operations that are done per data item.</p>
 <dl class="simple">
-<dt>FFT Size:</dt><dd><p>A larger FFT size will lead to more calulations per data item (<span class="math notranslate nohighlight">\(5 * ld(n)\)</span> single precision floating point operations for FFT size n).
+<dt>FFT Size:</dt><dd><p>A larger FFT size will lead to more calculations per data item (<span class="math notranslate nohighlight">\(5 * ld(n)\)</span> single-precision floating-point operations for FFT size n).
 Also, the shift register size depends on the used FFT size, so BRAM and logic usage will increase for larger sizes.</p>
 </dd>
-<dt>Kernel Replications:</dt><dd><p>Allow to utilize more memory banks. Since the benchmark is not solely memory bound, it might be better for the overall benchmark performance to increase the FFT size instead of adding more kernel replications.
+<dt>Kernel Replications:</dt><dd><p>Allows utilizing more memory banks. Since the benchmark is not solely memory-bound, it might be better for the overall benchmark performance to increase the FFT size instead of adding more kernel replications.
 The expected performance can be calculated using <a class="reference internal" href="#equation-eq-fft-performance">Eq.1</a>.</p>
 </dd>
 </dl>
 <div class="math notranslate nohighlight" id="equation-eq-fft-performance">
-<span class="eqno">(1)<a class="headerlink" href="#equation-eq-fft-performance" title="Permalink to this equation">¶</a></span>\[gflops = 5 \cdot LOG\_FFT\_SIZE \cdot NUM\_REPLICATIONS \cdot 8 \cdot f\]</div>
+<span class="eqno">(1)<a class="headerlink" href="#equation-eq-fft-performance" title="Permalink to this equation">¶</a></span>\[flops = 5 \cdot LOG\_FFT\_SIZE \cdot NUM\_REPLICATIONS \cdot 8 \cdot f\]</div>
 <p>where f is the minimum of the kernel frequency and the frequency of the memory interface.</p>
 </div>
 </div>
