@@ -1,4 +1,4 @@
-# This file contains the default configuration for the Nallatech 520N board
+# This file contains the default configuration for the Xilinx U280 board
 # for the use with half precision floating point values.
 # To use this configuration file, call cmake with the parameter
 #
@@ -17,7 +17,7 @@ set(DEFAULT_ARRAY_LENGTH 1073741824 CACHE STRING "" FORCE)
 set(VECTOR_COUNT 1 CACHE STRING "" FORCE)
 set(GLOBAL_MEM_UNROLL 32 CACHE STRING "" FORCE)
 set(NUM_REPLICATIONS 32 CACHE STRING "" FORCE)
-set(DEVICE_BUFFER_SIZE 4096 CACHE STRING "" FORCE)
+set(DEVICE_BUFFER_SIZE 65536 CACHE STRING "" FORCE)
 
 # Set the data type since optional vector types are used
 set(DATA_TYPE half CACHE STRING "" FORCE)

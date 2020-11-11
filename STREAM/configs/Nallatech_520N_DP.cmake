@@ -1,5 +1,5 @@
 # This file contains the default configuration for the Nallatech 520N board
-# for the use with half precision floating point values.
+# for the use with double precision floating point values.
 # To use this configuration file, call cmake with the parameter
 #
 #     cmake [...] -DHPCC_FPGA_CONFIG="path to this file"
@@ -18,7 +18,7 @@ set(DEFAULT_ARRAY_LENGTH 536870912 CACHE STRING "" FORCE)
 set(VECTOR_COUNT 8 CACHE STRING "" FORCE)
 set(GLOBAL_MEM_UNROLL 1 CACHE STRING "" FORCE)
 set(NUM_REPLICATIONS 4 CACHE STRING "" FORCE)
-set(DEVICE_BUFFER_SIZE 2048 CACHE STRING "" FORCE)
+set(DEVICE_BUFFER_SIZE 8192 CACHE STRING "" FORCE)
 
 # Set the data type since optional vector types are used
 set(DATA_TYPE double CACHE STRING "" FORCE)

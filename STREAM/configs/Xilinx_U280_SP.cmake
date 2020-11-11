@@ -1,5 +1,5 @@
-# This file contains the default configuration for the Nallatech 520N board
-# for the use with half precision floating point values.
+# This file contains the default configuration for the Xilinx U280 board
+# for the use with single precision floating point values.
 # To use this configuration file, call cmake with the parameter
 #
 #     cmake [...] -DHPCC_FPGA_CONFIG="path to this file"
