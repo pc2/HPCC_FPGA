@@ -77,21 +77,21 @@ The result of the calculation is checked by calculating the residual :math:`\fra
 Expected Bottlenecks
 ---------------------
 
-In general the benchmark can be both memory bandwidth and compute bound.
-The implementation in a single pipeline allow to contiously read and write from global memory.
-Since reads and writes are symmetric and the memory bandwidth is unidrectional, we need two memory banks per replication.
-Besides that, the size of the FFT has an impact on the number of floating point operations that are done per data item.
+In general, the benchmark can be both memory bandwidth and compute-bound.
+The implementation in a single pipeline allows to continously read and write from global memory.
+Since reads and writes are symmetric and the memory bandwidth is uni-directional, we need two memory banks per replication.
+Besides that, the size of the FFT has an impact on the number of floating-point operations that are done per data item.
 
 FFT Size:
-  A larger FFT size will lead to more calulations per data item (:math:`5 * ld(n)` single precision floating point operations for FFT size n).
+  A larger FFT size will lead to more calculations per data item (:math:`5 * ld(n)` single-precision floating-point operations for FFT size n).
   Also, the shift register size depends on the used FFT size, so BRAM and logic usage will increase for larger sizes.
 
 Kernel Replications:
-  Allow to utilize more memory banks. Since the benchmark is not solely memory bound, it might be better for the overall benchmark performance to increase the FFT size instead of adding more kernel replications.
+  Allows utilizing more memory banks. Since the benchmark is not solely memory-bound, it might be better for the overall benchmark performance to increase the FFT size instead of adding more kernel replications.
   The expected performance can be calculated using :eq:`eq_fft_performance`.
 
 .. math::
-  gflops = 5 \cdot LOG\_FFT\_SIZE \cdot NUM\_REPLICATIONS \cdot 8 \cdot f
+  flops = 5 \cdot LOG\_FFT\_SIZE \cdot NUM\_REPLICATIONS \cdot 8 \cdot f
   :label: eq_fft_performance
 
 where f is the minimum of the kernel frequency and the frequency of the memory interface.

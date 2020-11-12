@@ -7,6 +7,7 @@
 HPCC FPGA is an OpenCL-based FPGA benchmark suite with focus on high performance computing.
 It is based on the benchmarks of the well-established CPU benchmark suite [HPCC](https://icl.utk.edu/hpcc/).
 This repository contains the OpenCL kernels and host code for all benchmarks together with the build scripts and instructions.
+Visit the [Online Documentation](https://pc2.github.io/HPCC_FPGA) to find additional help, descriptions, and measurement results.
 
 ## Overview
 

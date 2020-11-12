@@ -79,11 +79,11 @@ A third pipeline loads a block of C and calculates the final result for a block 
 Expected Bottlenecks
 ---------------------
 
-Matrix multiplications are very compute intensive, so the benchmark is expected to be mostly computation-bound.
-Nevertheless, the two main pipelines that are executed sequentially are both, memory bound (load data from global memory) and compute bound (calculate on data).
+Matrix multiplications are very compute-intensive, so the benchmark is expected to be mostly computation-bound.
+Nevertheless, the two main pipelines that are executed sequentially are both, memory-bound (load data from global memory) and compute-bound (calculate on data).
 The total execution time of the first pipeline is -- depending on the chosen block size -- considerably smaller than for the calculation pipeline.
 So the benchmark will in the end be affected by both, the memory bandwidth and the calculation performance of the unrolled multiplication.
-The calculation performance again is highly depending on the used FPGA resource and the final kernel frquency.
+The calculation performance again is highly depending on the used FPGA resource and the final kernel frequency.
 In consequence, the benchmark performance is also depending on the route and place capabilities of the development tools.
 
 Together with the third pipeline, that is used to write the final result of a block back to global memory, the execution time can be modelled as given in :eq:`eq_gemm_performance`.
