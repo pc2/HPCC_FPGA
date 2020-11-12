@@ -159,6 +159,16 @@ make STREAM_FPGA_intel
 
 All artifacts can be found in the `bin` folder located in the current build directory.
 
+Some benchmarks also provide prepared configurations for individual devices in the `configs` folder located in the source directory of each benchmark.
+These configurations can be used instead of manually setting every configuration option.
+to do this, call cmake as follows:
+
+```bash
+cmake -DHPCC_FPGA_CONFIG=path-to-config-file.cmake
+```
+
+This is also a way to contribute configuration best practices for specific devices.
+
 #### Basic Functionality Testing
 
 The subfolder `scripts` contains helper scripts that are used during the build and test process or for evaluation.
