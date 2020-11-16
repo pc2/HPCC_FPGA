@@ -7,6 +7,7 @@ set(PARALLEL_MEM_ACCESSES 1 CACHE STRING "Unrolling factor that is used for all 
 set(NUM_REPLICATIONS 4 CACHE STRING "Number of times the kernels will be replicated")
 set(DEVICE_BUFFER_SIZE 1 CACHE STRING "Buffer size in number of values that is used within the single kernel implementation.")
 set(COMBINE_LOOPS Yes CACHE BOOL "If enabled this will combine the address calculation loop and the load darta loop to a single loop. This can improve the performance when all loops are running sequentially")
+set(INTEL_USE_PRAGMA_IVDEP No CACHE BOOL "Use the pragma ivdep in the main loop to remove dependency of global memory reads and writes. This might lead to non validating kernel.") 
 
 set(DATA_TYPE long)
 set(HOST_DATA_TYPE cl_ulong)
