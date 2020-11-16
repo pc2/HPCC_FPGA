@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.4
+
+#### Changed:
+- Make pragma ivdep optional for Intel devices using the new flag `INTEL_USE_PRAGMA_IVDEP`
+
 ## 2.3
 
 #### Added:
