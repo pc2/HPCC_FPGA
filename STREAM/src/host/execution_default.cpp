@@ -506,7 +506,7 @@ namespace bm_execution {
             err = copykernel.setArg(2, Buffers_C[i]);
             ASSERT_CL(err);
 #endif
-            err = copykernel.setArg(3, 1.0f);
+            err = copykernel.setArg(3, static_cast<HOST_DATA_TYPE>(1.0));
             ASSERT_CL(err);
             err = copykernel.setArg(4, data_per_kernel);
             ASSERT_CL(err);
@@ -556,7 +556,7 @@ namespace bm_execution {
             err = addkernel.setArg(2, Buffers_C[i]);
             ASSERT_CL(err);
 #endif
-            err = addkernel.setArg(3, 1.0f);
+            err = addkernel.setArg(3, static_cast<HOST_DATA_TYPE>(1.0));
             ASSERT_CL(err);
             err = addkernel.setArg(4, data_per_kernel);
             ASSERT_CL(err);
