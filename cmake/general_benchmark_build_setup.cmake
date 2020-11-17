@@ -26,9 +26,11 @@ set(USE_SVM No CACHE BOOL "Use SVM pointers instead of creating buffers on the b
 set(USE_HBM No CACHE BOOL "Use host code specific to HBM FPGAs")
 set(USE_CUSTOM_KERNEL_TARGETS No CACHE BOOL "Enable build targets for custom kernels")
 set(USE_DEPRECATED_HPP_HEADER ${header_default} CACHE BOOL "Flag that indicates if the old C++ wrapper header should be used (cl.hpp) or the newer version (cl2.hpp or opencl.hpp)")
+set(HPCC_FPGA_CONFIG ${HPCC_FPGA_CONFIG} CACHE FILEPATH "Configuration file that is used to overwrite the default configuration")
 
-if (USE_SVM AND USE_HBM)
-    message(ERROR "Misconfiguration: Can not use USE_HBM and USE_SVM at the same time because they target different memory architectures")
+if (HPCC_FPGA_CONFIG)
+    message(STATUS "HPCC FPGA configuration defined. Overwrite default values with configuration: ${HPCC_FPGA_CONFIG}")
+    include(${HPCC_FPGA_CONFIG})
 endif()
 
 # Set the used data type
@@ -41,6 +43,11 @@ endif()
 if (NOT HOST_DATA_TYPE OR NOT DEVICE_DATA_TYPE)
     set(HOST_DATA_TYPE cl_${DATA_TYPE})
     set(DEVICE_DATA_TYPE ${DATA_TYPE})
+endif()
+
+# check configuration sanity
+if (USE_SVM AND USE_HBM)
+    message(ERROR "Misconfiguration: Can not use USE_HBM and USE_SVM at the same time because they target different memory architectures")
 endif()
 
 # Setup CMake environment
