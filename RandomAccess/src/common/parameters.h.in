@@ -20,6 +20,8 @@
 #define DEVICE_DATA_TYPE_UNSIGNED @DEVICE_DATA_TYPE_UNSIGNED@
 #define UNROLL_COUNT @PARALLEL_MEM_ACCESSES@
 #define BUFFER_SIZE @DEVICE_BUFFER_SIZE@
+
+#cmakedefine INTEL_USE_PRAGMA_IVDEP
 #cmakedefine SINGLE_KERNEL
 // Combine address calculation and data read loop to a single loop
 #cmakedefine COMBINE_LOOPS
