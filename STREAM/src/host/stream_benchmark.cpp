@@ -166,20 +166,20 @@ stream::StreamBenchmark::generateInputData() {
 bool  
 stream::StreamBenchmark::validateOutputAndPrintError(stream::StreamData &data) {
     HOST_DATA_TYPE aj,bj,cj,scalar;
-    HOST_DATA_TYPE aSumErr,bSumErr,cSumErr;
-    HOST_DATA_TYPE aAvgErr,bAvgErr,cAvgErr;
+    double aSumErr,bSumErr,cSumErr;
+    double aAvgErr,bAvgErr,cAvgErr;
     double epsilon;
     ssize_t	j;
     int	k,ierr,err;
 
     /* reproduce initialization */
-    aj = 1.0;
-    bj = 2.0;
-    cj = 0.0;
+    aj = static_cast<HOST_DATA_TYPE>(1.0);
+    bj = static_cast<HOST_DATA_TYPE>(2.0);
+    cj = static_cast<HOST_DATA_TYPE>(0.0);
     /* a[] is modified during timing check */
-    aj = 2.0E0 * aj;
+    aj = static_cast<HOST_DATA_TYPE>(2.0) * aj;
     /* now execute timing loop */
-    scalar = 3.0;
+    scalar = static_cast<HOST_DATA_TYPE>(3.0);
     for (k=0; k<executionSettings->programSettings->numRepetitions; k++)
     {
         cj = aj;
@@ -193,14 +193,13 @@ stream::StreamBenchmark::validateOutputAndPrintError(stream::StreamData &data) {
     bSumErr = 0.0;
     cSumErr = 0.0;
     for (j=0; j< executionSettings->programSettings->streamArraySize; j++) {
-        aSumErr += abs(data.A[j] - aj);
-        bSumErr += abs(data.B[j] - bj);
-        cSumErr += abs(data.C[j] - cj);
-        // if (j == 417) printf("Index 417: c[j]: %f, cj: %f\n",c[j],cj);	// MCCALPIN
+        aSumErr += std::abs(data.A[j] - aj);
+        bSumErr += std::abs(data.B[j] - bj);
+        cSumErr += std::abs(data.C[j] - cj);
     }
-    aAvgErr = aSumErr / (HOST_DATA_TYPE) executionSettings->programSettings->streamArraySize;
-    bAvgErr = bSumErr / (HOST_DATA_TYPE) executionSettings->programSettings->streamArraySize;
-    cAvgErr = cSumErr / (HOST_DATA_TYPE) executionSettings->programSettings->streamArraySize;
+    aAvgErr = aSumErr / executionSettings->programSettings->streamArraySize;
+    bAvgErr = bSumErr / executionSettings->programSettings->streamArraySize;
+    cAvgErr = cSumErr / executionSettings->programSettings->streamArraySize;
 
 #ifdef _USE_MPI_
     double totalAAvgErr = 0.0;
@@ -215,16 +214,8 @@ stream::StreamBenchmark::validateOutputAndPrintError(stream::StreamData &data) {
 #endif
 
     if (mpi_comm_rank == 0) {
-        if (sizeof(HOST_DATA_TYPE) == 4) {
-            epsilon = 1.e-6;
-        }
-        else if (sizeof(HOST_DATA_TYPE) == 8) {
-            epsilon = 1.e-13;
-        }
-        else {
-            printf("WEIRD: sizeof(STREAM_TYPE) = %lu\n",sizeof(executionSettings->programSettings->streamArraySize));
-            epsilon = 1.e-6;
-        }
+
+        epsilon = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
 
         err = 0;
         if (abs(aAvgErr/aj) > epsilon) {
