@@ -2,6 +2,14 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.6
+
+#### Changed:
+- Fix a bug that leads to wrong performance numbers when using MPI
+
+#### Added:
+- Support for half and double precision floating point numbers
+
 ## 2.5
 
 #### Added:
