@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.3
+
+## Added:
+- Support for Intel SVM and HBM using kernel attributes
+
 ## 1.2
 
 #### Added:
