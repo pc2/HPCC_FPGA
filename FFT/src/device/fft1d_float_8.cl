@@ -48,6 +48,16 @@
 
 #include "parameters.h"
 
+// code generation expects an array of maps of size num_replications with the keys "in" and "out".
+// The value of the keys have to be strings containing the attributes that
+// have to be assigned to input and output buffers in global memory
+/* PY_CODE_GEN 
+try:
+    kernel_param_attributes = generate_attributes(num_replications)
+except:
+    kernel_param_attributes = [{"in": "", "out": ""} for i in range(num_replications)]
+*/
+
 
 #define min(a,b) (a<b?a:b)
 
@@ -90,7 +100,7 @@ __attribute__((opencl_unroll_hint()))
 
 __kernel
 __attribute__ ((max_global_work_dim(0), reqd_work_group_size(1,1,1)))
-void fetch/*PY_CODE_GEN i*/(__global float2 * restrict src, int iter) {
+void fetch/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["in"]*/ float2 * restrict src, int iter) {
 
   const int N = (1 << LOGN);
 
@@ -178,7 +188,7 @@ __attribute__((reqd_work_group_size(1,1,1)))
 kernel void fft1d/*PY_CODE_GEN i*/(
 #ifdef INTEL_FPGA
                 // Intel does not need a store kernel and directly writes back the result to global memory
-                __global float2 * restrict dest,
+                __global /*PY_CODE_GEN kernel_param_attributes[i]["out"]*/ float2 * restrict dest,
 #endif
                 int count, int inverse) {
 
@@ -269,7 +279,7 @@ This kernel works without conditional branches which enables memory bursts.
  */
 __kernel
 __attribute__ ((max_global_work_dim(0), reqd_work_group_size(1,1,1)))
-void store/*PY_CODE_GEN i*/(__global float2 * restrict dest, int iter) {
+void store/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["out"]*/ float2 * restrict dest, int iter) {
 
   const int N = (1 << LOGN);
 

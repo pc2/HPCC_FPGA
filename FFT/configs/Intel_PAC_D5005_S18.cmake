@@ -15,3 +15,4 @@ set(AOC_FLAGS "-fpc -fp-relaxed -no-interleaving=default" CACHE STRING "" FORCE)
 # FFT specific options
 set(LOG_FFT_SIZE 18 CACHE STRING "Log2 of the used FFT size" FORCE)
 set(NUM_REPLICATIONS 1 CACHE STRING "Number of kernel replications" FORCE)
+set(INTEL_CODE_GENERATION_SETTINGS ${CMAKE_SOURCE_DIR}/settings/settings.gen.intel.fft1d_float_8.svm.py CACHE FILEPATH "" FORCE)
