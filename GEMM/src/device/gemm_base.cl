@@ -30,6 +30,16 @@ SOFTWARE.
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
+// code generation expects an array of maps of size num_replications with the keys a,b,c,out.
+// The value of the keys have to be strings containing the attributes that
+// have to be assigned to input and output buffers in global memory
+/* PY_CODE_GEN 
+try:
+    kernel_param_attributes = generate_attributes(num_replications)
+except:
+    kernel_param_attributes = [{"a": "", "b": "", "c": "", "out": ""} for i in range(num_replications)]
+*/
+
 /**
 Calculate for the Level 2 block:
 
@@ -270,17 +280,17 @@ void gemm/*PY_CODE_GEN i*/(
 #ifdef ENABLE_MIXED_PRECISION
         // In mixed precision convert the values accordingly 
         // from single precision to the target precision on the FPGA
-            __global const float* restrict a,
-          __global const float* restrict b,
-          __global const float* restrict c,
-          __global float* restrict c_out,
+            __global /*PY_CODE_GEN kernel_param_attributes[i]["a"]*/ const float* restrict a,
+          __global /*PY_CODE_GEN kernel_param_attributes[i]["b"]*/ const float* restrict b,
+          __global /*PY_CODE_GEN kernel_param_attributes[i]["c"]*/ const float* restrict c,
+          __global /*PY_CODE_GEN kernel_param_attributes[i]["out"]*/ float* restrict c_out,
           const float alpha,
           const float beta,
 #else
-            __global const DEVICE_DATA_TYPE* restrict a,
-          __global const DEVICE_DATA_TYPE* restrict b,
-          __global const DEVICE_DATA_TYPE* restrict c,
-          __global DEVICE_DATA_TYPE* restrict c_out,
+            __global /*PY_CODE_GEN kernel_param_attributes[i]["a"]*/ const DEVICE_DATA_TYPE* restrict a,
+          __global /*PY_CODE_GEN kernel_param_attributes[i]["b"]*/ const DEVICE_DATA_TYPE* restrict b,
+          __global /*PY_CODE_GEN kernel_param_attributes[i]["c"]*/ const DEVICE_DATA_TYPE* restrict c,
+          __global /*PY_CODE_GEN kernel_param_attributes[i]["out"]*/ DEVICE_DATA_TYPE* restrict c_out,
           const DEVICE_DATA_TYPE alpha,
           const DEVICE_DATA_TYPE beta,
 #endif
