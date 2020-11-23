@@ -361,8 +361,8 @@ namespace bm_execution {
             cl::Kernel triadkernel(*config.program, ("triad_" + std::to_string(i)).c_str(), &err);
             ASSERT_CL(err);
 
-            HOST_DATA_TYPE scalar = 3.0;
-            HOST_DATA_TYPE test_scalar = 2.0E0;
+            HOST_DATA_TYPE scalar = static_cast<HOST_DATA_TYPE>(3.0);
+            HOST_DATA_TYPE test_scalar = static_cast<HOST_DATA_TYPE>(2.0);
             //prepare kernels
             err = testkernel.setArg(0, Buffers_A[i]);
             ASSERT_CL(err);
@@ -459,8 +459,8 @@ namespace bm_execution {
             cl::Kernel triadkernel(*config.program, ("calc_0:{calc_0_" + std::to_string(i+1) + "}").c_str(), &err);
             ASSERT_CL(err);
 #endif
-            HOST_DATA_TYPE scalar = 3.0;
-            HOST_DATA_TYPE test_scalar = 2.0E0;
+            HOST_DATA_TYPE scalar = static_cast<HOST_DATA_TYPE>(3.0);
+            HOST_DATA_TYPE test_scalar = static_cast<HOST_DATA_TYPE>(2.0);
             //prepare kernels
 #ifdef USE_SVM
             err = clSetKernelArgSVMPointer(testkernel(), 0,
@@ -506,7 +506,7 @@ namespace bm_execution {
             err = copykernel.setArg(2, Buffers_C[i]);
             ASSERT_CL(err);
 #endif
-            err = copykernel.setArg(3, 1.0f);
+            err = copykernel.setArg(3, static_cast<HOST_DATA_TYPE>(1.0));
             ASSERT_CL(err);
             err = copykernel.setArg(4, data_per_kernel);
             ASSERT_CL(err);
@@ -556,7 +556,7 @@ namespace bm_execution {
             err = addkernel.setArg(2, Buffers_C[i]);
             ASSERT_CL(err);
 #endif
-            err = addkernel.setArg(3, 1.0f);
+            err = addkernel.setArg(3, static_cast<HOST_DATA_TYPE>(1.0));
             ASSERT_CL(err);
             err = addkernel.setArg(4, data_per_kernel);
             ASSERT_CL(err);

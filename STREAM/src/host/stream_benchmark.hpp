@@ -31,6 +31,8 @@ SOFTWARE.
 #include "hpcc_benchmark.hpp"
 #include "parameters.h"
 
+#include "half.hpp"
+
 /**
  * @brief Contains all classes and methods needed by the STREAM benchmark
  * 

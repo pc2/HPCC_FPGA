@@ -33,6 +33,8 @@ SOFTWARE.
 #include "parameters.h"
 #include "stream_benchmark.hpp"
 
+#include "half.hpp"
+
 // Map keys for execution timings
 #define PCIE_WRITE_KEY "PCI write"
 #define PCIE_READ_KEY "PCI read"

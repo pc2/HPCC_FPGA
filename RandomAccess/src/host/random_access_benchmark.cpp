@@ -95,8 +95,10 @@ random_access::RandomAccessBenchmark::collectAndPrintResults(const random_access
 
     std::vector<double> avgTimings(output.times.size());
 #ifdef _USE_MPI_
+    // Copy the object variable to a local variable to make it accessible to the lambda function
+    int mpi_size = mpi_comm_size;
     MPI_Reduce(output.times.data(),avgTimings.data(),output.times.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    std::for_each(avgTimings.begin(),avgTimings.end(), [output](double& x) {x /= output.times.size();});
+    std::for_each(avgTimings.begin(),avgTimings.end(), [mpi_size](double& x) {x /= mpi_size;});
     
 #else
     std::copy(output.times.begin(), output.times.end(), avgTimings.begin());
