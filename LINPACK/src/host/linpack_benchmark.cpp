@@ -228,6 +228,41 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
               << std::setw(ENTRY_SPACE) << data.b[0]-1 << std::setw(ENTRY_SPACE)
               << data.b[n-1]-1 << std::endl;
 
+#ifndef NDEBUG
+    if (residn > 1) {
+        auto ref_result = generateInputData();
+        // For each column right of current diagonal element
+        for (int j = 0; j < n; j++) {
+            // For each element below it
+            for (int i = 0; i < n; i++) {
+                std::cout << ref_result->A[n * j + i] << ", ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+        // For each column right of current diagonal element
+        for (int j = 0; j < n; j++) {
+            // For each element below it
+            for (int i = 0; i < n; i++) {
+                std::cout << data.A[n * j + i] << ", ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+        linpack::gefa_ref_nopvt(ref_result->A, n, n);
+        linpack::gesl_ref_nopvt(ref_result->A, ref_result->b, n, n);
+        // For each column right of current diagonal element
+        for (int j = 0; j < n; j++) {
+            // For each element below it
+            for (int i = 0; i < n; i++) {
+                std::cout << ref_result->A[n * j + i] << ", ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+    }
+#endif
+
     return residn < 100;
 }
 
