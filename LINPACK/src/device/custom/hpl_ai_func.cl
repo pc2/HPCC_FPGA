@@ -81,10 +81,13 @@ lu(const DEVICE_DATA_TYPE A[GEMM_BLOCK][GEMM_BLOCK], const int step, DEVICE_DATA
 }
 
 /**
+This function can be used to update blocks using with three different operations.
+It will execute the update for a single row in the block. The update is completed after GEMM_BLOCK calls of this
+update function
 
-operation_type: 0 for top
-				1 for left
-				2 for inner block
+operation_type: 0 for top = the top row of blocks will need a triangular MM
+				1 for left = the left column of blocks will need a triangular MM, matrices have to be transposed
+				2 for inner block == all inner blocks will be updated with a MM
  */
 void
 update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK], 
@@ -146,7 +149,7 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 	}
 
 	DEVICE_DATA_TYPE tmp[GEMM_BLOCK][GEMM_BLOCK];
-	// scale all blocks with the pre calculated scaling array and the second input
+	// scale all values with the pre calculated scaling array and the second input
 	__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 	for (int ii =0; ii < GEMM_BLOCK; ii++) {
 		__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
@@ -185,10 +188,11 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 	DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
 
 	// Load block to local memory
+	#pragma loop_coalesce
 	for (int i =0; i < BLOCK_SIZE/GEMM_BLOCK; i++) {
 		for (int ii =0; ii < GEMM_BLOCK; ii++) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
-				__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
 					a_buffer[i][j][ii][jj] = a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj];
 				}
@@ -232,15 +236,32 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 			DEVICE_DATA_TYPE left_buffer[2][GEMM_BLOCK][GEMM_BLOCK];
 
 			// Update all other blocks with the new calculated row and column
-			for (int ti = k; ti < BLOCK_SIZE/GEMM_BLOCK; ti++) {
-				#pragma ivdep
-				for (int j = k; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
+			#pragma ivdep array(a_buffer)
+			#pragma ivdep array(top_buffer) safelen(BLOCK_SIZE/GEMM_BLOCK)
+			#pragma ivdep array(left_buffer) safelen(BLOCK_SIZE/GEMM_BLOCK)
+			for (int ttj = 0; ttj < BLOCK_SIZE/GEMM_BLOCK * BLOCK_SIZE/GEMM_BLOCK; ttj++) {
 
-
+				int j = ttj & (BLOCK_SIZE/GEMM_BLOCK - 1);
+				int ti = ttj / (BLOCK_SIZE/GEMM_BLOCK);
+				// always execute the pipeline for the whole matrix block.
+				// Only execute update for blocks that are required.
+				// This helps to keep constant latencies between the calculation of blocks
+				if (ti >= k && j >= k) {
+					/*
+					Update order of block is:
+					First the block below the LU block
+					Then the row of blocks right of LU block
+					This way the left block of the next column will always be calculated in advance 
+					because it will be needed as input for the subsequent blocks.
+					*/
 					int i = (j == k) ? ti + 1 : ti;
 
+					// The last left block will be out of bounds because of the update strategy described above
+					// Skip it
 					if (i < BLOCK_SIZE/GEMM_BLOCK) {
-
+						
+						// copy the correct block in the second input buffer
+						// this depends on the operations that has to be executed
 						DEVICE_DATA_TYPE second_input[GEMM_BLOCK][GEMM_BLOCK];
 						if ((j == k || i == k) ) {
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
@@ -256,7 +277,7 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 							for (int ii =0; ii < GEMM_BLOCK; ii++) {
 								__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 								for (int jj =0; jj < GEMM_BLOCK; jj++) {
-									second_input[ii][jj] = left_buffer[i & 1][ii][jj];
+									second_input[ii][jj] = left_buffer[ti & 1][ii][jj];
 								}
 							}
 						}
@@ -277,12 +298,12 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 								}
 							}
 						}
-						if (i > k && j == k) {
+						else if (i > k && j == k) {
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int ii =0; ii < GEMM_BLOCK; ii++) {
 								__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 								for (int jj =0; jj < GEMM_BLOCK; jj++) {
-									left_buffer[i & 1][ii][jj] = out[ii][jj];
+									left_buffer[(ti + 1) & 1][ii][jj] = out[ii][jj];
 								}
 							}
 						}
@@ -300,10 +321,11 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
  	}
 
 	// Store block to global memory
+	#pragma loop_coalesce
 	for (int i =0; i < BLOCK_SIZE/GEMM_BLOCK; i++) {
 		for (int ii =0; ii < GEMM_BLOCK; ii++) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
-				__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
 					a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
 				}
