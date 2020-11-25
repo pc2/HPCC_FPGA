@@ -68,7 +68,8 @@ lu(const DEVICE_DATA_TYPE A[GEMM_BLOCK][GEMM_BLOCK], const int step, DEVICE_DATA
 
 	// Update all rows fully unrolled
 	// The multiply adds are fully independent
-	__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+	//__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+	// Unrolliong disabled for this loop to save resources
 	for (int j = 0; j < GEMM_BLOCK; j++) {
 		DEVICE_DATA_TYPE curr_scale = a_block[j][step];
 		// Update a single row. If it is already updated, just write back the value, if it is the current row
