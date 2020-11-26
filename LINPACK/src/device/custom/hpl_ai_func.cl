@@ -127,7 +127,7 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 			__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 			for (int jj =0; jj < GEMM_BLOCK; jj++) {
 				current_block[ii][jj] = current_block_in[jj][ii] ;
-				left_or_lu_block[ii][jj] = left_or_lu_block_in[jj][ii];
+				left_or_lu_block[ii][jj] = left_or_lu_block_in[ii][jj];
 			}
 		}
 	}
@@ -137,7 +137,7 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 			__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 			for (int jj =0; jj < GEMM_BLOCK; jj++) {
 				current_block[ii][jj] = current_block_in[ii][jj] ;
-				left_or_lu_block[ii][jj] = left_or_lu_block_in[ii][jj];
+				left_or_lu_block[ii][jj] = left_or_lu_block_in[jj][ii];
 			}
 		}
 	}
@@ -155,7 +155,8 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 	for (int ii =0; ii < GEMM_BLOCK; ii++) {
 		__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 		for (int jj =0; jj < GEMM_BLOCK; jj++) {
-			tmp[ii][jj] = current_block[ii][jj] + scale_row[jj] * left_or_lu_block[ii][current_row];
+			// left_or_lu_block are stored transposed to simplify the data access here
+			tmp[ii][jj] = current_block[ii][jj] + scale_row[jj] * left_or_lu_block[current_row][ii];
 		}
 	}
 
