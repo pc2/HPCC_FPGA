@@ -83,7 +83,7 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedExternalTranspos
 }
 
 void transpose::DistributedExternalTransposeDataHandler::exchangeData(transpose::TransposeData& data) {
-    // Calculate the rank of the apired FPGA
+    // Calculate the rank of the paired FPGA
     int pair_rank = (mpi_comm_rank < mpi_comm_size / 2) ? (mpi_comm_size / 2 + mpi_comm_rank) : (mpi_comm_rank - mpi_comm_size / 2);
 
     // To re-calculate the matrix transposition locally on this host, we need to 
