@@ -48,15 +48,6 @@ lu(const DEVICE_DATA_TYPE A[GEMM_BLOCK][GEMM_BLOCK], const int step, DEVICE_DATA
 		line[i] = A[step][i];
 	}
 
-	DEVICE_DATA_TYPE a_block[GEMM_BLOCK][GEMM_BLOCK];
-	__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-	for (int j = 0; j < GEMM_BLOCK; j++) {
-		__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-		for (int i = 0; i < GEMM_BLOCK; i++) {
-			a_block[j][i] =  A[j][i];
-		}
-	}
-
 	// calculate the inverse of the diagonal element for the scaling
 	DEVICE_DATA_TYPE inv_scale_a = -1.0 / line[step];
 
@@ -74,13 +65,13 @@ lu(const DEVICE_DATA_TYPE A[GEMM_BLOCK][GEMM_BLOCK], const int step, DEVICE_DATA
 	//__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 	// Unrolling disabled for this loop to save resources
 	for (int j = 0; j < GEMM_BLOCK; j++) {
-		DEVICE_DATA_TYPE curr_scale = a_block[j][step];
+		DEVICE_DATA_TYPE curr_scale = A[j][step];
 		// Update a single row. If it is already updated, just write back the value, if it is the current row
 		// write back the value in "line", else update the value
 		if (j != step) {
 			__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 			for (int i = 0; i < GEMM_BLOCK; i++) {
-				A_out[j][i] = (i > step && j > step) ? a_block[j][i] + line[i] * curr_scale : a_block[j][i];
+				A_out[j][i] = (i > step && j > step) ? A[j][i] + line[i] * curr_scale : A[j][i];
 			}
 		}
 		else {
@@ -102,8 +93,8 @@ operation_type: 0 for top = the top row of blocks will need a triangular MM
 				2 for inner block == all inner blocks will be updated with a MM
  */
 void
-update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK], 
-			 const DEVICE_DATA_TYPE top[GEMM_BLOCK][GEMM_BLOCK],
+update_block(const local DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK], 
+			 const local DEVICE_DATA_TYPE top[GEMM_BLOCK],
 			 const DEVICE_DATA_TYPE left_or_lu[GEMM_BLOCK],
 			 DEVICE_DATA_TYPE out[GEMM_BLOCK][GEMM_BLOCK],
 			 const int current_row,
@@ -115,20 +106,18 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 	const int op_inner = 2;
 
 	// Read in the input blocks (lu block is already stored in variable)
-	DEVICE_DATA_TYPE current_block_in[GEMM_BLOCK][GEMM_BLOCK];
-	DEVICE_DATA_TYPE top_block[GEMM_BLOCK][GEMM_BLOCK];
+	DEVICE_DATA_TYPE current_block_in[GEMM_BLOCK][GEMM_BLOCK] __attribute__((register));
 
 	__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 	for (int ii =0; ii < GEMM_BLOCK; ii++) {
 		__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 		for (int jj =0; jj < GEMM_BLOCK; jj++) {
 			current_block_in[ii][jj] = a[ii][jj];
-			top_block[ii][jj] = top[ii][jj];
 		}
 	}
 
 	// Transpose the input matrices if the target is a left block
-	DEVICE_DATA_TYPE current_block[GEMM_BLOCK][GEMM_BLOCK];
+	DEVICE_DATA_TYPE current_block[GEMM_BLOCK][GEMM_BLOCK]  __attribute__((register));
 	if (operation_type == op_left) {
 		__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 		for (int ii =0; ii < GEMM_BLOCK; ii++) {
@@ -149,11 +138,11 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 	}
 
 	// Generate the first scalling array depending on the operation type
-	DEVICE_DATA_TYPE scale_row[GEMM_BLOCK];
+	DEVICE_DATA_TYPE scale_row[GEMM_BLOCK]  __attribute__((register));
 	if (operation_type == op_inner) {
 		__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 		for (int jj =0; jj < GEMM_BLOCK; jj++) {
-			scale_row[jj] = top_block[current_row][jj];
+			scale_row[jj] = top[jj];
 		}
 	}
 	else {
@@ -169,7 +158,7 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 		}
 	}
 
-	DEVICE_DATA_TYPE tmp[GEMM_BLOCK][GEMM_BLOCK];
+	DEVICE_DATA_TYPE tmp[GEMM_BLOCK][GEMM_BLOCK]  __attribute__((register));
 	// scale all values with the pre calculated scaling array and the second input
 	__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 	for (int ii =0; ii < GEMM_BLOCK; ii++) {
@@ -226,7 +215,12 @@ void
 gefa(__global DEVICE_DATA_TYPE* restrict a,
 	unsigned n_blocks) {
 
-	DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
+	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
+	
+	// Store current row and column in separate buffers for 
+	// easier access in the deep pipeline
+	local DEVICE_DATA_TYPE top_buffer[BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK];
+	DEVICE_DATA_TYPE left_buffer[2][GEMM_BLOCK] __attribute__((register));
 
 	// Load block to local memory
 	#pragma loop_coalesce
@@ -260,6 +254,8 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 		}
 
 		DEVICE_DATA_TYPE lu_a_buffer_out[GEMM_BLOCK][GEMM_BLOCK];
+		DEVICE_DATA_TYPE lu_a_buffer_out_row[GEMM_BLOCK];
+		DEVICE_DATA_TYPE lu_a_buffer_out_col[GEMM_BLOCK];
 		// Calculate next row and column of LU factorization and store in local memory buffer
 		lu(lu_a_buffer_in, kk, lu_a_buffer_out);
 		__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
@@ -269,14 +265,18 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 				a_buffer[k][k][ii][jj] = lu_a_buffer_out[ii][jj];
 			}
 		}
+		__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+		for (int jj =0; jj < GEMM_BLOCK; jj++) {
+			lu_a_buffer_out_row[jj] = lu_a_buffer_out[kk][jj];
+		}
+		__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
+		for (int jj =0; jj < GEMM_BLOCK; jj++) {
+			lu_a_buffer_out_col[jj] = lu_a_buffer_out[jj][kk];
+		}
 
 		// The update pipeline does not need to be executed for the last
 		// row of blocks
 		if (gk < BLOCK_SIZE - GEMM_BLOCK) {
-			// Store current row and column in separate buffers for 
-			// easier access in the deep pipeline
-			DEVICE_DATA_TYPE top_buffer[BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
-			DEVICE_DATA_TYPE left_buffer[2][GEMM_BLOCK][GEMM_BLOCK];
 
 			// Update all other blocks with the new calculated row and column
 			#pragma ivdep array(a_buffer)
@@ -310,25 +310,25 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 							// left matrix block will be calculated
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int jj =0; jj < GEMM_BLOCK; jj++) {
-								second_input[jj] = lu_a_buffer_out[kk][jj];
+								second_input[jj] = lu_a_buffer_out_row[jj];
 							}
 						}
 						else if (i == k) {
 							// top matrix block will be calculated
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int jj =0; jj < GEMM_BLOCK; jj++) {
-								second_input[jj] = lu_a_buffer_out[jj][kk];
+								second_input[jj] = lu_a_buffer_out_col[jj];
 							}
 						}
 						else {
 							// inner block will be calculated
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int jj =0; jj < GEMM_BLOCK; jj++) {
-								second_input[jj] = left_buffer[ti & 1][jj][kk];
+								second_input[jj] = left_buffer[ti & 1][jj];
 							}
 						}
 
-						DEVICE_DATA_TYPE out[GEMM_BLOCK][GEMM_BLOCK];
+						DEVICE_DATA_TYPE out[GEMM_BLOCK][GEMM_BLOCK] __attribute__((register));
 						update_block(a_buffer[i][j], 
 										top_buffer[j], 
 										second_input, 
@@ -337,20 +337,14 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 										(i == k) ? 0 : ((j == k) ? 1 : 2));
 						if (i == k && j > k) {
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-							for (int ii =0; ii < GEMM_BLOCK; ii++) {
-								__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-								for (int jj =0; jj < GEMM_BLOCK; jj++) {
-									top_buffer[j][ii][jj] = out[ii][jj];
-								}
+							for (int jj =0; jj < GEMM_BLOCK; jj++) {
+								top_buffer[j][jj] = out[kk][jj];
 							}
 						}
 						else if (i > k && j == k) {
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int ii =0; ii < GEMM_BLOCK; ii++) {
-								__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-								for (int jj =0; jj < GEMM_BLOCK; jj++) {
-									left_buffer[(ti + 1) & 1][ii][jj] = out[ii][jj];
-								}
+								left_buffer[(ti + 1) & 1][ii] = out[ii][kk];
 							}
 						}
 						__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
