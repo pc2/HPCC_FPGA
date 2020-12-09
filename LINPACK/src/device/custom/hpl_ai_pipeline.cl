@@ -204,6 +204,8 @@ void
 gefa(__global DEVICE_DATA_TYPE* restrict a,
 	unsigned n_blocks) {
 
+	//TODO: n_blocks is currently ignored!
+
 	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
 	
 	// Store current row and column in separate buffers for 
@@ -380,27 +382,124 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 __attribute__((uses_global_work_offset(0)))
 __kernel
 void
-gesl(__global DEVICE_DATA_TYPE* restrict a, 
+gesl(__global const DEVICE_DATA_TYPE* restrict a, 
 	__global DEVICE_DATA_TYPE* restrict b,
-	unsigned n_blocks) {
+	const unsigned n_blocks) {
 
-    const int n = n_blocks * BLOCK_SIZE;
+	const unsigned n = n_blocks * BLOCK_SIZE;
 
 	// solve l*y = b
 	// For each row in matrix
+
+	// Go through every value in b
+	#pragma disable_loop_pipelining
 	for (int k = 0; k < n - 1; k++) {
-		// For each row below add
-		for (int i = k + 1; i < n; i++) {
-			// add solved upper row to current row
-			b[i] += b[k] * a[n * k + i];
+
+		// Split the row into chunks to allow caching in local memory
+		#pragma disable_loop_pipelining
+		for (int row_block = k / BLOCK_SIZE; row_block < n / BLOCK_SIZE; row_block++) {
+			DEVICE_DATA_TYPE b_tmp[BLOCK_SIZE];
+			DEVICE_DATA_TYPE scale_b;
+
+			// Read a chunk of b into the cache and exchange the pivot element
+			for (int chunk = 0; chunk < BLOCK_SIZE/GLOBAL_MEM_UNROLL; chunk++) {
+				DEVICE_DATA_TYPE b_burst[GLOBAL_MEM_UNROLL];
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					b_burst[i] = b[curr_id];
+				}
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					b_tmp[chunk * GLOBAL_MEM_UNROLL + i] = b_burst[i];
+					if (curr_id == k) {
+						scale_b = b_burst[i];
+					}
+				}
+			}
+
+			// Update values of b and store them back to global memory
+			for (int chunk = 0; chunk <  BLOCK_SIZE/ GLOBAL_MEM_UNROLL; chunk++) {
+				DEVICE_DATA_TYPE a_burst[GLOBAL_MEM_UNROLL];
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					a_burst[i] = a[n * k + curr_id];
+				}
+
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					DEVICE_DATA_TYPE new_val = (curr_id > k) ? b_tmp[chunk * GLOBAL_MEM_UNROLL + i] +  scale_b * a_burst[i] : b_tmp[chunk * GLOBAL_MEM_UNROLL + i];
+					b[curr_id] = new_val;
+				}
+			}
 		}
 	}
 
 	// now solve  u*x = y
+
+	// load the current sclae value for b from global memory
+	DEVICE_DATA_TYPE curr_b = b[n-1];
+	DEVICE_DATA_TYPE ux_scale_b = 0.f;
+
+	// for every value in b
+	#pragma disable_loop_pipelining
 	for (int k = n - 1; k >= 0; k--) {
-		b[k] = b[k] * -a[n * k + k];
-		for (int i = 0; i < k; i++) {
-			b[i] -= b[k] * a[n * k + i];
+
+		// Split the row into chunks to allow caching in local memory
+		#pragma disable_loop_pipelining
+		for (int row_block = 0; row_block <= (k >> LOCAL_MEM_BLOCK_LOG); row_block++) {
+			DEVICE_DATA_TYPE b_tmp[BLOCK_SIZE];
+
+			if (row_block == 0) {
+				// scale current b value
+				ux_scale_b = curr_b * a[n * k + k];
+			}
+
+			// Read a chunk of b into the cache
+			for (int chunk = 0; chunk < BLOCK_SIZE/GLOBAL_MEM_UNROLL; chunk++) {
+				DEVICE_DATA_TYPE b_burst[GLOBAL_MEM_UNROLL];
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					b_burst[i] = b[curr_id];
+				}
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					b_tmp[chunk * GLOBAL_MEM_UNROLL + i] = b_burst[i];
+				}
+			}
+
+			// scale all other values of b and write them back to global memory
+			// TODO: With Vitis this pipeline has an II=16 because of non-aligned accesses
+			//       to global memory(?) Why? Maybe because of ak,k loaded for scaling and the
+			//		load in this pipeline? 
+			#pragma nofusion
+			for (int chunk = 0; chunk <  BLOCK_SIZE/GLOBAL_MEM_UNROLL; chunk++) {
+				DEVICE_DATA_TYPE a_burst[GLOBAL_MEM_UNROLL];
+
+				// read in a
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					a_burst[i] = a[n * k + curr_id];
+				}
+
+				// Update values
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					DEVICE_DATA_TYPE new_val = (curr_id < k) ? b_tmp[chunk * GLOBAL_MEM_UNROLL + i] +  ux_scale_b * a_burst[i] : (curr_id != k) ? b_tmp[chunk * GLOBAL_MEM_UNROLL + i] : -ux_scale_b;
+					b[curr_id] = new_val;
+					if (curr_id == k - 1) {
+						// cache next scale value for next iteration
+						curr_b = new_val;
+					}
+				}
+			}
 		}
 	}
 }
