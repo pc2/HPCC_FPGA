@@ -125,7 +125,7 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
     }
     tmean = tmean / output.gefaTimings.size();
     tlumean = tlumean / output.gefaTimings.size();
-    tslmean = tslmean / output.gefaTimings.size();
+    tslmean = tslmean / output.geslTimings.size();
 
      std::cout << std::setw(ENTRY_SPACE)
               << "Method" << std::setw(ENTRY_SPACE)
@@ -220,13 +220,6 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
 
     HOST_DATA_TYPE eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
     HOST_DATA_TYPE residn = resid / (n*newdata->norma*normx*eps);
-    //std::cout << resid << ", " << norma << ", " << normx << std::endl;
-    std::cout << "  norm. resid        resid       "\
-                 "machep       x[0]-1     x[n-1]-1" << std::endl;
-    std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
-              << resid << std::setw(ENTRY_SPACE) << eps
-              << std::setw(ENTRY_SPACE) << data.b[0]-1 << std::setw(ENTRY_SPACE)
-              << data.b[n-1]-1 << std::endl;
 
 #ifndef NDEBUG
     if (residn > 1) {
@@ -249,8 +242,14 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
             std::cout << std::endl;
         }
         std::cout << std::endl;
-        linpack::gefa_ref_nopvt(ref_result->A, n, n);
-        linpack::gesl_ref_nopvt(ref_result->A, ref_result->b, n, n);
+        if (executionSettings->programSettings->isDiagonallyDominant) {
+            linpack::gefa_ref_nopvt(ref_result->A, n, n);
+            linpack::gesl_ref_nopvt(ref_result->A, ref_result->b, n, n);
+        }
+        else {
+            linpack::gefa_ref(ref_result->A, n, n, ref_result->ipvt);
+            linpack::gesl_ref(ref_result->A, ref_result->b, ref_result->ipvt, n, n);
+        }
         // For each column right of current diagonal element
         for (int j = 0; j < n; j++) {
             // For each element below it
@@ -262,6 +261,14 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
         std::cout << std::endl;
     }
 #endif
+
+    //std::cout << resid << ", " << norma << ", " << normx << std::endl;
+    std::cout << "  norm. resid        resid       "\
+                 "machep       x[0]-1     x[n-1]-1" << std::endl;
+    std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
+              << resid << std::setw(ENTRY_SPACE) << eps
+              << std::setw(ENTRY_SPACE) << data.b[0]-1 << std::setw(ENTRY_SPACE)
+              << data.b[n-1]-1 << std::endl;
 
     return residn < 100;
 }
@@ -323,16 +330,13 @@ linpack::gefa_ref(HOST_DATA_TYPE* a, unsigned n, unsigned lda, cl_int* ipvt) {
 void
 linpack::gesl_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, cl_int* ipvt, unsigned n, unsigned lda) {
     auto b_tmp = new HOST_DATA_TYPE[n];
-#pragma omp parallel default(shared)
     {
-#pragma omp for
         for (int k = 0; k < n; k++) {
             b_tmp[k] = b[k];
         }
 
         // solve l*y = b
         // For each row in matrix
-#pragma omp single
         for (int k = 0; k < n - 1; k++) {
             if (ipvt[k] != k) {
                 HOST_DATA_TYPE tmp = b_tmp[k];
@@ -340,7 +344,6 @@ linpack::gesl_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, cl_int* ipvt, unsigned n
                 b_tmp[ipvt[k]] = tmp;
             }
             // For each row below add
-#pragma omp parallel for
             for (int i = k + 1; i < n; i++) {
                 // add solved upper row to current row
                 b_tmp[i] += b_tmp[k] * a[lda * k + i];
@@ -348,15 +351,12 @@ linpack::gesl_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, cl_int* ipvt, unsigned n
         }
 
         // now solve  u*x = y
-#pragma omp single
         for (int k = n - 1; k >= 0; k--) {
             b_tmp[k] = b_tmp[k] / a[lda * k + k];
-#pragma omp parallel for
             for (int i = 0; i < k; i++) {
                 b_tmp[i] -= b_tmp[k] * a[lda * k + i];
             }
         }
-#pragma omp for
         for (int k = 0; k < n; k++) {
             b[k] = b_tmp[k];
         }
