@@ -255,15 +255,15 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 			int curr_ipvt = k;
 			DEVICE_DATA_TYPE old_a = 0.f;
 			// Find the maximum of the current row
-			for (int row_block = k / UNROLL_COUNT; row_block < (diagonal_block + 1) * BLOCK_SIZE / UNROLL_COUNT; row_block++) {
-				DEVICE_DATA_TYPE a_tmp[UNROLL_COUNT];
-				DEVICE_DATA_TYPE a_tmp_abs[UNROLL_COUNT];
-				int index_tmp[UNROLL_COUNT];
+			for (int row_block = k / GLOBAL_MEM_UNROLL; row_block < (diagonal_block + 1) * BLOCK_SIZE / GLOBAL_MEM_UNROLL; row_block++) {
+				DEVICE_DATA_TYPE a_tmp[GLOBAL_MEM_UNROLL];
+				DEVICE_DATA_TYPE a_tmp_abs[GLOBAL_MEM_UNROLL];
+				int index_tmp[GLOBAL_MEM_UNROLL];
 
 				// Read a chunk of a into the cache
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-				for (int chunk = 0; chunk < UNROLL_COUNT; chunk++) {
-					int curr_id = (row_block) * UNROLL_COUNT + chunk;
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int chunk = 0; chunk < GLOBAL_MEM_UNROLL; chunk++) {
+					int curr_id = (row_block) * GLOBAL_MEM_UNROLL + chunk;
 					a_tmp[chunk] = (curr_id >= k) ? a[n*k + curr_id] : 0.f;
 					a_tmp_abs[chunk] = fabs(a_tmp[chunk]);
 					index_tmp[chunk] = curr_id;
@@ -271,15 +271,15 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 						old_a = a_tmp[chunk];
 					}
 				}
-#if UNROLL_COUNT > 1
+#if GLOBAL_MEM_UNROLL > 1
 				// Find local absolute maximum of chunk
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-				for (int stage = 2; stage <= UNROLL_COUNT; stage += stage) {
-					__attribute__((opencl_unroll_hint(UNROLL_COUNT / 2)))
-					for (int pair = 0; pair < UNROLL_COUNT / stage; pair++) {
-						a_tmp_abs[pair] = (a_tmp_abs[pair] > a_tmp_abs[UNROLL_COUNT / stage + pair]) ? a_tmp_abs[pair] : a_tmp_abs[UNROLL_COUNT / stage + pair];
-						a_tmp[pair] = (a_tmp_abs[pair] > a_tmp_abs[UNROLL_COUNT / stage + pair]) ? a_tmp[pair] : a_tmp[UNROLL_COUNT / stage + pair];
-						index_tmp[pair] = (a_tmp_abs[pair] > a_tmp_abs[UNROLL_COUNT / stage + pair]) ? index_tmp[pair] : index_tmp[UNROLL_COUNT / stage + pair];
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int stage = 2; stage <= GLOBAL_MEM_UNROLL; stage += stage) {
+					__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL / 2)))
+					for (int pair = 0; pair < GLOBAL_MEM_UNROLL / stage; pair++) {
+						a_tmp_abs[pair] = (a_tmp_abs[pair] > a_tmp_abs[GLOBAL_MEM_UNROLL / stage + pair]) ? a_tmp_abs[pair] : a_tmp_abs[GLOBAL_MEM_UNROLL / stage + pair];
+						a_tmp[pair] = (a_tmp_abs[pair] > a_tmp_abs[GLOBAL_MEM_UNROLL / stage + pair]) ? a_tmp[pair] : a_tmp[GLOBAL_MEM_UNROLL / stage + pair];
+						index_tmp[pair] = (a_tmp_abs[pair] > a_tmp_abs[GLOBAL_MEM_UNROLL / stage + pair]) ? index_tmp[pair] : index_tmp[GLOBAL_MEM_UNROLL / stage + pair];
 					}
 				}
 #endif
@@ -300,7 +300,7 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 				DEVICE_DATA_TYPE a_tmp[BLOCK_SIZE];
 
 				// Read a chunk of a into the cache and exchange the pivot element
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int chunk = 0; chunk < BLOCK_SIZE; chunk++) {
 					int curr_id = (row_block) * BLOCK_SIZE + chunk;
 					a_tmp[chunk] = (curr_id != k && curr_id != curr_ipvt) 
@@ -309,7 +309,7 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 				}
 
 				// Update values of a and store them back to global memory
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int chunk = 0; chunk <  BLOCK_SIZE; chunk++) {
 					int curr_id = (row_block) * BLOCK_SIZE + chunk;
 					// scale current row
@@ -332,7 +332,7 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 					DEVICE_DATA_TYPE lower_old_a = (row_block == diagonal_block) ? a[j*n + k] : 0.f;
 
 					// Read a chunk of a into the cache and exchange the pivot element
-					__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
+					__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 					for (int chunk = 0; chunk < BLOCK_SIZE; chunk++) {
 						int curr_id = (row_block) * BLOCK_SIZE + chunk;
 						a_lower_tmp[chunk] = (curr_id != k && curr_id != curr_ipvt) 
@@ -343,7 +343,7 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
 					}
 
 					// store them back to global memory
-					__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
+					__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 					for (int chunk = 0; chunk <  BLOCK_SIZE; chunk++) {
 						int curr_id = (row_block) * BLOCK_SIZE + chunk;
 						a[j * n + curr_id] = a_lower_tmp[chunk];
@@ -395,18 +395,18 @@ gefa(__global DEVICE_DATA_TYPE* restrict a,
                 // Load the current block
 #pragma loop_coalesce 2
                 for (int i = 0; i < BLOCK_SIZE ; i++) {
-                    for (int j = 0; j < BLOCK_SIZE / UNROLL_COUNT; j++) {
-                        DEVICE_DATA_TYPE current_reorder_buffer[UNROLL_COUNT];
-__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-                        for (int u = 0; u < UNROLL_COUNT; u++) {
+                    for (int j = 0; j < BLOCK_SIZE / GLOBAL_MEM_UNROLL; j++) {
+                        DEVICE_DATA_TYPE current_reorder_buffer[GLOBAL_MEM_UNROLL];
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+                        for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
                             current_reorder_buffer[u] = a[(inner_y_block * n + inner_x_block) * BLOCK_SIZE +
-                                j * UNROLL_COUNT + u + i * n];
+                                j * GLOBAL_MEM_UNROLL + u + i * n];
                         }
-__attribute__((opencl_unroll_hint(UNROLL_COUNT/GEMM_BLOCK)))
-                        for (int b = 0; b < UNROLL_COUNT/GEMM_BLOCK; b++) {
+__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/GEMM_BLOCK)))
+                        for (int b = 0; b < GLOBAL_MEM_UNROLL/GEMM_BLOCK; b++) {
 __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                             for (int u = 0; u < GEMM_BLOCK; u++) {
-                                current_block[i / GEMM_BLOCK][j * UNROLL_COUNT / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = current_reorder_buffer[b * GEMM_BLOCK + u];
+                                current_block[i / GEMM_BLOCK][j * GLOBAL_MEM_UNROLL / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = current_reorder_buffer[b * GEMM_BLOCK + u];
                             }
                         }
                     }
@@ -421,36 +421,36 @@ __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                     // load the needed left and top block
                     #pragma loop_coalesce 2
                     for (int i = 0; i < BLOCK_SIZE ; i++) {
-                        for (int j = 0; j < BLOCK_SIZE / UNROLL_COUNT; j++) {
-                            DEVICE_DATA_TYPE left_reorder_buffer[UNROLL_COUNT];
-    __attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-                            for (int u = 0; u < UNROLL_COUNT; u++) {
+                        for (int j = 0; j < BLOCK_SIZE / GLOBAL_MEM_UNROLL; j++) {
+                            DEVICE_DATA_TYPE left_reorder_buffer[GLOBAL_MEM_UNROLL];
+    __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+                            for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
                                 left_reorder_buffer[u] = a[(inner_y_block * n + k) * BLOCK_SIZE +
-                                    j * UNROLL_COUNT + u + i * n];
+                                    j * GLOBAL_MEM_UNROLL + u + i * n];
                             }
-    __attribute__((opencl_unroll_hint(UNROLL_COUNT/GEMM_BLOCK)))
-                            for (int b = 0; b < UNROLL_COUNT/GEMM_BLOCK; b++) {
+    __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/GEMM_BLOCK)))
+                            for (int b = 0; b < GLOBAL_MEM_UNROLL/GEMM_BLOCK; b++) {
     __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                                 for (int u = 0; u < GEMM_BLOCK; u++) {
-                                    left_block[i / GEMM_BLOCK][j * UNROLL_COUNT / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = left_reorder_buffer[b * GEMM_BLOCK + u];
+                                    left_block[i / GEMM_BLOCK][j * GLOBAL_MEM_UNROLL / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = left_reorder_buffer[b * GEMM_BLOCK + u];
                                 }
                             }
                         }
                     }
                     #pragma loop_coalesce 2
                     for (int i = 0; i < BLOCK_SIZE ; i++) {
-                        for (int j = 0; j < BLOCK_SIZE / UNROLL_COUNT; j++) {
-                            DEVICE_DATA_TYPE top_reorder_buffer[UNROLL_COUNT];
-    __attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-                            for (int u = 0; u < UNROLL_COUNT; u++) {
+                        for (int j = 0; j < BLOCK_SIZE / GLOBAL_MEM_UNROLL; j++) {
+                            DEVICE_DATA_TYPE top_reorder_buffer[GLOBAL_MEM_UNROLL];
+    __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+                            for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
                                 top_reorder_buffer[u] = a[(k * n + inner_x_block) * BLOCK_SIZE +
-                                    j * UNROLL_COUNT + u + i * n];
+                                    j * GLOBAL_MEM_UNROLL + u + i * n];
                             }
-    __attribute__((opencl_unroll_hint(UNROLL_COUNT/GEMM_BLOCK)))
-                            for (int b = 0; b < UNROLL_COUNT/GEMM_BLOCK; b++) {
+    __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/GEMM_BLOCK)))
+                            for (int b = 0; b < GLOBAL_MEM_UNROLL/GEMM_BLOCK; b++) {
     __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                                 for (int u = 0; u < GEMM_BLOCK; u++) {
-                                    top_block[i / GEMM_BLOCK][j * UNROLL_COUNT / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = top_reorder_buffer[b * GEMM_BLOCK + u];
+                                    top_block[i / GEMM_BLOCK][j * GLOBAL_MEM_UNROLL / GEMM_BLOCK + b][i & (GEMM_BLOCK - 1)][u] = top_reorder_buffer[b * GEMM_BLOCK + u];
                                 }
                             }
                         }
@@ -462,11 +462,11 @@ __attribute__((opencl_unroll_hint(GEMM_BLOCK)))
                 // write block back to main memory
                 #pragma loop_coalesce 2
                 for (int i = 0; i < BLOCK_SIZE; i++) {
-                    for (int j = 0; j < BLOCK_SIZE/UNROLL_COUNT; j++) {
-    __attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-                        for (int u = 0; u < UNROLL_COUNT; u++) {
-                            a[(inner_y_block * n + inner_x_block) * BLOCK_SIZE + j * UNROLL_COUNT + u
-                                    + i * n] = current_block[i/GEMM_BLOCK][(j * UNROLL_COUNT + u)/GEMM_BLOCK][i & (GEMM_BLOCK - 1)][(j * UNROLL_COUNT + u) & (GEMM_BLOCK - 1)];
+                    for (int j = 0; j < BLOCK_SIZE/GLOBAL_MEM_UNROLL; j++) {
+    __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+                        for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
+                            a[(inner_y_block * n + inner_x_block) * BLOCK_SIZE + j * GLOBAL_MEM_UNROLL + u
+                                    + i * n] = current_block[i/GEMM_BLOCK][(j * GLOBAL_MEM_UNROLL + u)/GEMM_BLOCK][i & (GEMM_BLOCK - 1)][(j * GLOBAL_MEM_UNROLL + u) & (GEMM_BLOCK - 1)];
                         }
                     }
                 }
@@ -515,33 +515,33 @@ gesl(__global DEVICE_DATA_TYPE* restrict a,
 			}
 
 			// Read a chunk of b into the cache and exchange the pivot element
-			for (int chunk = 0; chunk < BLOCK_SIZE/UNROLL_COUNT; chunk++) {
-				DEVICE_DATA_TYPE b_burst[UNROLL_COUNT];
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-				for (int i = 0; i < UNROLL_COUNT; i++) {
-					int curr_id = (row_block) * BLOCK_SIZE + chunk * UNROLL_COUNT + i;
+			for (int chunk = 0; chunk < BLOCK_SIZE/GLOBAL_MEM_UNROLL; chunk++) {
+				DEVICE_DATA_TYPE b_burst[GLOBAL_MEM_UNROLL];
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
 					b_burst[i] = b[curr_id];
 				}
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-				for (int i = 0; i < UNROLL_COUNT; i++) {
-					int curr_id = (row_block) * BLOCK_SIZE + chunk * UNROLL_COUNT + i;
-					b_tmp[chunk * UNROLL_COUNT + i] = (curr_id != k && curr_id != curr_ipvt) ? b_burst[i] : ((curr_id == k) ? scale_b : old_b);
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					b_tmp[chunk * GLOBAL_MEM_UNROLL + i] = (curr_id != k && curr_id != curr_ipvt) ? b_burst[i] : ((curr_id == k) ? scale_b : old_b);
 				}
 			}
 
 			// Update values of b and store them back to global memory
-			for (int chunk = 0; chunk <  BLOCK_SIZE/ UNROLL_COUNT; chunk++) {
-				DEVICE_DATA_TYPE a_burst[UNROLL_COUNT];
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-				for (int i = 0; i < UNROLL_COUNT; i++) {
-					int curr_id = (row_block) * BLOCK_SIZE + chunk * UNROLL_COUNT + i;
+			for (int chunk = 0; chunk <  BLOCK_SIZE/ GLOBAL_MEM_UNROLL; chunk++) {
+				DEVICE_DATA_TYPE a_burst[GLOBAL_MEM_UNROLL];
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
 					a_burst[i] = a[n * k + curr_id];
 				}
 
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-				for (int i = 0; i < UNROLL_COUNT; i++) {
-					int curr_id = (row_block) * BLOCK_SIZE + chunk * UNROLL_COUNT + i;
-					DEVICE_DATA_TYPE new_val = (curr_id > k) ? b_tmp[chunk * UNROLL_COUNT + i] +  scale_b * a_burst[i] : b_tmp[chunk * UNROLL_COUNT + i];
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					DEVICE_DATA_TYPE new_val = (curr_id > k) ? b_tmp[chunk * GLOBAL_MEM_UNROLL + i] +  scale_b * a_burst[i] : b_tmp[chunk * GLOBAL_MEM_UNROLL + i];
 					b[curr_id] = new_val;
 					if (curr_id == next_ipvt) {
 						// cached for next iteration
@@ -584,17 +584,17 @@ gesl(__global DEVICE_DATA_TYPE* restrict a,
 			}
 
 			// Read a chunk of b into the cache
-			for (int chunk = 0; chunk < BLOCK_SIZE/UNROLL_COUNT; chunk++) {
-				DEVICE_DATA_TYPE b_burst[UNROLL_COUNT];
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-				for (int i = 0; i < UNROLL_COUNT; i++) {
-					int curr_id = (row_block) * BLOCK_SIZE + chunk * UNROLL_COUNT + i;
+			for (int chunk = 0; chunk < BLOCK_SIZE/GLOBAL_MEM_UNROLL; chunk++) {
+				DEVICE_DATA_TYPE b_burst[GLOBAL_MEM_UNROLL];
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
 					b_burst[i] = b[curr_id];
 				}
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-				for (int i = 0; i < UNROLL_COUNT; i++) {
-					int curr_id = (row_block) * BLOCK_SIZE + chunk * UNROLL_COUNT + i;
-					b_tmp[chunk * UNROLL_COUNT + i] = b_burst[i];
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					b_tmp[chunk * GLOBAL_MEM_UNROLL + i] = b_burst[i];
 				}
 			}
 
@@ -602,21 +602,21 @@ gesl(__global DEVICE_DATA_TYPE* restrict a,
 			// TODO: With Vitis this pipeline has an II=16 because of non-aligned accesses
 			//       to global memory(?) Why? Maybe because of ak,k loaded for scaling and the
 			//		load in this pipeline? 
-			for (int chunk = 0; chunk <  BLOCK_SIZE/UNROLL_COUNT; chunk++) {
-				DEVICE_DATA_TYPE a_burst[UNROLL_COUNT];
+			for (int chunk = 0; chunk <  BLOCK_SIZE/GLOBAL_MEM_UNROLL; chunk++) {
+				DEVICE_DATA_TYPE a_burst[GLOBAL_MEM_UNROLL];
 
 				// read in a
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-				for (int i = 0; i < UNROLL_COUNT; i++) {
-					int curr_id = (row_block) * BLOCK_SIZE + chunk * UNROLL_COUNT + i;
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
 					a_burst[i] = a[n * k + curr_id];
 				}
 
 				// Update values
-				__attribute__((opencl_unroll_hint(UNROLL_COUNT)))
-				for (int i = 0; i < UNROLL_COUNT; i++) {
-					int curr_id = (row_block) * BLOCK_SIZE + chunk * UNROLL_COUNT + i;
-					DEVICE_DATA_TYPE new_val = (curr_id < k) ? b_tmp[chunk * UNROLL_COUNT + i] +  ux_scale_b * a_burst[i] : (curr_id != k) ? b_tmp[chunk * UNROLL_COUNT + i] : -ux_scale_b;
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int i = 0; i < GLOBAL_MEM_UNROLL; i++) {
+					int curr_id = (row_block) * BLOCK_SIZE + chunk * GLOBAL_MEM_UNROLL + i;
+					DEVICE_DATA_TYPE new_val = (curr_id < k) ? b_tmp[chunk * GLOBAL_MEM_UNROLL + i] +  ux_scale_b * a_burst[i] : (curr_id != k) ? b_tmp[chunk * GLOBAL_MEM_UNROLL + i] : -ux_scale_b;
 					b[curr_id] = new_val;
 					if (curr_id == k - 1) {
 						// cache next scale value for next iteration

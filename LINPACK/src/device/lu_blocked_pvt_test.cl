@@ -36,20 +36,20 @@ void test_c4(global DEVICE_DATA_TYPE* restrict a, global DEVICE_DATA_TYPE* restr
 
 #pragma loop_coalesce 2
     for (int i = 0; i < BLOCK_SIZE ; i++) {
-        for (int j = 0; j < BLOCK_SIZE / UNROLL_COUNT; j++) {
-            DEVICE_DATA_TYPE left_reorder_buffer[UNROLL_COUNT];
-            DEVICE_DATA_TYPE top_reorder_buffer[UNROLL_COUNT];
+        for (int j = 0; j < BLOCK_SIZE / GLOBAL_MEM_UNROLL; j++) {
+            DEVICE_DATA_TYPE left_reorder_buffer[GLOBAL_MEM_UNROLL];
+            DEVICE_DATA_TYPE top_reorder_buffer[GLOBAL_MEM_UNROLL];
 #pragma unroll
-            for (int u = 0; u < UNROLL_COUNT; u++) {
-                left_reorder_buffer[u] = a[j * UNROLL_COUNT + u + i * a_size * BLOCK_SIZE];
-                top_reorder_buffer[u] = b[j * UNROLL_COUNT + u + i * a_size * BLOCK_SIZE];
+            for (int u = 0; u < GLOBAL_MEM_UNROLL; u++) {
+                left_reorder_buffer[u] = a[j * GLOBAL_MEM_UNROLL + u + i * a_size * BLOCK_SIZE];
+                top_reorder_buffer[u] = b[j * GLOBAL_MEM_UNROLL + u + i * a_size * BLOCK_SIZE];
             }
 #pragma unroll
-            for (int k = 0; k < UNROLL_COUNT/GEMM_BLOCK; k++) {
+            for (int k = 0; k < GLOBAL_MEM_UNROLL/GEMM_BLOCK; k++) {
 #pragma unroll
                 for (int u = 0; u < GEMM_BLOCK; u++) {
-                    left_block_out[i / GEMM_BLOCK][j * (UNROLL_COUNT / GEMM_BLOCK)+ k][i & (GEMM_BLOCK - 1)][u] = left_reorder_buffer[k * GEMM_BLOCK + u];
-                    top_block_out[i / GEMM_BLOCK][j * (UNROLL_COUNT / GEMM_BLOCK)+ k][i & (GEMM_BLOCK - 1)][u] = top_reorder_buffer[k * GEMM_BLOCK + u];
+                    left_block_out[i / GEMM_BLOCK][j * (GLOBAL_MEM_UNROLL / GEMM_BLOCK)+ k][i & (GEMM_BLOCK - 1)][u] = left_reorder_buffer[k * GEMM_BLOCK + u];
+                    top_block_out[i / GEMM_BLOCK][j * (GLOBAL_MEM_UNROLL / GEMM_BLOCK)+ k][i & (GEMM_BLOCK - 1)][u] = top_reorder_buffer[k * GEMM_BLOCK + u];
                 }
             }
         }
