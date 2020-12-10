@@ -238,7 +238,7 @@ column_exchange(local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZ
 		}
 	}
 	ipvt[current_row] = curr_ipvt;
-	// printf("%d <-> %d\n", gk, curr_ipvt);
+	// printf("%d <-> %d\n", current_row, curr_ipvt);
 	// for (unsigned i =0; i < BLOCK_SIZE; i++) {
 	// 	for (unsigned j =0; j < BLOCK_SIZE; j++) {
 	// 		printf("%f,",a_buffer[i/GEMM_BLOCK][j/GEMM_BLOCK][i & (GEMM_BLOCK - 1)][j & (GEMM_BLOCK - 1)]);
@@ -545,7 +545,7 @@ gesl(__global const DEVICE_DATA_TYPE* restrict a,
 	}
 
 	// now solve  u*x = y
-	for (unsigned k = n - 1; k >= 0; k--) {
+	for (int k = n - 1; k >= 0; k--) {
 		b[k] = b[k] * -a[n * k + k];
 		for (unsigned i = 0; i < k; i++) {
 			b[i] -= b[k] * a[n * k + i];
