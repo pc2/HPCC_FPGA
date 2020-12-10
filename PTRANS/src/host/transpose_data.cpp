@@ -16,43 +16,37 @@ transpose::TransposeProgramSettings::getSettingsMap() {
         return map;
 }
 
-transpose::TransposeData::TransposeData(cl::Context context, uint block_size, uint y_size, uint numReplications) : context(context) {
+transpose::TransposeData::TransposeData(cl::Context context, uint block_size, uint y_size) : context(context) {
     numBlocks = y_size;
     blockSize = block_size;
-    for (int r = 0; r < numReplications; r++) {
 #ifdef USE_SVM
-        A.push_back(reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            block_size * block_size * y_size * sizeof(HOST_DATA_TYPE), 1024)));
-        B.push_back(reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            block_size * block_size * y_size * sizeof(HOST_DATA_TYPE), 1024)));
-        result.push_back(reinterpret_cast<HOST_DATA_TYPE*>(
-                            clSVMAlloc(context(), 0 ,
-                            block_size * block_size * y_size * sizeof(HOST_DATA_TYPE), 1024)));
+    A = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        block_size * block_size * y_size * sizeof(HOST_DATA_TYPE), 1024));
+    B = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        block_size * block_size * y_size * sizeof(HOST_DATA_TYPE), 1024));
+    result = reinterpret_cast<HOST_DATA_TYPE*>(
+                        clSVMAlloc(context(), 0 ,
+                        block_size * block_size * y_size * sizeof(HOST_DATA_TYPE), 1024));
 #else
-        HOST_DATA_TYPE *tmpA, *tmpB, *tmpResult;
-        posix_memalign(reinterpret_cast<void **>(&tmpA), 64,
-                    sizeof(HOST_DATA_TYPE) * block_size * block_size * y_size);
-        posix_memalign(reinterpret_cast<void **>(&tmpB), 64,
-                    sizeof(HOST_DATA_TYPE) * block_size * block_size * y_size);
-        posix_memalign(reinterpret_cast<void **>(&tmpResult), 64,
-                    sizeof(HOST_DATA_TYPE) * block_size * block_size * y_size);
-        A.push_back(tmpA);
-        B.push_back(tmpB);
-        result.push_back(tmpResult);
+    posix_memalign(reinterpret_cast<void **>(&A), 64,
+                sizeof(HOST_DATA_TYPE) * block_size * block_size * y_size);
+    posix_memalign(reinterpret_cast<void **>(&B), 64,
+                sizeof(HOST_DATA_TYPE) * block_size * block_size * y_size);
+    posix_memalign(reinterpret_cast<void **>(&result), 64,
+                sizeof(HOST_DATA_TYPE) * block_size * block_size * y_size);
 #endif
-    }
 }
 
 transpose::TransposeData::~TransposeData() {
 #ifdef USE_SVM
-    std::for_each(A.begin(), A.end(),[](HOST_DATA_TYPE* a){ clSVMFree(context(), reinterpret_cast<void*>(a));});
-    std::for_each(B.begin(), B.end(),[](HOST_DATA_TYPE* b){ clSVMFree(context(), reinterpret_cast<void*>(b));});
-    std::for_each(result.begin(), result.end(),[](HOST_DATA_TYPE* r){ clSVMFree(context(), reinterpret_cast<void*>(r));});
+    clSVMFree(context(), reinterpret_cast<void*>(A));});
+    clSVMFree(context(), reinterpret_cast<void*>(B));});
+    clSVMFree(context(), reinterpret_cast<void*>(result));});
 #else
-    std::for_each(A.begin(), A.end(),[](HOST_DATA_TYPE* a){ free(a);});
-    std::for_each(B.begin(), B.end(),[](HOST_DATA_TYPE* b){ free(b);});
-    std::for_each(result.begin(), result.end(),[](HOST_DATA_TYPE* r){ free(r);});
+    free(A);
+    free(B);
+    free(result);
 #endif
 }

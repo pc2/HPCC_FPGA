@@ -87,19 +87,19 @@ public:
      * @brief Vector of input matrices A
      * 
      */
-    std::vector<HOST_DATA_TYPE*> A;
+    HOST_DATA_TYPE* A;
 
     /**
      * @brief Vector of input matrices B
      * 
      */
-    std::vector<HOST_DATA_TYPE*> B;
+    HOST_DATA_TYPE* B;
 
     /**
      * @brief Vector of the result matrices
      * 
      */
-    std::vector<HOST_DATA_TYPE*> result;
+    HOST_DATA_TYPE* result;
 
     /**
      * @brief Number of matrix blocks that are stored in every matrix A, B and result. Blocks are
@@ -126,9 +126,8 @@ public:
      * @param context Context that is used to allocate memory for SVM
      * @param block_size size of the quadratic blocks that are stored within this object
      * @param y_size number of blocks that are stored within this object per replication
-     * @param numReplications Number of kernel replications that will be created per device
      */
-    TransposeData(cl::Context context, uint block_size, uint size_y, uint numReplications);
+    TransposeData(cl::Context context, uint block_size, uint size_y);
 
     /**
      * @brief Destroy the Transpose Data object. Free the allocated memory

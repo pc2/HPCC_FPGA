@@ -50,32 +50,29 @@ transpose::DistributedExternalTransposeDataHandler::DistributedExternalTranspose
 std::unique_ptr<transpose::TransposeData> transpose::DistributedExternalTransposeDataHandler::generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) {
     int width_in_blocks = settings.programSettings->matrixSize / settings.programSettings->blockSize;
     // The matrix without the diagonal blocks can be equally split between the configured MPI ranks and kernel replications
-    bool two_matrix_sides_splitable = (((width_in_blocks * (width_in_blocks - 1) / 2)  % (mpi_comm_size * settings.programSettings->kernelReplications)) == 0);
+    bool two_matrix_sides_splitable = (((width_in_blocks * (width_in_blocks - 1) / 2)  % (mpi_comm_size)) == 0);
     // The diagonal matrix blocks can be equally split between the configured ranks and replications
-    bool diagonal_splitable = (width_in_blocks % (mpi_comm_size * settings.programSettings->kernelReplications)) == 0;
+    bool diagonal_splitable = (width_in_blocks % (mpi_comm_size)) == 0;
     // Check if data handler can be used with the given configuration
     if (!two_matrix_sides_splitable || !diagonal_splitable) {
         // The matrix is not equally divisible by the number of MPI ranks. Abort here.
         throw std::runtime_error("Matrix not equally divisible by number of MPI ranks. Choose a different data handler or change the MPI communication size to be a divisor of " + std::to_string(width_in_blocks * width_in_blocks));
     }
-    int blocks_per_rank = width_in_blocks * width_in_blocks / (mpi_comm_size * settings.programSettings->kernelReplications);
+    int blocks_per_rank = width_in_blocks * width_in_blocks / (mpi_comm_size);
     // Height of a matrix generated for a single memory bank on a single MPI rank
     int data_height_per_rank = blocks_per_rank * settings.programSettings->blockSize;
     
     // Allocate memory for a single device and all its memory banks
-    auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank,
-                                                                                    settings.programSettings->kernelReplications));
+    auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
 
     // Fill the allocated memory with pseudo random values
     std::mt19937 gen(7);
     std::uniform_real_distribution<> dis(-100.0, 100.0);
-    for (int r =0; r < settings.programSettings->kernelReplications; r++) {
-        for (int i = 0; i < data_height_per_rank; i++) {
-            for (int j = 0; j < settings.programSettings->blockSize; j++) {
-                d->A[r][i * settings.programSettings->blockSize + j] = dis(gen);
-                d->B[r][i * settings.programSettings->blockSize + j] = dis(gen);
-                d->result[r][i * settings.programSettings->blockSize + j] = 0.0;
-            }
+    for (int i = 0; i < data_height_per_rank; i++) {
+        for (int j = 0; j < settings.programSettings->blockSize; j++) {
+            d->A[i * settings.programSettings->blockSize + j] = dis(gen);
+            d->B[i * settings.programSettings->blockSize + j] = dis(gen);
+            d->result[i * settings.programSettings->blockSize + j] = 0.0;
         }
     }
     
@@ -95,10 +92,8 @@ void transpose::DistributedExternalTransposeDataHandler::exchangeData(transpose:
     // . . . 2
     // 1 . . .
     // 3 2 . .
-    for (HOST_DATA_TYPE* d : data.A) {
-        MPI_Status status;
-        MPI_Sendrecv_replace(d, data.blockSize * data.blockSize * data.numBlocks, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
-    }
+    MPI_Status status;
+    MPI_Sendrecv_replace(data.A, data.blockSize * data.blockSize * data.numBlocks, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
 }
 
 #endif

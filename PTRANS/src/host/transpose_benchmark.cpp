@@ -99,22 +99,18 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
     dataHandler->exchangeData(data);
 
     int block_offset = executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize;
-    for (int r = 0; r < executionSettings->programSettings->kernelReplications; r++) {
-        for (int b = 0; b < data.numBlocks; b++) {
-            for (int i = 0; i < executionSettings->programSettings->blockSize; i++) {
-                for (int j = 0; j < executionSettings->programSettings->blockSize; j++) {
-                    data.A[r][b * block_offset + j * executionSettings->programSettings->blockSize + i] -= data.result[r][b * block_offset + i * executionSettings->programSettings->blockSize + j] 
-                                                                                - data.B[r][b * block_offset + i * executionSettings->programSettings->blockSize + j];
-                }
+    for (int b = 0; b < data.numBlocks; b++) {
+        for (int i = 0; i < executionSettings->programSettings->blockSize; i++) {
+            for (int j = 0; j < executionSettings->programSettings->blockSize; j++) {
+                data.A[b * block_offset + j * executionSettings->programSettings->blockSize + i] -= (data.result[b * block_offset + i * executionSettings->programSettings->blockSize + j] 
+                                                                            - data.B[b * block_offset + i * executionSettings->programSettings->blockSize + j]);
             }
         }
     }
 
     double max_error = 0.0;
-    for (int r = 0; r < executionSettings->programSettings->kernelReplications; r++) {
-        for (int i = 0; i < executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize * data.numBlocks; i++) {
-            max_error = std::max(fabs(data.A[r][i]), max_error);
-        }
+    for (int i = 0; i < executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize * data.numBlocks; i++) {
+        max_error = std::max(fabs(data.A[i]), max_error);
     }
 
     std::cout << "Maximum error: " << max_error << std::endl;

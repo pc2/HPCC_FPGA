@@ -12,18 +12,16 @@
 #ifdef INTEL_FPGA
 #pragma OPENCL EXTENSION cl_intel_channels : enable
 
-struct ch_data {
+typedef struct {
     DEVICE_DATA_TYPE data[CHANNEL_WIDTH];
-};
+} ch_data;
 
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
 // Channel used to send the transposed blocks of A
-channel ch_data chan_a_out/*PY_CODE_GEN i*/[GLOBAL_MEM_UNROLL/CHANNEL_WIDTH] __attribute__((depth(POINTS)));
-channel ch_data chan_a_in/*PY_CODE_GEN i*/[GLOBAL_MEM_UNROLL/CHANNEL_WIDTH] __attribute__((depth(POINTS)));
+channel ch_data chan_a_out/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(i % 4) + "\""*/)));
+channel ch_data chan_a_in/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(i % 4) + "\""*/)));
 // PY_CODE_GEN block_end
 #endif
-
-
 
 /**
 * Load a block of A into local memory in a reordered fashion
@@ -37,33 +35,35 @@ channel ch_data chan_a_in/*PY_CODE_GEN i*/[GLOBAL_MEM_UNROLL/CHANNEL_WIDTH] __at
 */
 void
 load_chunk_of_a(__global DEVICE_DATA_TYPE *restrict A,
-        DEVICE_DATA_TYPE[BLOCK_SIZE][BLOCK_SIZE] local_buffer,
+        DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
         const int current_block,
         const int row,
         const int col) {
 
-        unsigned local_mem_converted_row = row * (BLOCK_SIZE / GLOBAL_MEM_UNROLL) + col;
+        unsigned local_mem_converted_row = row * (BLOCK_SIZE / CHANNEL_WIDTH) + col;
 
-        DEVICE_DATA_TYPE rotate_in[GLOBAL_MEM_UNROLL];
+        DEVICE_DATA_TYPE rotate_in[CHANNEL_WIDTH];
 
         // Blocks of a will be stored columnwise in global memory
-__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
-        for (unsigned unroll_count = 0; unroll_count < GLOBAL_MEM_UNROLL; unroll_count++) {
-            rotate_in[unroll_count] = A[block * BLOCK_SIZE * BLOCK_SIZE + col * GLOBAL_MEM_UNROLL + unroll_count +
+__attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+        for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+            rotate_in[unroll_count] = A[current_block * BLOCK_SIZE * BLOCK_SIZE + col * CHANNEL_WIDTH + unroll_count +
                                                                     row * BLOCK_SIZE];
         }
 
-        unsigned rot = row & (GLOBAL_MEM_UNROLL - 1);
+        unsigned rot = row & (CHANNEL_WIDTH - 1);
 
         // rotate temporary buffer to store data into local buffer
-__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
-        for (unsigned unroll_count = 0; unroll_count < GLOBAL_MEM_UNROLL; unroll_count++) {
-            // every block of (N / GLOBAL_MEM_UNROLL), rotates the index by 1
+__attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+        for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+            // every block of (N / CHANNEL_WIDTH), rotates the index by 1
             // store in double buffer
-            local_buffer[local_mem_converted_row][unroll_count] = rotate_in[(unroll_count + GLOBAL_MEM_UNROLL - rot)
-                                                                                        & (GLOBAL_MEM_UNROLL - 1)];
+            local_buffer[local_mem_converted_row][unroll_count] = rotate_in[(unroll_count + CHANNEL_WIDTH - rot)
+                                                                                        & (CHANNEL_WIDTH - 1)];
         }
 }
+
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
 
 /**
 * send a chunk of A into local memory in a reordered fashion
@@ -76,39 +76,34 @@ __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 *
 */
 void
-send_chunk_of_a(__global DEVICE_DATA_TYPE *restrict A,
-        DEVICE_DATA_TYPE[BLOCK_SIZE][BLOCK_SIZE] local_buffer,
-        const int current_block,
+send_chunk_of_a/*PY_CODE_GEN i*/(const DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
         const int row,
         const int col) {
 
-        DEVICE_DATA_TYPE rotate_out[GLOBAL_MEM_UNROLL];
+        DEVICE_DATA_TYPE rotate_out[CHANNEL_WIDTH];
 
         unsigned base = col * BLOCK_SIZE;
-        unsigned offset = row / GLOBAL_MEM_UNROLL;
+        unsigned offset = row / CHANNEL_WIDTH;
 
 
-__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
-        for (unsigned unroll_count = 0; unroll_count < GLOBAL_MEM_UNROLL; unroll_count++) {
-            unsigned rot = ((GLOBAL_MEM_UNROLL + unroll_count - row) * (BLOCK_SIZE / GLOBAL_MEM_UNROLL)) &
+__attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+        for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+            unsigned rot = ((CHANNEL_WIDTH + unroll_count - row) * (BLOCK_SIZE / CHANNEL_WIDTH)) &
                                                                                         (BLOCK_SIZE - 1);
             unsigned row_rotate = base + offset + rot;
-            rotate_out[unroll_count] = a_block[row_rotate][unroll_count];
+            rotate_out[unroll_count] = local_buffer[row_rotate][unroll_count];
         }
 
-        unsigned rot_out = row & (GLOBAL_MEM_UNROLL - 1);
+        unsigned rot_out = row & (CHANNEL_WIDTH - 1);
 
-        DEVICE_DATA_TYPE channel_data[GLOBAL_MEM_UNROLL / CHANNEL_WIDTH][GLOBAL_MEM_UNROLL & (CHANNEL_WIDTH - 1)];
+        ch_data data;
         // rotate temporary buffer to store data into local buffer
-__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
-        for (unsigned unroll_count = 0; unroll_count < GLOBAL_MEM_UNROLL; unroll_count++) {
-            channel_data[unroll_count / CHANNEL_WIDTH][unroll_count & (CHANNEL_WIDTH - 1)] = rotate_out[(unroll_count + rot_out) & (GLOBAL_MEM_UNROLL - 1)];
+__attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+        for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+            data.data[unroll_count] = rotate_out[(unroll_count + rot_out) & (CHANNEL_WIDTH - 1)];
         }
 
-__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/CHANNEL_WIDTH)))
-        for (unsigned c = 0; c < GLOBAL_MEM_UNROLL/CHANNEL_WIDTH; c++) {
-            write_channel_intel(chan_a_out/*PY_CODE_GEN i*/, channel_data[c]); 
-        }
+        write_channel_intel(chan_a_out/*PY_CODE_GEN i*/, data); 
 }
 
 /**
@@ -120,26 +115,31 @@ __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/CHANNEL_WIDTH)))
  * A -> trans(A) -> ext. ch
  *
  * @param A Buffer for matrix A
- * @param matrixSize Size of the matrices. Must be multiple of BLOCK_SIZE
+ * @param block_offset The first block that will be processed in the provided buffer
+ * @param number_of_blocks The number of blocks that will be processed starting from the block offset
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose_read(__global DEVICE_DATA_TYPE *restrict A,
+void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
+            const uint block_offset,
             const uint number_of_blocks) {
+
+    // local memory double buffer for a matrix block
+    DEVICE_DATA_TYPE a_block[2][BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH] __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,1))) __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,2)));
 
     // transpose the matrix block-wise from global memory
     // One extra iteration to empty double buffer
-    for (int block = 0; block < number_of_blocks + 1; block++) {
-
-        // local memory double buffer for a matrix block
-        DEVICE_DATA_TYPE a_block[2][BLOCK_SIZE * BLOCK_SIZE / GLOBAL_MEM_UNROLL][GLOBAL_MEM_UNROLL] __attribute__((xcl_array_partition(cyclic, GLOBAL_MEM_UNROLL,1))) __attribute__((xcl_array_partition(cyclic, GLOBAL_MEM_UNROLL,2)));
-
+    #pragma loop_coalesce
+    for (int block = block_offset; block < block_offset + number_of_blocks + 1; block++) {
         // read in block from global memory and store it in a memory efficient manner
-#pragma loop_coalesce 2
         for (int row = 0; row < BLOCK_SIZE; row++) {
-            for (int col = 0; col < BLOCK_SIZE / GLOBAL_MEM_UNROLL; col++) {
-                load_chunk_of_a(A, a_block[block & 1], block, row, col);
-                send_chunk_of_a(a_block[block & 1], block, row, col);
+            for (int col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
+                if (block < number_of_blocks) {
+                    load_chunk_of_a(A, a_block[block & 1], block, row, col);
+                }
+                if (block > 0) {
+                    send_chunk_of_a/*PY_CODE_GEN i*/(a_block[(block - 1) & 1], row, col);
+                }
             }
         }
     }
@@ -156,39 +156,37 @@ void transpose_read(__global DEVICE_DATA_TYPE *restrict A,
  *
  * @param B Buffer for matrix B
  * @param A_out Output buffer for result matrix
- * @param matrixSize Size of the matrices. Must be multiple of BLOCK_SIZE
+ * @param block_offset The first block that will be processed in the provided buffer
+ * @param number_of_blocks The number of blocks that will be processed starting from the block offset
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose_write(__global DEVICE_DATA_TYPE *restrict B,
+void transpose_write/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict B,
             __global DEVICE_DATA_TYPE *restrict A_out,
+            const uint block_offset,
             const uint number_of_blocks) {
 
-    for (int block = 0; block < number_of_blocks; block++) {
+    #pragma loop_coalesce
+    for (int current_block = block_offset; current_block < block_offset + number_of_blocks; current_block++) {
         // complete matrix transposition and write the result back to global memory
-#pragma loop_coalesce 2
         for (int row = 0; row < BLOCK_SIZE; row++) {
-            for (int col = 0; col < BLOCK_SIZE / GLOBAL_MEM_UNROLL; col++) {
+            for (int col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
 
-                DEVICE_DATA_TYPE channel_data[GLOBAL_MEM_UNROLL / CHANNEL_WIDTH][GLOBAL_MEM_UNROLL & (CHANNEL_WIDTH - 1)];
+                ch_data data = read_channel_intel(chan_a_in/*PY_CODE_GEN i*/); 
 
-                __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL/CHANNEL_WIDTH)))
-                for (unsigned c = 0; c < GLOBAL_MEM_UNROLL/CHANNEL_WIDTH; c++) {
-                     channel_data[c] = read_channel_intel(chan_a_out/*PY_CODE_GEN i*/); 
-                }
-
-                unsigned rot_out = row & (GLOBAL_MEM_UNROLL - 1);
+                unsigned rot_out = row & (CHANNEL_WIDTH - 1);
                 // rotate temporary buffer to store data into local buffer
-__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
-                for (unsigned unroll_count = 0; unroll_count < GLOBAL_MEM_UNROLL; unroll_count++) {
-
-                    A_out[block * BLOCK_SIZE * BLOCK_SIZE +
-                    row * BLOCK_SIZE + col * GLOBAL_MEM_UNROLL + unroll_count] =
-                    channel_data[unroll_count / CHANNEL_WIDTH][unroll_count & (CHANNEL_WIDTH - 1)]
-                    + B[block * BLOCK_SIZE * BLOCK_SIZE +
-                    row * BLOCK_SIZE + col * GLOBAL_MEM_UNROLL + unroll_count];
+__attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+                for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+                    A_out[current_block * BLOCK_SIZE * BLOCK_SIZE +
+                    row * BLOCK_SIZE + col * CHANNEL_WIDTH + unroll_count] =
+                    data.data[unroll_count]
+                    + B[current_block * BLOCK_SIZE * BLOCK_SIZE +
+                    row * BLOCK_SIZE + col * CHANNEL_WIDTH + unroll_count];
                 }
             }
         }
     }
 }
+
+// PY_CODE_GEN block_end
