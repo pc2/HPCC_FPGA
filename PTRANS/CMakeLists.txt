@@ -10,7 +10,3 @@ set(CHANNEL_WIDTH 8 CACHE STRING "Width of a single channel in number of values.
 mark_as_advanced(READ_KERNEL_NAME WRITE_KERNEL_NAME)
 
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
-
-if (NUM_REPLICATIONS GREATER 1)
-    message(WARNING "NUM_REPLICATIONS = ${NUM_REPLICATIONS} > 1  which is not supported by the host code, yet")
-endif()
