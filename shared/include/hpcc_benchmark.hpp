@@ -124,7 +124,7 @@ public:
             defaultPlatform(results["platform"].as<int>()),
             defaultDevice(results["device"].as<int>()),
             kernelFileName(results["f"].as<std::string>()),
-            kernelReplications(results["r"].as<uint>()) {}
+            kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : 1) {}
 
     /**
      * @brief Get a map of the settings. This map will be used to print the final configuration.
