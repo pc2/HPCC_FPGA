@@ -70,11 +70,16 @@ namespace bm_execution {
 
                 bufferSizeList.push_back(buffer_size);
 
-                cl::Buffer bufferA(*config.context, CL_MEM_READ_ONLY,
+                int memory_bank_info = 0;
+#ifdef INTEL_FPGA
+                // Define the memory bank the buffers will be placed in
+                memory_bank_info = ((r + 1) << 16);
+#endif
+                cl::Buffer bufferA(*config.context, CL_MEM_READ_ONLY | memory_bank_info,
                                 buffer_size* sizeof(HOST_DATA_TYPE));
-                cl::Buffer bufferB(*config.context, CL_MEM_READ_ONLY,
+                cl::Buffer bufferB(*config.context, CL_MEM_READ_ONLY | memory_bank_info,
                                 buffer_size * sizeof(HOST_DATA_TYPE));
-                cl::Buffer bufferA_out(*config.context, CL_MEM_WRITE_ONLY,
+                cl::Buffer bufferA_out(*config.context, CL_MEM_WRITE_ONLY | memory_bank_info,
                                 buffer_size * sizeof(HOST_DATA_TYPE));
 
                 // TODO the kernel name may need to be changed for Xilinx support
