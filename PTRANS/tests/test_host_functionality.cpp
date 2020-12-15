@@ -75,12 +75,13 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
 TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
     bm->getExecutionSettings().programSettings->kernelReplications = 1;
     bm->getExecutionSettings().programSettings->matrixSize = 4;
-    bm->executeBenchmark();
+    bm->getExecutionSettings().programSettings->blockSize = 2;
+
     auto data = bm->generateInputData();
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-            data->A[0][i * 4 + j] = i * 4 + j;
-            data->B[0][i * 4 + j] = i * 4 + j;
+            data->A[i * 4 + j] = i * 4 + j;
+            data->B[i * 4 + j] = i * 4 + j;
         }
     }
 
@@ -104,12 +105,13 @@ TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
  */
 TEST_F(TransposeHostTest, ValidationIsSuccess) {
     bm->getExecutionSettings().programSettings->matrixSize = 4;
-    bm->executeBenchmark();
+    bm->getExecutionSettings().programSettings->blockSize = 2;
+
     auto data = bm->generateInputData();
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-            data->A[0][i * 4 + j] = 0.0;
-            data->B[0][i * 4 + j] = 0.0;
+            data->A[i * 4 + j] = 0.0;
+            data->B[i * 4 + j] = 0.0;
         }
     }
 
@@ -127,5 +129,3 @@ TEST_F(TransposeHostTest, ValidationIsSuccess) {
                 ::testing::MatchesRegex("Maximum error:\\s+0\\.00000e\\+00\n"));
     EXPECT_TRUE(success);
 }
-
-

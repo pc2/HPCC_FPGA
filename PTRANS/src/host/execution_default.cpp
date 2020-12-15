@@ -62,6 +62,9 @@ namespace bm_execution {
                         // Catch the case, that the number of blocks is not divisible by the number of kernel replications
                         blocks_per_replication += 1;
                 }
+                if (blocks_per_replication < 1) {
+                        continue;
+                }
 
                 size_t buffer_size = data.blockSize * (data.blockSize * blocks_per_replication);
 
@@ -148,7 +151,7 @@ namespace bm_execution {
                                 buffer_size, 0,
                                 NULL, NULL);
         #else
-                for (int r = 0; r < config.programSettings->kernelReplications; r++) {
+                for (int r = 0; r < transposeReadKernelList.size(); r++) {
                         readCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
                                                 bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.A[bufferOffset]);
                         writeCommandQueueList[r].enqueueWriteBuffer(bufferListB[r], CL_FALSE, 0,
@@ -156,7 +159,7 @@ namespace bm_execution {
                         bufferOffset += bufferSizeList[r];
                 }
         #endif
-            for (int r = 0; r < config.programSettings->kernelReplications; r++) {
+            for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 readCommandQueueList[r].finish();
                 writeCommandQueueList[r].finish();
             }
@@ -166,11 +169,11 @@ namespace bm_execution {
                             (endTransfer - startTransfer);
 
             auto startCalculation = std::chrono::high_resolution_clock::now();
-            for (int r = 0; r < config.programSettings->kernelReplications; r++) {
+            for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].enqueueTask(transposeWriteKernelList[r]);
                 readCommandQueueList[r].enqueueTask(transposeReadKernelList[r]);
             }
-            for (int r = 0; r < config.programSettings->kernelReplications; r++) {
+            for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].finish();
                 readCommandQueueList[r].finish();
             }
@@ -193,7 +196,7 @@ namespace bm_execution {
                                         reinterpret_cast<void *>(data.result), 0,
                                         NULL, NULL);
         #else
-                for (int r = 0; r < config.programSettings->kernelReplications; r++) {
+                for (int r = 0; r < transposeReadKernelList.size(); r++) {
                         writeCommandQueueList[r].enqueueReadBuffer(bufferListA_out[r], CL_TRUE, 0,
                                                 bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.result[bufferOffset]);
                         bufferOffset += bufferSizeList[r];
