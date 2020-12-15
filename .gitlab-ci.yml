@@ -61,8 +61,7 @@ build:PTRANS:
     - make -j 40 all
   artifacts:
     paths:
-      - build/bin/transpose_optimized_emulate.aocx
-      - build/bin/transpose_default_emulate.aocx
+      - build/bin/transpose_diagonal_emulate.aocx
       - build/bin/Transpose_intel
       - build/bin/Transpose_test_intel
   only:
