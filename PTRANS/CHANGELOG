@@ -2,6 +2,15 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.3
+
+#### Added:
+- Distributed matrix transpose kernel transpose_diagonal
+
+#### Changed:
+- Host code to support different data distribution schemes using the TransposeDataHandler class
+- Support for kernel replications
+
 ## 1.2
 
 #### Added:

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(PTRANS VERSION 1.2)
+project(PTRANS VERSION 1.3)
 
 set(READ_KERNEL_NAME transpose_read CACHE STRING "Name of the OpenCL kernel that reads A and sends it over external channel")
 set(WRITE_KERNEL_NAME transpose_write CACHE STRING "Name of the OpenCL kernel that receives A, adds C to it and stores result")
