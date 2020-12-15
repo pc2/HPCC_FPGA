@@ -351,8 +351,10 @@ public:
             "you will be asked which platform to use if there are multiple "\
             "platforms available.",
                 cxxopts::value<int>()->default_value(std::to_string(DEFAULT_PLATFORM)))
+#ifdef NUM_REPLICATIONS
                 ("r", "Number of used kernel replications",
                 cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)))
+#endif
                 ("h,help", "Print this help");
 
 

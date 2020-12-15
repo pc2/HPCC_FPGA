@@ -96,8 +96,6 @@ gemm::GEMMBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
              cxxopts::value<cl_uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
             ("b", "Block size in number of values in one dimension",
              cxxopts::value<cl_uint>()->default_value(std::to_string(BLOCK_SIZE)))
-            ("r", "Number of used kernel replications",
-             cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)))
             ("replicate-inputs", "Also replicates the input buffer for each kernel");
 }
 

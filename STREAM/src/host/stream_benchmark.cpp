@@ -99,8 +99,6 @@ stream::StreamBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
         options.add_options()
             ("s", "Size of the data arrays",
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ARRAY_LENGTH)))
-            ("r", "Number of kernel replications used",
-             cxxopts::value<uint>()->default_value(std::to_string(NUM_KERNEL_REPLICATIONS)))
             ("multi-kernel", "Use the legacy multi kernel implementation");
 }
 
