@@ -246,6 +246,16 @@ test:PTRANS:
   script:
     - cd build
     - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cd bin
+    - touch kernel_output_ch0
+    - touch kernel_output_ch1
+    - touch kernel_output_ch2
+    - touch kernel_output_ch3
+    - ln -s kernel_output_ch0 kernel_input_ch0
+    - ln -s kernel_output_ch2 kernel_input_ch2
+    - ln -s kernel_output_ch1 kernel_input_ch1
+    - ln -s kernel_output_ch3 kernel_input_ch3
+    - cd ..
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:PTRANS
