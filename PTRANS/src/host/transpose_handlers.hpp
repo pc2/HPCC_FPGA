@@ -103,6 +103,14 @@ public:
  */
 class DistributedExternalTransposeDataHandler : public transpose::TransposeDataHandler {
 
+private:
+
+    /**
+     * @brief Number of diagonal ranks that will sent the blcoks to themselves
+     * 
+     */
+    int num_diagonal_ranks;
+
 public:
 
     /**

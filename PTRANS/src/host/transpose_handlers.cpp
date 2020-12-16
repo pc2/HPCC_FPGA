@@ -39,26 +39,33 @@ std::map<std::string, std::unique_ptr<transpose::TransposeDataHandler> (*)(int r
 
 #ifdef _USE_MPI_
 
-transpose::DistributedExternalTransposeDataHandler::DistributedExternalTransposeDataHandler(int rank, int size) : TransposeDataHandler(rank, size) {
-    // Only works, if the number of MPI ranks is a multiple of two to create pairs of MPI ranks plus one rank for the diagonal elements
-    if ((mpi_comm_size % 2) == 0) {
-        throw std::runtime_error("Number of MPI ranks must be a multiple of 2 + 1");
-    }
-}
+transpose::DistributedExternalTransposeDataHandler::DistributedExternalTransposeDataHandler(int rank, int size) : TransposeDataHandler(rank, size) {}
 
 
 std::unique_ptr<transpose::TransposeData> transpose::DistributedExternalTransposeDataHandler::generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) {
     int width_in_blocks = settings.programSettings->matrixSize / settings.programSettings->blockSize;
-    // The matrix without the diagonal blocks can be equally split between the configured MPI ranks and kernel replications
-    bool two_matrix_sides_splitable = (((width_in_blocks * (width_in_blocks - 1) / 2)  % (mpi_comm_size)) == 0);
-    // The diagonal matrix blocks can be equally split between the configured ranks and replications
-    bool diagonal_splitable = (width_in_blocks % (mpi_comm_size)) == 0;
-    // Check if data handler can be used with the given configuration
-    if (!two_matrix_sides_splitable || !diagonal_splitable) {
-        // The matrix is not equally divisible by the number of MPI ranks. Abort here.
-        throw std::runtime_error("Matrix not equally divisible by number of MPI ranks. Choose a different data handler or change the MPI communication size to be a divisor of " + std::to_string(width_in_blocks * width_in_blocks));
+
+    int avg_blocks_per_rank = (width_in_blocks * width_in_blocks) / mpi_comm_size;
+    num_diagonal_ranks = std::max((width_in_blocks / avg_blocks_per_rank), 1);
+
+    if (num_diagonal_ranks % 2 != mpi_comm_size % 2) {
+        // Abort if there is a too high difference in the number of matrix blocks between the MPI ranks
+        throw std::runtime_error("Matrix size and MPI ranks to not allow fair distribution of blocks! Increase or reduce the number of MPI ranks by 1.");
     }
-    int blocks_per_rank = width_in_blocks * width_in_blocks / (mpi_comm_size);
+    if ((mpi_comm_size - num_diagonal_ranks) % 2 != 0) {
+        throw std::runtime_error("Not possible to create pairs of MPI ranks for lower and upper half of matrix. Increase number of MPI ranks!.");
+    }
+    bool this_rank_is_diagonal = mpi_comm_rank < num_diagonal_ranks;
+    int blocks_if_diagonal = width_in_blocks / num_diagonal_ranks + ((width_in_blocks % num_diagonal_ranks < mpi_comm_rank) ? 1 : 0);
+    int blocks_if_not_diagonal = (width_in_blocks * (width_in_blocks - 1)) / (mpi_comm_size - num_diagonal_ranks) + (((width_in_blocks * (width_in_blocks - 1)) % (mpi_comm_size - num_diagonal_ranks) < (mpi_comm_rank - num_diagonal_ranks)) ? 1 : 0);
+
+    int blocks_per_rank = (this_rank_is_diagonal) ? blocks_if_diagonal : blocks_if_not_diagonal;
+
+    if (mpi_comm_rank == 0) {
+        std::cout << "Diag. blocks per rank:              " << blocks_if_diagonal << std::endl;
+        std::cout << "Blocks per rank:                    " << blocks_if_not_diagonal << std::endl;
+        std::cout << "Loopback ranks for diagonal blocks: " << num_diagonal_ranks << std::endl;
+    }
     // Height of a matrix generated for a single memory bank on a single MPI rank
     int data_height_per_rank = blocks_per_rank * settings.programSettings->blockSize;
     
@@ -80,20 +87,24 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedExternalTranspos
 }
 
 void transpose::DistributedExternalTransposeDataHandler::exchangeData(transpose::TransposeData& data) {
-    // Calculate the rank of the paired FPGA
-    int pair_rank = (mpi_comm_rank < mpi_comm_size / 2) ? (mpi_comm_size / 2 + mpi_comm_rank) : (mpi_comm_rank - mpi_comm_size / 2);
+    // The rank cleaned by the diagonal ranks, that send to themselves
+    int cleaned_rank = mpi_comm_rank - num_diagonal_ranks;
+    // Only need to exchange data, if rank has a partner
+    if (cleaned_rank >= 0) {
+        int pair_rank = (cleaned_rank % 2) ? cleaned_rank - 1 : cleaned_rank + 1;
 
-    // To re-calculate the matrix transposition locally on this host, we need to 
-    // exchange matrix A for every kernel replication
-    // The order of the matrix blocks does not change during the exchange, because they are distributed diagonally 
-    // and will be handled in the order below:
-    //
-    // . . 1 3
-    // . . . 2
-    // 1 . . .
-    // 3 2 . .
-    MPI_Status status;
-    MPI_Sendrecv_replace(data.A, data.blockSize * data.blockSize * data.numBlocks, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
+        // To re-calculate the matrix transposition locally on this host, we need to 
+        // exchange matrix A for every kernel replication
+        // The order of the matrix blocks does not change during the exchange, because they are distributed diagonally 
+        // and will be handled in the order below:
+        //
+        // . . 1 3
+        // . . . 2
+        // 1 . . .
+        // 3 2 . .
+        MPI_Status status;
+        MPI_Sendrecv_replace(data.A, data.blockSize * data.blockSize * data.numBlocks, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
+    }
 }
 
 #endif
