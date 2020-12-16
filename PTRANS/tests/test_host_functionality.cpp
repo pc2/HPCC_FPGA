@@ -75,7 +75,7 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
 TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
     bm->getExecutionSettings().programSettings->kernelReplications = 1;
     bm->getExecutionSettings().programSettings->matrixSize = 4;
-    bm->getExecutionSettings().programSettings->blockSize = 2;
+    bm->getExecutionSettings().programSettings->blockSize = 4;
 
     auto data = bm->generateInputData();
     for (int i = 0; i < 4; i++) {
@@ -105,7 +105,7 @@ TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
  */
 TEST_F(TransposeHostTest, ValidationIsSuccess) {
     bm->getExecutionSettings().programSettings->matrixSize = 4;
-    bm->getExecutionSettings().programSettings->blockSize = 2;
+    bm->getExecutionSettings().programSettings->blockSize = 4;
 
     auto data = bm->generateInputData();
     for (int i = 0; i < 4; i++) {

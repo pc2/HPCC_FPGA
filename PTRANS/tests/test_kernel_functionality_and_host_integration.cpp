@@ -118,37 +118,3 @@ TEST_F(TransposeKernelTest, FPGATimingsMeasuredForEveryIteration) {
     }
 }
 
-/**
- * Check if the generated input data is in the specified range
- */
-TEST_F(TransposeKernelTest, GenerateInputDataInRangeSingleBlock) {
-    bm->getExecutionSettings().programSettings->matrixSize = 5;
-    bm->getExecutionSettings().programSettings->blockSize = 5;
-    auto data = bm->generateInputData();
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 5; j++) {
-            EXPECT_LT(data->A[i * 5 + j], 100);
-            EXPECT_GT(data->A[i * 5 + j], -100);
-            EXPECT_LT(data->B[i * 5 + j], 101);
-            EXPECT_GT(data->B[i * 5 + j], -99);
-        }
-    }
-}
-
-/**
- * Check if the generated input data is in the specified range
- */
-TEST_F(TransposeKernelTest, GenerateInputDataInRangeMultipleBlocks) {
-    bm->getExecutionSettings().programSettings->matrixSize = 6;
-    bm->getExecutionSettings().programSettings->blockSize = 2;
-    auto data = bm->generateInputData();
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 5; j++) {
-            EXPECT_LT(data->A[i * 5 + j], 100);
-            EXPECT_GT(data->A[i * 5 + j], -100);
-            EXPECT_LT(data->B[i * 5 + j], 101);
-            EXPECT_GT(data->B[i * 5 + j], -99);
-        }
-    }
-}
-

@@ -39,25 +39,37 @@ std::map<std::string, std::unique_ptr<transpose::TransposeDataHandler> (*)(int r
 
 #ifdef _USE_MPI_
 
-transpose::DistributedExternalTransposeDataHandler::DistributedExternalTransposeDataHandler(int rank, int size) : TransposeDataHandler(rank, size) {}
+transpose::DistributedExternalTransposeDataHandler::DistributedExternalTransposeDataHandler(int rank, int size) : TransposeDataHandler(rank, size) {
+    if (rank >= size) {
+        throw std::runtime_error("MPI rank must be smaller the MPI world size!");
+    }
+}
 
 
 std::unique_ptr<transpose::TransposeData> transpose::DistributedExternalTransposeDataHandler::generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) {
     int width_in_blocks = settings.programSettings->matrixSize / settings.programSettings->blockSize;
 
     int avg_blocks_per_rank = (width_in_blocks * width_in_blocks) / mpi_comm_size;
-    num_diagonal_ranks = std::max((width_in_blocks / avg_blocks_per_rank), 1);
+    int avg_diagonal_blocks = width_in_blocks;
+    if (avg_blocks_per_rank > 0) {
+        avg_diagonal_blocks = (width_in_blocks / avg_blocks_per_rank);
+    }
+    num_diagonal_ranks = std::max(avg_diagonal_blocks, 1);
 
     if (num_diagonal_ranks % 2 != mpi_comm_size % 2) {
         // Abort if there is a too high difference in the number of matrix blocks between the MPI ranks
         throw std::runtime_error("Matrix size and MPI ranks to not allow fair distribution of blocks! Increase or reduce the number of MPI ranks by 1.");
     }
-    if ((mpi_comm_size - num_diagonal_ranks) % 2 != 0) {
+    if ((mpi_comm_size - num_diagonal_ranks) % 2 != 0 || (mpi_comm_size - num_diagonal_ranks) == 0 && width_in_blocks > 1) {
         throw std::runtime_error("Not possible to create pairs of MPI ranks for lower and upper half of matrix. Increase number of MPI ranks!.");
     }
     bool this_rank_is_diagonal = mpi_comm_rank < num_diagonal_ranks;
-    int blocks_if_diagonal = width_in_blocks / num_diagonal_ranks + ((width_in_blocks % num_diagonal_ranks < mpi_comm_rank) ? 1 : 0);
-    int blocks_if_not_diagonal = (width_in_blocks * (width_in_blocks - 1)) / (mpi_comm_size - num_diagonal_ranks) + (((width_in_blocks * (width_in_blocks - 1)) % (mpi_comm_size - num_diagonal_ranks) < (mpi_comm_rank - num_diagonal_ranks)) ? 1 : 0);
+    int blocks_if_diagonal = width_in_blocks / num_diagonal_ranks + ( mpi_comm_rank < (width_in_blocks % num_diagonal_ranks) ? 1 : 0);
+    int blocks_if_not_diagonal = 0;
+    if ((mpi_comm_size - num_diagonal_ranks) > 0 ) {
+        blocks_if_not_diagonal = (width_in_blocks * (width_in_blocks - 1)) / (mpi_comm_size - num_diagonal_ranks) + ((mpi_comm_rank - num_diagonal_ranks) < ((width_in_blocks * (width_in_blocks - 1)) % (mpi_comm_size - num_diagonal_ranks)) ? 1 : 0);
+    }
+
 
     int blocks_per_rank = (this_rank_is_diagonal) ? blocks_if_diagonal : blocks_if_not_diagonal;
 

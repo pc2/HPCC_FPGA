@@ -106,13 +106,13 @@ public:
      *          always stored columnwise.
      * 
      */
-    uint numBlocks;
+    const uint numBlocks;
 
     /**
      * @brief The width and heigth of the used blocks in number of values
      * 
      */
-    uint blockSize;
+    const uint blockSize;
 
     /**
      * @brief The context that is used to allocate memory in SVM mode
