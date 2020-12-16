@@ -110,6 +110,12 @@ public:
     uint kernelReplications;
 
     /**
+     * @brief Only test the given configuration. Do not execute the benchmarks
+     * 
+     */
+    bool testOnly;
+
+    /**
      * @brief Construct a new Base Settings object
      * 
      * @param results The resulting map from parsing the program input parameters
@@ -124,7 +130,8 @@ public:
             defaultPlatform(results["platform"].as<int>()),
             defaultDevice(results["device"].as<int>()),
             kernelFileName(results["f"].as<std::string>()),
-            kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : 1) {}
+            kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : 1),
+            testOnly(static_cast<bool>(results.count("test"))) {}
 
     /**
      * @brief Get a map of the settings. This map will be used to print the final configuration.
@@ -142,7 +149,7 @@ public:
         str_mpi_ranks = std::to_string(mpi_size);
     }
         return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel Replications", std::to_string(kernelReplications)}, 
-                {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}};
+                {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}, {"Test Mode", std::to_string(testOnly)}};
     }
 
 };
@@ -355,6 +362,7 @@ public:
                 ("r", "Number of used kernel replications",
                 cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)))
 #endif
+                ("test", "Only test given configuration and skip execution and validation")
                 ("h,help", "Print this help");
 
 
@@ -504,33 +512,39 @@ public:
                         << HLINE;
             }
 
-            auto exe_start = std::chrono::high_resolution_clock::now();
-            std::unique_ptr<TOutput> output =  executeKernel(*data);
-            std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
-
-            if (mpi_comm_rank == 0) {
-                std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
-                std::cout << HLINE << "Validate output..." << std::endl
-                        << HLINE;
-            }
-
             bool validateSuccess = false;
-            if (!executionSettings->programSettings->skipValidation) {
-                auto eval_start = std::chrono::high_resolution_clock::now();
-                validateSuccess = validateOutputAndPrintError(*data);
-                std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
+            if (!executionSettings->programSettings->testOnly) {
+                auto exe_start = std::chrono::high_resolution_clock::now();
+                std::unique_ptr<TOutput> output =  executeKernel(*data);
+                std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
 
                 if (mpi_comm_rank == 0) {
-                    std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
+                    std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
+                    std::cout << HLINE << "Validate output..." << std::endl
+                            << HLINE;
                 }
-            }
-            collectAndPrintResults(*output);
 
-            if (!validateSuccess) {
-                std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
+                if (!executionSettings->programSettings->skipValidation) {
+                    auto eval_start = std::chrono::high_resolution_clock::now();
+                    validateSuccess = validateOutputAndPrintError(*data);
+                    std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
+
+                    if (mpi_comm_rank == 0) {
+                        std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
+                    }
+                }
+                collectAndPrintResults(*output);
+
+                if (!validateSuccess) {
+                    std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
+                }
+                else {
+                    std::cout << "Validation: SUCCESS!" << std::endl;
+                }
+
             }
             else {
-                std::cout << "Validation: SUCCESS!" << std::endl;
+                std::cout << "TEST MODE ENABLED: SKIP EXECUTION AND VALIDATION!" << std::endl;
             }
 
             return validateSuccess;
