@@ -11,6 +11,9 @@ This file contains all changes made to the source code for each release.
 - Host code to support different data distribution schemes using the TransposeDataHandler class
 - Support for kernel replications
 
+#### Removed:
+- Old non-distributed kernels transpose_default and transpose_optimized as well as host code support for both
+
 ## 1.2
 
 #### Added:

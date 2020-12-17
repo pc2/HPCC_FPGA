@@ -35,10 +35,9 @@ The targets below can be used to build the benchmark and its kernels:
   | KERNEL_FILE_NAME_report_`VENDOR`  | Just compile kernel and create logs and reports   |
   | KERNEL_FILE_NAME_emulate_`VENDOR`  | Create a n emulation kernel             |
   
-The currently supported values for KERNEL_FILE_NAME are listed below where `transpose_optimized` is set to be the default for the ase run:
+The currently supported values for KERNEL_FILE_NAME are listed below where `transpose_diagonal` is set to be the default for the ase run:
 
-- transpose_default
-- transpose_optimized
+- transpose_diagonal
  
  You can build for example the host application by running
  
@@ -53,9 +52,10 @@ Next to the common configuration options given in the [README](../README.md) of 
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
  `DATA_TYPE`     | float       | Data type used for calculation       |
-`KERNEL_NAME`| transpose | Name of the kernel (only needed for own implementations) |
-`BLOCK_SIZE`    | 512          | Block size used by the kernel to transpose the matrix |
-`GLOBAL_MEM_UNROLL`| 16        | Unrolling factor for the global memory access |
+`READ_KERNEL_NAME`    | transpose_read | Name of the kernel that reads A from global memory and sends it to an external channel (only needed for own implementations) |
+`WRITE_KERNEL_NAME`    | transpose_write | Name of the kernel that receives a from an external channel and adds it to B (only needed for own implementations) |
+`BLOCK_SIZE`     | 512          | Block size used by the kernel to transpose the matrix |
+`CHANNEL_WIDTH`  | 8        | Unrolling factor for the global memory access |
 
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.
@@ -69,27 +69,39 @@ For execution of the benchmark run:
 For more information on available input parameters run
 
     $./Transpose_xilinx -h
+    -------------------------------------------------------------
+    General setup:
+    C++ high resolution clock is used.
+    The clock precision seems to be 1.00000e+01ns
+    -------------------------------------------------------------
     Implementation of the matrix transposition benchmark proposed in the HPCC benchmark suite for FPGA.
-    Version: 1.0.1
+    Version: 1.3
 
     Usage:
     ./Transpose_xilinx [OPTION...]
 
-    -f, --file arg        Kernel file name
-    -n, arg               Number of repetitions (default: 10)
-    -m, arg               Matrix size in number of blocks in one dimension
-                            (default: 8)
-    -b, arg               Block size in number of values in one dimension
-                            (default: 512)
-        --kernel arg      Name of the kernel (default: transpose)
-    -i, --nointerleaving  Disable memory interleaving
-        --device arg      Index of the device that has to be used. If not given
-                            you will be asked which device to use if there are
+    -f, --file arg         Kernel file name
+    -n, arg                Number of repetitions (default: 10)
+    -i,                    Use memory Interleaving
+        --skip-validation  Skip the validation of the output data. This will
+                            speed up execution and helps when working with special
+                            data types.
+        --device arg       Index of the device that has to be used. If not
+                            given you will be asked which device to use if there are
                             multiple devices available. (default: -1)
-        --platform arg    Index of the platform that has to be used. If not
+        --platform arg     Index of the platform that has to be used. If not
                             given you will be asked which platform to use if there
                             are multiple platforms available. (default: -1)
-    -h, --help            Print this help
+    -r, arg                Number of used kernel replications (default: 4)
+        --test             Only test given configuration and skip execution and
+                            validation
+    -h, --help             Print this help
+    -m, arg                Matrix size in number of blocks in one dimension
+                            (default: 8)
+    -b, arg                Block size in number of values in one dimension
+                            (default: 512)
+        --handler arg      Specify the used data handler that distributes the
+                            data over devices and memory banks (default: distext)
     
 
     
@@ -104,10 +116,12 @@ It will run an emulation of the kernel and execute some functionality tests.
 
 An example output from an emulation is given below:
 
-                 trans          calc    calc FLOPS   total FLOPS
-    avg:   3.92349e-02   3.55022e-01   4.72568e+07   4.25540e+07
-    best:  1.55398e-02   2.94127e-01   5.70407e+07   5.41782e+07
-    Aggregated Error: 0.00000e00
+    Maximum error: 7.62939e-06
+    Validation Time: 6.44831e-02 s
+                trans          calc    calc FLOPS   total FLOPS
+    avg:   1.42614e-03   1.15279e-01   2.27400e+06   2.24621e+06
+    best:  1.42614e-03   1.15279e-01   2.27400e+06   2.24621e+06
+    Validation: SUCCESS!
 
 The output gives the average time for calculation and data transfer
 over all iterations as well as the best measured performance.
@@ -118,6 +132,7 @@ For both rows there are the following columns:
 - `calc FLOPS`: Achieved FLOPS just considering the execution time.
 - `total FLOPS`: Total FLOPS combining transfer and calculation time.
 
-The `Aggregated Error` field sums up the values of the result matrix. All values
-should be 0 due to the used input data generation scheme.
+The `Maximum Error` field shows the largest error that was computed in the addition.
+Since it is only a single addition that takes place, the error should be close to the machine epsilon
+which depeneds on the chosen data type.
 

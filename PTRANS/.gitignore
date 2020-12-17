@@ -1,3 +1,0 @@
-# Exclude cmake build folder and CLion files
-cmake-build*
-.idea
