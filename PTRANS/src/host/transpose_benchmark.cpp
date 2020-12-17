@@ -113,9 +113,10 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
         max_error = std::max(fabs(data.A[i]), max_error);
     }
 
-    std::cout << "Maximum error: " << max_error << std::endl;
+    std::cout << "Maximum error: " << max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
+    std::cout << "Mach. Epsilon: " << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl;
 
-    return (static_cast<double>(max_error) / executionSettings->programSettings->matrixSize) < 1.0e-6;
+    return static_cast<double>(max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
 }
 
 void
