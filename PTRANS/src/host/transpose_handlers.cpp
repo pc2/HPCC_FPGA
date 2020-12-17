@@ -33,20 +33,20 @@ SOFTWARE.
 std::map<std::string, std::unique_ptr<transpose::TransposeDataHandler> (*)(int rank, int size)> transpose::dataHandlerIdentifierMap{
         // distributed external data handler
 #ifdef _USE_MPI_
-        {TRANSPOSE_HANDLERS_DIST_EXT, &generateDataHandler<transpose::DistributedExternalTransposeDataHandler>}
+        {TRANSPOSE_HANDLERS_DIST_DIAG, &generateDataHandler<transpose::DistributedDiagonalTransposeDataHandler>}
 #endif
         };
 
 #ifdef _USE_MPI_
 
-transpose::DistributedExternalTransposeDataHandler::DistributedExternalTransposeDataHandler(int rank, int size) : TransposeDataHandler(rank, size) {
+transpose::DistributedDiagonalTransposeDataHandler::DistributedDiagonalTransposeDataHandler(int rank, int size) : TransposeDataHandler(rank, size) {
     if (rank >= size) {
         throw std::runtime_error("MPI rank must be smaller the MPI world size!");
     }
 }
 
 
-std::unique_ptr<transpose::TransposeData> transpose::DistributedExternalTransposeDataHandler::generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) {
+std::unique_ptr<transpose::TransposeData> transpose::DistributedDiagonalTransposeDataHandler::generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) {
     int width_in_blocks = settings.programSettings->matrixSize / settings.programSettings->blockSize;
 
     int avg_blocks_per_rank = (width_in_blocks * width_in_blocks) / mpi_comm_size;
@@ -98,7 +98,7 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedExternalTranspos
     return d;
 }
 
-void transpose::DistributedExternalTransposeDataHandler::exchangeData(transpose::TransposeData& data) {
+void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose::TransposeData& data) {
     // The rank cleaned by the diagonal ranks, that send to themselves
     int cleaned_rank = mpi_comm_rank - num_diagonal_ranks;
     // Only need to exchange data, if rank has a partner

@@ -33,7 +33,7 @@ SOFTWARE.
  * @brief String that identifies the transpose::DistributedExternalTransposeDataHandler 
  * 
  */
-#define TRANSPOSE_HANDLERS_DIST_EXT "distext" 
+#define TRANSPOSE_HANDLERS_DIST_DIAG "distdiag" 
 
 /**
  * @brief Contains all classes and methods needed by the Transpose benchmark
@@ -101,7 +101,7 @@ public:
  *         the missing data. e.g. for N ranks, the pairs will be (0, N/2), (1, N/2 + 1), ...
  * 
  */
-class DistributedExternalTransposeDataHandler : public transpose::TransposeDataHandler {
+class DistributedDiagonalTransposeDataHandler : public transpose::TransposeDataHandler {
 
 private:
 
@@ -131,7 +131,7 @@ public:
     void
     exchangeData(TransposeData& data) override;
 
-    DistributedExternalTransposeDataHandler(int mpi_rank, int mpi_size);
+    DistributedDiagonalTransposeDataHandler(int mpi_rank, int mpi_size);
 
 };
 

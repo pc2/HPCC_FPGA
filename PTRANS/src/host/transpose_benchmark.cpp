@@ -47,7 +47,7 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
         ("b", "Block size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(BLOCK_SIZE)))
         ("handler", "Specify the used data handler that distributes the data over devices and memory banks",
-            cxxopts::value<std::string>()->default_value(TRANSPOSE_HANDLERS_DIST_EXT));
+            cxxopts::value<std::string>()->default_value(TRANSPOSE_HANDLERS_DIST_DIAG));
 }
 
 std::unique_ptr<transpose::TransposeExecutionTimings>
