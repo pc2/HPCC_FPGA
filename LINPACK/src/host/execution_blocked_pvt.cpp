@@ -63,7 +63,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                                         sizeof(cl_int)*config.programSettings->matrixSize);
 
     // create the kernels
-    cl::Kernel gefakernel(*config.program, "gefa",
+    cl::Kernel gefakernel(*config.program, "lu",
                                     &err);
     ASSERT_CL(err);
     cl::Kernel geslkernel(*config.program, "gesl",
@@ -90,13 +90,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 #else
     err = gefakernel.setArg(0, Buffer_a);
     ASSERT_CL(err);
-    if (!config.programSettings->isDiagonallyDominant) {
-        err = gefakernel.setArg(1, Buffer_pivot);
-        ASSERT_CL(err);
-    }
 #endif
-    err = gefakernel.setArg((config.programSettings->isDiagonallyDominant) ? 1 : 2, static_cast<uint>(config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG));
-    ASSERT_CL(err);
 
 #ifdef USE_SVM
 

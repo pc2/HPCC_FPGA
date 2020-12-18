@@ -8,7 +8,7 @@ endif()
 set(HOST_EXE_NAME Linpack)
 set(LIB_NAME lp)
 
-set(TEST_SOURCES test_kernel_functionality_and_host_integration.cpp test_host_reference_implementations.cpp)
+set(TEST_SOURCES test_kernel_functionality_and_host_integration.cpp test_host_reference_implementations.cpp test_kernel_communication.cpp)
 
 include(${CMAKE_SOURCE_DIR}/../cmake/unitTestTargets.cmake)
 

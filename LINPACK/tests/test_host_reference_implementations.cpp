@@ -91,3 +91,5 @@ TEST_F(LinpackHostTest, ReferenceSolveWithoutPivoting) {
     linpack::gesl_ref_nopvt(data->A, data->b, array_size, array_size);
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 }
+
+
