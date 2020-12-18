@@ -166,3 +166,5 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToTopCorrec
         EXPECT_FLOAT_EQ(total_error, 0.0);
     }
 }
+
+// TODO implement tests for other kernels
