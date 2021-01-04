@@ -6,34 +6,29 @@
 #SBATCH -p fpgasyn
 #SBATCH --exclusive
 
-module load intelFPGA_pro/19.4.0
-module load intel_s10mx/19.3.0
-module load lang/Python/3.7.0-foss-2018b
+module load intelFPGA_pro/20.3.0
+module load bittware_520n_mx/19.4.0_hpc
+module load intel
 module load devel/CMake/3.15.3-GCCcore-8.3.0
 
 SCRIPT_PATH=${SLURM_SUBMIT_DIR}
 
 BENCHMARK_DIR=${SCRIPT_PATH}/../
 
-BUILD_DIR_4K=${SCRIPT_PATH}/../../build/synth/STREAM-s10xm_hbm-4k
-BUILD_DIR_8K=${SCRIPT_PATH}/../../build/synth/STREAM-s10xm_hbm-8k
+SYNTH_DIR=${PFS_SCRATCH}/synth/s10mx/STREAM
 
-mkdir -p ${BUILD_DIR_4K}
-cd ${BUILD_DIR_4K}
+CONFIG_NAMES=("Bittware_S10MX_SP" "Bittware_S10MX_SP_B2048")
 
-cmake ${BENCHMARK_DIR} -DDEVICE_BUFFER_SIZE=4096 -DVECTOR_COUNT=8 -DNUM_REPLICATIONS=32 \
-    -DAOC_FLAGS="-fpc -fp-relaxed -global-ring" \
-    -DINTEL_CODE_GENERATION_SETTINGS=${BENCHMARK_DIR}/settings/settings.gen.intel.stream_kernels_single.s10mxhbm.py
+for r in "${CONFIG_NAMES[@]}"; do
+    BUILD_DIR=${SYNTH_DIR}/20.3.0-19.4.0-${r}
 
-make stream_kernels_single_intel&
+    mkdir -p ${BUILD_DIR}
+    cd ${BUILD_DIR}
 
-mkdir -p ${BUILD_DIR_8K}
-cd ${BUILD_DIR_8K}
+    cmake ${BENCHMARK_DIR} -DHPCC_FPGA_CONFIG=${BENCHMARK_DIR}/configs/${r}.cmake
 
-cmake ${BENCHMARK_DIR} -DDEVICE_BUFFER_SIZE=8192 -DVECTOR_COUNT=8 -DNUM_REPLICATIONS=32 \
-    -DAOC_FLAGS="-fpc -fp-relaxed -global-ring" \
-    -DINTEL_CODE_GENERATION_SETTINGS=${BENCHMARK_DIR}/settings/settings.gen.intel.stream_kernels_single.s10mxhbm.py
-
-make stream_kernels_single_intel&
+    make stream_kernels_single_intel STREAM_FPGA_intel&
+done
 
 wait
+
