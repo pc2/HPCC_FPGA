@@ -16,7 +16,7 @@ struct StreamKernelTest :public  ::testing::Test {
     }
 
     void SetUp( ) { 
-        bm->getExecutionSettings().programSettings->streamArraySize = VECTOR_COUNT * UNROLL_COUNT * NUM_KERNEL_REPLICATIONS * BUFFER_SIZE;
+        bm->getExecutionSettings().programSettings->streamArraySize = VECTOR_COUNT * UNROLL_COUNT * NUM_REPLICATIONS * BUFFER_SIZE;
         data = bm->generateInputData();
    }
 

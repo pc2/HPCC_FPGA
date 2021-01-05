@@ -34,55 +34,9 @@ SOFTWARE.
 #include "execution.h"
 #include "parameters.h"
 
-transpose::TransposeProgramSettings::TransposeProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["m"].as<uint>() * results["b"].as<uint>()),
-    blockSize(results["b"].as<uint>()) {
-
-}
-
-std::map<std::string, std::string>
-transpose::TransposeProgramSettings::getSettingsMap() {
-        auto map = hpcc_base::BaseSettings::getSettingsMap();
-        map["Matrix Size"] = std::to_string(matrixSize);
-        map["Block Size"] = std::to_string(blockSize);
-        return map;
-}
-
-transpose::TransposeData::TransposeData(cl::Context context, uint size) : context(context) {
-#ifdef USE_SVM
-    A = reinterpret_cast<HOST_DATA_TYPE*>(
-                        clSVMAlloc(context(), 0 ,
-                        size * size * sizeof(HOST_DATA_TYPE), 1024));
-    B = reinterpret_cast<HOST_DATA_TYPE*>(
-                        clSVMAlloc(context(), 0 ,
-                        size * size * sizeof(HOST_DATA_TYPE), 1024));
-    result = reinterpret_cast<HOST_DATA_TYPE*>(
-                        clSVMAlloc(context(), 0 ,
-                        size * size * sizeof(HOST_DATA_TYPE), 1024));
-#else
-    posix_memalign(reinterpret_cast<void **>(&A), 64,
-                sizeof(HOST_DATA_TYPE) * size * size);
-    posix_memalign(reinterpret_cast<void **>(&B), 64,
-                sizeof(HOST_DATA_TYPE) * size * size);
-    posix_memalign(reinterpret_cast<void **>(&result), 64,
-                sizeof(HOST_DATA_TYPE) * size * size);
-#endif
-}
-
-transpose::TransposeData::~TransposeData() {
-#ifdef USE_SVM
-    clSVMFree(context(), reinterpret_cast<void*>(A));
-    clSVMFree(context(), reinterpret_cast<void*>(B));
-    clSVMFree(context(), reinterpret_cast<void*>(result));
-#else
-    free(A);
-    free(B);
-    free(result);
-#endif
-}
-
 transpose::TransposeBenchmark::TransposeBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
+    setTransposeDataHandler(executionSettings->programSettings->dataHandlerIdentifier);
 }
 
 void
@@ -91,12 +45,14 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
         ("m", "Matrix size in number of blocks in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
         ("b", "Block size in number of values in one dimension",
-            cxxopts::value<uint>()->default_value(std::to_string(BLOCK_SIZE)));
+            cxxopts::value<uint>()->default_value(std::to_string(BLOCK_SIZE)))
+        ("handler", "Specify the used data handler that distributes the data over devices and memory banks",
+            cxxopts::value<std::string>()->default_value(TRANSPOSE_HANDLERS_DIST_DIAG));
 }
 
 std::unique_ptr<transpose::TransposeExecutionTimings>
 transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
-    return bm_execution::calculate(*executionSettings, data.A, data.B, data.result);
+    return bm_execution::calculate(*executionSettings, data);
 }
 
 void
@@ -133,36 +89,40 @@ transpose::TransposeBenchmark::collectAndPrintResults(const transpose::Transpose
 
 std::unique_ptr<transpose::TransposeData>
 transpose::TransposeBenchmark::generateInputData() {
-    auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*executionSettings->context, executionSettings->programSettings->matrixSize));
-
-    std::mt19937 gen(7);
-    std::uniform_real_distribution<> dis(-100.0, 100.0);
-    for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
-        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
-            d->A[i * executionSettings->programSettings->matrixSize + j] = dis(gen);
-            d->B[j * executionSettings->programSettings->matrixSize + i] = dis(gen);
-            d->result[j * executionSettings->programSettings->matrixSize + i] = 0.0;
-        }
-    }
-
-    return d;
+    return dataHandler->generateData(*executionSettings);
 }
 
 bool  
 transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeData &data) {
-    for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
-        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
-            data.A[j * executionSettings->programSettings->matrixSize + i] -= data.result[i * executionSettings->programSettings->matrixSize + j] 
-                                                                        - data.B[i * executionSettings->programSettings->matrixSize + j];
+
+    // exchange the data using MPI depending on the chosen distribution scheme
+    dataHandler->exchangeData(data);
+
+    int block_offset = executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize;
+    for (int b = 0; b < data.numBlocks; b++) {
+        for (int i = 0; i < executionSettings->programSettings->blockSize; i++) {
+            for (int j = 0; j < executionSettings->programSettings->blockSize; j++) {
+                data.A[b * block_offset + j * executionSettings->programSettings->blockSize + i] -= (data.result[b * block_offset + i * executionSettings->programSettings->blockSize + j] 
+                                                                            - data.B[b * block_offset + i * executionSettings->programSettings->blockSize + j]);
+            }
         }
     }
 
     double max_error = 0.0;
-    for (int i = 0; i < executionSettings->programSettings->matrixSize * executionSettings->programSettings->matrixSize; i++) {
+    for (int i = 0; i < executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize * data.numBlocks; i++) {
         max_error = std::max(fabs(data.A[i]), max_error);
     }
 
-    std::cout << "Maximum error: " << max_error << std::endl;
+    std::cout << "Maximum error: " << max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
+    std::cout << "Mach. Epsilon: " << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl;
 
-    return (static_cast<double>(max_error) / executionSettings->programSettings->matrixSize) < 1.0e-6;
+    return static_cast<double>(max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+}
+
+void
+transpose::TransposeBenchmark::setTransposeDataHandler(std::string dataHandlerIdentifier) {
+    if (transpose::dataHandlerIdentifierMap.find(dataHandlerIdentifier) == transpose::dataHandlerIdentifierMap.end()) {
+        throw std::runtime_error("Could not match selected data handler: " + dataHandlerIdentifier);
+    }
+    dataHandler = transpose::dataHandlerIdentifierMap[dataHandlerIdentifier](mpi_comm_rank, mpi_comm_size);
 }

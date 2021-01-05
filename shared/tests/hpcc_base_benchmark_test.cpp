@@ -63,11 +63,16 @@ public:
     bool returnExecuteKernel = true; 
     bool returnValidate = true;
 
+    uint executeKernelcalled = 0;
+    uint generateInputDatacalled = 0;
+    uint validateOutputcalled = 0;
+
     std::unique_ptr<int>
     generateInputData() override { 
         if (!returnInputData) {
             throw fpga_setup::FpgaSetupException("Test input data failed");
         }
+        generateInputDatacalled++;
         return std::unique_ptr<int>(new int);}
 
     std::unique_ptr<int>
@@ -75,10 +80,13 @@ public:
         if (!returnExecuteKernel) {
             throw fpga_setup::FpgaSetupException("Test execute kernel failed");
         }
+        executeKernelcalled++;
         return std::unique_ptr<int>(new int);}
 
     bool
-    validateOutputAndPrintError(int &data) override { return returnValidate;}
+    validateOutputAndPrintError(int &data) override { 
+        validateOutputcalled++;
+        return returnValidate;}
 
     void
     collectAndPrintResults(const int &output) override {}
@@ -99,6 +107,39 @@ public:
     }
 
 };
+
+
+/**
+ * Checks if the testing flag works as expected
+ */
+TEST_F(BaseHpccBenchmarkTest, AllExecutedWhenNotTestOnly) {
+    bm->getExecutionSettings().programSettings->testOnly = false;
+    bm->executeBenchmark();
+    EXPECT_EQ(bm->validateOutputcalled, 1);
+    EXPECT_EQ(bm->executeKernelcalled, 1);
+    EXPECT_EQ(bm->generateInputDatacalled, 1);
+
+}
+
+TEST_F(BaseHpccBenchmarkTest, GenerateInputExecutedWhenTestOnly) {
+    bm->getExecutionSettings().programSettings->testOnly = true;
+    bm->executeBenchmark();
+    EXPECT_EQ(bm->validateOutputcalled, 0);
+    EXPECT_EQ(bm->executeKernelcalled, 0);
+    EXPECT_EQ(bm->generateInputDatacalled, 1);
+}
+
+TEST_F(BaseHpccBenchmarkTest, ExecutionSuccessWhenNotTestOnly) {
+    bm->getExecutionSettings().programSettings->testOnly = false;
+    EXPECT_TRUE(bm->executeBenchmark());
+
+}
+
+TEST_F(BaseHpccBenchmarkTest, ExecutionFailsWhenTestOnly) {
+    bm->getExecutionSettings().programSettings->testOnly = true;
+    EXPECT_FALSE(bm->executeBenchmark());
+}
+
 
 /**
  * Checks if using default platform and device is successful

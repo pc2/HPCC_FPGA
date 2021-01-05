@@ -184,10 +184,10 @@ As an example:
 Will use the pre-defined configuration for a Nallatech 520N board.
 These configurations can also be used to document best practices in how to configure the benchmark for specific devices or architectures.
 Note, that this option will overwrite all other options that may be given during CMake configuration!
-To make changes on the configuration you need to unset the `HPCC_FPGA_CONFIG` variable by executing cmake as follows:
+To make changes on the configuration you need to unset the `HPCC_FPGA_CONFIG` variable by executing CMake as follows:
 
 .. code-block:: bash
 
     cmake ../../STREAM -UHPCC_FPGA_CONFIG
 
-After that you can mke additional changes to the build configuration.
+After that, you can make additional changes to the build configuration.

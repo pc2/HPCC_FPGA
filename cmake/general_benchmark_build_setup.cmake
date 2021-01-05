@@ -27,6 +27,15 @@ set(USE_HBM No CACHE BOOL "Use host code specific to HBM FPGAs")
 set(USE_CUSTOM_KERNEL_TARGETS No CACHE BOOL "Enable build targets for custom kernels")
 set(USE_DEPRECATED_HPP_HEADER ${header_default} CACHE BOOL "Flag that indicates if the old C++ wrapper header should be used (cl.hpp) or the newer version (cl2.hpp or opencl.hpp)")
 set(HPCC_FPGA_CONFIG ${HPCC_FPGA_CONFIG} CACHE FILEPATH "Configuration file that is used to overwrite the default configuration")
+set(NUM_REPLICATIONS 4 CACHE STRING "Number of times the kernels will be replicated")
+set(KERNEL_REPLICATION_ENABLED Yes CACHE INTERNAL "Enables kernel replication for the OpenCL kernel targets")
+
+mark_as_advanced(KERNEL_REPLICATION_ENABLED)
+if (NOT KERNEL_REPLICATION_ENABLED)
+# Only define NUM_REPLICATIONS if kernel replications is enabled
+ unset(NUM_REPLICATIONS)
+endif()
+
 
 if (HPCC_FPGA_CONFIG)
     message(STATUS "HPCC FPGA configuration defined. Overwrite default values with configuration: ${HPCC_FPGA_CONFIG}")

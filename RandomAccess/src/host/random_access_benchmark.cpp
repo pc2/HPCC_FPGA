@@ -80,9 +80,7 @@ void
 random_access::RandomAccessBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
         ("d", "Size of the data array",
-            cxxopts::value<size_t>()->default_value(std::to_string(DEFAULT_ARRAY_LENGTH)))
-        ("r", "Number of kernel replications used",
-            cxxopts::value<uint>()->default_value(std::to_string(NUM_KERNEL_REPLICATIONS)));
+            cxxopts::value<size_t>()->default_value(std::to_string(DEFAULT_ARRAY_LENGTH)));
 }
 
 std::unique_ptr<random_access::RandomAccessExecutionTimings>

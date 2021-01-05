@@ -13,7 +13,7 @@ struct RandomAccessKernelTest : testing::Test {
 
     RandomAccessKernelTest() {
         bm = std::unique_ptr<random_access::RandomAccessBenchmark>(new random_access::RandomAccessBenchmark(global_argc, global_argv));
-        bm->getExecutionSettings().programSettings->dataSize =  128 * NUM_KERNEL_REPLICATIONS * BUFFER_SIZE;
+        bm->getExecutionSettings().programSettings->dataSize =  128 * NUM_REPLICATIONS * BUFFER_SIZE;
         bm->getExecutionSettings().programSettings->numRepetitions = 1;
     }
 
