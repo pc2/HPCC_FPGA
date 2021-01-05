@@ -79,10 +79,10 @@ for bm in ${BENCHMARKS[@]}; do
         touch kernel_output_ch1
         touch kernel_output_ch2
         touch kernel_output_ch3
-        ln -s kernel_output_ch0 kernel_input_ch0
-        ln -s kernel_output_ch2 kernel_input_ch2
-        ln -s kernel_output_ch1 kernel_input_ch1
-        ln -s kernel_output_ch3 kernel_input_ch3
+        ln -s kernel_output_ch0 kernel_input_ch1
+        ln -s kernel_output_ch2 kernel_input_ch3
+        ln -s kernel_output_ch1 kernel_input_ch0
+        ln -s kernel_output_ch3 kernel_input_ch2
         cd ..
     fi
     make XCL_EMULATION_MODE=sw_emu CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test &>> $TEST_LOG_FILE
