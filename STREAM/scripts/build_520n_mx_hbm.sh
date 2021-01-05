@@ -17,7 +17,7 @@ BENCHMARK_DIR=${SCRIPT_PATH}/../
 
 SYNTH_DIR=${PFS_SCRATCH}/synth/s10mx/STREAM
 
-CONFIG_NAMES=("Bittware_S10MX_SP" "Bittware_S10MX_SP_B2048")
+CONFIG_NAMES=("Bittware_520N_MX_SP")
 
 for r in "${CONFIG_NAMES[@]}"; do
     BUILD_DIR=${SYNTH_DIR}/20.3.0-19.4.0-${r}
