@@ -57,11 +57,7 @@ transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
 
 void
 transpose::TransposeBenchmark::collectAndPrintResults(const transpose::TransposeExecutionTimings &output) {
-    double flops = executionSettings->programSettings->matrixSize * executionSettings->programSettings->matrixSize;
-
-    double avgTransferTime = accumulate(output.transferTimings.begin(), output.transferTimings.end(), 0.0)
-                             / output.transferTimings.size();
-    double minTransferTime = *min_element(output.transferTimings.begin(), output.transferTimings.end());
+    double flops = static_cast<double>(executionSettings->programSettings->matrixSize) * executionSettings->programSettings->matrixSize;
 
     // Number of experiment repetitions
     uint number_measurements = output.calculationTimings.size();
@@ -89,15 +85,13 @@ transpose::TransposeBenchmark::collectAndPrintResults(const transpose::Transpose
 
 
     if (mpi_comm_rank == 0) {
-        std::cout << "             trans          calc    calc FLOPS    Net [GB/s]    Mem [GB/s]" << std::endl;
-        std::cout << "avg:   " << avgTransferTime
-                << "   " << avgCalculationTime
+        std::cout << "                calc    calc FLOPS    Net [GB/s]    Mem [GB/s]" << std::endl;
+        std::cout << "avg:   " << avgCalculationTime
                 << "   " << avgCalcFLOPS
                 << "   " << avgNetworkBandwidth
                 << "   " << avgMemBandwidth
                 << std::endl;
-        std::cout << "best:  " << minTransferTime
-                << "   " << minCalculationTime
+        std::cout << "best:  " << minCalculationTime
                 << "   " << maxCalcFLOPS
                 << "   " << maxNetworkBandwidth
                 << "   " << maxMemBandwidth
