@@ -173,6 +173,8 @@ namespace bm_execution {
                     std::chrono::duration_cast<std::chrono::duration<double>>
                             (endTransfer - startTransfer);
 
+            MPI_Barrier(MPI_COMM_WORLD);
+
             auto startCalculation = std::chrono::high_resolution_clock::now();
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].enqueueTask(transposeWriteKernelList[r]);
