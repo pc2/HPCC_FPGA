@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.4
+
+## Changed:
+- Fix Intel HBM support in host code and add kernel configuration for 520N MX board
+
 ## 1.3
 
 ## Added:
