@@ -506,6 +506,10 @@ public:
             std::unique_ptr<TData> data = generateInputData();
             std::chrono::duration<double> gen_time = std::chrono::high_resolution_clock::now() - gen_start;
             
+#ifdef _USE_MPI_
+            MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
             if (mpi_comm_rank == 0) {
                 std::cout << "Generation Time: " << gen_time.count() << " s"  << std::endl;
                 std::cout << HLINE << "Execute benchmark kernel..." << std::endl
@@ -516,6 +520,11 @@ public:
             if (!executionSettings->programSettings->testOnly) {
                 auto exe_start = std::chrono::high_resolution_clock::now();
                 std::unique_ptr<TOutput> output =  executeKernel(*data);
+
+#ifdef _USE_MPI_
+            MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
                 std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
 
                 if (mpi_comm_rank == 0) {
@@ -535,11 +544,13 @@ public:
                 }
                 collectAndPrintResults(*output);
 
-                if (!validateSuccess) {
-                    std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
-                }
-                else {
-                    std::cout << "Validation: SUCCESS!" << std::endl;
+                if (mpi_comm_rank == 0) {
+                    if (!validateSuccess) {
+                        std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
+                    }
+                    else {
+                        std::cout << "Validation: SUCCESS!" << std::endl;
+                    }
                 }
 
             }
@@ -571,6 +582,7 @@ public:
         MPI_Initialized(&isMpiInitialized);
         if (!isMpiInitialized) {
             MPI_Init(&argc, &argv);
+            mpi_external_init = isMpiInitialized;
         }
         MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
         MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
