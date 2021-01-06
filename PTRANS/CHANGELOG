@@ -2,6 +2,13 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.4
+
+#### Changed:
+- Ordering of FPGAs for diagonal transpose: Now the highest ranks will calculate the diagonal blocks instead of the lowest
+- Provide execution example in scripts folder
+- Host code now also aggregates the measurements from other MPI ranks
+
 ## 1.3
 
 #### Added:
