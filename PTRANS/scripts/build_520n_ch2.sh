@@ -17,7 +17,7 @@ BENCHMARK_DIR=${SCRIPT_PATH}/../
 
 SYNTH_DIR=${PFS_SCRATCH}/synth/520n/PTRANS
 
-CONFIG_NAMES=("Nallatech_520N_interleave")
+CONFIG_NAMES=("Nallatech_520N_ch2_interleave" "Nallatech_520N_ch2")
 
 for r in "${CONFIG_NAMES[@]}"; do
     BUILD_DIR=${SYNTH_DIR}/20.3.0-19.4.0_max-${r}
@@ -27,5 +27,5 @@ for r in "${CONFIG_NAMES[@]}"; do
 
     cmake ${BENCHMARK_DIR} -DCMAKE_BUILD_TYPE=Release -DHPCC_FPGA_CONFIG=${BENCHMARK_DIR}/configs/${r}.cmake
 
-    make transpose_diagonal_intel Transpose_intel
+    make transpose_diagonal_c2_intel Transpose_intel
 done

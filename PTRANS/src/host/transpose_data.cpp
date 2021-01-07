@@ -3,7 +3,8 @@
 
 transpose::TransposeProgramSettings::TransposeProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     matrixSize(results["m"].as<uint>() * results["b"].as<uint>()),
-    blockSize(results["b"].as<uint>()), dataHandlerIdentifier(results["handler"].as<std::string>()) {
+    blockSize(results["b"].as<uint>()), dataHandlerIdentifier(results["handler"].as<std::string>()),
+    distributeBuffers(results["distribute-buffers"].count() > 0) {
 
 }
 
@@ -12,6 +13,7 @@ transpose::TransposeProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["Matrix Size"] = std::to_string(matrixSize);
         map["Block Size"] = std::to_string(blockSize);
+        map["Dist. Buffers"] = distributeBuffers ? "Yes" : "No";
         map["Data Handler"] = dataHandlerIdentifier;
         return map;
 }

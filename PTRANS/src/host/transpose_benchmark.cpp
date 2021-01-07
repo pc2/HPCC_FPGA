@@ -46,6 +46,7 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
         ("b", "Block size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(BLOCK_SIZE)))
+        ("distribute-buffers", "Distribute buffers over memory banks. This will use three memory banks instead of one for a single kernel replication, but kernel replications may interfere. This is an Intel only attribute, since buffer placement is decided at compile time for Xilinx FPGAs.")
         ("handler", "Specify the used data handler that distributes the data over devices and memory banks",
             cxxopts::value<std::string>()->default_value(TRANSPOSE_HANDLERS_DIST_DIAG));
 }
