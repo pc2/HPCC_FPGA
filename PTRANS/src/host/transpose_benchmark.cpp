@@ -85,7 +85,7 @@ transpose::TransposeBenchmark::collectAndPrintResults(const transpose::Transpose
 
 
     if (mpi_comm_rank == 0) {
-        std::cout << "                calc    calc FLOPS    Net [GB/s]    Mem [GB/s]" << std::endl;
+        std::cout << "              calc    calc FLOPS    Net [GB/s]    Mem [GB/s]" << std::endl;
         std::cout << "avg:   " << avgCalculationTime
                 << "   " << avgCalcFLOPS
                 << "   " << avgNetworkBandwidth

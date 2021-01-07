@@ -1,8 +1,15 @@
 #!/bin/bash
 #
-# Execute the matrix transposition with 9 FPGAs
-# Sets up the network topology for the execution with 9 FPGAs with FPGAs on the same node being pairs and the
-# 9th FPGA calculating the diagonal blocks.
+# Execute the matrix transposition with N FPGAs.
+# This is a generator script. Use it as input for the code generator.
+# Example to generate script for execution on 19 FPGAs:
+#
+#    ../../scripts/code_generator/generator.py --comment="#" --comment-ml-start="$" --comment-ml-end="$" run_transpose_gen.sh -o run_transpose_n19.sh
+#
+# You can specify the number of used nodes with the parameter N.
+# To generate a script for the execution on 9 FPGAs:
+#
+#    ../../scripts/code_generator/generator.py -p "N=5" --comment="#" --comment-ml-start="$" --comment-ml-end="$" run_transpose_gen.sh -o run_transpose_n9.sh
 #
 # PY_CODE_GEN N=10
 # PY_CODE_GEN block_start replace()
