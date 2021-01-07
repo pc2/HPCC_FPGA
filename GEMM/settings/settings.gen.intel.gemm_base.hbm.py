@@ -17,5 +17,5 @@ def generate_attributes(num_replications, num_global_memory_banks=32):
     array_names = ["a", "b", "c", "out"]
     global_memory_names = [ "%s%d" % (global_memory_name, i) for i in range(num_global_memory_banks)]
     return [ { array_name : "__attribute__((buffer_location(\"%s\")))" 
-            % (global_memory_names[(4*i + k) % num_global_memory_banks])) for k, array_name in enumerate(array_names)}
+            % (global_memory_names[(4*i + k) % num_global_memory_banks]) for k, array_name in enumerate(array_names)}
             for i in range(num_replications)]
