@@ -22,6 +22,7 @@
 #define DATA_TYPE_SIZE @DATA_TYPE_SIZE@
 
 #cmakedefine USE_SVM
+#cmakedefine USE_HBM
 #cmakedefine XILINX_UNROLL_GLOBAL_MEM_PIPELINE
 #cmakedefine ENABLE_MIXED_PRECISION
 
