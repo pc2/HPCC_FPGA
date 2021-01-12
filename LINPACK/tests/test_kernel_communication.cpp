@@ -84,6 +84,7 @@ class LinpackKernelCommunicationTestLU : public LinpackKernelCommunicationTest {
         compute_queue.enqueueTask(kernel);
         compute_queue.finish();
         compute_queue.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
+        linpack::gesl_ref_nopvt(data->A, data->b, bm->getExecutionSettings().programSettings->matrixSize,bm->getExecutionSettings().programSettings->matrixSize);
     }
 };
 
