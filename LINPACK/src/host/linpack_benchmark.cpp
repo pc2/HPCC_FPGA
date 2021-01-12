@@ -375,10 +375,12 @@ void linpack::dmxpy(unsigned n1, HOST_DATA_TYPE* y, unsigned n2, unsigned ldm, H
 void
 linpack::gefa_ref_nopvt(HOST_DATA_TYPE* a, unsigned n, unsigned lda) {
     // For each diagnonal element
-    for (int k = 0; k < n - 1; k++) {
+    for (int k = 0; k < n; k++) {
+        // Store negatie invers of diagonal elements to get rid of some divisions afterwards!
+        a[k * lda + k] = -1.0 / a[k * lda + k];
         // For each element below it
         for (int i = k + 1; i < n; i++) {
-            a[k * lda + i] *= -1.0 / a[k * lda + k];
+            a[k * lda + i] *= a[k * lda + k];
         }
         // For each column right of current diagonal element
         for (int j = k + 1; j < n; j++) {
@@ -423,9 +425,10 @@ linpack::gesl_ref_nopvt(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, unsigned n, unsign
 
         // now solve  u*x = y
         for (int k = n - 1; k >= 0; k--) {
-            b_tmp[k] = b_tmp[k] / a[lda * k + k];
+            HOST_DATA_TYPE scale = b_tmp[k] * a[lda * k + k];
+            b_tmp[k] = -scale;
             for (int i = 0; i < k; i++) {
-                b_tmp[i] -= b_tmp[k] * a[lda * k + i];
+                b_tmp[i] += scale * a[lda * k + i];
             }
         }
         for (int k = 0; k < n; k++) {
