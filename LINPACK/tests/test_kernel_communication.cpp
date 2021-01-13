@@ -45,7 +45,8 @@ public:
     /**
      * @brief Get the Data sent over an external channel.
      * 
-     * @param channel_id Id of the external channel
+     * @param channel_id Id of the external channel. It is assumed to be conntected in the order 0->Top,1->Right,2->Bottom,3->Left.
+     *                  So channel 0 will be connected to the channel 2 of the FPGA above the current FPGA in the 2D Torus. 
      * @return std::vector<HOST_DATA_TYPE> The data that is contained in the output file of the channel
      */
     std::vector<HOST_DATA_TYPE>
@@ -84,17 +85,17 @@ class LinpackKernelCommunicationTestLU : public LinpackKernelCommunicationTest {
         compute_queue.enqueueTask(kernel);
         compute_queue.finish();
         compute_queue.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
-        linpack::gesl_ref_nopvt(data->A, data->b, bm->getExecutionSettings().programSettings->matrixSize,bm->getExecutionSettings().programSettings->matrixSize);
     }
 };
 
 
 TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalResultisCorrect) {
+    linpack::gesl_ref_nopvt(data->A, data->b, bm->getExecutionSettings().programSettings->matrixSize,bm->getExecutionSettings().programSettings->matrixSize);
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 
 }
 
-TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToLeftCorrectAmountOfData) {
+TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToRightCorrectAmountOfData) {
     // data that was sent to left kernels
     auto data_left = getDataFromExternalChannel(1);
 
@@ -105,9 +106,23 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToLeftCorre
     EXPECT_EQ(data_left.size(), number_values);
 }
 
+TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToLeftCorrectAmountOfData) {
+    // data that was sent to left kernels
+    auto data_left = getDataFromExternalChannel(3);
+
+    EXPECT_EQ(data_left.size(), 0);
+}
+
 TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToTopCorrectAmountOfData) {
+    // data that was sent to left kernels
+    auto data_left = getDataFromExternalChannel(0);
+
+    EXPECT_EQ(data_left.size(), 0);
+}
+
+TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToBottomCorrectAmountOfData) {
     // data that was sent to top kernels
-    auto data_top = getDataFromExternalChannel(0);
+    auto data_top = getDataFromExternalChannel(2);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -116,7 +131,7 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToTopCorrec
     EXPECT_EQ(data_top.size(), number_values);
 }
 
-TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToLeftCorrect) {
+TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToRightCorrect) {
     // data that was sent to top kernels
     auto data_left = getDataFromExternalChannel(1);
 
@@ -142,9 +157,9 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToLeftCorre
     }
 }
 
-TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToTopCorrect) {
+TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToBottomCorrect) {
     // data that was sent to top kernels
-    auto data_top = getDataFromExternalChannel(0);
+    auto data_top = getDataFromExternalChannel(2);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
