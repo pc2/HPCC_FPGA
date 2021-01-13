@@ -75,16 +75,24 @@ class LinpackKernelCommunicationTestLU : public LinpackKernelCommunicationTest {
     void executeKernel() {
         int err;
         cl::CommandQueue compute_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device, 0, &err);
+        cl::CommandQueue network_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device, 0, &err);
         cl::Buffer buffer(*(bm->getExecutionSettings().context), CL_MEM_READ_WRITE,
                                             sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize);
         cl::Kernel kernel(*bm->getExecutionSettings().program, "lu", &err);
 
         err = kernel.setArg(0, buffer);
 
+        // Start network layer kernel
+        cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
+        err = network.setArg(0, static_cast<cl_uint>(3));
+        network_queue.enqueueTask(network);
+
         compute_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
         compute_queue.enqueueTask(kernel);
         compute_queue.finish();
         compute_queue.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
+
+        network_queue.finish();
     }
 };
 
