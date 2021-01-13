@@ -85,6 +85,7 @@ class LinpackKernelCommunicationTestLU : public LinpackKernelCommunicationTest {
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
         err = network.setArg(0, static_cast<cl_uint>(3));
+        err = network.setArg(1, CL_TRUE);
         network_queue.enqueueTask(network);
 
         compute_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);

@@ -41,9 +41,12 @@ Takes care of the external channels.
 Will forward data from calculation kernels to the external channels and will forward data if required.
 
 operation_type: 0:inner, 1: left, 2:top,3:lu
+forward: if true (forward > 0), forward data to external channel, discard data otherwise. This is used to stop 
+		forwarding when reaching the end of the grid
  */
 __kernel
-void network_layer(const uint operation_type) {
+void network_layer(const uint operation_type,
+				   const uint forward) {
 	// For every row or column of the block, something needs to be sent
 	#pragma loop_coalesce
 	for (uint row = 0; row < BLOCK_SIZE; row++) {
@@ -63,15 +66,17 @@ void network_layer(const uint operation_type) {
 					to_bottom = read_channel_intel(ch_lu_row_out);
 				break;
 			}
-			// send operation
-			switch (operation_type) {
-				case 0: break;
-				case 1: break;
-				case 2: break;
-				case 3: 
-					write_channel_intel(ch_right_out, to_right);
-					write_channel_intel(ch_bottom_out, to_bottom);
-				break;
+			if (forward) {
+				// send operation
+				switch (operation_type) {
+					case 0: break;
+					case 1: break;
+					case 2: break;
+					case 3: 
+						write_channel_intel(ch_right_out, to_right);
+						write_channel_intel(ch_bottom_out, to_bottom);
+					break;
+				}
 			}
 		}
 	}
@@ -340,6 +345,8 @@ lu(__global DEVICE_DATA_TYPE* restrict a) {
 					// The last left block will be out of bounds because of the update strategy described above
 					// Skip it
 					if (i < BLOCK_SIZE/GEMM_BLOCK) {
+
+						// TODO Split this up into three different styles to reduce logic usage?
 						
 						// copy the correct block in the second input buffer
 						// this depends on the operations that has to be executed
@@ -413,7 +420,6 @@ lu(__global DEVICE_DATA_TYPE* restrict a) {
 		}
 		// Send current updated column to right neighbor
 		for (int i = 0; i < (BLOCK_SIZE/GEMM_BLOCK - k); i++) {
-			// TODO: this will most likely mess up memory
 			ch_chunk_t col_data;
 			ch_chunk_t row_data;
 			#pragma unroll GEMM_BLOCK
