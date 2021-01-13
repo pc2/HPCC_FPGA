@@ -24,7 +24,58 @@ SOFTWARE.
 #define BLOCK_SIZE (1 << LOCAL_MEM_BLOCK_LOG)
 #define GEMM_BLOCK (1 << REGISTER_BLOCK_LOG)
 
-typedef struct tmp_block_type { DEVICE_DATA_TYPE data[GEMM_BLOCK][GEMM_BLOCK];} block_t;
+#pragma OPENCL EXTENSION cl_intel_channels : enable
+
+typedef struct tmp_channel_chunk { DEVICE_DATA_TYPE data[GEMM_BLOCK];} ch_chunk_t;
+
+channel ch_chunk_t ch_top_in __attribute((io("kernel_input_ch0")));
+channel ch_chunk_t ch_right_out __attribute((io("kernel_output_ch1")));
+channel ch_chunk_t ch_bottom_out __attribute((io("kernel_output_ch2")));
+channel ch_chunk_t ch_left_in __attribute((io("kernel_input_ch3")));
+
+channel ch_chunk_t ch_lu_col_out;
+channel ch_chunk_t ch_lu_row_out;
+
+/**
+Takes care of the external channels.
+Will forward data from calculation kernels to the external channels and will forward data if required.
+
+operation_type: 0:inner, 1: left, 2:top,3:lu
+ */
+__kernel
+void network_layer(const uint operation_type) {
+	// For every row or column of the block, something needs to be sent
+	#pragma loop_coalesce
+	for (uint row = 0; row < BLOCK_SIZE; row++) {
+		// Number of chunks that has to be processed
+		for (uint chunk = 0; chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG); chunk++) {
+			ch_chunk_t to_right;
+			ch_chunk_t to_bottom;
+			ch_chunk_t from_top;
+			ch_chunk_t from_left;
+			// receive operation
+			switch (operation_type) {
+				case 0: break;
+				case 1: break;
+				case 2: break;
+				case 3: 
+					to_right = read_channel_intel(ch_lu_col_out);
+					to_bottom = read_channel_intel(ch_lu_row_out);
+				break;
+			}
+			// send operation
+			switch (operation_type) {
+				case 0: break;
+				case 1: break;
+				case 2: break;
+				case 3: 
+					write_channel_intel(ch_right_out, to_right);
+					write_channel_intel(ch_bottom_out, to_bottom);
+				break;
+			}
+		}
+	}
+}
 
 
 /**
@@ -359,6 +410,19 @@ lu(__global DEVICE_DATA_TYPE* restrict a) {
 					}
 				}
 			}
+		}
+		// Send current updated column to right neighbor
+		for (int i = 0; i < (BLOCK_SIZE/GEMM_BLOCK - k); i++) {
+			// TODO: this will most likely mess up memory
+			ch_chunk_t col_data;
+			ch_chunk_t row_data;
+			#pragma unroll GEMM_BLOCK
+			for (int j = 0; j < GEMM_BLOCK; j++) {
+				col_data.data[j] = a_buffer[k][i + k][kk][j];
+				row_data.data[j] = a_buffer[i + k][k][j][kk];
+			}
+			write_channel_intel(ch_lu_col_out, col_data);
+			write_channel_intel(ch_lu_row_out, row_data);
 		}
  	}
 
