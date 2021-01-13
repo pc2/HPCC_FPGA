@@ -94,7 +94,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../RandomAccess/index.html">RandomAccess</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../FFT/index.html">FFT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../GEMM/index.html">GEMM</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">PTRANS</a><ul class="simple">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">PTRANS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-parameters">Configuration Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#detailed-description">Detailed Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-model-for-diagonal-distribution">Performance Model for Diagonal Distribution</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../LINPACK/index.html">LINPACK</a></li>
@@ -103,6 +106,7 @@
 <p class="caption"><span class="caption-text">Technical Support:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/Host Input Parameters/index.html">Execution of a Benchmark</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Benchmark Results:</span></p>
@@ -177,10 +181,101 @@
             
   <div class="section" id="id1">
 <h1>PTRANS<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
-<p>This section contains all information related to the PTRANS benchmark.</p>
-<p><em>Currently, the documentation is work in progress and some sections are still missing.
-They will be added step by step to complete the documentation.</em></p>
+<p>This benchmark calculates a distributed blocked matrix transposition with <span class="math notranslate nohighlight">\(C = B + A^T\)</span> where <span class="math notranslate nohighlight">\(A,B,C \in \Bbb R^{n \times n}\)</span>.
+So, a matrix <span class="math notranslate nohighlight">\(A\)</span> is transposed and added to another matrix <span class="math notranslate nohighlight">\(B\)</span>. The result is stored in a separate buffer.
+All matrices are divided into blocks and the blocks are distributed over multiple FPGAs, so the FPGA will need to complete the calculation
+using an inter-FPGA network.</p>
+<p>The benchmark is designed to be easily extendable with different distribution schemes on the host side.</p>
 <div class="toctree-wrapper compound">
+</div>
+<div class="section" id="configuration-parameters">
+<h2>Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Permalink to this headline">¶</a></h2>
+<p>In <a class="reference internal" href="#ptrans-config"><span class="std std-numref">Table 10</span></a> the configuration parameters are shown that are used to modify the kernel.
+All other parameters can also later be changed with the host code during runtime.</p>
+<span id="ptrans-config"></span><table class="colwidths-given docutils align-default" id="id2">
+<caption><span class="caption-number">Table 10 </span><span class="caption-text">Configuration parameters for the Kernel</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 63%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NUM_REPLICATIONS</span></code></p></td>
+<td><p>Replicates all kernels the given number of times. This allows to create a kernel pair for every available external channel in case of the circuit-switched network.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">BLOCK_SIZE</span></code></p></td>
+<td><p>Size of the matrix blocks that are buffered in local memory and also distributed between the FPGAs.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CHANNEL_WIDTH</span></code></p></td>
+<td><p>Width of the channels in data items. Together with the used data type, the width of the channel in bytes can be calculated.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DATA_TYPE</span></code></p></td>
+<td><p>Specifies the used data type for the calculation.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="detailed-description">
+<h2>Detailed Description<a class="headerlink" href="#detailed-description" title="Permalink to this headline">¶</a></h2>
+<p>As mentioned at the beginning, the host code of this benchmark is designed to support different data distribution schemes between the FPGAs.
+The performance models for the supported models are given in the following sections. In this section, it is focussed on the part of
+the implementation that is common for every distribution scheme, which will be parts of the host code and the kernel signature.</p>
+<div class="figure align-center" id="id3">
+<span id="handler-class"></span><a class="reference internal image-reference" href="../_images/transpose_data_class.drawio.png"><img alt="../_images/transpose_data_class.drawio.png" src="../_images/transpose_data_class.drawio.png" style="width: 600px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 6 </span><span class="caption-text">Class diagram showing the integration of the <code class="docutils literal notranslate"><span class="pre">TransposeDataHandler</span></code> interface into the implementation of the host code</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+</div>
+<p>An overview of the structure of the host code is given in <a class="reference internal" href="#handler-class"><span class="std std-numref">Fig. 6</span></a>.
+Different host processes are communicating using MPI to allow scaling over multiple FPGAs, which may be installed on different nodes in a compute cluster.
+Every MPI rank is in charge of a single FPGA and all objects shown in the figure are created on every MPI rank.
+This means, the data handler and the generated data may differ between the MPI ranks depending on the chosen distribution scheme.
+Therefore, the implementation introduces a new interface: <code class="docutils literal notranslate"><span class="pre">TransposeDataHandler</span></code>.
+Implementations of this interface are managing the initialization of the <code class="docutils literal notranslate"><span class="pre">TransposeData</span></code> object for a given MPI rank,
+which again holds the allocated memory for the kernel execution on the FPGA.
+The data on each rank is implemented as a one-dimensional array of matrix blocks.
+This allows to reuse the validation mechanism, independent of the chosen data distribution scheme.
+In the current state, only one implementation for the <code class="docutils literal notranslate"><span class="pre">TransposeDataHandler</span></code> exists, which will distribute the blocks diagonally
+and is named <code class="docutils literal notranslate"><span class="pre">DistributedDiagonalTransposeDataHandler</span></code>.
+One big advantage of this data distribution scheme is the possibility to create very simple circuit-switched networks for the data exchange.</p>
+</div>
+<div class="section" id="performance-model-for-diagonal-distribution">
+<h2>Performance Model for Diagonal Distribution<a class="headerlink" href="#performance-model-for-diagonal-distribution" title="Permalink to this headline">¶</a></h2>
+<p>The diagonal distribution tries to create pairs of FPGAs that hold each other’s blocks of the transposed matrix A.
+This allows to set up a static circuit-switched network between the pairs and exchange the matrix blocks without additional routing.
+A visualization for the data distribution of a 4-by-4-block matrix is given in <a class="reference internal" href="#diagonal-distribution"><span class="std std-numref">Fig. 7</span></a>.
+The FPGA rank is given by the number in the block, the color specifies the communication pairs necessary to exchange the block information.
+Also note, that the FPGA with rank 1 will need to process one block more than the other FPGAs.
+This is required because the diagonal blocks need different processing than the other blocks: The transposed block of A needs to be added to the block B in the same position, so no communication for the exchange of the block is required.
+The host code will take care of this requirement when distributing the blocks to the MPI ranks.
+Moreover, the host will also try to distribute the blocks evenly between the ranks under the given restrictions.</p>
+<div class="figure align-center" id="id4">
+<span id="diagonal-distribution"></span><a class="reference internal image-reference" href="../_images/diagonal_data_distribution.drawio.png"><img alt="../_images/diagonal_data_distribution.drawio.png" src="../_images/diagonal_data_distribution.drawio.png" style="width: 400px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 7 </span><span class="caption-text">Diagonal distribution of the blocks of the 16 blocks of a 4x4 matrix on five FPGAs. The number in the block represents the FPGA the block is distributed to. Communication pairs are represented by the block colors, so FPGAs with blocks of the same color will form communication pairs. Note, that the FPGAs that are in charge of the diagonal blocks will send the data to themselves.</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+</div>
+<p>The FPGA logic is implemented in two kernels per external channel. The number of kernel pairs can be defined with the <code class="docutils literal notranslate"><span class="pre">NUM_REPLICATIONS</span></code> parameter.
+Moreover, the external channels in a circuit-switched network have a fixed width (e.g. 256 bit). The kernels can be adapted to this width
+by specifying the channel width in the number of data items with the <code class="docutils literal notranslate"><span class="pre">CHANNEL_WIDTH</span></code> parameter together with the <code class="docutils literal notranslate"><span class="pre">DATA_TYPE</span></code>.</p>
+<p>One of the kernels will read a block of A into local memory using chunks of <code class="docutils literal notranslate"><span class="pre">CHANNEL_WIDTH</span></code> data items. The size of this local memory buffer can be defined with the <code class="docutils literal notranslate"><span class="pre">BLOCK_SIZE</span></code> parameter
+which represents the size of the quadratic matrix blocks in the number of values.
+Note, that the block sizes have to match the block sizes used on the host side!
+The block of matrix A is then read transposed from local memory and sent over the external channel.
+Reading from global memory and writing to the external channel is implemented in a single pipeline using double buffering for the local memory block.
+If the width of the global memory interface and the channel width are not matching, this may lead to inefficient global memory accesses.
+Usually, this will not affect the performance of the kernel, since the performance will be bound by the external channel bandwidth.</p>
+<p>The second kernel will receive chunks of a transposed block of A, add a block of B to it and store it in global memory.
+So the result will immediately be stored in global memory and no local memory is needed in this kernel.
+One major goal of this implementation is, to continuously send and receive data over all available external channels and by that to fully utilize the
+available network bandwidth.
+Nevertheless, the kernels may also suffer from low memory bandwidth since the need to read and write to three different buffers for every kernel pair replication.
+This leads to a total required global memory bandwidth of <span class="math notranslate nohighlight">\(mem_{global} = 3 \cdot r \cdot c_w \cdot d_w \cdot f_{channel}\)</span> where
+<span class="math notranslate nohighlight">\(r\)</span> the number of external channels per FPGA (or number of kernel pair replications), <span class="math notranslate nohighlight">\(f_{channel}\)</span>  the frequency of the external channel, <span class="math notranslate nohighlight">\(c_w\)</span> the width of an external channel in number of data items
+and <span class="math notranslate nohighlight">\(d_w\)</span> the size of a single data item in bytes.
+In short, the required global memory bandwidth is three times higher than the network bandwidth to keep the benchmark network-bandwidth bound.</p>
+<p>For an arbitrary large matrix, the expected maximum performance will be <span class="math notranslate nohighlight">\(flops = n \cdot r \cdot f_{channel} * c_w\)</span> where <span class="math notranslate nohighlight">\(n\)</span> is the number of FPGAs,
+<span class="math notranslate nohighlight">\(r\)</span> the number of external channels per FPGA (or number of kernel pair replications), <span class="math notranslate nohighlight">\(f_{channel}\)</span> the frequency of the external channel and <span class="math notranslate nohighlight">\(c_w\)</span> the width of an external channel in number of data items.</p>
 </div>
 </div>
 

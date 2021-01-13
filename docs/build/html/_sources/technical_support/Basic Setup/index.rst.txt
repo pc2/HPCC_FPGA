@@ -168,3 +168,26 @@ After executing the command above, the actual build files will be created.
 Usually this will be Makefiles on Unix systems.
 You can then start building the host code, create a report for the kernel code with the current configuration or even synthesize the kernel by using the matching build targets that are explained in the README.
 
+---------------------------------
+Using pre-defined Configurations
+---------------------------------
+
+Some benchmarks do also provide pre-defined configurations for a selection of FPGAs in the `configs` folder within their sources.
+The configurations are `*.cmake` files that overwrite the default configuration options.
+They can be used with CMake and the configuration option `HPCC_FPGA_CONFIG`.
+As an example:
+
+.. code-block:: bash
+
+    cmake ../../STREAM -DHPCC_FPGA_CONFIG=../../STREAM/configs/Nallatech_520N_SP.cmake
+
+Will use the pre-defined configuration for a Nallatech 520N board.
+These configurations can also be used to document best practices in how to configure the benchmark for specific devices or architectures.
+Note, that this option will overwrite all other options that may be given during CMake configuration!
+To make changes on the configuration you need to unset the `HPCC_FPGA_CONFIG` variable by executing CMake as follows:
+
+.. code-block:: bash
+
+    cmake ../../STREAM -UHPCC_FPGA_CONFIG
+
+After that, you can make additional changes to the build configuration.

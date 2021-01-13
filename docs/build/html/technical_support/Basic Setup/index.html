@@ -38,7 +38,7 @@
     
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Multi-FPGA Benchmarking" href="../multi_fpga/index.html" />
+    <link rel="next" title="Execution of a Benchmark" href="../Host Input Parameters/index.html" />
     <link rel="prev" title="b_eff" href="../../b_eff/index.html" /> 
 </head>
 
@@ -104,8 +104,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#general-benchmark-configuration">General Benchmark Configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#general-build-targets">General Build Targets</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configure-and-build-stream-for-a-fictional-xilinx-fpga">Configure and Build STREAM for a fictional Xilinx FPGA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-pre-defined-configurations">Using pre-defined Configurations</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../Host Input Parameters/index.html">Execution of a Benchmark</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Benchmark Results:</span></p>
@@ -198,7 +200,7 @@ Especially the <code class="docutils literal notranslate"><span class="pre">FPGA
 The <code class="docutils literal notranslate"><span class="pre">DEFAULT_*</span></code> options are used by the host code and can also be changed later at runtime.
 The given default values will be set if no other values are given during configuration.</p>
 <table class="colwidths-given docutils align-default" id="id1">
-<caption><span class="caption-number">Table 12 </span><span class="caption-text">General Configuration Options</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<caption><span class="caption-number">Table 13 </span><span class="caption-text">General Configuration Options</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
 <colgroup>
 <col style="width: 25%" />
 <col style="width: 25%" />
@@ -232,7 +234,7 @@ The given default values will be set if no other values are given during configu
 <p>Additionally, the compile options for the Intel or Xilinx compiler have to be specified.
 For the Intel compiler these are:</p>
 <table class="colwidths-given docutils align-default" id="id2">
-<caption><span class="caption-number">Table 13 </span><span class="caption-text">Intel Specific Configuration Options</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<caption><span class="caption-number">Table 14 </span><span class="caption-text">Intel Specific Configuration Options</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
 <colgroup>
 <col style="width: 25%" />
 <col style="width: 25%" />
@@ -258,7 +260,7 @@ For the Intel compiler these are:</p>
 <p>For the Xilinx compiler it is also necessary to set settings files for the compile and link step of the compiler.
 The available options are given in the following table:</p>
 <table class="colwidths-given docutils align-default" id="id3">
-<caption><span class="caption-number">Table 14 </span><span class="caption-text">Xilinx Vitis Specific Configuration Options</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<caption><span class="caption-number">Table 15 </span><span class="caption-text">Xilinx Vitis Specific Configuration Options</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
 <colgroup>
 <col style="width: 25%" />
 <col style="width: 25%" />
@@ -322,7 +324,7 @@ You can always get an overview of the available targets by executing the followi
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default" id="id4">
-<caption><span class="caption-number">Table 15 </span><span class="caption-text">Host code build targets</span><a class="headerlink" href="#id4" title="Permalink to this table">¶</a></caption>
+<caption><span class="caption-number">Table 16 </span><span class="caption-text">Host code build targets</span><a class="headerlink" href="#id4" title="Permalink to this table">¶</a></caption>
 <colgroup>
 <col style="width: 25%" />
 <col style="width: 75%" />
@@ -344,7 +346,7 @@ You can always get an overview of the available targets by executing the followi
 <p>Moreover, there are additional targets to generate kernel reports and bitstreams.
 The kernel targets are:</p>
 <table class="colwidths-given docutils align-default" id="id5">
-<caption><span class="caption-number">Table 16 </span><span class="caption-text">Device code build targets</span><a class="headerlink" href="#id5" title="Permalink to this table">¶</a></caption>
+<caption><span class="caption-number">Table 17 </span><span class="caption-text">Device code build targets</span><a class="headerlink" href="#id5" title="Permalink to this table">¶</a></caption>
 <colgroup>
 <col style="width: 25%" />
 <col style="width: 75%" />
@@ -410,6 +412,24 @@ This allows to create a single link settings file for an arbitrary number of ker
 Usually this will be Makefiles on Unix systems.
 You can then start building the host code, create a report for the kernel code with the current configuration or even synthesize the kernel by using the matching build targets that are explained in the README.</p>
 </div>
+<div class="section" id="using-pre-defined-configurations">
+<h2>Using pre-defined Configurations<a class="headerlink" href="#using-pre-defined-configurations" title="Permalink to this headline">¶</a></h2>
+<p>Some benchmarks do also provide pre-defined configurations for a selection of FPGAs in the <cite>configs</cite> folder within their sources.
+The configurations are <cite>*.cmake</cite> files that overwrite the default configuration options.
+They can be used with CMake and the configuration option <cite>HPCC_FPGA_CONFIG</cite>.
+As an example:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake ../../STREAM -DHPCC_FPGA_CONFIG<span class="o">=</span>../../STREAM/configs/Nallatech_520N_SP.cmake
+</pre></div>
+</div>
+<p>Will use the pre-defined configuration for a Nallatech 520N board.
+These configurations can also be used to document best practices in how to configure the benchmark for specific devices or architectures.
+Note, that this option will overwrite all other options that may be given during CMake configuration!
+To make changes on the configuration you need to unset the <cite>HPCC_FPGA_CONFIG</cite> variable by executing CMake as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake ../../STREAM -UHPCC_FPGA_CONFIG
+</pre></div>
+</div>
+<p>After that, you can make additional changes to the build configuration.</p>
+</div>
 </div>
 
 
@@ -424,7 +444,7 @@ You can then start building the host code, create a report for the kernel code w
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../multi_fpga/index.html" class="btn btn-neutral float-right" title="Multi-FPGA Benchmarking" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="../Host Input Parameters/index.html" class="btn btn-neutral float-right" title="Execution of a Benchmark" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="../../b_eff/index.html" class="btn btn-neutral float-left" title="b_eff" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

@@ -109,6 +109,7 @@
 <p class="caption"><span class="caption-text">Technical Support:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/Host Input Parameters/index.html">Execution of a Benchmark</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Benchmark Results:</span></p>
@@ -188,11 +189,11 @@
 </div>
 <div class="section" id="configuration-parameters">
 <h2>Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Permalink to this headline">¶</a></h2>
-<p>In <a class="reference internal" href="#beff-config"><span class="std std-numref">Table 10</span></a> the configuration parameters are shown that are used to modify the kernel.
+<p>In <a class="reference internal" href="#beff-config"><span class="std std-numref">Table 11</span></a> the configuration parameters are shown that are used to modify the kernel.
 All other parameters can also later be changed with the host code during runtime.</p>
 <p><em>Note: The current implementation is optimized for circuit-switched networks with four channels. Packet-switched networks might need a different kernel architecture. This specialization is the reason for the low amount of configuration parameters which might change, if more systems with inter-FPGA communication are available.</em></p>
 <span id="beff-config"></span><table class="colwidths-given docutils align-center" id="id1">
-<caption><span class="caption-number">Table 10 </span><span class="caption-text">Configuration parameters for the Kernel</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<caption><span class="caption-number">Table 11 </span><span class="caption-text">Configuration parameters for the Kernel</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
 <colgroup>
 <col style="width: 38%" />
 <col style="width: 63%" />
@@ -253,10 +254,10 @@ Thus, a message is streamed chunk-wise over two channels to the receiver in a pi
 At kernel start, the <cite>send</cite> kernel will generate a message chunk that is filled with bytes of the value <span class="math notranslate nohighlight">\(ld(m) mod 256\)</span>.
 The message chunk will be used continuously for sending and will be stored in global memory after the last transmission.
 This allows verifying the correct transmission of the data chunk over the whole range of repetitions.</p>
-<p>A schematic view of the channel connections for the kernel implementation is given in <a class="reference internal" href="#network-kernel-flow"><span class="std std-numref">Fig. 6</span></a>.</p>
+<p>A schematic view of the channel connections for the kernel implementation is given in <a class="reference internal" href="#network-kernel-flow"><span class="std std-numref">Fig. 8</span></a>.</p>
 <div class="figure align-center" id="id2">
 <span id="network-kernel-flow"></span><a class="reference internal image-reference" href="../_images/network_topology_setup.drawio.png"><img alt="Connection of external channels to FPGA kernels" src="../_images/network_topology_setup.drawio.png" style="width: 360px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 6 </span><span class="caption-text">The different kernels of the implementation are connected over bidirectional external channels to kernels running on other FPGAs. It this example two FPGAs form a bidirectional ring and will send and receive data from the other FPGA.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 8 </span><span class="caption-text">The different kernels of the implementation are connected over bidirectional external channels to kernels running on other FPGAs. It this example two FPGAs form a bidirectional ring and will send and receive data from the other FPGA.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
 </div>
 <p>The host code will start all kernels simultaneously and measure the time until all kernels are finished and use this time to calculate the achieved bandwidth for the execution.
 Overall, the kernels will be executed sequentially for all message sizes and the host processes will be synchronized with an MPI barrier before every execution.</p>
@@ -272,7 +273,7 @@ They will be used to connect to the left-hand and right-hand neighbor in the rin
 From the BittWare OpenCL S10 BSP Reference Guide we get the following relevant metrics for
 external channels:</p>
 <table class="docutils align-center" id="id3">
-<caption><span class="caption-number">Table 11 </span><span class="caption-text">Relevant metrics for the external channels on the BittWare 520N board</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<caption><span class="caption-number">Table 12 </span><span class="caption-text">Relevant metrics for the external channels on the BittWare 520N board</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
 <colgroup>
 <col style="width: 50%" />
 <col style="width: 50%" />
@@ -314,10 +315,10 @@ inaccuracy. So the equation reduces to:</p>
 <div class="math notranslate nohighlight">
 \[b_{L} = \frac{L}{\frac{\lceil\frac{L}{64B}\rceil}{156.25MHz} + 520ns}\]</div>
 <p>where everything except <span class="math notranslate nohighlight">\(L\)</span> is constant.
-This means the bandwidth depends on the used message size which is shown for a kernel that uses two channels for transmission in <a class="reference internal" href="#network-bandwidth-model"><span class="std std-numref">Fig. 7</span></a>.</p>
+This means the bandwidth depends on the used message size which is shown for a kernel that uses two channels for transmission in <a class="reference internal" href="#network-bandwidth-model"><span class="std std-numref">Fig. 9</span></a>.</p>
 <div class="figure align-center" id="id4">
 <span id="network-bandwidth-model"></span><a class="reference internal image-reference" href="../_images/network_bandwidth_model.jpg"><img alt="Model bandwidth over used message sizes" src="../_images/network_bandwidth_model.jpg" style="width: 360px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 7 </span><span class="caption-text">Expected network bandwidth depending on the used message size based on the model.</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 9 </span><span class="caption-text">Expected network bandwidth depending on the used message size based on the model.</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
 </div>
 <p>The effective bandwidth for a single kernel pair is then calculated with:</p>
 <div class="math notranslate nohighlight">

@@ -107,6 +107,7 @@
 <p class="caption"><span class="caption-text">Technical Support:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/Host Input Parameters/index.html">Execution of a Benchmark</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Benchmark Results:</span></p>
@@ -209,6 +210,9 @@ All other parameters can also later be changed with the host code during runtime
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DEVICE_BUFFER_SIZE</span></code></p></td>
 <td><p>Size of the local memory buffer that stores intermediate values read from global memory. Used to reduce the impact of memory latency on the execution time.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">INTEL_USE_PRAGMA_IVDEP</span></code></p></td>
+<td><p>Use the pragma <code class="docutils literal notranslate"><span class="pre">ivdep</span></code> on the outer loop of the kernel implementation. This will tell the compiler to ignore the dependencies between read and write to the global memory and allows the implementation in a single pipeline (use together with <code class="docutils literal notranslate"><span class="pre">DEVICE_BUFFER_SIZE=1</span></code>. NOTE: This might lead to a increased error above the allowed threshold!)</p></td>
 </tr>
 </tbody>
 </table>
