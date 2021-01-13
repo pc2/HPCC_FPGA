@@ -63,7 +63,7 @@ void accessMemory_/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attribut
     DEVICE_DATA_TYPE_UNSIGNED const mupdate = 4 * m;
 
 #ifdef INTEL_FPGA
-#ifndef USE_SVM
+#ifdef INTEL_USE_PRAGMA_IVDEP
 #pragma ivdep
 #endif
 #endif

@@ -83,9 +83,7 @@ fft::FFTBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
             ("b", "Number of batched FFT calculations (iterations)",
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ITERATIONS)))
-            ("inverse", "If set, the inverse FFT is calculated instead")
-            ("r", "Number of kernel replications used for calculation",
-             cxxopts::value<uint>()->default_value(std::to_string(NUM_REPLICATIONS)));
+            ("inverse", "If set, the inverse FFT is calculated instead");
 }
 
 std::unique_ptr<fft::FFTExecutionTimings>

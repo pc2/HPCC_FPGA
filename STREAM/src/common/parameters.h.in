@@ -9,8 +9,16 @@
 #define DEFAULT_ARRAY_LENGTH @DEFAULT_ARRAY_LENGTH@
 #define DEFAULT_PLATFORM @DEFAULT_PLATFORM@
 #define DEFAULT_DEVICE @DEFAULT_DEVICE@
+#define NUM_REPLICATIONS @NUM_REPLICATIONS@
+#define DATA_TYPE_SIZE @DATA_TYPE_SIZE@
+
+#if DATA_TYPE_SIZE == 2
+// use a custom half precision data tpe that also allows basic arithmetic. The validation will still
+// be done in single precision using BLAS - if available
+#define HOST_DATA_TYPE half_float::half
+#else
 #define HOST_DATA_TYPE @HOST_DATA_TYPE@
-#define NUM_KERNEL_REPLICATIONS @NUM_REPLICATIONS@
+#endif
 
 /**
  * Device specific parameters
@@ -18,6 +26,7 @@
 #define DEVICE_ARRAY_DATA_TYPE @DEVICE_DATA_TYPE@
 #define DEVICE_SCALAR_DATA_TYPE @DATA_TYPE@
 #define VECTOR_COUNT @VECTOR_COUNT@
+#define DATA_TYPE_SIZE @DATA_TYPE_SIZE@
 #define UNROLL_COUNT @GLOBAL_MEM_UNROLL@
 #define BUFFER_SIZE @DEVICE_BUFFER_SIZE@
 #cmakedefine INNER_LOOP_BUFFERS

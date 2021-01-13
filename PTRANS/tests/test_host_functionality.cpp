@@ -73,8 +73,10 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
  * Checks if the error is printed to stdout and the error is aggregated over the whole matrix.
  */
 TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
+    bm->getExecutionSettings().programSettings->kernelReplications = 1;
     bm->getExecutionSettings().programSettings->matrixSize = 4;
-    bm->executeBenchmark();
+    bm->getExecutionSettings().programSettings->blockSize = 4;
+
     auto data = bm->generateInputData();
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
@@ -93,8 +95,16 @@ TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);
 
+    // Format the float representation of the machine epsilon
+    std::stringstream epsilon_times_100;
+    epsilon_times_100 << std::scientific << std::setprecision(5) << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    std::stringstream epsilon;
+    epsilon << std::scientific << std::setprecision(5) << std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+
     EXPECT_THAT(newStdOutBuffer.str(),
-                ::testing::MatchesRegex("Maximum error:\\s+3\\.00000e\\+01\n"));
+                ::testing::MatchesRegex("Maximum error:\\s+3\\.00000e\\+01\\s+<\\s+" 
+                                        + epsilon_times_100.str() + "\n"
+                                        + "Mach. Epsilon: " + epsilon.str() + "\n"));
     EXPECT_FALSE(success);
 }
 
@@ -103,7 +113,8 @@ TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
  */
 TEST_F(TransposeHostTest, ValidationIsSuccess) {
     bm->getExecutionSettings().programSettings->matrixSize = 4;
-    bm->executeBenchmark();
+    bm->getExecutionSettings().programSettings->blockSize = 4;
+
     auto data = bm->generateInputData();
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
@@ -122,9 +133,16 @@ TEST_F(TransposeHostTest, ValidationIsSuccess) {
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);
 
+    // Format the float representation of the machine epsilon
+    std::stringstream epsilon_times_100;
+    epsilon_times_100 << std::scientific << std::setprecision(5) << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    std::stringstream epsilon;
+    epsilon << std::scientific << std::setprecision(5) << std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+
+
     EXPECT_THAT(newStdOutBuffer.str(),
-                ::testing::MatchesRegex("Maximum error:\\s+0\\.00000e\\+00\n"));
+                ::testing::MatchesRegex("Maximum error:\\s+0\\.00000e\\+00\\s+<\\s+" 
+                                        + epsilon_times_100.str() + "\n"
+                                        + "Mach. Epsilon: " + epsilon.str() + "\n"));
     EXPECT_TRUE(success);
 }
-
-

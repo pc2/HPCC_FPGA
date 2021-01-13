@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(FFT VERSION 1.2)
+project(FFT VERSION 1.4)
 
 set(DEFAULT_ITERATIONS 100 CACHE STRING "Default number of iterations that is done with a single kernel execution")
 set(HOST_DATA_TYPE cl_float CACHE STRING "Data type used by the host code. Should match the data type of the used FFT")

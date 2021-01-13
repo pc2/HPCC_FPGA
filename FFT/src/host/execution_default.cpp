@@ -30,6 +30,12 @@ SOFTWARE.
 
 /* External library headers */
 #include "CL/cl.hpp"
+#ifdef INTEL_FPGA
+#ifdef USE_HBM
+// CL_HETEROGENEOUS_INTELFPGA is defined here 
+#include "CL/cl_ext_intelfpga.h"
+#endif
+#endif
 
 /* Project's headers */
 
@@ -60,9 +66,31 @@ namespace bm_execution {
         unsigned iterations_per_kernel = iterations / config.programSettings->kernelReplications;
 
         for (int r=0; r < config.programSettings->kernelReplications; r++) {
-                inBuffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 : (((2 * r) + 1) << 16)), (1 << LOG_FFT_SIZE) * iterations_per_kernel * 2 * sizeof(HOST_DATA_TYPE), NULL, &err));
+                // Array of flags for each buffer that is allocated in this benchmark
+                // The content of the flags will be changed according to the used compiler flags
+                // to support different kinds of devices
+                int memory_bank_info[2] = {0};
+#ifdef INTEL_FPGA
+#ifdef USE_HBM
+                // For Intel HBM the buffers have to be created with a special flag
+                for (int& v : memory_bank_info) {
+                         v = CL_MEM_HETEROGENEOUS_INTELFPGA;
+                }
+#else
+                // Set the memory bank bits if memory interleaving is not used
+                // Three bits are used to represent the target memory bank for the buffer on the FPGA by using the values 1-7.
+                // This does also mean, that only up to 7 memory banks can be accessed with this functionality.
+                // For boards with HBM, the selection of memory banks is done in the kernel code.
+                if (!config.programSettings->useMemoryInterleaving) {
+                        for (int k = 0; k < 2; k++) {
+                                memory_bank_info[k] = (((2 * r) + 1 + k) << 16);
+                        }
+                }
+#endif
+#endif
+                inBuffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | memory_bank_info[0], (1 << LOG_FFT_SIZE) * iterations_per_kernel * 2 * sizeof(HOST_DATA_TYPE), NULL, &err));
                 ASSERT_CL(err)
-                outBuffers.push_back(cl::Buffer(*config.context, CL_MEM_WRITE_ONLY | (config.programSettings->useMemoryInterleaving ? 0 : (((2 * r) + 2) << 16)), (1 << LOG_FFT_SIZE) * iterations_per_kernel * 2 * sizeof(HOST_DATA_TYPE), NULL, &err));
+                outBuffers.push_back(cl::Buffer(*config.context, CL_MEM_WRITE_ONLY | memory_bank_info[1], (1 << LOG_FFT_SIZE) * iterations_per_kernel * 2 * sizeof(HOST_DATA_TYPE), NULL, &err));
                 ASSERT_CL(err)
 
         #ifdef INTEL_FPGA

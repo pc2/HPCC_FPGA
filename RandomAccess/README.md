@@ -54,9 +54,9 @@ Next to the common configuration options given in the [README](../README.md) of 
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
 `DEFAULT_ARRAY_LENGTH`| 536870912 | Length of each input array (4GB) |
-`GLOBAL_MEM_UNROLL`| 1        | Loop unrolling factor for all loops in the device code |
 `NUM_REPLICATIONS`| 4        | Replicates the kernels the given number of times |
 `DEVICE_BUFFER_SIZE`| 1       | Number of values that are stored in the local memory in the single kernel approach |
+`INTEL_USE_PRAGMA_IVDEP`| No       | Use the ivdep pragma in the main loop to remove the data dependency between reads and writes. This might lead to an error larger than 1%, but might also increase performance! |
 
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.

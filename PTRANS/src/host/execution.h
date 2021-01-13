@@ -39,14 +39,11 @@ namespace bm_execution {
  * @brief Transpose and add the matrices using the OpenCL kernel
  * 
  * @param config The progrma configuration
- * @param A The input matrix A
- * @param B The input matrix B
- * @param A_out The matrix storing the result of the calculation
- * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured executuon times 
+ * @param data data object that contains all required data for the execution on the FPGA
+ * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
     std::unique_ptr<transpose::TransposeExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, HOST_DATA_TYPE *const A,
-              HOST_DATA_TYPE *const B, HOST_DATA_TYPE *A_out);
+    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data);
 
 }  // namespace bm_execution
 

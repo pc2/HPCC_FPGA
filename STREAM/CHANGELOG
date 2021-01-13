@@ -2,6 +2,22 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.6
+
+#### Changed:
+- Fix a bug that leads to wrong performance numbers when using MPI
+
+#### Added:
+- Support for half and double precision floating point numbers
+
+## 2.5
+
+#### Added:
+- Configuration files for 520N, U280 and PAC D5005
+
+#### Changed:
+- Use registers between load and store operations from global memory to local memory to overcome destroyed memory bursts on Xilinx FPGAs when unrolling the inner loops.
+
 ## 2.4
 
 #### Added:

@@ -31,6 +31,8 @@ All other parameters can also later be changed with the host code during runtime
      - Replicates all kernels the given number of times. This allows to simultaneously schedule multiple kernels with different input data. The data set might be split between the available kernels to speed up execution.
    * - ``DEVICE_BUFFER_SIZE``
      - Size of the local memory buffer that stores intermediate values read from global memory. Used to reduce the impact of memory latency on the execution time.
+   * - ``INTEL_USE_PRAGMA_IVDEP``
+     - Use the pragma ``ivdep`` on the outer loop of the kernel implementation. This will tell the compiler to ignore the dependencies between read and write to the global memory and allows the implementation in a single pipeline (use together with ``DEVICE_BUFFER_SIZE=1``. NOTE: This might lead to a increased error above the allowed threshold!)
 
 
 

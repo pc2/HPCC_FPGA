@@ -4,7 +4,7 @@
 [![arXiv](http://img.shields.io/badge/cs.DC-arXiv%3A2004.11059-4FC1F2.svg)](https://arxiv.org/abs/2004.11059)
 [![GitHub release](https://img.shields.io/github/release/pc2/HPCC_FPGA.svg)](https://GitHub.com/pc2/HPCC_FPGA/releases/)
 
-HPCC FPGA is an OpenCL-based FPGA benchmark suite with focus on high performance computing.
+HPCC FPGA is an OpenCL-based FPGA benchmark suite with a focus on high-performance computing.
 It is based on the benchmarks of the well-established CPU benchmark suite [HPCC](https://icl.utk.edu/hpcc/).
 This repository contains the OpenCL kernels and host code for all benchmarks together with the build scripts and instructions.
 Visit the [Online Documentation](https://pc2.github.io/HPCC_FPGA) to find additional help, descriptions, and measurement results.
@@ -19,11 +19,11 @@ The included benchmarks are listed below.
 You can find more information on how to build the benchmarks in the appropriate subfolder.
 
 - [b_eff](b_eff): Ths application sends messages of varying sizes of the inter-FPGA network and measures the achieved bandwidth.
-- [FFT](FFT): Executes multiple 1d-FFT of size 2^12.
+- [FFT](FFT): Executes multiple 1d-FFT of configurable size.
 - [GEMM](GEMM): Multiplies two quadratic matrices similar to the GEMM routine implemented in BLAS.
 - [LINPACK](LINPACK): Implementation of the [LINPACK benchmark](https://www.netlib.org/benchmark/hpl/) for FPGA. (WIP and currently only does a LU factorization with block-wise pivoting)
 - [PTRANS](PTRANS): Transposes a quadratic matrix.
-- [RandomAccess](RandomAccess): Executes updates on a data array following a pseudo random number scheme.
+- [RandomAccess](RandomAccess): Executes updates on a data array following a pseudo-random number scheme.
 - [STREAM](STREAM): Implementation of the [STREAM benchmark](https://www.cs.virginia.edu/stream/) for FPGA.
 
 The repository contains multiple submodules located in the `extern` folder.
@@ -57,13 +57,13 @@ They can be used to adjust the OpenCL base implementations of a benchmark for a 
 #### Configuration of a Benchmark
 
 The **configuration options** are implemented as CMake build parameters and can be set when creating a new CMake build directory.
-We recommend to create a new build directory for a benchmark in a folder `build` in the root direcotry of the project.
+We recommend to create a new build directory for a benchmark in a folder `build` in the root directory of the project.
 You may want to create a folder hierarchy in there e.g. to build the STREAM benchmark create a folder `build/STREAM` and change into that new folder.
-Initialize a new CMake build direcotry by calling
+Initialize a new CMake build directory by calling
 
     cmake PATH_TO_SOURCE_DIR
 
-where `PATH_TO_SOURCE_DIR` would be `../../STREAM` in case of stream (the relative path to the source direcotry of the target benchmark).
+where `PATH_TO_SOURCE_DIR` would be `../../STREAM` in the case of STREAM (the relative path to the source directory of the target benchmark).
 Some of the configuration options are the same for each benchmark and are given in the Table below. 
 Especially the `FPGA_BOARD_NAME` is important to set, since it will specify the target board.
 The `DEFAULT_*` options are used by the host code and can also be changed later at runtime.
@@ -91,11 +91,11 @@ The available options are given in the following table:
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
 `XILINX_COMPILE_FLAGS` | `-j 40` | Set special compiler flags like the number of used threads for compilation. |
-`XILINX_COMPILE_SETTINGS_FILE` | First `settings.compile.xilinx.*.ini` file found in the `settings` folder of the benchmark | Path to the file containing compile time settings like the target clock frequuency |
+`XILINX_COMPILE_SETTINGS_FILE` | First `settings.compile.xilinx.*.ini` file found in the `settings` folder of the benchmark | Path to the file containing compile time settings like the target clock frequency |
 `XILINX_LINK_SETTINGS_FILE` | First `settings.link.xilinx.*.ini` file found in the `settings` folder of the benchmark | Path to the file containing link settings like the mapping of the memory banks to the kernel parameters |
 `XILINX_GENERATE_LINK_SETTINGS` | `Yes` if the link settings file ends on `.generator.ini`, `No` otherwise | Boolean flag indicating if the link settings file will be used as a source to generate a link settings file e.g. for a given number of kernel replications |
 
-When building a benchmark for Xilinx FPGAs double check the path to the settings files and if they match to the target board.
+When building a benchmark for Xilinx FPGAs double-check the path to the settings files and if they match to the target board.
 The settings files follow the name convention:
 
     settings.[compile|link].xilinx.KERNEL_NAME.[hbm|ddr](?.generator).ini
@@ -111,6 +111,15 @@ or after configuration using the UI with
 
     ccmake ../../RandomAccess
 
+Some benchmarks also provide prepared configurations for individual devices in the `configs` folder located in the source directory of each benchmark.
+These configurations can be used instead of manually setting every configuration option.
+to do this, call cmake as follows:
+
+```bash
+cmake -DHPCC_FPGA_CONFIG=path-to-config-file.cmake
+```
+
+This is also a way to contribute configuration best practices for specific devices.
 
 For an overview of the current limitations of the benchmarks refer to the subsection [Notes on Vendor Compatibility](#notes-on-vendor-compatibility).
 In the following the configuration and build steps are shown with a more specific example.
@@ -148,7 +157,7 @@ make stream_kernels_single_report_intel
 ```
 The report can be found within the build directory of the project e.g. under `bin/stream_kernels_single/reports`.
 
-If the tests with the selected configuration succeed and the report shows no anormalies, the kernel can be synthesized with:
+If the tests with the selected configuration succeed and the report shows a high resource utilization and no problems with the design, the kernel can be synthesized with:
 ```bash
 # Synthesize the kernel
 make stream_kernels_single
@@ -168,16 +177,16 @@ and run all tests.
 
 ## Code Documentation
 
-The benchmark suite supports the generation of code documentation using doxygen in HTML and Latex format.
+The benchmark suite supports the generation of code documentation using Doxygen in HTML and Latex format.
 To generate the documentation, execute the following commands:
 
     cd docs
     doxygen doxy.config
 
 The generated documentation will be placed in `docs/html` and `docs/latex`.
-To view the HTML documentation, open `docs/html/index.html` with a internet browser.
+To view the HTML documentation, open `docs/html/index.html` with an internet browser.
 
-A more general documentation is maintained using Sphinx. It can be generated using the makefile provided in the `docs/` folder.
+More general documentation is maintained using Sphinx. It can be generated using the makefile provided in the `docs/` folder.
 In this documentation a more general description of the benchmarks and how to use them is given.
 To generate the HTML documentation, execute the commands below:
 
@@ -188,7 +197,7 @@ To generate the HTML documentation, execute the commands below:
 
 The benchmark suite also allows to use custom kernels for measurements.
 Some basic setup is already done for all benchmarks to ensure an easier integration of custom kernels into the build system.
-Every benchmark comes with an folder `src/device/custom` that is meant to be used for customized or own kernel designs.
+Every benchmark comes with a folder `src/device/custom` that is meant to be used for customized or own kernel designs.
 The folder already contains a `CMakeLists.txt` file that creates build targets for all OpenCL files (*.cl) in this folder and also creates tests for each custom kernel using CTest.
 Place the custom kernel design in this folder to use it within the build system of the benchmark suite.
 To enable custom kernel builds the build environment has to be configured using the `USE_CUSTOM_KERNEL_TARGETS` flag.
@@ -198,7 +207,7 @@ As an example, the following call will create a build environment that supports 
     cmake ../STREAM -DUSE_CUSTOM_KERNEL_TARGETS=Yes
 
 After adding a new custom kernel to the folder, rerun CMake to generate build targets and tests for this kernel.
-Now the same build commands that are used for the base impementations can be used for the custom implementations.
+Now the same build commands that are used for the base implementations can be used for the custom implementations.
 This also means that the kernels will also be tested within the `make test` command.
 
 
@@ -231,7 +240,7 @@ For Xilinx, all benchmarks need a compatible compile- and link-settings-file to 
 
 #### HBM
 
-*(Yes)* indicates, that the benchmarks can be excuted with HBM, but not all available memory banks can be used. For Intel, the device code has to be modified to make it compatible with HBM.
+*(Yes)* indicates, that the benchmarks can be executed with HBM, but not all available memory banks can be used. For Intel, the device code has to be modified to make it compatible with HBM.
 
 | Benchmark    | Intel      | Xilinx       |
 |--------------|------------|--------------|
@@ -239,8 +248,8 @@ For Xilinx, all benchmarks need a compatible compile- and link-settings-file to 
 | RandomAccess | Yes        |  Yes         |      
 | PTRANS       | No         |  (Yes)       |      
 | LINPACK      | No         |  (Yes)       |           
-| GEMM         | No         |  Yes         |      
-| FFT          | No         |  Yes         | 
+| GEMM         | Yes         |  Yes         |      
+| FFT          | Yes         |  Yes         | 
 
 #### SVM
 
@@ -250,8 +259,8 @@ SVM could not be tested with Xilinx-based boards, yet. Thus, they are considered
 |--------------|------------|--------------|
 | STREAM       | Yes        |  No          |            
 | RandomAccess | Yes        |  No          |      
-| PTRANS       | Yes        |  No          |      
-| LINPACK      | Yes        |  No          |           
+| PTRANS       | No         |  No          |      
+| LINPACK      | No         |  No          |           
 | GEMM         | Yes        |  No          |      
 | FFT          | Yes        |  No          | 
 

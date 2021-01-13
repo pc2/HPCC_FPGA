@@ -66,45 +66,46 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
     std::vector<cl::Buffer> c_buffers;
     std::vector<cl::Buffer> out_buffers;
 
+    // Create an output buffer for every kernel to still allow restrict optimizations
+    // For the other buffers this is not necessary, since they are read only
+    for (int i=0; i < config.programSettings->kernelReplications; i++) {
+        // Array of flags for each buffer that is allocated in this benchmark
+        // The content of the flags will be changed according to the used compiler flags
+        // to support different kinds of devices
+        int memory_bank_info[4] = {0};
 #ifdef INTEL_FPGA
-    // Create an output buffer for every kernel to still allow restrict optimizations
-    // For the other buffers this is not necessary, since they are read only
-    for (int i=0; i < config.programSettings->kernelReplications; i++) {
-        if (i == 0 || config.programSettings->replicateInputBuffers) {
-            a_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_1_INTELFPGA),
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
-            ASSERT_CL(err)
-            b_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_2_INTELFPGA),
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
-            ASSERT_CL(err)
-            c_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_3_INTELFPGA),
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
-            ASSERT_CL(err)
+#ifdef USE_HBM
+        // For Intel HBM the buffers have to be created with a special flag
+        for (int& v : memory_bank_info) {
+                    v = CL_MEM_HETEROGENEOUS_INTELFPGA;
         }
-        out_buffers.push_back(cl::Buffer(*config.context, CL_MEM_WRITE_ONLY | (config.programSettings->useMemoryInterleaving ? 0 :CL_CHANNEL_4_INTELFPGA),
-                                    sizeof(HOST_DATA_TYPE)*out_buffer_size, NULL, &err));
-        ASSERT_CL(err)
-    }
 #else
-    // Create an output buffer for every kernel to still allow restrict optimizations
-    // For the other buffers this is not necessary, since they are read only
-    for (int i=0; i < config.programSettings->kernelReplications; i++) {
+        // Set the memory bank bits if memory interleaving is not used
+        // Three bits are used to represent the target memory bank for the buffer on the FPGA by using the values 1-7.
+        // This does also mean, that only up to 7 memory banks can be accessed with this functionality.
+        // For boards with HBM, the selection of memory banks is done in the kernel code.
+        if (!config.programSettings->useMemoryInterleaving) {
+                for (int k = 0; k < 4; k++) {
+                    memory_bank_info[k] = ((1 + k) << 16);
+                }
+        }
+#endif
+#endif
         if (i == 0 || config.programSettings->replicateInputBuffers) {
-            a_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY,
+            a_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | memory_bank_info[0],
                                 sizeof(HOST_DATA_TYPE) *config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
             ASSERT_CL(err)
-            b_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY,
+            b_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | memory_bank_info[1],
                                 sizeof(HOST_DATA_TYPE) *config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
             ASSERT_CL(err)
-            c_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY,
+            c_buffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_ONLY | memory_bank_info[2],
                                 sizeof(HOST_DATA_TYPE) *config.programSettings->matrixSize*config.programSettings->matrixSize, NULL, &err));
             ASSERT_CL(err)
         }
-        out_buffers.push_back(cl::Buffer(*config.context, CL_MEM_WRITE_ONLY,
+        out_buffers.push_back(cl::Buffer(*config.context, CL_MEM_WRITE_ONLY | memory_bank_info[3],
                                     sizeof(HOST_DATA_TYPE) * out_buffer_size, NULL, &err));
         ASSERT_CL(err)
     }
-#endif
 
     std::vector<cl::Kernel> gemmkernels;
 

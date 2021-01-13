@@ -96,8 +96,6 @@ gemm::GEMMBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
              cxxopts::value<cl_uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
             ("b", "Block size in number of values in one dimension",
              cxxopts::value<cl_uint>()->default_value(std::to_string(BLOCK_SIZE)))
-            ("r", "Number of used kernel replications",
-             cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)))
             ("replicate-inputs", "Also replicates the input buffer for each kernel");
 }
 
@@ -112,8 +110,10 @@ gemm::GEMMBenchmark::collectAndPrintResults(const gemm::GEMMExecutionTimings &ou
     uint number_measurements = output.timings.size();
     std::vector<double> avg_measures(number_measurements);
 #ifdef _USE_MPI_
+    // Copy the object variable to a local variable to make it accessible to the lambda function
+    int mpi_size = mpi_comm_size;
     MPI_Reduce(output.timings.data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    std::for_each(avg_measures.begin(),avg_measures.end(), [number_measurements](double& x) {x /= number_measurements;});
+    std::for_each(avg_measures.begin(),avg_measures.end(), [mpi_size](double& x) {x /= mpi_size;});
 #else
     std::copy(output.timings.begin(), output.timings.end(), avg_measures.begin());
 #endif

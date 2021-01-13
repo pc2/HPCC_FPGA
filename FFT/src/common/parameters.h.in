@@ -22,6 +22,7 @@
 #define FFT_UNROLL @FFT_UNROLL@
 
 #cmakedefine USE_SVM
+#cmakedefine USE_HBM
 /*
 Short description of the program.
 Moreover the version and build time is also compiled into the description.
