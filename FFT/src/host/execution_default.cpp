@@ -30,6 +30,12 @@ SOFTWARE.
 
 /* External library headers */
 #include "CL/cl.hpp"
+#ifdef INTEL_FPGA
+#ifdef USE_HBM
+// CL_HETEROGENEOUS_INTELFPGA is defined here 
+#include "CL/cl_ext_intelfpga.h"
+#endif
+#endif
 
 /* Project's headers */
 
