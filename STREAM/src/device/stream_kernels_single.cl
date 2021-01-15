@@ -48,6 +48,10 @@ void calc_/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]*/ 
 #ifdef INNER_LOOP_BUFFERS
         DEVICE_ARRAY_DATA_TYPE buffer1[BUFFER_SIZE];
 #endif
+#ifdef INTEL_FPGA
+// Disable fusion of loops, since they are meant to be executed sequentially
+#pragma nofusion
+#endif
         // Load chunk of first array into buffer and scale the values
         for (uint k = 0;k<BUFFER_SIZE; k += UNROLL_COUNT) {
             // Registers used to store the values for all unrolled
@@ -70,6 +74,10 @@ void calc_/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]*/ 
         }
         // optionally load chunk of second array into buffer for add and triad
         if (operation_type == ADD_KERNEL_TYPE || operation_type == TRIAD_KERNEL_TYPE) {
+#ifdef INTEL_FPGA
+// Disable fusion of loops, since they are meant to be executed sequentially
+#pragma nofusion
+#endif
             for (uint k = 0;k<BUFFER_SIZE; k += UNROLL_COUNT) {
                 // Registers used to store the values for all unrolled
                 // load operations from global memory
@@ -90,8 +98,13 @@ void calc_/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]*/ 
                 }
             }
         }
+        
         // Read the cumputed chunk of the output array from local memory
         // and store it in global memory
+#ifdef INTEL_FPGA
+// Disable fusion of loops, since they are meant to be executed sequentially
+#pragma nofusion
+#endif
         for (uint k = 0;k<BUFFER_SIZE; k += UNROLL_COUNT) {
             // Registers used to store the values for all unrolled
             // load operations from local memory
