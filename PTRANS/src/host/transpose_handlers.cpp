@@ -63,11 +63,11 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedDiagonalTranspos
     if ((mpi_comm_size - num_diagonal_ranks) % 2 != 0 || (mpi_comm_size - num_diagonal_ranks) == 0 && width_in_blocks > 1) {
         throw std::runtime_error("Not possible to create pairs of MPI ranks for lower and upper half of matrix. Increase number of MPI ranks!.");
     }
-    bool this_rank_is_diagonal = mpi_comm_rank < num_diagonal_ranks;
-    int blocks_if_diagonal = width_in_blocks / num_diagonal_ranks + ( mpi_comm_rank < (width_in_blocks % num_diagonal_ranks) ? 1 : 0);
+    bool this_rank_is_diagonal = mpi_comm_rank >= (mpi_comm_size - num_diagonal_ranks);
+    int blocks_if_diagonal = width_in_blocks / num_diagonal_ranks + ( (mpi_comm_rank - (mpi_comm_size - num_diagonal_ranks)) < (width_in_blocks % num_diagonal_ranks) ? 1 : 0);
     int blocks_if_not_diagonal = 0;
     if ((mpi_comm_size - num_diagonal_ranks) > 0 ) {
-        blocks_if_not_diagonal = (width_in_blocks * (width_in_blocks - 1)) / (mpi_comm_size - num_diagonal_ranks) + ((mpi_comm_rank - num_diagonal_ranks) < ((width_in_blocks * (width_in_blocks - 1)) % (mpi_comm_size - num_diagonal_ranks)) ? 1 : 0);
+        blocks_if_not_diagonal = (width_in_blocks * (width_in_blocks - 1)) / (mpi_comm_size - num_diagonal_ranks) + (mpi_comm_rank  < ((width_in_blocks * (width_in_blocks - 1)) % (mpi_comm_size - num_diagonal_ranks)) ? 1 : 0);
     }
 
 
@@ -99,11 +99,9 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedDiagonalTranspos
 }
 
 void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose::TransposeData& data) {
-    // The rank cleaned by the diagonal ranks, that send to themselves
-    int cleaned_rank = mpi_comm_rank - num_diagonal_ranks;
     // Only need to exchange data, if rank has a partner
-    if (cleaned_rank >= 0) {
-        int pair_rank = (cleaned_rank % 2) ? cleaned_rank - 1 : cleaned_rank + 1;
+    if (mpi_comm_rank < mpi_comm_size - num_diagonal_ranks) {
+        int pair_rank = (mpi_comm_rank % 2) ? mpi_comm_rank - 1 : mpi_comm_rank + 1;
 
         // To re-calculate the matrix transposition locally on this host, we need to 
         // exchange matrix A for every kernel replication

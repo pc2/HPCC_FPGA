@@ -31,13 +31,15 @@ struct TransposeKernelTest : testing::Test {
 
     void createChannelFilesAndSymbolicLinks() {
         for (int i=0; i < numberOfChannels; i++) {
+            // Combine 0+1,2+3,...
+            int partnerChannelId = 2 * (i / 2) + ((i + 1) % 2); 
             std::string fname = channelOutName + std::to_string(i);
             std::remove(fname.c_str());
             std::ofstream fs;
             fs.open(fname, std::ofstream::out | std::ofstream::trunc);
             fs.close();
-            std::remove((channelInName + std::to_string(i)).c_str());
-            symlink(fname.c_str(), (channelInName + std::to_string(i)).c_str());
+            std::remove((channelInName + std::to_string(partnerChannelId)).c_str());
+            symlink(fname.c_str(), (channelInName + std::to_string(partnerChannelId)).c_str());
         }
     }
 };

@@ -115,3 +115,7 @@ In short, the required global memory bandwidth is three times higher than the ne
 
 For an arbitrary large matrix, the expected maximum performance will be :math:`flops = n \cdot r \cdot f_{channel} * c_w` where :math:`n` is the number of FPGAs,
 :math:`r` the number of external channels per FPGA (or number of kernel pair replications), :math:`f_{channel}` the frequency of the external channel and :math:`c_w` the width of an external channel in number of data items.
+
+A second version of the implementation uses two external channels per kernel pair. This allows to increase the width of the LSUs to global memory and at the same time half the required number of kernel replications.
+Note, that this implementation will in some cases lead to a more severe imbalance in read and write accesses per memory bank. Using the memory interleaving mainly resolves this issue.
+The model for the expected maximum performance stays the same.

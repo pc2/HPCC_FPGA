@@ -61,6 +61,12 @@ public:
     std::string dataHandlerIdentifier;
 
     /**
+     * @brief If true, the three buffers for A,B and A_out will be placed on three different memory banks, if possible
+     *          instead of a single one
+     */
+    bool distributeBuffers;
+
+    /**
      * @brief Construct a new Transpose Program Settings object
      * 
      * @param results the result map from parsing the program input parameters
