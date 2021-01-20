@@ -206,6 +206,177 @@ class LinpackKernelCommunicationTestLeft : public LinpackKernelCommunicationTest
     }
 };
 
+class LinpackKernelCommunicationTestInner : public LinpackKernelCommunicationTest {
+
+    void SetUp() override {
+        LinpackKernelCommunicationTest::SetUp();
+        // Generate uniformy distributed data
+        bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
+        data = bm->generateInputData();
+        bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
+        setupInputChannels();
+        executeKernel();
+    }
+
+    void setupInputChannels() {
+        bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
+        auto left_data = bm->generateInputData();
+        auto top_data = bm->generateInputData();
+        bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
+        // Fill top channel with top result
+        std::string fname = channelInName + std::to_string(0);
+        std::remove(fname.c_str());
+        std::ofstream fs;
+        fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+        for (int ii = 0; ii < BLOCK_SIZE; ii++ ) {
+            for (int jj = 0; jj < BLOCK_SIZE; jj++ ) {
+                fs.write(reinterpret_cast<const char*>(&top_data->A[ii * bm->getExecutionSettings().programSettings->matrixSize + jj]), sizeof(HOST_DATA_TYPE));
+            }
+        }
+        fs.close();
+        // Fill left channel with left result
+        fname = channelInName + std::to_string(3);
+        std::remove(fname.c_str());
+        fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+        for (int ii = 0; ii < BLOCK_SIZE; ii++ ) {
+            for (int jj = 0; jj < BLOCK_SIZE; jj++ ) {
+                fs.write(reinterpret_cast<const char*>(&left_data->A[jj * bm->getExecutionSettings().programSettings->matrixSize + ii]), sizeof(HOST_DATA_TYPE));
+            }
+        }
+        fs.close();
+    }
+
+    void executeKernel() {
+        int err;
+        cl::CommandQueue compute_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device, 0, &err);
+        cl::CommandQueue network_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device, 0, &err);
+        cl::Buffer buffer(*(bm->getExecutionSettings().context), CL_MEM_READ_WRITE,
+                                            sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize);
+        cl::Kernel kernel(*bm->getExecutionSettings().program, "inner_update", &err);
+
+        err = kernel.setArg(0, buffer);
+
+        // Start network layer kernel
+        cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
+        err = network.setArg(0, static_cast<cl_uint>(0));
+        err = network.setArg(1, CL_TRUE);
+        network_queue.enqueueTask(network);
+
+        compute_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
+        compute_queue.enqueueTask(kernel);
+        compute_queue.finish();
+        compute_queue.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
+
+        network_queue.finish();
+    }
+};
+
+TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalResultisCorrect) {
+    uint matrix_size = bm->getExecutionSettings().programSettings->matrixSize;
+
+    // generate uniformly distributed block as top block
+    bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
+    auto ref_data = bm->generateInputData();
+    auto left_data = bm->generateInputData();
+    auto top_data = bm->generateInputData();
+    bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
+
+    // do MM with left and top and add result to inner block
+    for (int k = 0; k < matrix_size; k++) {
+        for (int j = 0; j < matrix_size; j++) {
+            for (int i = 0; i < matrix_size; i++) {
+                ref_data->A[j * matrix_size + i] += top_data->A[k * matrix_size + i] * left_data->A[j * matrix_size + k];
+            }
+        }
+    }
+    double total_error = 0.0;
+    for (int i = 0; i < bm->getExecutionSettings().programSettings->matrixSize; i++) {
+        for (int j = 0; j < bm->getExecutionSettings().programSettings->matrixSize; j++) {
+            total_error += std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j]);
+        }
+    }
+    EXPECT_FLOAT_EQ(total_error, 0.0);
+}
+
+TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToRightCorrectAmountOfData) {
+    // data that was sent to left kernels
+    auto data_left = getDataFromExternalChannel(1, true);
+
+    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
+    EXPECT_EQ(data_left.size(), number_values);
+}
+
+TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToLeftCorrectAmountOfData) {
+    // data that was sent to left kernels
+    auto data_left = getDataFromExternalChannel(3, true);
+
+    EXPECT_EQ(data_left.size(), 0);
+}
+
+TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToTopCorrectAmountOfData) {
+    // data that was sent to left kernels
+    auto data_left = getDataFromExternalChannel(0, true);
+
+    EXPECT_EQ(data_left.size(), 0);
+}
+
+TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToBottomCorrectAmountOfData) {
+    // data that was sent to top kernels
+    auto data_top = getDataFromExternalChannel(2, true);
+
+    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
+    EXPECT_EQ(data_top.size(), number_values);
+}
+
+TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToBottomCorrect) {
+    // data that was sent to next top kernels
+    auto data_bottom = getDataFromExternalChannel(2, true);
+    // data that was sent from top kernel
+    auto data_top = getDataFromExternalChannel(0, false);
+
+    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
+    EXPECT_EQ(data_bottom.size(), number_values);
+    if (data_bottom.size() == number_values) {
+
+        HOST_DATA_TYPE total_error = 0.0;
+
+        // for every column of a block
+        for (int i = 0; i < BLOCK_SIZE; i++ ) {
+            // for every row of a block
+            for (int j = 0; j < BLOCK_SIZE; j++) {
+                total_error += std::abs(data_bottom[i + j * BLOCK_SIZE] - data_top[j*BLOCK_SIZE + i]);
+            }
+        }
+        EXPECT_FLOAT_EQ(total_error, 0.0);
+    }
+}
+
+TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToRightCorrect) {
+    // data that was sent to next top kernels
+    auto data_right = getDataFromExternalChannel(1, true);
+    // data that was sent from top kernel
+    auto data_left = getDataFromExternalChannel(3, false);
+
+    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
+    EXPECT_EQ(data_right.size(), number_values);
+    if (data_right.size() == number_values) {
+
+        HOST_DATA_TYPE total_error = 0.0;
+
+        // for every column of a block
+        for (int i = 0; i < BLOCK_SIZE; i++ ) {
+            // for every row of a block
+            for (int j = 0; j < BLOCK_SIZE; j++) {
+                total_error += std::abs(data_right[i + j * BLOCK_SIZE] - data_left[j*BLOCK_SIZE + i]);
+            }
+        }
+        EXPECT_FLOAT_EQ(total_error, 0.0);
+    }
+}
+
+
+// START Unit tests for Left
+
 TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalResultisCorrect) {
     uint matrix_size = bm->getExecutionSettings().programSettings->matrixSize;
     auto gefa_data = bm->generateInputData();
@@ -559,4 +730,4 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToBottomCor
     }
 }
 
-// TODO implement tests for other kernels
+// TODO implement tests for inner kernel

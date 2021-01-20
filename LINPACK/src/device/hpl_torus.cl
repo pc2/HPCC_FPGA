@@ -39,6 +39,8 @@ channel ch_chunk_t ch_top_col_in;
 channel ch_chunk_t ch_top_row_out;
 channel ch_chunk_t ch_left_row_in;
 channel ch_chunk_t ch_left_col_out;
+channel ch_chunk_t ch_inner_row_in;
+channel ch_chunk_t ch_inner_col_in;
 
 /**
 Takes care of the external channels.
@@ -48,6 +50,7 @@ operation_type: 0:inner, 1: left, 2:top,3:lu
 forward: if true (forward > 0), forward data to external channel, discard data otherwise. This is used to stop 
 		forwarding when reaching the end of the grid
  */
+ __attribute__((uses_global_work_offset(0)))
 __kernel
 void network_layer(const uint operation_type,
 				   const uint forward) {
@@ -61,26 +64,21 @@ void network_layer(const uint operation_type,
 			ch_chunk_t from_top;
 			ch_chunk_t from_left;
 			// receive extern operation
-			switch (operation_type) {
-				case 0: break;
-				case 1: if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-							from_top = read_channel_intel(ch_top_in);
-							// Forward chunk to the next top block
-							to_bottom = from_top;
-						}
-						break;
-				case 2:
-				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-					from_left = read_channel_intel(ch_left_in);
-					// Forward chunk to the next top block
-					to_right = from_left;
-				}
-					break;
-				case 3: break;
+			if (operation_type == 0 || (operation_type == 1 && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
+				from_top = read_channel_intel(ch_top_in);
+				// Forward chunk to the next top block
+				to_bottom = from_top;
+			}
+			if (operation_type == 0 || (operation_type == 2 && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
+				from_left = read_channel_intel(ch_left_in);
+				// Forward chunk to the next top block
+				to_right = from_left;
 			}
 			// exchange intern operation
 			switch (operation_type) {
-				case 0: break;
+				case 0: write_channel_intel(ch_inner_row_in, from_top);
+						write_channel_intel(ch_inner_col_in, from_left);
+						break;
 				case 1: if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 							write_channel_intel(ch_left_row_in, from_top);
 						}
@@ -654,14 +652,94 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a) {
 
 		// Update all rows
 		#pragma loop_coalesce
+		#pragma ivdep
 		for (int row = 0; row < BLOCK_SIZE/GEMM_BLOCK; row++) {
 			// Update only remaining row chunks
+			#pragma ivdep
 			for (int curr_col = 0; curr_col < BLOCK_SIZE/GEMM_BLOCK - k; curr_col++) {
 				#pragma unroll
 				for (int i = 0; i < GEMM_BLOCK; i++) {
 					#pragma unroll
 					for (int j=0; j < GEMM_BLOCK; j++) {
 						a_buffer[row][curr_col + k][i][j] += current_lu_row[curr_col][j] * current_col[row][i];
+					}
+				}
+			}
+		}
+ 	}
+
+	// Store block to global memory
+	#pragma loop_coalesce
+	for (int i =0; i < BLOCK_SIZE/GEMM_BLOCK; i++) {
+		for (int ii =0; ii < GEMM_BLOCK; ii++) {
+			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int jj =0; jj < GEMM_BLOCK; jj++) {
+					a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
+				}
+			}
+		}
+	}
+}
+
+
+/**
+Update the inner blocks using the left and right column and rows
+
+ */
+ __attribute__((uses_global_work_offset(0)))
+__kernel
+void inner_update(__global DEVICE_DATA_TYPE* restrict a) {
+
+	// Store current block in local memory
+	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
+
+	// Load block to local memory
+	#pragma loop_coalesce
+	for (int i =0; i < BLOCK_SIZE/GEMM_BLOCK; i++) {
+		for (int ii =0; ii < GEMM_BLOCK; ii++) {
+			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
+				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				for (int jj =0; jj < GEMM_BLOCK; jj++) {
+					a_buffer[i][j][ii][jj] = a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj];
+				}
+			}
+		}
+	}
+	
+	// For each row in the matrix update whole matrix.
+	// The iterations depend on each other, so loop pipelining is disabled here
+	#pragma disable_loop_pipelining
+	for (int gk = 0; gk < BLOCK_SIZE; gk++) {
+
+		int k = gk / GEMM_BLOCK;
+		int kk = gk & (GEMM_BLOCK - 1);
+
+		DEVICE_DATA_TYPE current_left_col[BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK];
+		DEVICE_DATA_TYPE current_top_row[BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK];
+
+		for (int col = 0; col < BLOCK_SIZE / GEMM_BLOCK; col++) {
+			ch_chunk_t row_in;
+			ch_chunk_t col_in;
+			
+			row_in = read_channel_intel(ch_inner_row_in);
+			col_in = read_channel_intel(ch_inner_col_in);
+			#pragma unroll
+			for (int i =0; i < GEMM_BLOCK; i++) {
+				current_top_row[col][i] = row_in.data[i];
+				current_left_col[col][i] = col_in.data[i];
+			}
+		}
+
+		// Update whole block
+		#pragma loop_coalesce
+		for (int row = 0; row < BLOCK_SIZE/GEMM_BLOCK; row++) {
+			for (int curr_col = 0; curr_col < BLOCK_SIZE/GEMM_BLOCK; curr_col++) {
+				#pragma unroll
+				for (int i = 0; i < GEMM_BLOCK; i++) {
+					#pragma unroll
+					for (int j=0; j < GEMM_BLOCK; j++) {
+						a_buffer[row][curr_col][i][j] += current_top_row[curr_col][j] * current_left_col[row][i];
 					}
 				}
 			}
