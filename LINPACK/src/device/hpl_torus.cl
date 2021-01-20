@@ -585,11 +585,16 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a) {
 		for (int row = 0; row < BLOCK_SIZE/GEMM_BLOCK - k; row++) {
 			// Update whole rows!
 			for (int curr_col = 0; curr_col < BLOCK_SIZE/GEMM_BLOCK; curr_col++) {
+				DEVICE_DATA_TYPE colbuf[GEMM_BLOCK];
+				#pragma unroll
+				for (int j=0; j < GEMM_BLOCK; j++) {
+					colbuf[j] = current_lu_col[row][j];
+				}	
 				#pragma unroll
 				for (int i = 0; i < GEMM_BLOCK; i++) {
 					#pragma unroll
 					for (int j=0; j < GEMM_BLOCK; j++) {
-						a_buffer[row + k][curr_col][i][j] += current_lu_col[row][i] * current_row[curr_col][j];
+						a_buffer[row + k][curr_col][i][j] += colbuf[i] * current_row[curr_col][j];
 					}
 				}
 			}
@@ -685,11 +690,16 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a) {
 			// Update only remaining row chunks
 			#pragma ivdep
 			for (int curr_col = 0; curr_col < BLOCK_SIZE/GEMM_BLOCK - k; curr_col++) {
+				DEVICE_DATA_TYPE colbuf[GEMM_BLOCK];
+				#pragma unroll
+				for (int j=0; j < GEMM_BLOCK; j++) {
+					colbuf[j] = current_col[row][j];
+				}	
 				#pragma unroll
 				for (int i = 0; i < GEMM_BLOCK; i++) {
 					#pragma unroll
 					for (int j=0; j < GEMM_BLOCK; j++) {
-						a_buffer[row][curr_col + k][i][j] += current_lu_row[curr_col][j] * current_col[row][i];
+						a_buffer[row][curr_col + k][i][j] += current_lu_row[curr_col][j] * colbuf[i];
 					}
 				}
 			}
@@ -763,11 +773,16 @@ void inner_update(__global DEVICE_DATA_TYPE* restrict a) {
 		#pragma loop_coalesce
 		for (int row = 0; row < BLOCK_SIZE/GEMM_BLOCK; row++) {
 			for (int curr_col = 0; curr_col < BLOCK_SIZE/GEMM_BLOCK; curr_col++) {
+				DEVICE_DATA_TYPE colbuf[GEMM_BLOCK];
+				#pragma unroll
+				for (int j=0; j < GEMM_BLOCK; j++) {
+					colbuf[j] = current_left_col[row][j];
+				}				
 				#pragma unroll
 				for (int i = 0; i < GEMM_BLOCK; i++) {
 					#pragma unroll
 					for (int j=0; j < GEMM_BLOCK; j++) {
-						a_buffer[row][curr_col][i][j] += current_top_row[curr_col][j] * current_left_col[row][i];
+						a_buffer[row][curr_col][i][j] += current_top_row[curr_col][j] * colbuf[i];
 					}
 				}
 			}
