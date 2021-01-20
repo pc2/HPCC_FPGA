@@ -28,11 +28,18 @@ SOFTWARE.
 
 typedef struct tmp_channel_chunk { DEVICE_DATA_TYPE data[GEMM_BLOCK];} ch_chunk_t;
 
+// external channels to other devices
 channel ch_chunk_t ch_top_in __attribute((io("kernel_input_ch0")));
 channel ch_chunk_t ch_right_out __attribute((io("kernel_output_ch1")));
 channel ch_chunk_t ch_bottom_out __attribute((io("kernel_output_ch2")));
 channel ch_chunk_t ch_left_in __attribute((io("kernel_input_ch3")));
 
+channel ch_chunk_t ch_top_out __attribute((io("kernel_output_ch0")));
+channel ch_chunk_t ch_right_in __attribute((io("kernel_input_ch1")));
+channel ch_chunk_t ch_bottom_in __attribute((io("kernel_input_ch2")));
+channel ch_chunk_t ch_left_out __attribute((io("kernel_output_ch3")));
+
+// channels to and from the local kernels
 channel ch_chunk_t ch_lu_col_out;
 channel ch_chunk_t ch_lu_row_out;
 channel ch_chunk_t ch_top_col_in;
@@ -46,7 +53,7 @@ channel ch_chunk_t ch_inner_col_in;
 Takes care of the external channels.
 Will forward data from calculation kernels to the external channels and will forward data if required.
 
-operation_type: 0:inner, 1: left, 2:top,3:lu
+operation_type: 0:inner, 1: left, 4:top, 8:lu
 forward: if true (forward > 0), forward data to external channel, discard data otherwise. This is used to stop 
 		forwarding when reaching the end of the grid
  */
@@ -61,46 +68,67 @@ void network_layer(const uint operation_type,
 		for (uint chunk = 0; chunk < BLOCK_SIZE/GEMM_BLOCK; chunk++) {
 			ch_chunk_t to_right;
 			ch_chunk_t to_bottom;
+			ch_chunk_t to_left;
+			ch_chunk_t to_top;
 			ch_chunk_t from_top;
 			ch_chunk_t from_left;
+			ch_chunk_t from_right;
+			ch_chunk_t from_bottom;
 			// receive extern operation
-			if (operation_type == 0 || (operation_type == 1 && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
+
+			// If inner block, receive from right and bottom and forward to left and top
+			if (operation_type & (INNER_BLOCK)) {
+				from_bottom = read_channel_intel(ch_bottom_in);
+				from_right = read_channel_intel(ch_right_in);
+				// Forward chunk to the next top block
+				to_top = from_bottom;
+				to_left = from_right;
+			}
+			// If left block, read from top and forward to bottom
+			if ((operation_type & (LEFT_BLOCK)) && (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
 				from_top = read_channel_intel(ch_top_in);
 				// Forward chunk to the next top block
 				to_bottom = from_top;
 			}
-			if (operation_type == 0 || (operation_type == 2 && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
+			// If top block, read from left and forward to right
+			if ((operation_type & (TOP_BLOCK)) && (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
 				from_left = read_channel_intel(ch_left_in);
 				// Forward chunk to the next top block
 				to_right = from_left;
 			}
 			// exchange intern operation
-			switch (operation_type) {
-				case 0: write_channel_intel(ch_inner_row_in, from_top);
-						write_channel_intel(ch_inner_col_in, from_left);
-						break;
-				case 1: if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-							write_channel_intel(ch_left_row_in, from_top);
-						}
-						to_right = read_channel_intel(ch_left_col_out);
-						break;
-				case 2: if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-							write_channel_intel(ch_top_col_in, from_left);
-						}
-						to_bottom = read_channel_intel(ch_top_row_out);
-						break;
-				case 3: if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+			if (operation_type & (INNER_BLOCK)) {
+				write_channel_intel(ch_inner_row_in, from_bottom);
+				write_channel_intel(ch_inner_col_in, from_right);
+			}
+			if (operation_type & (LEFT_BLOCK)) {
+				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+					write_channel_intel(ch_left_row_in, from_top);
+				}
+				to_left = read_channel_intel(ch_left_col_out);
+			}
+			if (operation_type & (TOP_BLOCK)) {
+				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+					write_channel_intel(ch_top_col_in, from_left);
+				}
+				to_top = read_channel_intel(ch_top_row_out);
+			}
+			if ((operation_type & (LU_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 							to_right = read_channel_intel(ch_lu_col_out);
 							to_bottom = read_channel_intel(ch_lu_row_out);
-						}
-						break;
 			}
 			if (forward) {
-				if (operation_type < 2 || chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+				if ((operation_type & (LU_BLOCK | TOP_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 					write_channel_intel(ch_right_out, to_right);
 				}
-				if ((operation_type != 3 && operation_type != 1) || chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+				if ((operation_type & (LU_BLOCK | LEFT_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 					write_channel_intel(ch_bottom_out, to_bottom);
+				}
+				if (operation_type & (LEFT_BLOCK | INNER_BLOCK)) {
+					write_channel_intel(ch_left_out, to_left);
+				}
+				if (operation_type & (TOP_BLOCK | INNER_BLOCK)) {
+					write_channel_intel(ch_top_out, to_top);
 				}
 			}
 		}

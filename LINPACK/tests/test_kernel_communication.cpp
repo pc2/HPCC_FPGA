@@ -83,7 +83,7 @@ class LinpackKernelCommunicationTestLU : public LinpackKernelCommunicationTest {
 
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
-        err = network.setArg(0, static_cast<cl_uint>(3));
+        err = network.setArg(0, static_cast<cl_uint>(LU_BLOCK));
         err = network.setArg(1, CL_TRUE);
         network_queue.enqueueTask(network);
 
@@ -112,18 +112,16 @@ class LinpackKernelCommunicationTestTop : public LinpackKernelCommunicationTest 
         auto gefa_data = bm->generateInputData();
         linpack::gefa_ref_nopvt(gefa_data->A, bm->getExecutionSettings().programSettings->matrixSize,bm->getExecutionSettings().programSettings->matrixSize);
         // Fill all input channels with the correct number of 1.0s
-        for (int i=0; i < numberOfChannels; i++) {
-            std::string fname = channelInName + std::to_string(i);
-            std::remove(fname.c_str());
-            std::ofstream fs;
-            fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
-            for (int ii = 0; ii < BLOCK_SIZE; ii++ ) {
-                for (int jj = (ii / CHUNK) * CHUNK; jj < BLOCK_SIZE; jj++ ) {
-                    fs.write(reinterpret_cast<const char*>(&gefa_data->A[jj * bm->getExecutionSettings().programSettings->matrixSize + ii]), sizeof(HOST_DATA_TYPE));
-                }
+        std::string fname = channelInName + std::to_string(3);
+        std::remove(fname.c_str());
+        std::ofstream fs;
+        fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+        for (int ii = 0; ii < BLOCK_SIZE; ii++ ) {
+            for (int jj = (ii / CHUNK) * CHUNK; jj < BLOCK_SIZE; jj++ ) {
+                fs.write(reinterpret_cast<const char*>(&gefa_data->A[jj * bm->getExecutionSettings().programSettings->matrixSize + ii]), sizeof(HOST_DATA_TYPE));
             }
-            fs.close();
         }
+        fs.close();
     }
 
     void executeKernel() {
@@ -138,7 +136,7 @@ class LinpackKernelCommunicationTestTop : public LinpackKernelCommunicationTest 
 
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
-        err = network.setArg(0, static_cast<cl_uint>(2));
+        err = network.setArg(0, static_cast<cl_uint>(TOP_BLOCK));
         err = network.setArg(1, CL_TRUE);
         network_queue.enqueueTask(network);
 
@@ -167,18 +165,16 @@ class LinpackKernelCommunicationTestLeft : public LinpackKernelCommunicationTest
         auto gefa_data = bm->generateInputData();
         linpack::gefa_ref_nopvt(gefa_data->A, bm->getExecutionSettings().programSettings->matrixSize,bm->getExecutionSettings().programSettings->matrixSize);
         // Fill all input channels with the correct number of 1.0s
-        for (int i=0; i < numberOfChannels; i++) {
-            std::string fname = channelInName + std::to_string(i);
-            std::remove(fname.c_str());
-            std::ofstream fs;
-            fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
-            for (int ii = 0; ii < BLOCK_SIZE; ii++ ) {
-                for (int jj = (ii / CHUNK) * CHUNK; jj < BLOCK_SIZE; jj++ ) {
-                    fs.write(reinterpret_cast<const char*>(&gefa_data->A[ii * bm->getExecutionSettings().programSettings->matrixSize + jj]), sizeof(HOST_DATA_TYPE));
-                }
+        std::string fname = channelInName + std::to_string(0);
+        std::remove(fname.c_str());
+        std::ofstream fs;
+        fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+        for (int ii = 0; ii < BLOCK_SIZE; ii++ ) {
+            for (int jj = (ii / CHUNK) * CHUNK; jj < BLOCK_SIZE; jj++ ) {
+                fs.write(reinterpret_cast<const char*>(&gefa_data->A[ii * bm->getExecutionSettings().programSettings->matrixSize + jj]), sizeof(HOST_DATA_TYPE));
             }
-            fs.close();
         }
+        fs.close();
     }
 
     void executeKernel() {
@@ -193,7 +189,7 @@ class LinpackKernelCommunicationTestLeft : public LinpackKernelCommunicationTest
 
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
-        err = network.setArg(0, static_cast<cl_uint>(1));
+        err = network.setArg(0, static_cast<cl_uint>(LEFT_BLOCK));
         err = network.setArg(1, CL_TRUE);
         network_queue.enqueueTask(network);
 
@@ -224,7 +220,7 @@ class LinpackKernelCommunicationTestInner : public LinpackKernelCommunicationTes
         auto top_data = bm->generateInputData();
         bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
         // Fill top channel with top result
-        std::string fname = channelInName + std::to_string(0);
+        std::string fname = channelInName + std::to_string(2);
         std::remove(fname.c_str());
         std::ofstream fs;
         fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
@@ -235,7 +231,7 @@ class LinpackKernelCommunicationTestInner : public LinpackKernelCommunicationTes
         }
         fs.close();
         // Fill left channel with left result
-        fname = channelInName + std::to_string(3);
+        fname = channelInName + std::to_string(1);
         std::remove(fname.c_str());
         fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
         for (int ii = 0; ii < BLOCK_SIZE; ii++ ) {
@@ -258,7 +254,7 @@ class LinpackKernelCommunicationTestInner : public LinpackKernelCommunicationTes
 
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
-        err = network.setArg(0, static_cast<cl_uint>(0));
+        err = network.setArg(0, static_cast<cl_uint>(INNER_BLOCK));
         err = network.setArg(1, CL_TRUE);
         network_queue.enqueueTask(network);
 
@@ -299,40 +295,38 @@ TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalResultisCorrect) {
 }
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToRightCorrectAmountOfData) {
-    // data that was sent to left kernels
-    auto data_left = getDataFromExternalChannel(1, true);
+    auto data_right = getDataFromExternalChannel(1, true);
 
-    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
-    EXPECT_EQ(data_left.size(), number_values);
+    EXPECT_EQ(data_right.size(), 0);
 }
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToLeftCorrectAmountOfData) {
     // data that was sent to left kernels
     auto data_left = getDataFromExternalChannel(3, true);
 
-    EXPECT_EQ(data_left.size(), 0);
+    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
+    EXPECT_EQ(data_left.size(), number_values);
 }
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToTopCorrectAmountOfData) {
     // data that was sent to left kernels
     auto data_left = getDataFromExternalChannel(0, true);
-
-    EXPECT_EQ(data_left.size(), 0);
+    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
+    EXPECT_EQ(data_left.size(), number_values);
 }
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToBottomCorrectAmountOfData) {
     // data that was sent to top kernels
     auto data_top = getDataFromExternalChannel(2, true);
 
-    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
-    EXPECT_EQ(data_top.size(), number_values);
+    EXPECT_EQ(data_top.size(), 0);
 }
 
-TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToBottomCorrect) {
+TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToTopCorrect) {
     // data that was sent to next top kernels
-    auto data_bottom = getDataFromExternalChannel(2, true);
+    auto data_bottom = getDataFromExternalChannel(0, true);
     // data that was sent from top kernel
-    auto data_top = getDataFromExternalChannel(0, false);
+    auto data_top = getDataFromExternalChannel(2, false);
 
     size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
     EXPECT_EQ(data_bottom.size(), number_values);
@@ -351,11 +345,11 @@ TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToBot
     }
 }
 
-TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToRightCorrect) {
+TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToLeftCorrect) {
     // data that was sent to next top kernels
-    auto data_right = getDataFromExternalChannel(1, true);
+    auto data_right = getDataFromExternalChannel(3, true);
     // data that was sent from top kernel
-    auto data_left = getDataFromExternalChannel(3, false);
+    auto data_left = getDataFromExternalChannel(1, false);
 
     size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
     EXPECT_EQ(data_right.size(), number_values);
@@ -410,15 +404,14 @@ TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToRight
     // data that was sent to left kernels
     auto data_left = getDataFromExternalChannel(1, true);
 
-    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
-    EXPECT_EQ(data_left.size(), number_values);
+    EXPECT_EQ(data_left.size(), 0);
 }
 
 TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToLeftCorrectAmountOfData) {
     // data that was sent to left kernels
     auto data_left = getDataFromExternalChannel(3, true);
-
-    EXPECT_EQ(data_left.size(), 0);
+    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
+    EXPECT_EQ(data_left.size(), number_values);
 }
 
 TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToTopCorrectAmountOfData) {
@@ -467,9 +460,9 @@ TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToBotto
     }
 }
 
-TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToRightCorrect) {
+TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToLeftCorrect) {
     // data that was sent to kernels to the right
-    auto data_left = getDataFromExternalChannel(1, true);
+    auto data_left = getDataFromExternalChannel(3, true);
 
     size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
     EXPECT_EQ(data_left.size(), number_values);
@@ -561,16 +554,15 @@ TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToLeftCor
 TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToTopCorrectAmountOfData) {
     // data that was sent to left kernels
     auto data_left = getDataFromExternalChannel(0, true);
-
-    EXPECT_EQ(data_left.size(), 0);
+    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
+    EXPECT_EQ(data_left.size(), number_values);
 }
 
 TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToBottomCorrectAmountOfData) {
     // data that was sent to top kernels
     auto data_top = getDataFromExternalChannel(2, true);
 
-    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
-    EXPECT_EQ(data_top.size(), number_values);
+    EXPECT_EQ(data_top.size(), 0);
 }
 
 TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToRightCorrect) {
@@ -601,9 +593,9 @@ TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToRightCo
     }
 }
 
-TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToBottomCorrect) {
+TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToTopCorrect) {
     // data that was sent to kernels below
-    auto data_top = getDataFromExternalChannel(2, true);
+    auto data_top = getDataFromExternalChannel(0, true);
 
     size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
     EXPECT_EQ(data_top.size(), number_values);
