@@ -61,11 +61,18 @@ forward: if true (forward > 0), forward data to external channel, discard data o
 __kernel
 void network_layer(const uint operation_type,
 				   const uint forward) {
+
+	// Special register to store the scaling factor for the top block
+	// Top row is scaled here to reduce data dependencies between the send and receive channels of the top kernel
+	DEVICE_DATA_TYPE scaling_factor = 0.f;
+
 	// For every row or column of the block, something needs to be sent
 	#pragma loop_coalesce
 	for (uint row = 0; row < BLOCK_SIZE; row++) {
 		// Number of chunks that has to be processed
 		for (uint chunk = 0; chunk < BLOCK_SIZE/GEMM_BLOCK; chunk++) {
+
+			// Registers to store incoming and outgoing data chunks
 			ch_chunk_t to_right;
 			ch_chunk_t to_bottom;
 			ch_chunk_t to_left;
@@ -74,7 +81,6 @@ void network_layer(const uint operation_type,
 			ch_chunk_t from_left;
 			ch_chunk_t from_right;
 			ch_chunk_t from_bottom;
-			// receive extern operation
 
 			// If inner block, receive from right and bottom and forward to left and top
 			if (operation_type & (INNER_BLOCK)) {
@@ -93,6 +99,9 @@ void network_layer(const uint operation_type,
 			// If top block, read from left and forward to right
 			if ((operation_type & (TOP_BLOCK)) && (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
 				from_left = read_channel_intel(ch_left_in);
+				if (chunk == 0) {
+					scaling_factor  = from_left.data[row & (GEMM_BLOCK - 1)];
+				}
 				// Forward chunk to the next top block
 				to_right = from_left;
 			}
@@ -111,11 +120,15 @@ void network_layer(const uint operation_type,
 				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 					write_channel_intel(ch_top_col_in, from_left);
 				}
-				to_top = read_channel_intel(ch_top_row_out);
+				ch_chunk_t from_top_kernel = read_channel_intel(ch_top_row_out);
+				#pragma unroll
+				for (int i = 0; i < GEMM_BLOCK; i++) {
+					to_top.data[i] = from_top_kernel.data[i] * scaling_factor;
+				}
 			}
 			if ((operation_type & (LU_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-							to_right = read_channel_intel(ch_lu_col_out);
-							to_bottom = read_channel_intel(ch_lu_row_out);
+				to_right = read_channel_intel(ch_lu_col_out);
+				to_bottom = read_channel_intel(ch_lu_row_out);
 			}
 			if (forward) {
 				if ((operation_type & (LU_BLOCK | TOP_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
@@ -538,6 +551,21 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a) {
 
 		for (int col = 0; col < BLOCK_SIZE / GEMM_BLOCK; col++) {
 			DEVICE_DATA_TYPE scale_chunk[GEMM_BLOCK];
+
+			// get current row chunk
+			#pragma unroll
+			for (int i =0; i < GEMM_BLOCK; i++) {
+				scale_chunk[i] = a_buffer[k][col][kk][i];
+			}
+
+			// Store chunk for later update and forward it over external channel
+			ch_chunk_t row_out;
+			#pragma unroll
+			for (int i =0; i < GEMM_BLOCK; i++) {
+				row_out.data[i] = scale_chunk[i];
+			}
+			write_channel_intel(ch_top_row_out, row_out);
+
 			ch_chunk_t col_in;
 			
 			// if current column data is still available read it in and store it in buffer
@@ -551,12 +579,6 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a) {
 					current_lu_col[col][i] = (col > 0 || i > kk) ? col_in.data[i] : 0.f;
 				}
 			}
-			
-			// get current row chunk
-			#pragma unroll
-			for (int i =0; i < GEMM_BLOCK; i++) {
-				scale_chunk[i] = a_buffer[k][col][kk][i];
-			}
 
 			// scale current row chunk with the rows scale factor received over the external channel
 			#pragma unroll
@@ -564,14 +586,10 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a) {
 				scale_chunk[i] = scale_chunk[i] * current_scale;
 			}
 
-			// Store chunk for later update and forward it over external channel
-			ch_chunk_t row_out;
 			#pragma unroll
 			for (int i =0; i < GEMM_BLOCK; i++) {
-				row_out.data[i] = scale_chunk[i];
 				current_row[col][i] = scale_chunk[i];
 			}
-			write_channel_intel(ch_top_row_out, row_out);
 
 			// Update local memory buffer with chunk
 			#pragma unroll
@@ -652,7 +670,22 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a) {
 		DEVICE_DATA_TYPE current_scale;
 
 		for (int col = 0; col < BLOCK_SIZE / GEMM_BLOCK; col++) {
-			DEVICE_DATA_TYPE scale_chunk[GEMM_BLOCK];
+			DEVICE_DATA_TYPE chunk[GEMM_BLOCK];
+			// get current row chunk
+			#pragma unroll
+			for (int i =0; i < GEMM_BLOCK; i++) {
+				chunk[i] = a_buffer[col][k][i][kk];
+			}
+
+			// Store chunk for later update and forward it over external channel
+			ch_chunk_t col_out;
+			#pragma unroll
+			for (int i =0; i < GEMM_BLOCK; i++) {
+				col_out.data[i] = chunk[i];
+				current_col[col][i] = chunk[i];
+			}
+			write_channel_intel(ch_left_col_out, col_out);
+
 			ch_chunk_t row_in;
 			
 			// if current column data is still available read it in and store it in buffer
@@ -666,21 +699,6 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a) {
 					current_lu_row[col][i] = (col > 0 || i > kk) ? row_in.data[i] : 0.f;
 				}
 			}
-			
-			// get current row chunk
-			#pragma unroll
-			for (int i =0; i < GEMM_BLOCK; i++) {
-				scale_chunk[i] = a_buffer[col][k][i][kk];
-			}
-
-			// Store chunk for later update and forward it over external channel
-			ch_chunk_t col_out;
-			#pragma unroll
-			for (int i =0; i < GEMM_BLOCK; i++) {
-				col_out.data[i] = scale_chunk[i];
-				current_col[col][i] = scale_chunk[i];
-			}
-			write_channel_intel(ch_left_col_out, col_out);
 		}
 
 		// Update all rows
