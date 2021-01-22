@@ -80,6 +80,9 @@ class LinpackKernelCommunicationTestLU : public LinpackKernelCommunicationTest {
         cl::Kernel kernel(*bm->getExecutionSettings().program, "lu", &err);
 
         err = kernel.setArg(0, buffer);
+        err = kernel.setArg(1, 0);
+        err = kernel.setArg(2, 0);
+        err = kernel.setArg(3, 1);
 
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
@@ -133,6 +136,9 @@ class LinpackKernelCommunicationTestTop : public LinpackKernelCommunicationTest 
         cl::Kernel kernel(*bm->getExecutionSettings().program, "top_update", &err);
 
         err = kernel.setArg(0, buffer);
+        err = kernel.setArg(1, 0);
+        err = kernel.setArg(2, 0);
+        err = kernel.setArg(3, 1);
 
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
@@ -186,6 +192,9 @@ class LinpackKernelCommunicationTestLeft : public LinpackKernelCommunicationTest
         cl::Kernel kernel(*bm->getExecutionSettings().program, "left_update", &err);
 
         err = kernel.setArg(0, buffer);
+        err = kernel.setArg(1, 0);
+        err = kernel.setArg(2, 0);
+        err = kernel.setArg(3, 1);
 
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
@@ -251,6 +260,9 @@ class LinpackKernelCommunicationTestInner : public LinpackKernelCommunicationTes
         cl::Kernel kernel(*bm->getExecutionSettings().program, "inner_update", &err);
 
         err = kernel.setArg(0, buffer);
+        err = kernel.setArg(1, 0);
+        err = kernel.setArg(2, 0);
+        err = kernel.setArg(3, 1);
 
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
@@ -266,6 +278,245 @@ class LinpackKernelCommunicationTestInner : public LinpackKernelCommunicationTes
         network_queue.finish();
     }
 };
+
+class LinpackKernelCommunicationTestAll : public LinpackKernelCommunicationTest {
+
+    void SetUp() override {
+        LinpackKernelCommunicationTest::SetUp();
+        bm->getExecutionSettings().programSettings->matrixSize = 2 * BLOCK_SIZE;
+        data = bm->generateInputData();
+        setupInputChannels();
+        executeKernel();
+    }
+
+    void setupInputChannels() {
+        for (int i=0; i < 3; i++) {
+            // Fill all input channels with the correct number of 1.0s
+            std::string fname = channelInName + std::to_string(i);
+            std::remove(fname.c_str());
+            std::ofstream fs;
+            fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+            fs.close();
+        }
+    }
+
+    void executeKernel() {
+        int err;
+        cl::CommandQueue compute_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device, 0, &err);
+        cl::CommandQueue left_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device, 0, &err);
+        cl::CommandQueue top_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device, 0, &err);
+        cl::CommandQueue inner_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device, 0, &err);
+        cl::CommandQueue network_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device, 0, &err);
+        cl::Buffer buffer(*(bm->getExecutionSettings().context), CL_MEM_READ_WRITE,
+                                            sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize);
+        cl::Kernel innerkernel(*bm->getExecutionSettings().program, "inner_update", &err);
+
+        err = innerkernel.setArg(0, buffer);
+        err = innerkernel.setArg(1, 1);
+        err = innerkernel.setArg(2, 1);
+        err = innerkernel.setArg(3, 2);
+
+        cl::Kernel leftkernel(*bm->getExecutionSettings().program, "left_update", &err);
+
+        err = leftkernel.setArg(0, buffer);
+        err = leftkernel.setArg(1, 0);
+        err = leftkernel.setArg(2, 1);
+        err = leftkernel.setArg(3, 2);
+
+        cl::Kernel topkernel(*bm->getExecutionSettings().program, "top_update", &err);
+
+        err = topkernel.setArg(0, buffer);
+        err = topkernel.setArg(1, 1);
+        err = topkernel.setArg(2, 0);
+        err = topkernel.setArg(3, 2);
+
+        cl::Kernel lu1kernel(*bm->getExecutionSettings().program, "lu", &err);
+
+        err = lu1kernel.setArg(0, buffer);
+        err = lu1kernel.setArg(1, 0);
+        err = lu1kernel.setArg(2, 0);
+        err = lu1kernel.setArg(3, 2);
+
+        cl::Kernel lu2kernel(*bm->getExecutionSettings().program, "lu", &err);
+
+        err = lu2kernel.setArg(0, buffer);
+        err = lu2kernel.setArg(1, 1);
+        err = lu2kernel.setArg(2, 1);
+        err = lu2kernel.setArg(3, 2);
+
+        // Start network layer kernel
+        cl::Kernel network1(*bm->getExecutionSettings().program, "network_layer", &err);
+        err = network1.setArg(0, static_cast<cl_uint>(INNER_BLOCK | LEFT_BLOCK | TOP_BLOCK | LU_BLOCK));
+        err = network1.setArg(1, CL_TRUE);
+        cl::Kernel network2(*bm->getExecutionSettings().program, "network_layer", &err);
+        err = network2.setArg(0, static_cast<cl_uint>(LU_BLOCK));
+        err = network2.setArg(1, CL_FALSE);
+        network_queue.enqueueTask(network1);
+        network_queue.enqueueTask(network2);
+
+        compute_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
+        compute_queue.enqueueTask(lu1kernel);
+        left_queue.enqueueTask(leftkernel);
+        top_queue.enqueueTask(topkernel);
+        inner_queue.enqueueTask(innerkernel);
+        inner_queue.finish();
+        left_queue.finish();
+        top_queue.finish();
+        compute_queue.enqueueTask(lu2kernel);
+        compute_queue.finish();
+        network_queue.finish();
+        compute_queue.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
+
+    }
+};
+
+TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalResultisCorrect) {
+    uint matrix_size = bm->getExecutionSettings().programSettings->matrixSize;
+
+    // generate uniformly distributed block as top block
+    auto ref_data = bm->generateInputData();
+
+    linpack::gefa_ref_nopvt(ref_data->A, matrix_size, matrix_size);
+
+    double total_error = 0.0;
+    for (int i = 0; i < bm->getExecutionSettings().programSettings->matrixSize; i++) {
+        for (int j = 0; j < bm->getExecutionSettings().programSettings->matrixSize; j++) {
+            total_error += std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j]);
+        }
+    }
+    EXPECT_FLOAT_EQ(total_error, 0.0);
+}
+
+TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToRightCorrectAmountOfData) {
+    auto data_right = getDataFromExternalChannel(1, true);
+    size_t number_values = 0;
+    for (int i = 0; i < BLOCK_SIZE; i++ ) {
+        number_values += (BLOCK_SIZE - (i / CHUNK) * CHUNK);
+    }
+    EXPECT_EQ(data_right.size(), number_values);
+}
+
+TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToLeftCorrectAmountOfData) {
+    // data that was sent to left kernels
+    auto data_left = getDataFromExternalChannel(3, true);
+
+    EXPECT_EQ(data_left.size(), BLOCK_SIZE * BLOCK_SIZE);
+}
+
+TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToTopCorrectAmountOfData) {
+    // data that was sent to left kernels
+    auto data_left = getDataFromExternalChannel(0, true);
+
+    EXPECT_EQ(data_left.size(), BLOCK_SIZE * BLOCK_SIZE);
+}
+
+TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToBottomCorrectAmountOfData) {
+    // data that was sent to top kernels
+    auto data_top = getDataFromExternalChannel(2, true);
+    size_t number_values = 0;
+    for (int i = 0; i < BLOCK_SIZE; i++ ) {
+        number_values += (BLOCK_SIZE - (i / CHUNK) * CHUNK);
+    }
+    EXPECT_EQ(data_top.size(), number_values);
+}
+
+TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToRightCorrect) {
+    // data that was sent to next top kernels
+    auto data_left = getDataFromExternalChannel(1, true);
+
+    size_t number_values = 0;
+    for (int i = 0; i < BLOCK_SIZE; i++ ) {
+        number_values += (BLOCK_SIZE - (i / CHUNK) * CHUNK);
+    }
+    EXPECT_EQ(data_left.size(), number_values);
+    if (data_left.size() == number_values) {
+
+        HOST_DATA_TYPE total_error = 0.0;
+
+        size_t offset = 0;
+        // for every row of a block
+        for (int i = 0; i < BLOCK_SIZE; i++ ) {
+            // for every column of a block
+            for (int j = (i / CHUNK) * CHUNK; j < BLOCK_SIZE; j++) {
+                total_error += std::abs(data->A[2 * BLOCK_SIZE * j + i] - data_left[offset + (j - (i / CHUNK) * CHUNK)]);
+            }
+            offset += BLOCK_SIZE - (i / CHUNK) * CHUNK;
+        }
+        EXPECT_FLOAT_EQ(total_error, 0.0);
+    }
+}
+
+TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToBottomCorrect) {
+    // data that was sent to top kernels
+    auto data_top = getDataFromExternalChannel(2, true);
+
+    size_t number_values = 0;
+    for (int i = 0; i < BLOCK_SIZE; i++ ) {
+        number_values += (BLOCK_SIZE - (i / CHUNK) * CHUNK);
+    }
+    EXPECT_EQ(data_top.size(), number_values);
+    if (data_top.size() == number_values) {
+
+        HOST_DATA_TYPE total_error = 0.0;
+
+        size_t offset = 0;
+        // for every column of a block
+        for (int i = 0; i < BLOCK_SIZE; i++ ) {
+            // for every row of a block
+            for (int j = (i / CHUNK) * CHUNK; j < BLOCK_SIZE; j++) {
+                total_error += std::abs(data->A[j + i * 2 * BLOCK_SIZE] - data_top[offset + (j - (i / CHUNK) * CHUNK)]);
+            }
+            offset += BLOCK_SIZE - (i / CHUNK) * CHUNK;
+        }
+        EXPECT_FLOAT_EQ(total_error, 0.0);
+    }
+}
+
+TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToLeftCorrect) {
+    // data that was sent to kernels to the right
+    auto data_left = getDataFromExternalChannel(3, true);
+
+    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
+    EXPECT_EQ(data_left.size(), number_values);
+    if (data_left.size() == number_values) {
+
+        HOST_DATA_TYPE total_error = 0.0;
+
+        size_t offset = 0;
+        // for every column of a block
+        for (int i = 0; i < BLOCK_SIZE; i++ ) {
+            // for every row of a block
+            for (int j = 0; j < BLOCK_SIZE; j++) {
+                total_error += std::abs(data->A[i + (j + BLOCK_SIZE) * 2 * BLOCK_SIZE] - data_left[i*BLOCK_SIZE + j]);
+            }
+        }
+        EXPECT_FLOAT_EQ(total_error, 0.0);
+    }
+}
+
+TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToTopCorrect) {
+    // data that was sent to kernels below
+    auto data_top = getDataFromExternalChannel(0, true);
+
+    size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
+    EXPECT_EQ(data_top.size(), number_values);
+    if (data_top.size() == number_values) {
+
+        HOST_DATA_TYPE total_error = 0.0;
+
+        size_t offset = 0;
+        // for every column of a block
+        for (int i = 0; i < BLOCK_SIZE; i++ ) {
+            // for every row of a block
+            for (int j = 0; j < BLOCK_SIZE; j++) {
+                total_error += std::abs(data->A[(j + BLOCK_SIZE) + i * 2 * BLOCK_SIZE] - data_top[i*BLOCK_SIZE + j]);
+            }
+        }
+        EXPECT_FLOAT_EQ(total_error, 0.0);
+    }
+}
+
+// Start Unit tests for inner kernel
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalResultisCorrect) {
     uint matrix_size = bm->getExecutionSettings().programSettings->matrixSize;
@@ -688,7 +939,7 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToRightCorr
         for (int i = 0; i < BLOCK_SIZE; i++ ) {
             // for every column of a block
             for (int j = (i / CHUNK) * CHUNK; j < BLOCK_SIZE; j++) {
-                total_error += std::abs(data->A[j + i * BLOCK_SIZE] - data_left[offset + (j - (i / CHUNK) * CHUNK)]);
+                total_error += std::abs(data->A[i + j * BLOCK_SIZE] - data_left[offset + (j - (i / CHUNK) * CHUNK)]);
             }
             offset += BLOCK_SIZE - (i / CHUNK) * CHUNK;
         }
@@ -714,7 +965,7 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToBottomCor
         for (int i = 0; i < BLOCK_SIZE; i++ ) {
             // for every row of a block
             for (int j = (i / CHUNK) * CHUNK; j < BLOCK_SIZE; j++) {
-                total_error += std::abs(data->A[i + j * BLOCK_SIZE] - data_top[offset + (j - (i / CHUNK) * CHUNK)]);
+                total_error += std::abs(data->A[j + i * BLOCK_SIZE] - data_top[offset + (j - (i / CHUNK) * CHUNK)]);
             }
             offset += BLOCK_SIZE - (i / CHUNK) * CHUNK;
         }

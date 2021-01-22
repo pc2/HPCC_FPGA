@@ -22,7 +22,7 @@ struct LinpackKernelTest : testing::Test {
 
     void SetUp() override {
         bm = std::unique_ptr<linpack::LinpackBenchmark>(new linpack::LinpackBenchmark(global_argc, global_argv));
-        bm->getExecutionSettings().programSettings->matrixSize = 1 << LOCAL_MEM_BLOCK_LOG;
+        bm->getExecutionSettings().programSettings->matrixSize = 2 << LOCAL_MEM_BLOCK_LOG;
         data = bm->generateInputData();
         array_size = bm->getExecutionSettings().programSettings->matrixSize;
     }

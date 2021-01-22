@@ -77,10 +77,6 @@ void network_layer(const uint operation_type,
 			ch_chunk_t to_bottom;
 			ch_chunk_t to_left;
 			ch_chunk_t to_top;
-			ch_chunk_t from_top;
-			ch_chunk_t from_left;
-			ch_chunk_t from_right;
-			ch_chunk_t from_bottom;
 
 			if ((operation_type & (LU_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 				to_right = read_channel_intel(ch_lu_col_out);
@@ -89,13 +85,13 @@ void network_layer(const uint operation_type,
 			else {
 				// If left block, read from top and forward to bottom
 				if ((operation_type & (LEFT_BLOCK)) && (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
-					from_top = read_channel_intel(ch_top_in);
+					ch_chunk_t from_top = read_channel_intel(ch_top_in);
 					// Forward chunk to the next top block
 					to_bottom = from_top;
 				}
 				// If top block, read from left and forward to right
 				if ((operation_type & (TOP_BLOCK)) && (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
-					from_left = read_channel_intel(ch_left_in);
+					ch_chunk_t from_left = read_channel_intel(ch_left_in);
 					// Forward chunk to the next top block
 					to_right = from_left;
 				}
@@ -107,34 +103,34 @@ void network_layer(const uint operation_type,
 			}
 
 			if (operation_type & (LEFT_BLOCK)) {
-				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-					write_channel_intel(ch_left_row_in, from_top);
-				}
 				to_left = read_channel_intel(ch_left_col_out);
+				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+					write_channel_intel(ch_left_row_in, to_bottom);
+				}
 			}
 			else {
 				// If inner block, receive from right and bottom and forward to left and top
 				if (operation_type & (INNER_BLOCK)) {
-					from_right = read_channel_intel(ch_right_in);
+					ch_chunk_t from_right = read_channel_intel(ch_right_in);
 					// Forward chunk to the next top block
 					to_left = from_right;
 				}
 			}
 
 			if (operation_type & (TOP_BLOCK)) {
-				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-					write_channel_intel(ch_top_col_in, from_left);
-				}
 				ch_chunk_t from_top_kernel = read_channel_intel(ch_top_row_out);
 				#pragma unroll
 				for (int i = 0; i < GEMM_BLOCK; i++) {
 					to_top.data[i] = from_top_kernel.data[i] * scaling_factor;
 				}
+				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+					write_channel_intel(ch_top_col_in, to_right);
+				}
 			}
 			else {
 				// If inner block, receive from right and bottom and forward to left and top
 				if (operation_type & (INNER_BLOCK)) {
-					from_bottom = read_channel_intel(ch_bottom_in);
+					ch_chunk_t from_bottom = read_channel_intel(ch_bottom_in);
 					// Forward chunk to the next top block
 					to_top = from_bottom;
 				}
@@ -338,7 +334,10 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 __attribute__((uses_global_work_offset(0)))
 __kernel
 void
-lu(__global DEVICE_DATA_TYPE* restrict a) {
+lu(__global DEVICE_DATA_TYPE* restrict a, 
+				const uint block_col,
+				const uint block_row,
+				const uint blocks_per_row) {
 
 	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
 	
@@ -355,7 +354,7 @@ lu(__global DEVICE_DATA_TYPE* restrict a) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
 				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					a_buffer[i][j][ii][jj] = a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj];
+					a_buffer[i][j][ii][jj] = a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj];
 				}
 			}
 		}
@@ -505,8 +504,8 @@ lu(__global DEVICE_DATA_TYPE* restrict a) {
 			ch_chunk_t row_data;
 			#pragma unroll GEMM_BLOCK
 			for (int j = 0; j < GEMM_BLOCK; j++) {
-				col_data.data[j] = a_buffer[k][i + k][kk][j];
-				row_data.data[j] = a_buffer[i + k][k][j][kk];
+				row_data.data[j] = a_buffer[k][i + k][kk][j];
+				col_data.data[j] = a_buffer[i + k][k][j][kk];
 			}
 			write_channel_intel(ch_lu_col_out, col_data);
 			write_channel_intel(ch_lu_row_out, row_data);
@@ -520,7 +519,7 @@ lu(__global DEVICE_DATA_TYPE* restrict a) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
 				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
+					a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
 				}
 			}
 		}
@@ -533,7 +532,10 @@ Update the blocks to the right of the current LU block
  */
  __attribute__((uses_global_work_offset(0)))
 __kernel
-void top_update(__global DEVICE_DATA_TYPE* restrict a) {
+void top_update(__global DEVICE_DATA_TYPE* restrict a, 
+				const uint block_col,
+				const uint block_row,
+				const uint blocks_per_row) {
 
 	// Store current block in local memory
 	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
@@ -546,7 +548,7 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
 				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					a_buffer[i][j][ii][jj] = a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj];
+					a_buffer[i][j][ii][jj] = a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj];
 				}
 			}
 		}
@@ -641,7 +643,7 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
 				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
+					a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
 				}
 			}
 		}
@@ -654,7 +656,10 @@ Update the blocks below the current LU block
  */
  __attribute__((uses_global_work_offset(0)))
 __kernel
-void left_update(__global DEVICE_DATA_TYPE* restrict a) {
+void left_update(__global DEVICE_DATA_TYPE* restrict a, 
+				const uint block_col,
+				const uint block_row,
+				const uint blocks_per_row) {
 
 	// Store current block in local memory
 	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
@@ -666,7 +671,7 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
 				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					a_buffer[i][j][ii][jj] = a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj];
+					a_buffer[i][j][ii][jj] = a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj];
 				}
 			}
 		}
@@ -746,7 +751,7 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
 				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
+					a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
 				}
 			}
 		}
@@ -760,7 +765,10 @@ Update the inner blocks using the left and right column and rows
  */
  __attribute__((uses_global_work_offset(0)))
 __kernel
-void inner_update(__global DEVICE_DATA_TYPE* restrict a) {
+void inner_update(__global DEVICE_DATA_TYPE* restrict a, 
+				const uint block_col,
+				const uint block_row,
+				const uint blocks_per_row) {
 
 	// Store current block in local memory
 	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
@@ -772,7 +780,7 @@ void inner_update(__global DEVICE_DATA_TYPE* restrict a) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
 				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					a_buffer[i][j][ii][jj] = a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj];
+					a_buffer[i][j][ii][jj] = a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj];
 				}
 			}
 		}
@@ -829,7 +837,7 @@ void inner_update(__global DEVICE_DATA_TYPE* restrict a) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
 				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					a[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
+					a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
 				}
 			}
 		}
