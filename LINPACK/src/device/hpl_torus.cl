@@ -82,40 +82,45 @@ void network_layer(const uint operation_type,
 			ch_chunk_t from_right;
 			ch_chunk_t from_bottom;
 
-			// If inner block, receive from right and bottom and forward to left and top
-			if (operation_type & (INNER_BLOCK)) {
-				from_bottom = read_channel_intel(ch_bottom_in);
-				from_right = read_channel_intel(ch_right_in);
-				// Forward chunk to the next top block
-				to_top = from_bottom;
-				to_left = from_right;
+			if ((operation_type & (LU_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+				to_right = read_channel_intel(ch_lu_col_out);
+				to_bottom = read_channel_intel(ch_lu_row_out);
 			}
-			// If left block, read from top and forward to bottom
-			if ((operation_type & (LEFT_BLOCK)) && (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
-				from_top = read_channel_intel(ch_top_in);
-				// Forward chunk to the next top block
-				to_bottom = from_top;
-			}
-			// If top block, read from left and forward to right
-			if ((operation_type & (TOP_BLOCK)) && (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
-				from_left = read_channel_intel(ch_left_in);
-				if (chunk == 0) {
-					scaling_factor  = from_left.data[row & (GEMM_BLOCK - 1)];
+			else {
+				// If left block, read from top and forward to bottom
+				if ((operation_type & (LEFT_BLOCK)) && (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
+					from_top = read_channel_intel(ch_top_in);
+					// Forward chunk to the next top block
+					to_bottom = from_top;
 				}
-				// Forward chunk to the next top block
-				to_right = from_left;
+				// If top block, read from left and forward to right
+				if ((operation_type & (TOP_BLOCK)) && (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG))) {
+					from_left = read_channel_intel(ch_left_in);
+					// Forward chunk to the next top block
+					to_right = from_left;
+				}
 			}
-			// exchange intern operation
-			if (operation_type & (INNER_BLOCK)) {
-				write_channel_intel(ch_inner_row_in, from_bottom);
-				write_channel_intel(ch_inner_col_in, from_right);
+
+			// update the scaling factor
+			if (chunk == 0) {
+				scaling_factor  = to_right.data[row & (GEMM_BLOCK - 1)];
 			}
+
 			if (operation_type & (LEFT_BLOCK)) {
 				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 					write_channel_intel(ch_left_row_in, from_top);
 				}
 				to_left = read_channel_intel(ch_left_col_out);
 			}
+			else {
+				// If inner block, receive from right and bottom and forward to left and top
+				if (operation_type & (INNER_BLOCK)) {
+					from_right = read_channel_intel(ch_right_in);
+					// Forward chunk to the next top block
+					to_left = from_right;
+				}
+			}
+
 			if (operation_type & (TOP_BLOCK)) {
 				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 					write_channel_intel(ch_top_col_in, from_left);
@@ -126,10 +131,20 @@ void network_layer(const uint operation_type,
 					to_top.data[i] = from_top_kernel.data[i] * scaling_factor;
 				}
 			}
-			if ((operation_type & (LU_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-				to_right = read_channel_intel(ch_lu_col_out);
-				to_bottom = read_channel_intel(ch_lu_row_out);
+			else {
+				// If inner block, receive from right and bottom and forward to left and top
+				if (operation_type & (INNER_BLOCK)) {
+					from_bottom = read_channel_intel(ch_bottom_in);
+					// Forward chunk to the next top block
+					to_top = from_bottom;
+				}
 			}
+
+			if (operation_type & (INNER_BLOCK)) {
+				write_channel_intel(ch_inner_row_in, to_top);
+				write_channel_intel(ch_inner_col_in, to_left);
+			}
+
 			if (forward) {
 				if ((operation_type & (LU_BLOCK | TOP_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 					write_channel_intel(ch_right_out, to_right);
