@@ -85,9 +85,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     cl::Kernel innerkernel(*config.program, "inner_update",
                                     &err);
     ASSERT_CL(err);
-    cl::Kernel geslkernel(*config.program, "gesl",
-                                    &err);
-    ASSERT_CL(err);
+    // TODO uncomment and enable GESL calculation on FPGA
+    // cl::Kernel geslkernel(*config.program, "gesl",
+    //                                 &err);
+    // ASSERT_CL(err);
     cl::Kernel network1kernel(*config.program, "network_layer",
                                     &err);
     ASSERT_CL(err);
@@ -145,32 +146,31 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     err = leftkernel.setArg(3, 2);
     err = innerkernel.setArg(3, 2);
 
-#ifdef USE_SVM
+// #ifdef USE_SVM
 
-    err = clSetKernelArgSVMPointer(geslkernel(), 0,
-                                    reinterpret_cast<void*>(A_tmp));
-    ASSERT_CL(err)
-    err = clSetKernelArgSVMPointer(geslkernel(), 1,
-                                    reinterpret_cast<void*>(b));
-    ASSERT_CL(err)
-    if (!config.programSettings->isDiagonallyDominant) {
-        err = clSetKernelArgSVMPointer(geslkernel(), 2,
-                                        reinterpret_cast<void*>(ipvt));
-        ASSERT_CL(err)
-    }
-#else
-    err = geslkernel.setArg(0, Buffer_a);
-    ASSERT_CL(err);
-    err = geslkernel.setArg(1, Buffer_b);
-    ASSERT_CL(err);
-    if (!config.programSettings->isDiagonallyDominant) {
-        err = geslkernel.setArg(2, Buffer_pivot);
-        ASSERT_CL(err);
-    }
-#endif
-    err = geslkernel.setArg(config.programSettings->isDiagonallyDominant ? 2 : 3, static_cast<uint>(config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG));
-    ASSERT_CL(err);
-
+//     err = clSetKernelArgSVMPointer(geslkernel(), 0,
+//                                     reinterpret_cast<void*>(A_tmp));
+//     ASSERT_CL(err)
+//     err = clSetKernelArgSVMPointer(geslkernel(), 1,
+//                                     reinterpret_cast<void*>(b));
+//     ASSERT_CL(err)
+//     if (!config.programSettings->isDiagonallyDominant) {
+//         err = clSetKernelArgSVMPointer(geslkernel(), 2,
+//                                         reinterpret_cast<void*>(ipvt));
+//         ASSERT_CL(err)
+//     }
+// #else
+//     err = geslkernel.setArg(0, Buffer_a);
+//     ASSERT_CL(err);
+//     err = geslkernel.setArg(1, Buffer_b);
+//     ASSERT_CL(err);
+//     if (!config.programSettings->isDiagonallyDominant) {
+//         err = geslkernel.setArg(2, Buffer_pivot);
+//         ASSERT_CL(err);
+//     }
+// #endif
+//     err = geslkernel.setArg(config.programSettings->isDiagonallyDominant ? 2 : 3, static_cast<uint>(2));
+//     ASSERT_CL(err);
 
 
     /* --- Execute actual benchmark kernels --- */
@@ -233,8 +233,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
         // Execute GESL
         t1 = std::chrono::high_resolution_clock::now();
-        lu_queue.enqueueTask(geslkernel);
-        lu_queue.finish();
+        // lu_queue.enqueueTask(geslkernel);
+        // lu_queue.finish();
         t2 = std::chrono::high_resolution_clock::now();
         timespan = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
         geslExecutionTimes.push_back(timespan.count());
@@ -272,6 +272,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                                         sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
     }
 #endif
+
+    std::cout << "WARNING: GESL calculated on CPU!" << std::endl;
+    linpack::gesl_ref_nopvt(A,b,config.programSettings->matrixSize,config.programSettings->matrixSize);
 
     std::unique_ptr<linpack::LinpackExecutionTimings> results(
                     new linpack::LinpackExecutionTimings{gefaExecutionTimes, geslExecutionTimes});
