@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.1)
 project(LINPACK VERSION 2.1)
 
+set(USE_DEPRECATED_HPP_HEADER No)
+
 set(DEFAULT_MATRIX_SIZE 1024 CACHE STRING "Default matrix size")
 set(GLOBAL_MEM_UNROLL 16 CACHE STRING "Unrolling factor that is used for all loops in the kernels")
 set(LOCAL_MEM_BLOCK_LOG 5 CACHE STRING "Used to define the width and height of the block stored in local memory")
