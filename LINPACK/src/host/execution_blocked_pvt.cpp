@@ -30,7 +30,7 @@ SOFTWARE.
 #include <vector>
 
 /* External library headers */
-#include "CL/cl.hpp"
+#include "CL/cl2.hpp"
 #if QUARTUS_MAJOR_VERSION > 18
 #include "CL/cl_ext_intelfpga.h"
 #endif
@@ -61,6 +61,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     ASSERT_CL(err)
     cl::CommandQueue network_queue(*config.context, *config.device, 0, &err);
     ASSERT_CL(err)
+    cl::CommandQueue buffer_queue(*config.context, *config.device, 0, &err);
+    ASSERT_CL(err)
 
     // Create Buffers for input and output
     cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE,
@@ -70,108 +72,18 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     cl::Buffer Buffer_pivot(*config.context, CL_MEM_READ_WRITE,
                                         sizeof(cl_int)*config.programSettings->matrixSize);
 
-    // create the kernels
-    cl::Kernel gefakernel(*config.program, "lu",
-                                    &err);
-    cl::Kernel gefa2kernel(*config.program, "lu",
-                                    &err);
-    ASSERT_CL(err);
-    cl::Kernel topkernel(*config.program, "top_update",
-                                    &err);
-    ASSERT_CL(err);
-    cl::Kernel leftkernel(*config.program, "left_update",
-                                    &err);
-    ASSERT_CL(err);
-    cl::Kernel innerkernel(*config.program, "inner_update",
-                                    &err);
-    ASSERT_CL(err);
-    // TODO uncomment and enable GESL calculation on FPGA
-    // cl::Kernel geslkernel(*config.program, "gesl",
-    //                                 &err);
-    // ASSERT_CL(err);
-    cl::Kernel network1kernel(*config.program, "network_layer",
-                                    &err);
-    ASSERT_CL(err);
-    cl::Kernel network2kernel(*config.program, "network_layer",
-                                    &err);
-    ASSERT_CL(err);
+    // Buffers only used to store data received over the network layer
+    // The content will not be modified by the host
+    cl::Buffer Buffer_lu1(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*(1 << LOCAL_MEM_BLOCK_LOG)*(1 << LOCAL_MEM_BLOCK_LOG));
+    cl::Buffer Buffer_lu2(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*(1 << LOCAL_MEM_BLOCK_LOG)*(1 << LOCAL_MEM_BLOCK_LOG));
+    cl::Buffer Buffer_top(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize * (1 << LOCAL_MEM_BLOCK_LOG));
+    cl::Buffer Buffer_left(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize * (1 << LOCAL_MEM_BLOCK_LOG));
 
-    err = network1kernel.setArg(0, TOP_BLOCK | LEFT_BLOCK | INNER_BLOCK | LU_BLOCK);
-    err = network1kernel.setArg(1, CL_FALSE);
-    err = network2kernel.setArg(0, LU_BLOCK);
-    err = network2kernel.setArg(1, CL_FALSE);
-
-    // prepare kernels
-#ifdef USE_SVM
-    // To prevent the reuse of the result of previous repetitions, use this
-    // buffer instead and copy the result back to the real buffer 
-    HOST_DATA_TYPE* A_tmp = reinterpret_cast<HOST_DATA_TYPE*>(
-                    clSVMAlloc((*config.context)(), 0 ,
-                    config.programSettings->matrixSize * 
-                    config.programSettings->matrixSize * sizeof(HOST_DATA_TYPE), 1024));
-
-    err = clSetKernelArgSVMPointer(gefakernel(), 0,
-                                    reinterpret_cast<void*>(A_tmp));
-    ASSERT_CL(err)
-    if (!config.programSettings->isDiagonallyDominant) {
-        err = clSetKernelArgSVMPointer(gefakernel(), 1,
-                                        reinterpret_cast<void*>(ipvt));
-        ASSERT_CL(err)
-    }
-#else
-    err = gefakernel.setArg(0, Buffer_a);
-    ASSERT_CL(err);
-    err = gefa2kernel.setArg(0, Buffer_a);
-    ASSERT_CL(err);
-    err = topkernel.setArg(0, Buffer_a);
-    ASSERT_CL(err);
-    err = leftkernel.setArg(0, Buffer_a);
-    ASSERT_CL(err);
-    err = innerkernel.setArg(0, Buffer_a);
-    ASSERT_CL(err);
-#endif
-    err = gefakernel.setArg(1, 0);
-    err = gefa2kernel.setArg(1, 1);
-    err = topkernel.setArg(1, 1);
-    err = leftkernel.setArg(1, 0);
-    err = innerkernel.setArg(1, 1);
-    err = gefakernel.setArg(2, 0);
-    err = gefa2kernel.setArg(2, 1);
-    err = topkernel.setArg(2, 0);
-    err = leftkernel.setArg(2, 1);
-    err = innerkernel.setArg(2, 1);
-    err = gefakernel.setArg(3, 2);
-    err = gefa2kernel.setArg(3, 2);
-    err = topkernel.setArg(3, 2);
-    err = leftkernel.setArg(3, 2);
-    err = innerkernel.setArg(3, 2);
-
-// #ifdef USE_SVM
-
-//     err = clSetKernelArgSVMPointer(geslkernel(), 0,
-//                                     reinterpret_cast<void*>(A_tmp));
-//     ASSERT_CL(err)
-//     err = clSetKernelArgSVMPointer(geslkernel(), 1,
-//                                     reinterpret_cast<void*>(b));
-//     ASSERT_CL(err)
-//     if (!config.programSettings->isDiagonallyDominant) {
-//         err = clSetKernelArgSVMPointer(geslkernel(), 2,
-//                                         reinterpret_cast<void*>(ipvt));
-//         ASSERT_CL(err)
-//     }
-// #else
-//     err = geslkernel.setArg(0, Buffer_a);
-//     ASSERT_CL(err);
-//     err = geslkernel.setArg(1, Buffer_b);
-//     ASSERT_CL(err);
-//     if (!config.programSettings->isDiagonallyDominant) {
-//         err = geslkernel.setArg(2, Buffer_pivot);
-//         ASSERT_CL(err);
-//     }
-// #endif
-//     err = geslkernel.setArg(config.programSettings->isDiagonallyDominant ? 2 : 3, static_cast<uint>(2));
-//     ASSERT_CL(err);
-
+    uint blocks_per_row = config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG;
 
     /* --- Execute actual benchmark kernels --- */
 
@@ -179,52 +91,166 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     std::vector<double> gefaExecutionTimes;
     std::vector<double> geslExecutionTimes;
     for (int i = 0; i < config.programSettings->numRepetitions; i++) {
-#ifdef USE_SVM
-        for (int k=0; k < config.programSettings->matrixSize * config.programSettings->matrixSize; k++) {
-            A_tmp[k] = A[k];
+
+        // User event that is used to start actual execution of benchmark kernels
+        cl::UserEvent start_event(*config.context, &err);
+        ASSERT_CL(err);
+        std::vector<std::vector<cl::Event>> all_events(blocks_per_row + 1);
+        all_events[0].push_back(start_event);
+
+        // For every row of blocks create kernels and enqueue them
+        for (int block_row=0; block_row < config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG; block_row++) {
+            std::cout << "Create LU" << std::endl;
+            // create the LU kernel
+            cl::Kernel gefakernel(*config.program, "lu",
+                                        &err);
+            err = gefakernel.setArg(0, Buffer_a);
+            ASSERT_CL(err);
+            err = gefakernel.setArg(1, block_row);
+            ASSERT_CL(err)
+            err = gefakernel.setArg(2, block_row);
+            ASSERT_CL(err)
+            err = gefakernel.setArg(3, config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG);
+            ASSERT_CL(err)
+            all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
+            err = lu_queue.enqueueNDRangeKernel(gefakernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &all_events[block_row + 1][all_events[block_row + 1].size() - 1]);
+            ASSERT_CL(err)
+            // Create top kernels, left kernels and inner kernels
+            for (int tops=block_row + 1; tops < (config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG); tops++) {
+                std::cout << "Create top" << std::endl;
+                cl::Kernel topkernel(*config.program, "top_update",
+                                                &err);
+                ASSERT_CL(err);     
+                err = topkernel.setArg(0, Buffer_a);
+                ASSERT_CL(err);    
+                err = topkernel.setArg(1, Buffer_lu1);
+                ASSERT_CL(err) 
+                err = topkernel.setArg(2, (tops == block_row + 1) ? CL_TRUE : CL_FALSE);
+                ASSERT_CL(err) 
+                err = topkernel.setArg(3, tops);
+                ASSERT_CL(err)
+                err = topkernel.setArg(4, block_row);
+                ASSERT_CL(err)
+                err = topkernel.setArg(5, config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG);
+                ASSERT_CL(err)
+                all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
+                top_queue.enqueueNDRangeKernel(topkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));
+                std::cout << "Create left" << std::endl;
+
+                cl::Kernel leftkernel(*config.program, "left_update",
+                                                &err);
+                ASSERT_CL(err);     
+                err = leftkernel.setArg(0, Buffer_a);
+                ASSERT_CL(err);    
+                err = leftkernel.setArg(1, Buffer_lu2);
+                ASSERT_CL(err) 
+                err = leftkernel.setArg(2, (tops == block_row + 1) ? CL_TRUE : CL_FALSE);
+                ASSERT_CL(err) 
+                err = leftkernel.setArg(3, block_row);
+                ASSERT_CL(err)
+                err = leftkernel.setArg(4, tops);
+                ASSERT_CL(err)
+                err = leftkernel.setArg(5, config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG);
+                ASSERT_CL(err)
+                all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
+                left_queue.enqueueNDRangeKernel(leftkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));
+
+                // Create the network kernel
+                std::cout << "Create network" << std::endl;
+                cl::Kernel networkkernel(*config.program, "network_layer",
+                                            &err);
+                ASSERT_CL(err);
+                err = networkkernel.setArg(0, TOP_BLOCK_OUT | LEFT_BLOCK_OUT | INNER_BLOCK | ((tops == block_row + 1) ? (LU_BLOCK_OUT | TOP_BLOCK | LEFT_BLOCK) : 0));
+                ASSERT_CL(err)
+                err = networkkernel.setArg(1, CL_FALSE);
+                ASSERT_CL(err)
+                network_queue.enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
+
+                std::cout << "Create inner" << std::endl;
+                cl::Kernel innerkernel(*config.program, "inner_update",
+                                    &err);
+                ASSERT_CL(err);
+                err = innerkernel.setArg(0, Buffer_a);
+                ASSERT_CL(err);
+                err = innerkernel.setArg(1, Buffer_left);
+                ASSERT_CL(err)
+                err = innerkernel.setArg(2, Buffer_top);
+                ASSERT_CL(err)
+                err = innerkernel.setArg(3, CL_TRUE);
+                ASSERT_CL(err)
+                err = innerkernel.setArg(4, tops);
+                ASSERT_CL(err)
+                err = innerkernel.setArg(5, tops);
+                ASSERT_CL(err)
+                err = innerkernel.setArg(6, blocks_per_row);
+                ASSERT_CL(err)
+                all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
+                inner_queue.enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));
+            }
+            // remaining inner kernels
+            for (int current_row=block_row + 1; current_row < blocks_per_row; current_row++) {
+                for (int current_col=block_row + 1; current_col < blocks_per_row; current_col++) {
+                    if (current_row == current_col) {
+                        continue;
+                    }
+                    std::cout << "Create inner" << std::endl;
+                    cl::Kernel innerkernel(*config.program, "inner_update",
+                                        &err);
+                    ASSERT_CL(err);
+                    err = innerkernel.setArg(0, Buffer_a);
+                    ASSERT_CL(err);
+                    err = innerkernel.setArg(1, Buffer_left);
+                    ASSERT_CL(err)
+                    err = innerkernel.setArg(2, Buffer_top);
+                    ASSERT_CL(err)
+                    err = innerkernel.setArg(3, CL_FALSE);
+                    ASSERT_CL(err)
+                    err = innerkernel.setArg(4, current_col);
+                    ASSERT_CL(err)
+                    err = innerkernel.setArg(5, current_row);
+                    ASSERT_CL(err)
+                    err = innerkernel.setArg(6, blocks_per_row);
+                    ASSERT_CL(err)
+                    all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
+                    inner_queue.enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));         
+                }
+            }
+
+            if (block_row == blocks_per_row - 1) {
+                std::cout << "Create network only LU" << std::endl;
+                // Create the network kernel
+                cl::Kernel networkkernel(*config.program, "network_layer",
+                                            &err);
+                ASSERT_CL(err);
+                err = networkkernel.setArg(0, LU_BLOCK_OUT);
+                ASSERT_CL(err)
+                err = networkkernel.setArg(1, CL_FALSE);
+                ASSERT_CL(err)
+                network_queue.enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
+            }
         }
 
-        err = clEnqueueSVMMap(compute_queue(), CL_TRUE,
-                        CL_MAP_READ | CL_MAP_WRITE,
-                        reinterpret_cast<void *>(A_tmp),
-                        sizeof(HOST_DATA_TYPE) *
-                        (config.programSettings->matrixSize * config.programSettings->matrixSize), 0,
-                        NULL, NULL);
-        ASSERT_CL(err)
-        err = clEnqueueSVMMap(compute_queue(), CL_TRUE,
-                        CL_MAP_READ,
-                        reinterpret_cast<void *>(b),
-                        sizeof(HOST_DATA_TYPE) *
-                        (config.programSettings->matrixSize), 0,
-                        NULL, NULL);
-        ASSERT_CL(err)
-        err = clEnqueueSVMMap(compute_queue(), CL_TRUE,
-                        CL_MAP_WRITE,
-                        reinterpret_cast<void *>(ipvt),
-                        sizeof(cl_int) *
-                        (config.programSettings->matrixSize), 0,
-                        NULL, NULL);
-        ASSERT_CL(err)
-#else
-        err = lu_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
+        err = buffer_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
         ASSERT_CL(err)
-        err = lu_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
+        err = buffer_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
         ASSERT_CL(err)
-        lu_queue.finish();
-#endif
-        std::vector<cl::Event> event_vector(5);
+        buffer_queue.finish();
+
+        std::cout << "Start execution" << std::endl;
         // Execute GEFA
         auto t1 = std::chrono::high_resolution_clock::now();
-        network_queue.enqueueTask(network1kernel, NULL, &event_vector[0]);
-        lu_queue.enqueueTask(gefakernel, NULL, &event_vector[1]);
-        top_queue.enqueueTask(topkernel, NULL, &event_vector[2]);
-        left_queue.enqueueTask(leftkernel, NULL, &event_vector[3]);
-        inner_queue.enqueueTask(innerkernel, NULL, &event_vector[4]);
-        network_queue.enqueueTask(network2kernel, &event_vector, NULL);
-        lu_queue.enqueueTask(gefa2kernel, &event_vector, NULL);
-        lu_queue.finish();
+        start_event.setStatus(CL_COMPLETE);
+        std::cout << "Wait for iterations: " << all_events.size() << std::endl;
+        for (auto evs : all_events) {
+            std::cout << "Wait for events: " << evs.size() << std::flush;
+            for (auto ev : evs) {
+                ev.wait();
+                std::cout << "." << std::flush;
+            }
+            std::cout << std::endl;
+        }
         auto t2 = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> timespan =
             std::chrono::duration_cast<std::chrono::duration<double>>
@@ -263,12 +289,12 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     clSVMFree((*config.context)(), reinterpret_cast<void*>(A_tmp));
 
 #else
-    lu_queue.enqueueReadBuffer(Buffer_a, CL_TRUE, 0,
+    buffer_queue.enqueueReadBuffer(Buffer_a, CL_TRUE, 0,
                                      sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
-    lu_queue.enqueueReadBuffer(Buffer_b, CL_TRUE, 0,
+    buffer_queue.enqueueReadBuffer(Buffer_b, CL_TRUE, 0,
                                      sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
     if (!config.programSettings->isDiagonallyDominant) {
-        lu_queue.enqueueReadBuffer(Buffer_pivot, CL_TRUE, 0,
+        buffer_queue.enqueueReadBuffer(Buffer_pivot, CL_TRUE, 0,
                                         sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
     }
 #endif
@@ -278,6 +304,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
     std::unique_ptr<linpack::LinpackExecutionTimings> results(
                     new linpack::LinpackExecutionTimings{gefaExecutionTimes, geslExecutionTimes});
+
     return results;
 }
 
