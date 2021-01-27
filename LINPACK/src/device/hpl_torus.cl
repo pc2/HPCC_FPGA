@@ -62,12 +62,6 @@ __kernel
 void network_layer(const uint operation_type,
 				   const uint forward) {
 
-	printf("Network start %d\n", operation_type);
-
-	// Special register to store the scaling factor for the top block
-	// Top row is scaled here to reduce data dependencies between the send and receive channels of the top kernel
-	DEVICE_DATA_TYPE scaling_factor = 0.f;
-
 	// For every row or column of the block, something needs to be sent
 	#pragma loop_coalesce
 	for (uint row = 0; row < BLOCK_SIZE; row++) {
@@ -99,16 +93,15 @@ void network_layer(const uint operation_type,
 				}
 			}
 
-			// update the scaling factor
-			if (chunk == 0) {
-				scaling_factor  = to_right.data[row & (GEMM_BLOCK - 1)];
+			if ((operation_type & (LEFT_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+				write_channel_intel(ch_left_row_in, to_bottom);
+			}
+			if ((operation_type & (TOP_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+				write_channel_intel(ch_top_col_in, to_right);
 			}
 
 			if (operation_type & (LEFT_BLOCK_OUT)) {
 				to_left = read_channel_intel(ch_left_col_out);
-				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-					write_channel_intel(ch_left_row_in, to_bottom);
-				}
 			}
 			else {
 				// If inner block, receive from right and bottom and forward to left and top
@@ -120,14 +113,7 @@ void network_layer(const uint operation_type,
 			}
 
 			if (operation_type & (TOP_BLOCK_OUT)) {
-				ch_chunk_t from_top_kernel = read_channel_intel(ch_top_row_out);
-				#pragma unroll
-				for (int i = 0; i < GEMM_BLOCK; i++) {
-					to_top.data[i] = from_top_kernel.data[i] * scaling_factor;
-				}
-				if (chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-					write_channel_intel(ch_top_col_in, to_right);
-				}
+				to_top = read_channel_intel(ch_top_row_out);
 			}
 			else {
 				// If inner block, receive from right and bottom and forward to left and top
@@ -159,7 +145,6 @@ void network_layer(const uint operation_type,
 			}
 		}
 	}
-	printf("Network end\n");
 }
 
 
@@ -341,7 +326,6 @@ lu(__global DEVICE_DATA_TYPE* restrict a,
 				const uint block_col,
 				const uint block_row,
 				const uint blocks_per_row) {
-	printf("LU start\n");
 
 	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
 	
@@ -528,7 +512,6 @@ lu(__global DEVICE_DATA_TYPE* restrict a,
 			}
 		}
 	}
-	printf("LU end\n");
 }
 
 /**
@@ -543,8 +526,6 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a,
 				const uint block_col,
 				const uint block_row,
 				const uint blocks_per_row) {
-
-	printf("Top start\n");
 
 	// Store current block in local memory
 	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
@@ -576,22 +557,6 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a,
 		DEVICE_DATA_TYPE current_scale;
 
 		for (int col = 0; col < BLOCK_SIZE / GEMM_BLOCK; col++) {
-			DEVICE_DATA_TYPE scale_chunk[GEMM_BLOCK];
-
-			// get current row chunk
-			#pragma unroll
-			for (int i =0; i < GEMM_BLOCK; i++) {
-				scale_chunk[i] = a_buffer[k][col][kk][i];
-			}
-
-			// Store chunk for later update and forward it over external channel
-			ch_chunk_t row_out;
-			#pragma unroll
-			for (int i =0; i < GEMM_BLOCK; i++) {
-				row_out.data[i] = scale_chunk[i];
-			}
-			write_channel_intel(ch_top_row_out, row_out);
-
 			ch_chunk_t col_in;
 			
 			// if current column data is still available read it in and store it in buffer
@@ -620,11 +585,27 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a,
 				}
 			}
 
+			DEVICE_DATA_TYPE scale_chunk[GEMM_BLOCK];
+
+			// get current row chunk
+			#pragma unroll
+			for (int i =0; i < GEMM_BLOCK; i++) {
+				scale_chunk[i] = a_buffer[k][col][kk][i];
+			}
+
 			// scale current row chunk with the rows scale factor received over the external channel
 			#pragma unroll
 			for (int i =0; i < GEMM_BLOCK; i++) {
 				scale_chunk[i] = scale_chunk[i] * current_scale;
 			}
+
+			// Store chunk for later update and forward it over external channel
+			ch_chunk_t row_out;
+			#pragma unroll
+			for (int i =0; i < GEMM_BLOCK; i++) {
+				row_out.data[i] = scale_chunk[i];
+			}
+			write_channel_intel(ch_top_row_out, row_out);
 
 			#pragma unroll
 			for (int i =0; i < GEMM_BLOCK; i++) {
@@ -671,7 +652,6 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a,
 			}
 		}
 	}
-	printf("Top end\n");
 }
 
 /**
@@ -686,8 +666,6 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a,
 				const uint block_col,
 				const uint block_row,
 				const uint blocks_per_row) {
-
-	printf("Left start\n");
 
 	// Store current block in local memory
 	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
@@ -794,7 +772,6 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a,
 			}
 		}
 	}
-	printf("Left end\n");
 }
 
 
@@ -811,8 +788,6 @@ void inner_update(__global DEVICE_DATA_TYPE* restrict a,
 				const uint block_col,
 				const uint block_row,
 				const uint blocks_per_row) {
-
-	printf("Inner start\n");
 
 	// Store current block in local memory
 	local DEVICE_DATA_TYPE a_buffer[BLOCK_SIZE/GEMM_BLOCK][BLOCK_SIZE/GEMM_BLOCK][GEMM_BLOCK][GEMM_BLOCK];
@@ -850,22 +825,22 @@ void inner_update(__global DEVICE_DATA_TYPE* restrict a,
 				// Store received left and top block in global memory buffer to sustain between function calls
 				#pragma unroll
 				for (int i=0; i < GEMM_BLOCK; i++) {
-					left_global_buffer[block_col * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i] = col_in.data[i];
+					left_global_buffer[block_row * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i] = col_in.data[i];
 				}
 				#pragma unroll
 				for (int i=0; i < GEMM_BLOCK; i++) {
-					top_global_buffer[block_row * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i] = row_in.data[i];
+					top_global_buffer[block_col * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i] = row_in.data[i];
 				}
 			}
 			else {
 				// Load left and top data from global memory instead of receiving it from the channel
 				#pragma unroll
 				for (int i=0; i < GEMM_BLOCK; i++) {
-					col_in.data[i] = left_global_buffer[block_col * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i];
+					col_in.data[i] = left_global_buffer[block_row * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i];
 				}
 				#pragma unroll
 				for (int i=0; i < GEMM_BLOCK; i++) {
-					row_in.data[i] = top_global_buffer[block_row * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i];
+					row_in.data[i] = top_global_buffer[block_col * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i];
 				}
 			}
 			#pragma unroll
@@ -907,5 +882,4 @@ void inner_update(__global DEVICE_DATA_TYPE* restrict a,
 			}
 		}
 	}
-	printf("Inner end\n");
 }
