@@ -95,11 +95,13 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         // User event that is used to start actual execution of benchmark kernels
         cl::UserEvent start_event(*config.context, &err);
         ASSERT_CL(err);
-        std::vector<std::vector<cl::Event>> all_events(blocks_per_row + 1);
-        all_events[0].push_back(start_event);
+        std::vector<std::vector<cl::Event>> all_events;
+        all_events.emplace_back();
+        all_events.back().emplace_back(start_event);
 
         // For every row of blocks create kernels and enqueue them
         for (int block_row=0; block_row < config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG; block_row++) {
+            all_events.emplace_back();
             // create the LU kernel
             cl::Kernel gefakernel(*config.program, "lu",
                                         &err);
@@ -111,8 +113,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             ASSERT_CL(err)
             err = gefakernel.setArg(3, config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG);
             ASSERT_CL(err)
-            all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
-            err = lu_queue.enqueueNDRangeKernel(gefakernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &all_events[block_row + 1][all_events[block_row + 1].size() - 1]);
+            all_events.back().emplace_back();
+            err = lu_queue.enqueueNDRangeKernel(gefakernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &all_events.back().back());
             ASSERT_CL(err)
             // Create top kernels, left kernels and inner kernels
             for (int tops=block_row + 1; tops < (config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG); tops++) {
@@ -131,8 +133,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = topkernel.setArg(5, config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG);
                 ASSERT_CL(err)
-                all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
-                top_queue.enqueueNDRangeKernel(topkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));
+                all_events.back().emplace_back();
+                top_queue.enqueueNDRangeKernel(topkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events.back().back()));
 
                 cl::Kernel leftkernel(*config.program, "left_update",
                                                 &err);
@@ -149,8 +151,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = leftkernel.setArg(5, config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG);
                 ASSERT_CL(err)
-                all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
-                left_queue.enqueueNDRangeKernel(leftkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));
+                all_events.back().emplace_back();
+                left_queue.enqueueNDRangeKernel(leftkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events.back().back()));
 
                 // Create the network kernel
                 cl::Kernel networkkernel(*config.program, "network_layer",
@@ -158,7 +160,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err);
                 err = networkkernel.setArg(0, TOP_BLOCK_OUT | LEFT_BLOCK_OUT | INNER_BLOCK | ((tops == block_row + 1) ? (LU_BLOCK_OUT | TOP_BLOCK | LEFT_BLOCK) : 0));
                 ASSERT_CL(err)
-                err = networkkernel.setArg(1, 0);
+                err = networkkernel.setArg(1, static_cast<cl_uint>(0));
                 ASSERT_CL(err)
                 network_queue.enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
 
@@ -180,8 +182,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = innerkernel.setArg(6, blocks_per_row);
                 ASSERT_CL(err)
-                all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
-                inner_queue.enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));
+                all_events.back().emplace_back();
+                inner_queue.enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events.back().back()));
             }
             // update all remaining inner blocks using only global memory
             for (int current_row=block_row + 1; current_row < blocks_per_row; current_row++) {
@@ -206,8 +208,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     ASSERT_CL(err)
                     err = innerkernel.setArg(6, blocks_per_row);
                     ASSERT_CL(err)
-                    all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
-                    inner_queue.enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));         
+                    all_events.back().emplace_back();
+                    inner_queue.enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events.back().back()));         
                 }
             }
 
@@ -218,7 +220,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err);
                 err = networkkernel.setArg(0, LU_BLOCK_OUT);
                 ASSERT_CL(err)
-                err = networkkernel.setArg(1, 0);
+                err = networkkernel.setArg(1, static_cast<cl_uint>(0));
                 ASSERT_CL(err)
                 network_queue.enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
             }
