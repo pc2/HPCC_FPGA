@@ -53,14 +53,13 @@ channel ch_chunk_t ch_inner_col_in;
 Takes care of the external channels.
 Will forward data from calculation kernels to the external channels and will forward data if required.
 
-operation_type: 0:inner, 1: left, 4:top, 8:lu
-forward: if true (forward > 0), forward data to external channel, discard data otherwise. This is used to stop 
-		forwarding when reaching the end of the grid
+operation_type: 0:inner, 1: left, 4:top, 8:lu and every combination of it
+forward: 0: top, 1: right, 4: bottom, 8: left or every combination of it
  */
  __attribute__((uses_global_work_offset(0)))
 __kernel
 void network_layer(const uint operation_type,
-				   const uint forward) {
+				   const uint forward_type) {
 
 	// For every row or column of the block, something needs to be sent
 	#pragma loop_coalesce
@@ -129,19 +128,17 @@ void network_layer(const uint operation_type,
 				write_channel_intel(ch_inner_col_in, to_left);
 			}
 
-			if (forward) {
-				if ((operation_type & (LU_BLOCK_OUT | TOP_BLOCK_OUT)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-					write_channel_intel(ch_right_out, to_right);
-				}
-				if ((operation_type & (LU_BLOCK_OUT | LEFT_BLOCK_OUT)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-					write_channel_intel(ch_bottom_out, to_bottom);
-				}
-				if (operation_type & (LEFT_BLOCK_OUT | INNER_BLOCK)) {
-					write_channel_intel(ch_left_out, to_left);
-				}
-				if (operation_type & (TOP_BLOCK_OUT | INNER_BLOCK)) {
-					write_channel_intel(ch_top_out, to_top);
-				}
+			if ((forward_type & NETWORK_FWD_RIGHT) && (operation_type & (LU_BLOCK_OUT | TOP_BLOCK_OUT)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+				write_channel_intel(ch_right_out, to_right);
+			}
+			if ((forward_type & NETWORK_FWD_BOTTOM) && (operation_type & (LU_BLOCK_OUT | LEFT_BLOCK_OUT)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+				write_channel_intel(ch_bottom_out, to_bottom);
+			}
+			if ((forward_type & NETWORK_FWD_LEFT) && (operation_type & (LEFT_BLOCK_OUT | INNER_BLOCK))) {
+				write_channel_intel(ch_left_out, to_left);
+			}
+			if ((forward_type & NETWORK_FWD_TOP) && (operation_type & (TOP_BLOCK_OUT | INNER_BLOCK))) {
+				write_channel_intel(ch_top_out, to_top);
 			}
 		}
 	}

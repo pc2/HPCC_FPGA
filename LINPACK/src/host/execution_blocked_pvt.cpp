@@ -100,7 +100,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
         // For every row of blocks create kernels and enqueue them
         for (int block_row=0; block_row < config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG; block_row++) {
-            std::cout << "Create LU" << std::endl;
             // create the LU kernel
             cl::Kernel gefakernel(*config.program, "lu",
                                         &err);
@@ -117,7 +116,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             ASSERT_CL(err)
             // Create top kernels, left kernels and inner kernels
             for (int tops=block_row + 1; tops < (config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG); tops++) {
-                std::cout << "Create top" << std::endl;
                 cl::Kernel topkernel(*config.program, "top_update",
                                                 &err);
                 ASSERT_CL(err);     
@@ -135,7 +133,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
                 top_queue.enqueueNDRangeKernel(topkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));
-                std::cout << "Create left" << std::endl;
 
                 cl::Kernel leftkernel(*config.program, "left_update",
                                                 &err);
@@ -156,17 +153,16 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 left_queue.enqueueNDRangeKernel(leftkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));
 
                 // Create the network kernel
-                std::cout << "Create network" << std::endl;
                 cl::Kernel networkkernel(*config.program, "network_layer",
                                             &err);
                 ASSERT_CL(err);
                 err = networkkernel.setArg(0, TOP_BLOCK_OUT | LEFT_BLOCK_OUT | INNER_BLOCK | ((tops == block_row + 1) ? (LU_BLOCK_OUT | TOP_BLOCK | LEFT_BLOCK) : 0));
                 ASSERT_CL(err)
-                err = networkkernel.setArg(1, CL_FALSE);
+                err = networkkernel.setArg(1, 0);
                 ASSERT_CL(err)
                 network_queue.enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
 
-                std::cout << "Create inner" << std::endl;
+                // create all diagnonal inner updates because we need to receive the data from top and left while calculating
                 cl::Kernel innerkernel(*config.program, "inner_update",
                                     &err);
                 ASSERT_CL(err);
@@ -187,13 +183,12 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 all_events[block_row + 1].resize(all_events[block_row + 1].size() + 1);
                 inner_queue.enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events[block_row + 1][all_events[block_row + 1].size() - 1]));
             }
-            // remaining inner kernels
+            // update all remaining inner blocks using only global memory
             for (int current_row=block_row + 1; current_row < blocks_per_row; current_row++) {
                 for (int current_col=block_row + 1; current_col < blocks_per_row; current_col++) {
                     if (current_row == current_col) {
                         continue;
                     }
-                    std::cout << "Create inner" << std::endl;
                     cl::Kernel innerkernel(*config.program, "inner_update",
                                         &err);
                     ASSERT_CL(err);
@@ -217,14 +212,13 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             }
 
             if (block_row == blocks_per_row - 1) {
-                std::cout << "Create network only LU" << std::endl;
-                // Create the network kernel
+                // Create the network kernel for the very last iteration where only the LU kernel will run
                 cl::Kernel networkkernel(*config.program, "network_layer",
                                             &err);
                 ASSERT_CL(err);
                 err = networkkernel.setArg(0, LU_BLOCK_OUT);
                 ASSERT_CL(err)
-                err = networkkernel.setArg(1, CL_FALSE);
+                err = networkkernel.setArg(1, 0);
                 ASSERT_CL(err)
                 network_queue.enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
             }
@@ -238,19 +232,12 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         ASSERT_CL(err)
         buffer_queue.finish();
 
-        std::cout << "Start execution" << std::endl;
         // Execute GEFA
         auto t1 = std::chrono::high_resolution_clock::now();
+        // Trigger the user event that will start the first tasks in the queue
         start_event.setStatus(CL_COMPLETE);
-        std::cout << "Wait for iterations: " << all_events.size() << std::endl;
-        for (auto evs : all_events) {
-            std::cout << "Wait for events: " << evs.size() << std::flush;
-            for (auto ev : evs) {
-                ev.wait();
-                std::cout << "." << std::flush;
-            }
-            std::cout << std::endl;
-        }
+        // wait until the LU queue is done since it will be the last required operation
+        lu_queue.finish();
         auto t2 = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> timespan =
             std::chrono::duration_cast<std::chrono::duration<double>>

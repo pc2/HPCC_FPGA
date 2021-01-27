@@ -95,7 +95,7 @@ class LinpackKernelCommunicationTestLU : public LinpackKernelCommunicationTest {
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
         err = network.setArg(0, static_cast<cl_uint>(LU_BLOCK_OUT));
-        err = network.setArg(1, CL_TRUE);
+        err = network.setArg(1, NETWORK_FWD_TOP | NETWORK_FWD_RIGHT| NETWORK_FWD_BOTTOM | NETWORK_FWD_LEFT);
         network_queue.enqueueNDRangeKernel(network, cl::NullRange, cl::NDRange(1),cl::NullRange);
 
         compute_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
@@ -158,7 +158,7 @@ public:
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
         err = network.setArg(0, static_cast<cl_uint>(TOP_BLOCK| TOP_BLOCK_OUT));
-        err = network.setArg(1, CL_TRUE);
+        err = network.setArg(1, NETWORK_FWD_TOP | NETWORK_FWD_RIGHT| NETWORK_FWD_BOTTOM | NETWORK_FWD_LEFT);
         network_queue.enqueueNDRangeKernel(network, cl::NullRange, cl::NDRange(1),cl::NullRange);
 
         compute_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
@@ -216,7 +216,7 @@ class LinpackKernelCommunicationTestTopOut : public LinpackKernelCommunicationTe
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
         err = network.setArg(0, static_cast<cl_uint>(TOP_BLOCK_OUT));
-        err = network.setArg(1, CL_TRUE);
+        err = network.setArg(1, NETWORK_FWD_TOP | NETWORK_FWD_RIGHT| NETWORK_FWD_BOTTOM | NETWORK_FWD_LEFT);
         network_queue.enqueueNDRangeKernel(network, cl::NullRange, cl::NDRange(1),cl::NullRange);
 
         auto lu_data = bm->generateInputData();
@@ -278,7 +278,7 @@ class LinpackKernelCommunicationTestLeftOut : public LinpackKernelCommunicationT
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
         err = network.setArg(0, static_cast<cl_uint>(LEFT_BLOCK_OUT));
-        err = network.setArg(1, CL_TRUE);
+        err = network.setArg(1, NETWORK_FWD_TOP | NETWORK_FWD_RIGHT| NETWORK_FWD_BOTTOM | NETWORK_FWD_LEFT);
         network_queue.enqueueNDRangeKernel(network, cl::NullRange, cl::NDRange(1),cl::NullRange);
 
         auto lu_data = bm->generateInputData();
@@ -351,7 +351,7 @@ class LinpackKernelCommunicationTestLeft : public LinpackKernelCommunicationTest
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
         err = network.setArg(0, static_cast<cl_uint>(LEFT_BLOCK | LEFT_BLOCK_OUT));
-        err = network.setArg(1, CL_TRUE);
+        err = network.setArg(1, NETWORK_FWD_TOP | NETWORK_FWD_RIGHT| NETWORK_FWD_BOTTOM | NETWORK_FWD_LEFT);
         network_queue.enqueueNDRangeKernel(network, cl::NullRange, cl::NDRange(1),cl::NullRange);
 
         compute_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
@@ -433,7 +433,7 @@ public:
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
         err = network.setArg(0, static_cast<cl_uint>(INNER_BLOCK));
-        err = network.setArg(1, CL_TRUE);
+        err = network.setArg(1, NETWORK_FWD_TOP | NETWORK_FWD_RIGHT| NETWORK_FWD_BOTTOM | NETWORK_FWD_LEFT);
         network_queue.enqueueNDRangeKernel(network, cl::NullRange, cl::NDRange(1),cl::NullRange);
         compute_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
         compute_queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(1),cl::NullRange);
@@ -603,10 +603,10 @@ class LinpackKernelCommunicationTestAll : public LinpackKernelCommunicationTest 
         // Start network layer kernel
         cl::Kernel network1(*bm->getExecutionSettings().program, "network_layer", &err);
         err = network1.setArg(0, static_cast<cl_uint>(INNER_BLOCK | LEFT_BLOCK | TOP_BLOCK| LEFT_BLOCK_OUT | TOP_BLOCK_OUT | LU_BLOCK_OUT));
-        err = network1.setArg(1, CL_TRUE);
+        err = network1.setArg(1, NETWORK_FWD_TOP | NETWORK_FWD_RIGHT| NETWORK_FWD_BOTTOM | NETWORK_FWD_LEFT);
         cl::Kernel network2(*bm->getExecutionSettings().program, "network_layer", &err);
         err = network2.setArg(0, static_cast<cl_uint>(LU_BLOCK_OUT));
-        err = network2.setArg(1, CL_FALSE);
+        err = network2.setArg(1, 0);
         network_queue.enqueueNDRangeKernel(network1, cl::NullRange, cl::NDRange(1),cl::NullRange);
         network_queue.enqueueNDRangeKernel(network2, cl::NullRange, cl::NDRange(1),cl::NullRange);
 
