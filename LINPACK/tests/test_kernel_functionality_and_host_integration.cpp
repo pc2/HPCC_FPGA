@@ -14,15 +14,16 @@ extern "C" void sgesv_(int* size, int* lrhs, float* A, int* size2, int* ipvt, fl
 #endif
 #endif
 
-struct LinpackKernelTest : testing::Test {
+struct LinpackKernelTest : testing::TestWithParam<uint> {
     
     std::unique_ptr<linpack::LinpackBenchmark> bm;
     std::unique_ptr<linpack::LinpackData> data;
     uint array_size = 0;
 
     void SetUp() override {
+        uint matrix_blocks = GetParam();
         bm = std::unique_ptr<linpack::LinpackBenchmark>(new linpack::LinpackBenchmark(global_argc, global_argv));
-        bm->getExecutionSettings().programSettings->matrixSize = 2 << LOCAL_MEM_BLOCK_LOG;
+        bm->getExecutionSettings().programSettings->matrixSize = matrix_blocks * (1 << LOCAL_MEM_BLOCK_LOG);
         data = bm->generateInputData();
         array_size = bm->getExecutionSettings().programSettings->matrixSize;
     }
@@ -38,7 +39,7 @@ struct LinpackKernelTest : testing::Test {
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_F(LinpackKernelTest, FPGACorrectResultsOneRepetition) {
+TEST_P(LinpackKernelTest, FPGACorrectResultsOneRepetition) {
     auto result = bm->executeKernel(*data);
     for (int i = 0; i < array_size; i++) {
         EXPECT_NEAR(data->b[i], 1.0, 1.0e-3);
@@ -48,7 +49,7 @@ TEST_F(LinpackKernelTest, FPGACorrectResultsOneRepetition) {
 /**
  * GEFA Execution returns correct results for a single repetition
  */
-TEST_F(LinpackKernelTest, FPGACorrectResultsGEFA) {
+TEST_P(LinpackKernelTest, FPGACorrectResultsGEFA) {
     auto result = bm->executeKernel(*data);
     auto data2 = bm->generateInputData();
     if (bm->getExecutionSettings().programSettings->isDiagonallyDominant) {
@@ -75,7 +76,7 @@ TEST_F(LinpackKernelTest, FPGACorrectResultsGEFA) {
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_F(LinpackKernelTest, ValidationWorksForMKL) {
+TEST_P(LinpackKernelTest, ValidationWorksForMKL) {
 
     int info;    
     auto data_cpu = bm->generateInputData();
@@ -92,3 +93,8 @@ TEST_F(LinpackKernelTest, ValidationWorksForMKL) {
 
 
 #endif
+
+INSTANTIATE_TEST_CASE_P(
+        LinpackKernelParametrizedTests,
+        LinpackKernelTest,
+        ::testing::Values(1, 2, 3));
