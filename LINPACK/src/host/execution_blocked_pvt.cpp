@@ -82,6 +82,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                                         sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize * (1 << LOCAL_MEM_BLOCK_LOG));
     cl::Buffer Buffer_left(*config.context, CL_MEM_READ_WRITE,
                                         sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize * (1 << LOCAL_MEM_BLOCK_LOG));
+    cl::Buffer Buffer_network_scaling(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*(1 << LOCAL_MEM_BLOCK_LOG));
 
     uint blocks_per_row = config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG;
 
@@ -158,9 +160,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 cl::Kernel networkkernel(*config.program, "network_layer",
                                             &err);
                 ASSERT_CL(err);
-                err = networkkernel.setArg(0, TOP_BLOCK_OUT | LEFT_BLOCK_OUT | INNER_BLOCK | ((tops == block_row + 1) ? (LU_BLOCK_OUT | TOP_BLOCK | LEFT_BLOCK) : 0));
+                err = networkkernel.setArg(0, Buffer_network_scaling);
+                ASSERT_CL(err);
+                err = networkkernel.setArg(1, TOP_BLOCK_OUT | LEFT_BLOCK_OUT | INNER_BLOCK | ((tops == block_row + 1) ? (LU_BLOCK_OUT | TOP_BLOCK | LEFT_BLOCK) : 0));
                 ASSERT_CL(err)
-                err = networkkernel.setArg(1, static_cast<cl_uint>(0));
+                err = networkkernel.setArg(2, static_cast<cl_uint>(0));
                 ASSERT_CL(err)
                 network_queue.enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
 
@@ -218,9 +222,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 cl::Kernel networkkernel(*config.program, "network_layer",
                                             &err);
                 ASSERT_CL(err);
-                err = networkkernel.setArg(0, LU_BLOCK_OUT);
+                err = networkkernel.setArg(0, Buffer_network_scaling);
+                ASSERT_CL(err);
+                err = networkkernel.setArg(1, LU_BLOCK_OUT);
                 ASSERT_CL(err)
-                err = networkkernel.setArg(1, static_cast<cl_uint>(0));
+                err = networkkernel.setArg(2, static_cast<cl_uint>(0));
                 ASSERT_CL(err)
                 network_queue.enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
             }
