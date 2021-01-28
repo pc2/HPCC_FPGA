@@ -13,13 +13,15 @@
 #pragma OPENCL EXTENSION cl_intel_channels : enable
 
 typedef struct {
-    DEVICE_DATA_TYPE data[CHANNEL_WIDTH];
+    DEVICE_DATA_TYPE data[CHANNEL_WIDTH/2];
 } ch_data;
 
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
 // Channel used to send the transposed blocks of A
-channel ch_data chan_a_out/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(i) + "\""*/)));
-channel ch_data chan_a_in/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(2 * (i // 2) + ((i + 1) % 2)) + "\""*/)));
+channel ch_data chan_a_out1/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(2*i) + "\""*/)));
+channel ch_data chan_a_out2/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(2*i + 1) + "\""*/)));
+channel ch_data chan_a_in1/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(2*i + 1) + "\""*/)));
+channel ch_data chan_a_in2/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(2*i) + "\""*/)));
 // PY_CODE_GEN block_end
 #endif
 
@@ -96,14 +98,28 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
 
         unsigned rot_out = row & (CHANNEL_WIDTH - 1);
 
-        ch_data data;
+        DEVICE_DATA_TYPE channel_data[CHANNEL_WIDTH];
         // rotate temporary buffer to store data into local buffer
 __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
         for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
-            data.data[unroll_count] = rotate_out[(unroll_count + rot_out) & (CHANNEL_WIDTH - 1)];
+            channel_data[unroll_count] = rotate_out[(unroll_count + rot_out) & (CHANNEL_WIDTH - 1)];
         }
 
-        write_channel_intel(chan_a_out/*PY_CODE_GEN i*/, data); 
+        ch_data data1;
+        // rotate temporary buffer to store data into local buffer
+__attribute__((opencl_unroll_hint(CHANNEL_WIDTH/2)))
+        for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH/2; unroll_count++) {
+            data1.data[unroll_count] = channel_data[unroll_count];
+        }
+        write_channel_intel(chan_a_out1/*PY_CODE_GEN i*/, data1); 
+
+        ch_data data2;
+        // rotate temporary buffer to store data into local buffer
+__attribute__((opencl_unroll_hint(CHANNEL_WIDTH/2)))
+        for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH/2; unroll_count++) {
+            data2.data[unroll_count] = channel_data[CHANNEL_WIDTH/2 + unroll_count];
+        }
+        write_channel_intel(chan_a_out2/*PY_CODE_GEN i*/, data2); 
 }
 
 /**
@@ -172,7 +188,19 @@ void transpose_write/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict B,
         for (int row = 0; row < BLOCK_SIZE; row++) {
             for (int col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
 
-                ch_data data = read_channel_intel(chan_a_in/*PY_CODE_GEN i*/); 
+                DEVICE_DATA_TYPE channel_data[CHANNEL_WIDTH];
+
+                ch_data data1 = read_channel_intel(chan_a_in1/*PY_CODE_GEN i*/); 
+                __attribute__((opencl_unroll_hint(CHANNEL_WIDTH/2)))
+                for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH/2; unroll_count++) {
+                    channel_data[unroll_count] = data1.data[unroll_count];
+                }
+
+                ch_data data2 = read_channel_intel(chan_a_in2/*PY_CODE_GEN i*/); 
+                __attribute__((opencl_unroll_hint(CHANNEL_WIDTH/2)))
+                for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH/2; unroll_count++) {
+                    channel_data[CHANNEL_WIDTH/2 + unroll_count] = data2.data[unroll_count];
+                }
 
                 unsigned rot_out = row & (CHANNEL_WIDTH - 1);
                 // rotate temporary buffer to store data into local buffer
@@ -180,7 +208,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
                 for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
                     A_out[current_block * BLOCK_SIZE * BLOCK_SIZE +
                     row * BLOCK_SIZE + col * CHANNEL_WIDTH + unroll_count] =
-                    data.data[unroll_count]
+                    channel_data[unroll_count]
                     + B[current_block * BLOCK_SIZE * BLOCK_SIZE +
                     row * BLOCK_SIZE + col * CHANNEL_WIDTH + unroll_count];
                 }

@@ -70,16 +70,29 @@ namespace bm_execution {
 
                 bufferSizeList.push_back(buffer_size);
 
-                int memory_bank_info = 0;
+                int memory_bank_info_a = 0;
+                int memory_bank_info_b = 0;
+                int memory_bank_info_out = 0;
 #ifdef INTEL_FPGA
-                // Define the memory bank the buffers will be placed in
-                memory_bank_info = ((r + 1) << 16);
+                if (!config.programSettings->useMemoryInterleaving) {
+                        // Define the memory bank the buffers will be placed in
+                        if (config.programSettings->distributeBuffers) {
+                                memory_bank_info_a = ((((r * 3) % 7) + 1) << 16);
+                                memory_bank_info_a = ((((r * 3 + 1) % 7) + 1) << 16);
+                                memory_bank_info_out = ((((r * 3 + 2) % 7) + 1) << 16);
+                        }
+                        else {
+                                memory_bank_info_a = ((r + 1) << 16);
+                                memory_bank_info_a = ((r + 1) << 16);
+                                memory_bank_info_out = ((r + 1) << 16);
+                        }
+                }
 #endif
-                cl::Buffer bufferA(*config.context, CL_MEM_READ_ONLY | memory_bank_info,
+                cl::Buffer bufferA(*config.context, CL_MEM_READ_ONLY | memory_bank_info_a,
                                 buffer_size* sizeof(HOST_DATA_TYPE));
-                cl::Buffer bufferB(*config.context, CL_MEM_READ_ONLY | memory_bank_info,
+                cl::Buffer bufferB(*config.context, CL_MEM_READ_ONLY | memory_bank_info_b,
                                 buffer_size * sizeof(HOST_DATA_TYPE));
-                cl::Buffer bufferA_out(*config.context, CL_MEM_WRITE_ONLY | memory_bank_info,
+                cl::Buffer bufferA_out(*config.context, CL_MEM_WRITE_ONLY | memory_bank_info_out,
                                 buffer_size * sizeof(HOST_DATA_TYPE));
 
                 // TODO the kernel name may need to be changed for Xilinx support
@@ -172,6 +185,8 @@ namespace bm_execution {
             std::chrono::duration<double> transferTime =
                     std::chrono::duration_cast<std::chrono::duration<double>>
                             (endTransfer - startTransfer);
+
+            MPI_Barrier(MPI_COMM_WORLD);
 
             auto startCalculation = std::chrono::high_resolution_clock::now();
             for (int r = 0; r < transposeReadKernelList.size(); r++) {

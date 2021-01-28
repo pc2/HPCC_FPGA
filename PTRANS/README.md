@@ -62,7 +62,7 @@ of the Intel FPGA SDK installation.
 
 ## Execution
 
-For execution of the benchmark run:
+For the execution of the benchmark run:
 
     ./Transpose_intel -f path_to_kernel.aocx
     
@@ -116,23 +116,27 @@ It will run an emulation of the kernel and execute some functionality tests.
 
 An example output from an emulation is given below:
 
-    Maximum error: 7.62939e-06
-    Validation Time: 6.44831e-02 s
-                trans          calc    calc FLOPS   total FLOPS
-    avg:   1.42614e-03   1.15279e-01   2.27400e+06   2.24621e+06
-    best:  1.42614e-03   1.15279e-01   2.27400e+06   2.24621e+06
+    Maximum error: 7.62939e-06 < 1.19209e-05
+    Mach. Epsilon: 1.19209e-07
+    Validation Time: 4.69627e+00 s
+                  calc    calc FLOPS    Net [GB/s]    Mem [GB/s]
+    avg:   1.15169e-01   3.72929e+10   1.49172e+11   4.47515e+11
+    best:  1.14216e-01   3.76041e+10   1.50416e+11   4.51249e+11
     Validation: SUCCESS!
 
-The output gives the average time for calculation and data transfer
-over all iterations as well as the best measured performance.
-For both rows there are the following columns:
+The output gives the average and best calculation time for the transposition with the derived metrics.
+For the average and best timings, we have the following columns:
 
-- `trans`: Transfer time for reading and writing buffers from host to device.
-- `calc`: Actual execution time of the kernel.
-- `calc FLOPS`: Achieved FLOPS just considering the execution time.
-- `total FLOPS`: Total FLOPS combining transfer and calculation time.
+- `calc`: Calculation time in seconds, which is the pure kernel execution time without data transfer from the host.
+- `calc FLOPS`: Achieved FLOPS just considering the calculation time.
+- `Net [GB/s]`: Used total network bandwidth in GB/s.
+- `Mem [GB/s]`: Used total global memory bandwidth in GB/s.
 
-The `Maximum Error` field shows the largest error that was computed in the addition.
-Since it is only a single addition that takes place, the error should be close to the machine epsilon
-which depeneds on the chosen data type.
+The `Maximum Error` field shows the largest error that was computed.
+Since the arithmetic intensity of the algorithm is quite low and only one addition is required to calculate one value of the result matrix, the error should be close to the machine epsilon, which depends on the chosen data type.
+The second number in the row is the validation threshold which is depending on the machine epsilon.
+The validation is successful, if the maximum error is below this threshold.
+The machine epsilon is given in the row below with `Mach. Epsilon`.
+Moreover, the total time that was needed for the validation of the result is given, which is just a debug information.
+The very last column summarizes the result: The last row will show `Validation: SUCCESS!` if the validation succeeded and the error is below the tolerated threshold.
 
