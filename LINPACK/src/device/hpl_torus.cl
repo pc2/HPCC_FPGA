@@ -98,6 +98,9 @@ void network_layer(__global DEVICE_DATA_TYPE* restrict lu_scale_buffer,
 					ch_chunk_t from_left = read_channel_intel(ch_left_in);
 					// Forward chunk to the next top block
 					to_right = from_left;
+					if (chunk == 0) {
+						current_scale = from_left.data[row & (GEMM_BLOCK - 1)];
+					}
 				}
 				if (!(operation_type & (TOP_BLOCK)) && (operation_type & (TOP_BLOCK_OUT)) && chunk == 0) {
 					current_scale = lu_scale_buffer[row];
