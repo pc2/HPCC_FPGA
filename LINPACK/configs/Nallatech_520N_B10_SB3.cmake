@@ -9,11 +9,8 @@
 set(USE_MPI No CACHE BOOL "" FORCE)
 set(USE_SVM No CACHE BOOL "" FORCE)
 set(USE_HBM No CACHE BOOL "" FORCE)
-set(FPGA_BOARD_NAME "p520_hpc_sg280l" CACHE STRING "" FORCE)
+set(FPGA_BOARD_NAME "p520_max_sg280l" CACHE STRING "" FORCE)
 set(AOC_FLAGS "-fpc -fp-relaxed -no-interleaving=default" CACHE STRING "" FORCE)
-
-# allow custom kernels to synthesize current non pivoting version
-set(USE_CUSTOM_KERNEL_TARGETS Yes CACHE BOOL "" FORCE)
 
 # LINPACK specific options
 set(DEFAULT_MATRIX_SIZE 1024 CACHE STRING "Default matrix size" FORCE)
