@@ -66,8 +66,10 @@ void network_layer(__global DEVICE_DATA_TYPE* restrict lu_scale_buffer,
 
 	// For every row or column of the block, something needs to be sent
 	#pragma loop_coalesce
+	#pragma ivdep array(lu_scale_buffer)
 	for (uint row = 0; row < BLOCK_SIZE; row++) {
 		// Number of chunks that has to be processed
+		#pragma ivdep array(lu_scale_buffer)
 		for (uint chunk = 0; chunk < BLOCK_SIZE/GEMM_BLOCK; chunk++) {
 
 			// Registers to store incoming and outgoing data chunks
