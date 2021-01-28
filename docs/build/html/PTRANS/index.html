@@ -276,6 +276,9 @@ and <span class="math notranslate nohighlight">\(d_w\)</span> the size of a sing
 In short, the required global memory bandwidth is three times higher than the network bandwidth to keep the benchmark network-bandwidth bound.</p>
 <p>For an arbitrary large matrix, the expected maximum performance will be <span class="math notranslate nohighlight">\(flops = n \cdot r \cdot f_{channel} * c_w\)</span> where <span class="math notranslate nohighlight">\(n\)</span> is the number of FPGAs,
 <span class="math notranslate nohighlight">\(r\)</span> the number of external channels per FPGA (or number of kernel pair replications), <span class="math notranslate nohighlight">\(f_{channel}\)</span> the frequency of the external channel and <span class="math notranslate nohighlight">\(c_w\)</span> the width of an external channel in number of data items.</p>
+<p>A second version of the implementation uses two external channels per kernel pair. This allows to increase the width of the LSUs to global memory and at the same time half the required number of kernel replications.
+Note, that this implementation will in some cases lead to a more severe imbalance in read and write accesses per memory bank. Using the memory interleaving mainly resolves this issue.
+The model for the expected maximum performance stays the same.</p>
 </div>
 </div>
 
