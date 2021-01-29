@@ -195,7 +195,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     if (current_row == current_col) {
                         continue;
                     }
-                    cl::Kernel innerkernel(*config.program, "inner_update",
+                    cl::Kernel innerkernel(*config.program, "inner_update_mm",
                                         &err);
                     ASSERT_CL(err);
                     err = innerkernel.setArg(0, Buffer_a);
@@ -204,13 +204,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     ASSERT_CL(err)
                     err = innerkernel.setArg(2, Buffer_top);
                     ASSERT_CL(err)
-                    err = innerkernel.setArg(3, CL_FALSE);
+                    err = innerkernel.setArg(3, current_col);
                     ASSERT_CL(err)
-                    err = innerkernel.setArg(4, current_col);
+                    err = innerkernel.setArg(4, current_row);
                     ASSERT_CL(err)
-                    err = innerkernel.setArg(5, current_row);
-                    ASSERT_CL(err)
-                    err = innerkernel.setArg(6, blocks_per_row);
+                    err = innerkernel.setArg(5, blocks_per_row);
                     ASSERT_CL(err)
                     all_events.back().emplace_back();
                     inner_queue.enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events[block_row]), &(all_events.back().back()));         
