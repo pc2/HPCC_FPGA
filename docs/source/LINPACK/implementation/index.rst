@@ -84,6 +84,38 @@ The performance of the design can be further improved by adding more kernel repl
 The other kernels can not be replicated because the performance of these kernels is mainly limited by the external channels between the FPGAs.
 
 
+
+Multi-FPGA Implementation
+-------------------------
+
+.. _fpga_2d_torus_data:
+.. figure:: torus_data_forward_rev.drawio.png
+  :width: 180
+  :align: center
+
+  Communication between the FPGAs in a 2D torus for a single iteration of the algorithm where every FPGA needs to update multiple blocks. The FPGA in the top left will calculate the LU block. The colors of the arrows show the type of the data that is forwarded in the torus.
+
+In :numref:`fpga_2d_torus_data`, the data which is forwarded in the exchange phases is shown.
+The matrix is distributed between the FPGAs using a PQ grid to balance the workload between the FPGAs.
+The FPGA in the top left will use all four streaming kernels (LU, left, top, inner) and forward the LU row and column as well as the row and column of the updated left and top block.
+The FPGAs at the top will execute the top and inner kernel, the FPGAs on the left the left and inner kernel. All remaining FPGAs will only execute the inner kernel.
+Note, that the left column and the LU column are forwarded in opposite directions. This allows a better utilization of the bidirectional channels between the FPGAs
+and the simultaneous data exchange of all kernels.
+Also, the LU row and column are forwarded internally within the top-left FPGA. This is why it is not necessary to forward it from the FPGA below or at the right.
+The internal forwarding is used to remove circular data dependencies in the torus which otherwise would lead to increased stalls in the network kernel.
+
+In the next iteration, the FPGA in the center will take the role of the LU update because it will own the next diagonal block of the matrix. This means in every iteration the roles will shift one step to the bottom-right.
+The usage of the different external channels by the four streamining kernels is shown in :numref:`fpga_external_channels`.
+Every channel is used by exactly two kernels. However, these kernels will never conflict in the channel access, because data will be forwarded internally if both kernels are active.
+
+
+ .. _fpga_external_channels:
+.. figure:: external_channel_usage.drawio.png
+  :width: 180
+  :align: center
+
+  Every FPGA is connected to four other FPGAs over the bidirectional external channels. Every channel direction takes over a certain role and does only forward a single type of data. This means that multiple kernels need to read and write to each external channel.
+
 .. [DHW98] Dongarra, J. J., Hammarling, S., & Walker, D. W. (1998). Key concepts for parallel out-of-core LU factorization. Computers & Mathematics with Applications, 35(7), 13-31.
 
 
