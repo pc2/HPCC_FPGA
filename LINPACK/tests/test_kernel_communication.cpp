@@ -442,10 +442,9 @@ public:
         err = kernel.setArg(0, buffer);
         err = kernel.setArg(1, left_buffer_inner);
         err = kernel.setArg(2, top_buffer_inner);
-        err = kernel.setArg(3, CL_TRUE);
+        err = kernel.setArg(3, 0);
         err = kernel.setArg(4, 0);
-        err = kernel.setArg(5, 0);
-        err = kernel.setArg(6, 1);
+        err = kernel.setArg(5, 1);
 
         // Start network layer kernel
         cl::Kernel network(*bm->getExecutionSettings().program, "network_layer", &err);
@@ -464,77 +463,6 @@ public:
         compute_queue.enqueueReadBuffer(left_buffer_inner, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*BLOCK_SIZE * BLOCK_SIZE, left_data.data());
         top_data.resize(bm->getExecutionSettings().programSettings->matrixSize * BLOCK_SIZE);
         compute_queue.enqueueReadBuffer(top_buffer_inner, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*BLOCK_SIZE * BLOCK_SIZE, top_data.data());
-    }
-};
-
-class LinpackKernelCommunicationTestInnerOut : public LinpackKernelCommunicationTest {
-
-
-    void SetUp() override {
-        LinpackKernelCommunicationTest::SetUp();
-        // Generate uniformy distributed data
-        bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
-        data = bm->generateInputData();
-        bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
-        setupInputChannels();
-        executeKernel();
-    }
-
-    void setupInputChannels() {
-        // Fill top channel with top result
-        std::string fname = channelInName + std::to_string(2);
-        std::remove(fname.c_str());
-        std::ofstream fs;
-        fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
-        fs.close();
-        // Fill left channel with left result
-        fname = channelInName + std::to_string(1);
-        std::remove(fname.c_str());
-        fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
-        fs.close();
-    }
-
-    void executeKernel() {
-        int err;
-        cl::CommandQueue compute_queue(*bm->getExecutionSettings().context, *bm->getExecutionSettings().device, 0, &err);
-        cl::Buffer buffer(*(bm->getExecutionSettings().context), CL_MEM_READ_WRITE,
-                                            sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize);
-        cl::Kernel kernel(*bm->getExecutionSettings().program, "inner_update", &err);
-        cl::Buffer top_buffer_inner(*(bm->getExecutionSettings().context), CL_MEM_READ_WRITE,
-                                            sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*BLOCK_SIZE);
-        cl::Buffer left_buffer_inner(*(bm->getExecutionSettings().context), CL_MEM_READ_WRITE,
-                                            sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*BLOCK_SIZE);        
-
-        err = kernel.setArg(0, buffer);
-        err = kernel.setArg(1, left_buffer_inner);
-        err = kernel.setArg(2, top_buffer_inner);
-        err = kernel.setArg(3, CL_FALSE);
-        err = kernel.setArg(4, 0);
-        err = kernel.setArg(5, 0);
-        err = kernel.setArg(6, 1);
-
-        bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
-        auto left_data = bm->generateInputData();
-        std::vector<HOST_DATA_TYPE> left_buffer_data(BLOCK_SIZE * BLOCK_SIZE);
-        for (int i = 0; i < BLOCK_SIZE; i++) {
-            for (int j=0; j < BLOCK_SIZE; j++) {
-                left_buffer_data[i * BLOCK_SIZE + j] = left_data->A[j*BLOCK_SIZE + i];
-            }
-        }
-        std::vector<HOST_DATA_TYPE> top_buffer_data(BLOCK_SIZE * BLOCK_SIZE);
-        for (int i = 0; i < BLOCK_SIZE; i++) {
-            for (int j=0; j < BLOCK_SIZE; j++) {
-                top_buffer_data[i * BLOCK_SIZE + j] = left_data->A[i*BLOCK_SIZE + j] - left_data->A[j*BLOCK_SIZE + i];
-            }
-        }
-        bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
-        compute_queue.enqueueWriteBuffer(left_buffer_inner, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*BLOCK_SIZE * BLOCK_SIZE, left_buffer_data.data());
-        compute_queue.enqueueWriteBuffer(top_buffer_inner, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*BLOCK_SIZE * BLOCK_SIZE, top_buffer_data.data());
-
-        compute_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
-        compute_queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(1),cl::NullRange);
-        compute_queue.finish();
-        compute_queue.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*bm->getExecutionSettings().programSettings->matrixSize*bm->getExecutionSettings().programSettings->matrixSize, data->A);
     }
 };
 
@@ -583,10 +511,9 @@ class LinpackKernelCommunicationTestAll : public LinpackKernelCommunicationTest 
         err = innerkernel.setArg(0, buffer);
         err = innerkernel.setArg(1, left_buffer_inner);
         err = innerkernel.setArg(2, top_buffer_inner);
-        err = innerkernel.setArg(3, CL_TRUE);
+        err = innerkernel.setArg(3, 1);
         err = innerkernel.setArg(4, 1);
-        err = innerkernel.setArg(5, 1);
-        err = innerkernel.setArg(6, 2);
+        err = innerkernel.setArg(5, 2);
 
         cl::Kernel leftkernel(*bm->getExecutionSettings().program, "left_update", &err);
 
@@ -1389,33 +1316,6 @@ TEST_F(LinpackKernelCommunicationTestTopOut, TopBlockExternalResultisCorrect) {
             // multiply current column to current row and add it up
             for (int i = 0; i < matrix_size; i++) {
                 ref_data->A[j * matrix_size + i] += ref_data->A[k * matrix_size + i] * gefa_data->A[j * matrix_size + k];
-            }
-        }
-    }
-    double total_error = 0.0;
-    for (int i = 0; i < bm->getExecutionSettings().programSettings->matrixSize; i++) {
-        for (int j = 0; j < bm->getExecutionSettings().programSettings->matrixSize; j++) {
-            total_error += std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j]);
-        }
-    }
-    EXPECT_FLOAT_EQ(total_error, 0.0);
-}
-
-TEST_F(LinpackKernelCommunicationTestInnerOut, InnerBlockExternalResultisCorrect) {
-    uint matrix_size = bm->getExecutionSettings().programSettings->matrixSize;
-
-    // generate uniformly distributed block as top block
-    bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
-    auto ref_data = bm->generateInputData();
-    auto left_data = bm->generateInputData();
-    auto top_data = bm->generateInputData();
-    bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
-
-    // do MM with left and top and add result to inner block
-    for (int k = 0; k < matrix_size; k++) {
-        for (int j = 0; j < matrix_size; j++) {
-            for (int i = 0; i < matrix_size; i++) {
-                ref_data->A[j * matrix_size + i] += (top_data->A[k * matrix_size + i] - top_data->A[i * matrix_size + k]) * left_data->A[j * matrix_size + k];
             }
         }
     }

@@ -800,7 +800,6 @@ __kernel
 void inner_update(__global DEVICE_DATA_TYPE* restrict a, 
 				__global DEVICE_DATA_TYPE* restrict left_global_buffer,
 				__global DEVICE_DATA_TYPE* restrict top_global_buffer,
-				const uint is_first_block,
 				const uint block_col,
 				const uint block_row,
 				const uint blocks_per_row) {
@@ -835,29 +834,17 @@ void inner_update(__global DEVICE_DATA_TYPE* restrict a,
 		for (int col = 0; col < BLOCK_SIZE / GEMM_BLOCK; col++) {
 			ch_chunk_t row_in;
 			ch_chunk_t col_in;
-			if (is_first_block) {
-				row_in = read_channel_intel(ch_inner_row_in);
-				col_in = read_channel_intel(ch_inner_col_in);
-				// Store received left and top block in global memory buffer to sustain between function calls
-				#pragma unroll
-				for (int i=0; i < GEMM_BLOCK; i++) {
-					left_global_buffer[block_row * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i] = col_in.data[i];
-				}
-				#pragma unroll
-				for (int i=0; i < GEMM_BLOCK; i++) {
-					top_global_buffer[block_col * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i] = row_in.data[i];
-				}
+
+			row_in = read_channel_intel(ch_inner_row_in);
+			col_in = read_channel_intel(ch_inner_col_in);
+			// Store received left and top block in global memory buffer to sustain between function calls
+			#pragma unroll
+			for (int i=0; i < GEMM_BLOCK; i++) {
+				left_global_buffer[block_row * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i] = col_in.data[i];
 			}
-			else {
-				// Load left and top data from global memory instead of receiving it from the channel
-				#pragma unroll
-				for (int i=0; i < GEMM_BLOCK; i++) {
-					col_in.data[i] = left_global_buffer[block_row * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i];
-				}
-				#pragma unroll
-				for (int i=0; i < GEMM_BLOCK; i++) {
-					row_in.data[i] = top_global_buffer[block_col * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i];
-				}
+			#pragma unroll
+			for (int i=0; i < GEMM_BLOCK; i++) {
+				top_global_buffer[block_col * BLOCK_SIZE * BLOCK_SIZE + gk * BLOCK_SIZE + col * GEMM_BLOCK + i] = row_in.data[i];
 			}
 			#pragma unroll
 			for (int i =0; i < GEMM_BLOCK; i++) {

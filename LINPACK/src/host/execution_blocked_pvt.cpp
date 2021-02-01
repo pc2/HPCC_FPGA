@@ -180,13 +180,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = innerkernel.setArg(2, Buffer_top);
                 ASSERT_CL(err)
-                err = innerkernel.setArg(3, CL_TRUE);
+                err = innerkernel.setArg(3, tops);
                 ASSERT_CL(err)
                 err = innerkernel.setArg(4, tops);
                 ASSERT_CL(err)
-                err = innerkernel.setArg(5, tops);
-                ASSERT_CL(err)
-                err = innerkernel.setArg(6, blocks_per_row);
+                err = innerkernel.setArg(5, blocks_per_row);
                 ASSERT_CL(err)
                 all_events.back().emplace_back();
                 inner_queues[0].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));
