@@ -119,7 +119,7 @@ public:
      * @param context The OpenCL context used to allocate memory in SVM mode
      * @param size Size of the allocated square matrix and vectors
      */
-    LinpackData(cl::Context context, uint size);
+    LinpackData(cl::Context context, size_t size);
 
     /**
      * @brief Destroy the Linpack Data object. Free the allocated memory

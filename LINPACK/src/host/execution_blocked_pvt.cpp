@@ -50,19 +50,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
     int err;
 
-    // Create Command queue
-    cl::CommandQueue lu_queue(*config.context, *config.device, 0, &err);
-    ASSERT_CL(err)
-    cl::CommandQueue top_queue(*config.context, *config.device, 0, &err);
-    ASSERT_CL(err)
-    cl::CommandQueue left_queue(*config.context, *config.device, 0, &err);
-    ASSERT_CL(err)
-    std::vector<cl::CommandQueue> inner_queues;
-    for (uint rep = 0; rep < config.programSettings->kernelReplications; rep++) {
-        inner_queues.emplace_back(*config.context, *config.device, 0, &err);
-    }
-    cl::CommandQueue network_queue(*config.context, *config.device, 0, &err);
-    ASSERT_CL(err)
+    uint blocks_per_row = config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG;
+
     cl::CommandQueue buffer_queue(*config.context, *config.device, 0, &err);
     ASSERT_CL(err)
 
@@ -87,14 +76,23 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     cl::Buffer Buffer_network_scaling(*config.context, CL_MEM_READ_WRITE,
                                         sizeof(HOST_DATA_TYPE)*(1 << LOCAL_MEM_BLOCK_LOG));
 
-    uint blocks_per_row = config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG;
-
     /* --- Execute actual benchmark kernels --- */
 
     double t;
     std::vector<double> gefaExecutionTimes;
     std::vector<double> geslExecutionTimes;
     for (int i = 0; i < config.programSettings->numRepetitions; i++) {
+
+        auto schedule_t1 = std::chrono::high_resolution_clock::now();
+
+        // Command queues 
+        // A new command queue is created for every iteration of the algorithm to reduce the overhead
+        // of too large queues
+        std::vector<cl::CommandQueue> lu_queues;
+        std::vector<cl::CommandQueue> top_queues;
+        std::vector<cl::CommandQueue> left_queues;
+        std::vector<cl::CommandQueue> network_queues;
+        std::vector<std::vector<cl::CommandQueue>> inner_queues;
 
         // User event that is used to start actual execution of benchmark kernels
         cl::UserEvent start_event(*config.context, &err);
@@ -103,8 +101,25 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         all_events.emplace_back();
         all_events.back().emplace_back(start_event);
 
+
         // For every row of blocks create kernels and enqueue them
         for (int block_row=0; block_row < config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG; block_row++) {
+
+            // Create Command queues
+            lu_queues.emplace_back(*config.context, *config.device, 0, &err);
+            ASSERT_CL(err)
+            top_queues.emplace_back(*config.context, *config.device, 0, &err);
+            ASSERT_CL(err)
+            left_queues.emplace_back(*config.context, *config.device, 0, &err);
+            ASSERT_CL(err)
+            inner_queues.emplace_back();
+            for (uint rep = 0; rep < config.programSettings->kernelReplications + 1; rep++) {
+                inner_queues.back().emplace_back(*config.context, *config.device, 0, &err);
+                ASSERT_CL(err)
+            }
+            network_queues.emplace_back(*config.context, *config.device, 0, &err);
+            ASSERT_CL(err)
+
             all_events.emplace_back();
             // create the LU kernel
             cl::Kernel gefakernel(*config.program, "lu",
@@ -118,7 +133,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             err = gefakernel.setArg(3, config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG);
             ASSERT_CL(err)
             all_events.back().emplace_back();
-            err = lu_queue.enqueueNDRangeKernel(gefakernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &all_events.back().back());
+            err = lu_queues.back().enqueueNDRangeKernel(gefakernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &all_events.back().back());
             ASSERT_CL(err)
             // Create top kernels, left kernels and inner kernels
             for (int tops=block_row + 1; tops < (config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG); tops++) {
@@ -137,8 +152,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = topkernel.setArg(5, config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG);
                 ASSERT_CL(err)
-                all_events.back().emplace_back();
-                top_queue.enqueueNDRangeKernel(topkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));
+                err = top_queues.back().enqueueNDRangeKernel(topkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]));
+                ASSERT_CL(err)  
 
                 cl::Kernel leftkernel(*config.program, "left_update",
                                                 &err);
@@ -155,8 +170,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = leftkernel.setArg(5, config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG);
                 ASSERT_CL(err)
-                all_events.back().emplace_back();
-                left_queue.enqueueNDRangeKernel(leftkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));
+                err = left_queues.back().enqueueNDRangeKernel(leftkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]));
+                ASSERT_CL(err) 
 
                 // Create the network kernel
                 cl::Kernel networkkernel(*config.program, "network_layer",
@@ -168,7 +183,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = networkkernel.setArg(2, static_cast<cl_uint>(0));
                 ASSERT_CL(err)
-                network_queue.enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
+                err = network_queues.back().enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]));
+                ASSERT_CL(err) 
 
                 // create all diagnonal inner updates because we need to receive the data from top and left while calculating
                 cl::Kernel innerkernel(*config.program, "inner_update",
@@ -186,15 +202,27 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = innerkernel.setArg(5, blocks_per_row);
                 ASSERT_CL(err)
-                all_events.back().emplace_back();
-                inner_queues[0].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));
+                if (tops + 1 ==  (config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG)) {
+                    // only create an event for the last kernel execution that is enqueued
+                    all_events.back().emplace_back();
+                    err = inner_queues.back()[0].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));
+                    ASSERT_CL(err) 
+                }
+                else {
+                    err = inner_queues.back()[0].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]));
+                    ASSERT_CL(err) 
+                }
+
             }
             // update all remaining inner blocks using only global memory
-            if ((blocks_per_row - (block_row + 1) - 1) * (blocks_per_row - (block_row + 1)) > 0) {
+            uint total_inner_updates = (blocks_per_row - (block_row + 1) - 1) * (blocks_per_row - (block_row + 1));
+            uint updates_per_replication = total_inner_updates / config.programSettings->kernelReplications;
+            if (total_inner_updates > 0) {
                 // only emplace new event list, if the inner mm kernel will be executed
                 // otherwise the runtime dependency between the kernels may get lost!
                 all_events.emplace_back();
-                uint inner_queue_index = 0;
+                uint current_update = 0;
+                uint current_replication = 0;
                 for (int current_row=block_row + 1; current_row < blocks_per_row; current_row++) {
                     for (int current_col=block_row + 1; current_col < blocks_per_row; current_col++) {
                         if (current_row == current_col) {
@@ -202,7 +230,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                         }
                         // select the matrix multiplication kernel that should be used for this block updated 
                         // with a round-robin scheme
-                        cl::Kernel innerkernel(*config.program, ("inner_update_mm" + std::to_string(inner_queue_index)).c_str(),
+                        cl::Kernel innerkernel(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                             &err);
                         ASSERT_CL(err);
                         err = innerkernel.setArg(0, Buffer_a);
@@ -217,12 +245,22 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                         ASSERT_CL(err)
                         err = innerkernel.setArg(5, blocks_per_row);
                         ASSERT_CL(err)
-                        // create a new event barrier because the communication kernels have to be finished until the 
-                        // matrix multiplication can be applied!
-                        all_events.back().emplace_back();
-                        // Distribute the workload over all avaialble matrix multiplication kernels
-                        inner_queues[inner_queue_index].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));         
-                        inner_queue_index = (inner_queue_index + 1) % config.programSettings->kernelReplications;
+                        // If number of blocks is not dividable by the number of replications, the first replications will do one update more
+                        uint updates_for_current_replication = updates_per_replication + ((current_replication < total_inner_updates % config.programSettings->kernelReplications) ? 1 : 0);
+                        if ((current_update + 1) == updates_for_current_replication) {
+                            // this is the last taks that will be enqueued in this queue, so create an event
+                            all_events.back().emplace_back();
+                            // Distribute the workload over all available matrix multiplication kernels
+                            err = inner_queues.back()[(current_replication) + 1].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));         
+                            current_update = 0;
+                            current_replication++;
+                        }
+                        else {
+                            // Distribute the workload over all available matrix multiplication kernels
+                            err = inner_queues.back()[(current_replication) + 1].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]));         
+                            current_update++;
+                        }
+                        ASSERT_CL(err) 
                     }
                 }
             }
@@ -238,9 +276,21 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = networkkernel.setArg(2, static_cast<cl_uint>(0));
                 ASSERT_CL(err)
-                network_queue.enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
+                err = network_queues.back().enqueueNDRangeKernel(networkkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]));
+                ASSERT_CL(err) 
             }
         }
+
+        auto schedule_t2 = std::chrono::high_resolution_clock::now();
+
+        std::cout << "Schedule time: " << std::chrono::duration_cast<std::chrono::duration<double>>(schedule_t2 - schedule_t1).count() << "s" << std::endl;
+
+        uint num_events = 0;
+        for (auto& evq : all_events) {
+            num_events += evq.size();
+        }
+
+        std::cout << "#Events: " << num_events << std::endl;
 
         err = buffer_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
@@ -254,8 +304,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         auto t1 = std::chrono::high_resolution_clock::now();
         // Trigger the user event that will start the first tasks in the queue
         start_event.setStatus(CL_COMPLETE);
-        // wait until the LU queue is done since it will be the last required operation
-        lu_queue.finish();
+        // wait until the last LU queue is done since it will be the last required operation
+        lu_queues.back().finish();
         auto t2 = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> timespan =
             std::chrono::duration_cast<std::chrono::duration<double>>

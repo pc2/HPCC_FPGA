@@ -46,7 +46,7 @@ linpack::LinpackProgramSettings::getSettingsMap() {
         return map;
 }
 
-linpack::LinpackData::LinpackData(cl::Context context, uint size) : norma(0.0), context(context) {
+linpack::LinpackData::LinpackData(cl::Context context, size_t size) : norma(0.0), context(context) {
 #ifdef USE_SVM
     A = reinterpret_cast<HOST_DATA_TYPE*>(
                         clSVMAlloc(context(), 0 ,
