@@ -190,6 +190,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 inner_queues[0].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));
             }
             // update all remaining inner blocks using only global memory
+            all_events.emplace_back();
             uint inner_queue_index = 0;
             for (int current_row=block_row + 1; current_row < blocks_per_row; current_row++) {
                 for (int current_col=block_row + 1; current_col < blocks_per_row; current_col++) {
@@ -215,7 +216,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     ASSERT_CL(err)
                     // create a new event barrier because the communication kernels have to be finished until the 
                     // matrix multiplication can be applied!
-                    all_events.emplace_back();
                     all_events.back().emplace_back();
                     // Distribute the workload over all avaialble matrix multiplication kernels
                     inner_queues[inner_queue_index].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));         
