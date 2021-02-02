@@ -190,36 +190,40 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 inner_queues[0].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));
             }
             // update all remaining inner blocks using only global memory
-            all_events.emplace_back();
-            uint inner_queue_index = 0;
-            for (int current_row=block_row + 1; current_row < blocks_per_row; current_row++) {
-                for (int current_col=block_row + 1; current_col < blocks_per_row; current_col++) {
-                    if (current_row == current_col) {
-                        continue;
+            if ((blocks_per_row - (block_row + 1) - 1) * (blocks_per_row - (block_row + 1)) > 0) {
+                // only emplace new event list, if the inner mm kernel will be executed
+                // otherwise the runtime dependency between the kernels may get lost!
+                all_events.emplace_back();
+                uint inner_queue_index = 0;
+                for (int current_row=block_row + 1; current_row < blocks_per_row; current_row++) {
+                    for (int current_col=block_row + 1; current_col < blocks_per_row; current_col++) {
+                        if (current_row == current_col) {
+                            continue;
+                        }
+                        // select the matrix multiplication kernel that should be used for this block updated 
+                        // with a round-robin scheme
+                        cl::Kernel innerkernel(*config.program, ("inner_update_mm" + std::to_string(inner_queue_index)).c_str(),
+                                            &err);
+                        ASSERT_CL(err);
+                        err = innerkernel.setArg(0, Buffer_a);
+                        ASSERT_CL(err);
+                        err = innerkernel.setArg(1, Buffer_left);
+                        ASSERT_CL(err)
+                        err = innerkernel.setArg(2, Buffer_top);
+                        ASSERT_CL(err)
+                        err = innerkernel.setArg(3, current_col);
+                        ASSERT_CL(err)
+                        err = innerkernel.setArg(4, current_row);
+                        ASSERT_CL(err)
+                        err = innerkernel.setArg(5, blocks_per_row);
+                        ASSERT_CL(err)
+                        // create a new event barrier because the communication kernels have to be finished until the 
+                        // matrix multiplication can be applied!
+                        all_events.back().emplace_back();
+                        // Distribute the workload over all avaialble matrix multiplication kernels
+                        inner_queues[inner_queue_index].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));         
+                        inner_queue_index = (inner_queue_index + 1) % config.programSettings->kernelReplications;
                     }
-                    // select the matrix multiplication kernel that should be used for this block updated 
-                    // with a round-robin scheme
-                    cl::Kernel innerkernel(*config.program, ("inner_update_mm" + std::to_string(inner_queue_index)).c_str(),
-                                        &err);
-                    ASSERT_CL(err);
-                    err = innerkernel.setArg(0, Buffer_a);
-                    ASSERT_CL(err);
-                    err = innerkernel.setArg(1, Buffer_left);
-                    ASSERT_CL(err)
-                    err = innerkernel.setArg(2, Buffer_top);
-                    ASSERT_CL(err)
-                    err = innerkernel.setArg(3, current_col);
-                    ASSERT_CL(err)
-                    err = innerkernel.setArg(4, current_row);
-                    ASSERT_CL(err)
-                    err = innerkernel.setArg(5, blocks_per_row);
-                    ASSERT_CL(err)
-                    // create a new event barrier because the communication kernels have to be finished until the 
-                    // matrix multiplication can be applied!
-                    all_events.back().emplace_back();
-                    // Distribute the workload over all avaialble matrix multiplication kernels
-                    inner_queues[inner_queue_index].enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1), cl::NullRange, &(all_events.end()[-2]), &(all_events.back().back()));         
-                    inner_queue_index = (inner_queue_index + 1) % config.programSettings->kernelReplications;
                 }
             }
 
