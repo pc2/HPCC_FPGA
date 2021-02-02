@@ -205,20 +205,21 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = innerkernel.setArg(2, Buffer_top);
                 ASSERT_CL(err)
-                err = innerkernel.setArg(3, CL_TRUE);
-                ASSERT_CL(err)
-                err = innerkernel.setArg(4, tops);
-                ASSERT_CL(err)
-                err = innerkernel.setArg(5, tops);
-                ASSERT_CL(err)
-                err = innerkernel.setArg(6, blocks_per_row);
-                ASSERT_CL(err)
-                // err = innerkernel.setArg(3, tops);
+                // TODO remove this legacy code
+                // err = innerkernel.setArg(3, CL_TRUE);
                 // ASSERT_CL(err)
                 // err = innerkernel.setArg(4, tops);
                 // ASSERT_CL(err)
-                // err = innerkernel.setArg(5, blocks_per_row);
+                // err = innerkernel.setArg(5, tops);
                 // ASSERT_CL(err)
+                // err = innerkernel.setArg(6, blocks_per_row);
+                // ASSERT_CL(err)
+                err = innerkernel.setArg(3, tops);
+                ASSERT_CL(err)
+                err = innerkernel.setArg(4, tops);
+                ASSERT_CL(err)
+                err = innerkernel.setArg(5, blocks_per_row);
+                ASSERT_CL(err)
                 if (tops + 1 ==  (config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG)) {
                     // only create an event for the last kernel execution that is enqueued
                     all_events.back().emplace_back();
@@ -309,7 +310,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 lu_queues.back().finish();
                 t2 = std::chrono::high_resolution_clock::now();
             }
-            if (block_row > 2) {
+            if (block_row > 1) {
+                if (block_row == 2) {
+                    // additionally remove the user event in the first cleanup
+                    all_events.pop_front();
+                }
                 // Wait for all events that where executed 
                 // two iterations before and remove them from the data structure
                 // to free resources
