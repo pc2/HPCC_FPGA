@@ -24,8 +24,8 @@ All other blocks are updated using the results of the left- and top-blocks.
 
 
 .. _lu_operations:
-.. figure:: lu_interation.drawio.png
-  :width: 180
+.. figure:: lu_iteration.drawio.png
+  :width: 360
   :align: center
   :alt: Visualization of the operations performed on different blocks of the matrix in a single iteration is missing!
 
@@ -68,8 +68,8 @@ In step two and three, only the top, left and inner kernel will be executed and 
 The update phase will stay the same.
 
 .. _lu_operations_steps:
-.. figure:: lu_interation_block1.drawio.png
-  :width: 180
+.. figure:: lu_iteration_block1.drawio.png
+  :width: 360
   :align: center
 
   Required steps to update the whole top row and left column. The colored blocks will be updated after this phase. Blocks with the same number will be updated in the same step. The white blocks remain unmodified for now.
@@ -90,7 +90,7 @@ Multi-FPGA Implementation
 
 .. _fpga_2d_torus_data:
 .. figure:: torus_data_forward_rev.drawio.png
-  :width: 180
+  :width: 480
   :align: center
 
   Communication between the FPGAs in a 2D torus for a single iteration of the algorithm where every FPGA needs to update multiple blocks. The FPGA in the top left will calculate the LU block. The colors of the arrows show the type of the data that is forwarded in the torus.
@@ -111,7 +111,7 @@ Every channel is used by exactly two kernels. However, these kernels will never 
 
  .. _fpga_external_channels:
 .. figure:: external_channel_usage.drawio.png
-  :width: 180
+  :width: 360
   :align: center
 
   Every FPGA is connected to four other FPGAs over the bidirectional external channels. Every channel direction takes over a certain role and does only forward a single type of data. This means that multiple kernels need to read and write to each external channel.
