@@ -47,7 +47,7 @@ The execution of the kernels is divided into two steps which are repeated for ev
 
 .. _kernel_exchange:
 .. figure:: kernel_exchange_step.drawio.png
-  :width: 360
+  :width: 480
   :align: center
 
   Visualization of the kernel communication and the matrix blocks during the exchange phase. Every kernel will have a matrix block in a local memory buffer. These blocks are divided into smaller sub-blocks for the computation. Only single rows and columns are exchanged between the kernels. Note, that for the LU kernel only a part of the row and column are exchanged depending on the sub-block size.
@@ -69,7 +69,7 @@ So the exchange phase will be used to do the following:
 
 .. _kernel_update:
 .. figure:: kernel_update_step.drawio.png
-  :width: 360
+  :width: 480
   :align: center
 
   Visualization of the update step. Every kernel updates the sub-blocks that are colored grey with the data received in the previous exchange step.
@@ -119,9 +119,9 @@ Multi-FPGA Implementation
   :width: 480
   :align: center
 
-  Communication between the FPGAs in a 2D torus for a single iteration of the algorithm where every FPGA needs to update multiple blocks. The FPGA in the top left will calculate the LU block. The colors of the arrows show the type of the data that is forwarded in the torus.
+  Communication between the FPGAs in a 2D torus for a single iteration of the algorithm where every FPGA needs to update multiple blocks. The FPGA in the top left will calculate the LU block. The colors of the arrows show the type of the data that is forwarded in the torus and the colored blocks in the FPGAs show the active kernels.
 
-In :numref:`fpga_2d_torus_data`, the data which is forwarded in the exchange phases is shown.
+In :numref:`fpga_2d_torus_data`, the data which is forwarded in the exchange phases as well as the active kernels are shown.
 The matrix is distributed between the FPGAs using a PQ grid to balance the workload between the FPGAs.
 The FPGA in the top left will use all four streaming kernels (LU, left, top, inner) and forward the LU row and column as well as the row and column of the updated left and top block.
 The FPGAs at the top will execute the top and inner kernel, the FPGAs on the left the left and inner kernel. All remaining FPGAs will only execute the inner kernel.
@@ -131,7 +131,7 @@ Also, the LU row and column are forwarded internally within the top-left FPGA. T
 The internal forwarding is used to remove circular data dependencies in the torus which otherwise would lead to increased stalls in the network kernel.
 
 In the next iteration, the FPGA in the center will take the role of the LU update because it will own the next diagonal block of the matrix. This means in every iteration the roles will shift one step to the bottom-right.
-The usage of the different external channels by the four streamining kernels is shown in :numref:`fpga_external_channels`.
+The usage of the different external channels by the four streaming kernels is shown in :numref:`fpga_external_channels`.
 Every channel is used by exactly two kernels. However, these kernels will never conflict in the channel access, because data will be forwarded internally if both kernels are active.
 
 
