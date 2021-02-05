@@ -100,6 +100,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         std::list<cl::CommandQueue> left_queues;
         std::list<cl::CommandQueue> network_queues;
         std::list<std::vector<cl::CommandQueue>> inner_queues;
+        std::list<bool> mm_was_used;
 
         // User event that is used to start actual execution of benchmark kernels
         cl::UserEvent start_event(*config.context, &err);
@@ -235,6 +236,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             // update all remaining inner blocks using only global memory
             uint total_inner_updates = (blocks_per_row - (block_row + 1) - 1) * (blocks_per_row - (block_row + 1));
             uint updates_per_replication = total_inner_updates / config.programSettings->kernelReplications;
+            mm_was_used.push_back(total_inner_updates > 0);
             if (total_inner_updates > 0) {
                 // only emplace new event list, if the inner mm kernel will be executed
                 // otherwise the runtime dependency between the kernels may get lost!
@@ -324,7 +326,17 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 network_queues.pop_front();
                 top_queues.pop_front();
                 left_queues.pop_front();
+                if (mm_was_used.front()) {
+                    // For the MM, an additional list of events was created. Check if it is already done
+                    // and pop it afterwards
+                    cl::Event::waitForEvents(all_events.front());
+                    all_events.pop_front();
+                }
+                // remove inner block queues 
+                // (now MM events are all completed!)
                 inner_queues.pop_front();
+                // pop flag that indicates if MM was used in the iteration that is handeled now
+                mm_was_used.pop_front();
             }
 
 
