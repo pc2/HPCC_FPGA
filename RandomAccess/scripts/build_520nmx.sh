@@ -26,5 +26,5 @@ for r in "${CONFIG_NAMES[@]}"; do
 
     cmake ${BENCHMARK_DIR} -DCMAKE_BUILD_TYPE=Release -DHPCC_FPGA_CONFIG=${BENCHMARK_DIR}/configs/${r}.cmake
 
-    make random_access_kernels_single_intel RandomAccess_intel&
+    make random_access_kernels_single_intel RandomAccess_intel
 done
