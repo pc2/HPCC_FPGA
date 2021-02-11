@@ -49,7 +49,7 @@ TEST_P(LinpackKernelTest, FPGACorrectResultsOneRepetition) {
 /**
  * GEFA Execution returns correct results for a single repetition
  */
-TEST_P(LinpackKernelTest, FPGACorrectResultsGEFA) {
+TEST_P(LinpackKernelTest, DISABLED_FPGACorrectResultsGEFA) {
     auto result = bm->executeKernel(*data);
     auto data2 = bm->generateInputData();
     if (bm->getExecutionSettings().programSettings->isDiagonallyDominant) {
@@ -76,7 +76,7 @@ TEST_P(LinpackKernelTest, FPGACorrectResultsGEFA) {
 /**
  * Execution returns correct results for a single repetition
  */
-TEST_P(LinpackKernelTest, ValidationWorksForMKL) {
+TEST_P(LinpackKernelTest, DISABLED_ValidationWorksForMKL) {
 
     int info;    
     auto data_cpu = bm->generateInputData();
