@@ -129,7 +129,7 @@ public:
         auto gefa_data = bm->generateInputData();
         linpack::gefa_ref_nopvt(gefa_data->A, bm->getExecutionSettings().programSettings->matrixSize,bm->getExecutionSettings().programSettings->matrixSize);
         // Fill all input channels with the correct number of 1.0s
-        std::string fname = channelInName + std::to_string(3);
+        std::string fname = channelInName + std::to_string(2);
         std::remove(fname.c_str());
         std::ofstream fs;
         fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
@@ -195,7 +195,7 @@ class LinpackKernelCommunicationTestTopOut : public LinpackKernelCommunicationTe
 
     void setupInputChannels() {
         // Fill all input channels with the correct number of 1.0s
-        std::string fname = channelInName + std::to_string(3);
+        std::string fname = channelInName + std::to_string(2);
         std::remove(fname.c_str());
         std::ofstream fs;
         fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
@@ -403,7 +403,7 @@ public:
         auto top_data = bm->generateInputData();
         bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
         // Fill top channel with top result
-        std::string fname = channelInName + std::to_string(2);
+        std::string fname = channelInName + std::to_string(1);
         std::remove(fname.c_str());
         std::ofstream fs;
         fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
@@ -414,7 +414,7 @@ public:
         }
         fs.close();
         // Fill left channel with left result
-        fname = channelInName + std::to_string(1);
+        fname = channelInName + std::to_string(3);
         std::remove(fname.c_str());
         fs.open(fname, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
         for (int ii = 0; ii < BLOCK_SIZE; ii++ ) {
@@ -593,7 +593,7 @@ TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalResultisCorrect) {
 }
 
 TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToRightCorrectAmountOfData) {
-    auto data_right = getDataFromExternalChannel(1, true);
+    auto data_right = getDataFromExternalChannel(3, true);
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
         number_values += (BLOCK_SIZE - (i / CHUNK) * CHUNK);
@@ -603,7 +603,7 @@ TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToRightCo
 
 TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToLeftCorrectAmountOfData) {
     // data that was sent to left kernels
-    auto data_left = getDataFromExternalChannel(3, true);
+    auto data_left = getDataFromExternalChannel(2, true);
 
     EXPECT_EQ(data_left.size(), BLOCK_SIZE * BLOCK_SIZE);
 }
@@ -617,7 +617,7 @@ TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToTopCorr
 
 TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToBottomCorrectAmountOfData) {
     // data that was sent to top kernels
-    auto data_top = getDataFromExternalChannel(2, true);
+    auto data_top = getDataFromExternalChannel(1, true);
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
         number_values += (BLOCK_SIZE - (i / CHUNK) * CHUNK);
@@ -627,7 +627,7 @@ TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToBottomC
 
 TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToRightCorrect) {
     // data that was sent to next top kernels
-    auto data_left = getDataFromExternalChannel(1, true);
+    auto data_left = getDataFromExternalChannel(3, true);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -653,7 +653,7 @@ TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToRightCo
 
 TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToBottomCorrect) {
     // data that was sent to top kernels
-    auto data_top = getDataFromExternalChannel(2, true);
+    auto data_top = getDataFromExternalChannel(1, true);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -679,7 +679,7 @@ TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToBottomC
 
 TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToLeftCorrect) {
     // data that was sent to kernels to the right
-    auto data_left = getDataFromExternalChannel(3, true);
+    auto data_left = getDataFromExternalChannel(2, true);
 
     size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
     EXPECT_EQ(data_left.size(), number_values);
@@ -752,7 +752,7 @@ TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalResultisCorrect) {
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockGlobalMemLeftBufferContentSameAsLeftChannel) {
     // data that was sent from LU kernel
-    auto data_left = getDataFromExternalChannel(1, false);
+    auto data_left = getDataFromExternalChannel(3, false);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -772,7 +772,7 @@ TEST_F(LinpackKernelCommunicationTestInner, InnerBlockGlobalMemLeftBufferContent
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockGlobalMemTopBufferContentSameAsTopChannel) {
     // data that was sent from LU kernel
-    auto data_top = getDataFromExternalChannel(2, false);
+    auto data_top = getDataFromExternalChannel(1, false);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -791,14 +791,14 @@ TEST_F(LinpackKernelCommunicationTestInner, InnerBlockGlobalMemTopBufferContentS
 }
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToRightCorrectAmountOfData) {
-    auto data_right = getDataFromExternalChannel(1, true);
+    auto data_right = getDataFromExternalChannel(3, true);
 
     EXPECT_EQ(data_right.size(), 0);
 }
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToLeftCorrectAmountOfData) {
     // data that was sent to left kernels
-    auto data_left = getDataFromExternalChannel(3, true);
+    auto data_left = getDataFromExternalChannel(2, true);
 
     size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
     EXPECT_EQ(data_left.size(), number_values);
@@ -813,7 +813,7 @@ TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToTop
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToBottomCorrectAmountOfData) {
     // data that was sent to top kernels
-    auto data_top = getDataFromExternalChannel(2, true);
+    auto data_top = getDataFromExternalChannel(1, true);
 
     EXPECT_EQ(data_top.size(), 0);
 }
@@ -822,7 +822,7 @@ TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToTop
     // data that was sent to next top kernels
     auto data_bottom = getDataFromExternalChannel(0, true);
     // data that was sent from top kernel
-    auto data_top = getDataFromExternalChannel(2, false);
+    auto data_top = getDataFromExternalChannel(1, false);
 
     size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
     EXPECT_EQ(data_bottom.size(), number_values);
@@ -843,9 +843,9 @@ TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToTop
 
 TEST_F(LinpackKernelCommunicationTestInner, InnerBlockExternalChannelOutputToLeftCorrect) {
     // data that was sent to next top kernels
-    auto data_right = getDataFromExternalChannel(3, true);
+    auto data_right = getDataFromExternalChannel(2, true);
     // data that was sent from top kernel
-    auto data_left = getDataFromExternalChannel(1, false);
+    auto data_left = getDataFromExternalChannel(3, false);
 
     size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
     EXPECT_EQ(data_right.size(), number_values);
@@ -921,14 +921,14 @@ TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockGlobalMemLUBufferContentSame
 
 TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToRightCorrectAmountOfData) {
     // data that was sent to left kernels
-    auto data_left = getDataFromExternalChannel(1, true);
+    auto data_left = getDataFromExternalChannel(3, true);
 
     EXPECT_EQ(data_left.size(), 0);
 }
 
 TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToLeftCorrectAmountOfData) {
     // data that was sent to left kernels
-    auto data_left = getDataFromExternalChannel(3, true);
+    auto data_left = getDataFromExternalChannel(2, true);
     size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
     EXPECT_EQ(data_left.size(), number_values);
 }
@@ -942,7 +942,7 @@ TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToTopCo
 
 TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToBottomCorrectAmountOfData) {
     // data that was sent to top kernels
-    auto data_top = getDataFromExternalChannel(2, true);
+    auto data_top = getDataFromExternalChannel(1, true);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -953,7 +953,7 @@ TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToBotto
 
 TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToBottomCorrect) {
     // data that was sent to next top kernels
-    auto data_bottom = getDataFromExternalChannel(2, true);
+    auto data_bottom = getDataFromExternalChannel(1, true);
     // data that was sent from LU kernel
     auto data_lu = getDataFromExternalChannel(0, false);
 
@@ -981,7 +981,7 @@ TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToBotto
 
 TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalChannelOutputToLeftCorrect) {
     // data that was sent to kernels to the right
-    auto data_left = getDataFromExternalChannel(3, true);
+    auto data_left = getDataFromExternalChannel(2, true);
 
     size_t number_values = BLOCK_SIZE * BLOCK_SIZE;
     EXPECT_EQ(data_left.size(), number_values);
@@ -1054,7 +1054,7 @@ TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalResultisCorrect) {
 
 TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToRightCorrectAmountOfData) {
     // data that was sent to left kernels
-    auto data_left = getDataFromExternalChannel(1, true);
+    auto data_left = getDataFromExternalChannel(3, true);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -1065,7 +1065,7 @@ TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToRightCo
 
 TEST_F(LinpackKernelCommunicationTestTop, TopBlockGlobalMemLUBufferContentSameAsLUBlock) {
     // data that was sent from LU kernel
-    auto data_lu = getDataFromExternalChannel(3, false);
+    auto data_lu = getDataFromExternalChannel(2, false);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -1088,7 +1088,7 @@ TEST_F(LinpackKernelCommunicationTestTop, TopBlockGlobalMemLUBufferContentSameAs
 
 TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToLeftCorrectAmountOfData) {
     // data that was sent to left kernels
-    auto data_left = getDataFromExternalChannel(3, true);
+    auto data_left = getDataFromExternalChannel(2, true);
 
     EXPECT_EQ(data_left.size(), 0);
 }
@@ -1102,16 +1102,16 @@ TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToTopCorr
 
 TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToBottomCorrectAmountOfData) {
     // data that was sent to top kernels
-    auto data_top = getDataFromExternalChannel(2, true);
+    auto data_top = getDataFromExternalChannel(1, true);
 
     EXPECT_EQ(data_top.size(), 0);
 }
 
 TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToRightCorrect) {
     // data that was sent to next top kernels
-    auto data_left = getDataFromExternalChannel(1, true);
+    auto data_left = getDataFromExternalChannel(3, true);
     // data that was sent from LU kernel
-    auto data_lu = getDataFromExternalChannel(3, false);
+    auto data_lu = getDataFromExternalChannel(2, false);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -1177,7 +1177,7 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalResultisCorrect) {
 
 TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToRightCorrectAmountOfData) {
     // data that was sent to left kernels
-    auto data_left = getDataFromExternalChannel(1, true);
+    auto data_left = getDataFromExternalChannel(3, true);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -1188,7 +1188,7 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToRightCorr
 
 TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToLeftCorrectAmountOfData) {
     // data that was sent to left kernels
-    auto data_left = getDataFromExternalChannel(3, true);
+    auto data_left = getDataFromExternalChannel(2, true);
 
     EXPECT_EQ(data_left.size(), 0);
 }
@@ -1202,7 +1202,7 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToTopCorrec
 
 TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToBottomCorrectAmountOfData) {
     // data that was sent to top kernels
-    auto data_top = getDataFromExternalChannel(2, true);
+    auto data_top = getDataFromExternalChannel(1, true);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -1213,7 +1213,7 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToBottomCor
 
 TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToRightCorrect) {
     // data that was sent to top kernels
-    auto data_left = getDataFromExternalChannel(1, true);
+    auto data_left = getDataFromExternalChannel(3, true);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
@@ -1239,7 +1239,7 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToRightCorr
 
 TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalChannelOutputToBottomCorrect) {
     // data that was sent to top kernels
-    auto data_top = getDataFromExternalChannel(2, true);
+    auto data_top = getDataFromExternalChannel(1, true);
 
     size_t number_values = 0;
     for (int i = 0; i < BLOCK_SIZE; i++ ) {
