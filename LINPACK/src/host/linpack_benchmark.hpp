@@ -48,10 +48,16 @@ class LinpackProgramSettings : public hpcc_base::BaseSettings {
 
 public:
     /**
-     * @brief The size of the whole matrix
+     * @brief The size of the local matrix in number of blocks in one dimension
      * 
      */
     uint matrixSize;
+
+    /**
+     * @brief Size of a single block of the matrix in values in one dimension
+     * 
+     */
+    uint blockSize;
 
     /**
      * @brief Indicates if the generated input matrix should be diagonally dominant
@@ -159,12 +165,38 @@ class LinpackBenchmark : public hpcc_base::HpccFpgaBenchmark<LinpackProgramSetti
 protected:
 
     /**
+     * @brief The row position of this MPI rank in the torus
+     * 
+     */
+    int torus_row;
+
+    /**
+     * @brief The rcolumn position of this MPI rank in the torus
+     * 
+     */
+    int torus_col;
+
+    /**
+     * @brief Width of the torus in number of ranks
+     * 
+     */
+    int torus_width;
+
+    /**
      * @brief Additional input parameters of the Linpack benchmark
      * 
      * @param options 
      */
     void
     addAdditionalParseOptions(cxxopts::Options &options) override;
+
+    /**
+     * @brief Distributed solving of l*y=b and u*x = y 
+     * 
+     * @param data The local data. b will contain the solution for the unknows that were handeled by this rank
+     */
+    void 
+    distributed_gesl_nopvt_ref(linpack::LinpackData& data);
 
 public:
 

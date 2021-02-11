@@ -22,4 +22,6 @@ else()
 endif()
 
 set(USE_OPENMP Yes)
+set(USE_MPI Yes)
+
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)

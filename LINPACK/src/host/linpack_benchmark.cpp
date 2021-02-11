@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 linpack::LinpackProgramSettings::LinpackProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["s"].as<uint>()), isDiagonallyDominant(results.count("uniform") == 0) {
+    matrixSize(results["m"].as<uint>()), blockSize(1 << (results["b"].as<uint>())), isDiagonallyDominant(results.count("uniform") == 0) {
 
 }
 
@@ -43,6 +43,7 @@ std::map<std::string, std::string>
 linpack::LinpackProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["Matrix Size"] = std::to_string(matrixSize);
+        map["Block Size"] = std::to_string(blockSize);
         return map;
 }
 
@@ -77,20 +78,35 @@ linpack::LinpackData::~LinpackData() {
 }
 
 linpack::LinpackBenchmark::LinpackBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
+    // calculate the row and column of the MPI rank in the torus 
+    torus_row = (mpi_comm_rank / std::sqrt(mpi_comm_size));
+    torus_col = (mpi_comm_rank % static_cast<int>(std::sqrt(mpi_comm_size)));
+    torus_width = static_cast<int>(std::sqrt(mpi_comm_size));
     setupBenchmark(argc, argv);
+    if (static_cast<int>(std::sqrt(mpi_comm_size) * std::sqrt(mpi_comm_size)) != mpi_comm_size) {
+        throw std::runtime_error("ERROR: MPI communication size must be a square number!");
+    }
 }
 
 void
 linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
-        ("s", "Matrix size in number of values in one dimension",
+        ("m", "Matrix size in number of blocks in one dimension for a singe MPI rank. Total matrix will have size m * sqrt(MPI_size)",
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
-        ("uniform", "Generate a uniform matrix instead of a diagonally dominant");
+        ("b", "Log2 of the block size in number of values in one dimension",
+            cxxopts::value<uint>()->default_value(std::to_string(LOCAL_MEM_BLOCK_LOG)))
+        ("uniform", "Generate a uniform matrix instead of a diagonally dominant. This has to be supported by the FPGA kernel!");
 }
 
 std::unique_ptr<linpack::LinpackExecutionTimings>
 linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
-    return bm_execution::calculate(*executionSettings, data.A, data.b, data.ipvt);
+    auto timings = bm_execution::calculate(*executionSettings, data.A, data.b, data.ipvt);
+    if (mpi_comm_rank == 0) {
+        std::cout << "WARNING: GESL calculated on CPU!" << std::endl;
+    }
+    distributed_gesl_nopvt_ref(data);
+    //gesl_ref_nopvt(data.A, data.b, executionSettings->programSettings->matrixSize, executionSettings->programSettings->matrixSize);
+    return timings;
 }
 
 void
@@ -151,53 +167,67 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
 std::unique_ptr<linpack::LinpackData>
 linpack::LinpackBenchmark::generateInputData() {
     auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(*executionSettings->context ,executionSettings->programSettings->matrixSize));
-    std::mt19937 gen(7);
+    std::mt19937 gen(this->mpi_comm_rank);
     std::uniform_real_distribution<> dis(0.0, 1.0);
     d->norma = 0.0;
-    if (executionSettings->programSettings->isDiagonallyDominant) {
-        /*
-        Generate a diagonally dominant matrix by using pseudo random number in the range (0,1)
-        */
-        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
-            // initialize diagonal value
-            d->A[executionSettings->programSettings->matrixSize*j+j] = 0;
-            // fill a single column of the matrix
-            for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
-                if (i != j) {
-                    HOST_DATA_TYPE temp = dis(gen);
-                    d->A[executionSettings->programSettings->matrixSize*j+i] = temp;
-                    // diagonal element of the current column will contain the sum of allother values in the column
-                    d->A[executionSettings->programSettings->matrixSize*j+j] += temp;
-                }
-            }
-            // the biggest value is automatically the diagnonal value
-            d->norma = d->A[executionSettings->programSettings->matrixSize*j+j];
-        }
-    }
-    else {
-        /*
-        Generate uniform matrix by using pseudo random number in the range (0,1)
-        */
-        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
-            // fill a single column of the matrix
-            for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
+    /*
+    Generate a matrix by using pseudo random number in the range (0,1)
+    */
+    for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+        // fill a single column of the matrix
+        for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
                 HOST_DATA_TYPE temp = dis(gen);
-                d->A[executionSettings->programSettings->matrixSize*i+j] = temp;
+                d->A[executionSettings->programSettings->matrixSize*j+i] = dis(gen);
                 d->norma = (temp > d->norma) ? temp : d->norma;
+        }
+    }
+
+    // If the matrix should be diagonally dominant, we need to exchange the sum of the rows with
+    // the ranks that share blocks in the same column
+    if (executionSettings->programSettings->isDiagonallyDominant) {
+        // create a communicator to exchange the rows
+        MPI_Comm row_communicator;
+        MPI_Comm_split(MPI_COMM_WORLD, torus_row, 0,&row_communicator);
+        // Caclulate the sum for every row and insert in into the matrix
+        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+            // set the diagonal elements of the matrix to 0
+            if (torus_row == torus_col) {
+                d->A[executionSettings->programSettings->matrixSize*j + j] = 0.0;
+            }
+            HOST_DATA_TYPE local_row_sum = 0.0;
+            for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
+                local_row_sum += d->A[executionSettings->programSettings->matrixSize*j + i];
+            } 
+            HOST_DATA_TYPE row_sum = 0.0;
+            MPI_Reduce(&local_row_sum, &row_sum, 1, MPI_FLOAT, MPI_SUM, torus_row, row_communicator);
+            // insert row sum into matrix if it contains the diagonal block
+            if (torus_row == torus_col) {
+                // update norm of local matrix
+                d->norma = (row_sum > d->norma) ? row_sum : d->norma;
+                d->A[executionSettings->programSettings->matrixSize*j + j] = row_sum;
             }
         }
     }
+        
     // initialize other vectors
     for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
         d->b[i] = 0.0;
         d->ipvt[i] = i;
     }
-    // Generate vector b by accumulating the rows of the matrix.
+
+    MPI_Comm col_communicator;
+    MPI_Comm_split(MPI_COMM_WORLD, torus_col, 0,&col_communicator);
+
+    // Generate vector b by accumulating the columns of the matrix.
     // This will lead to a result vector x with ones on every position
+    // Every rank will have a valid part of the final b vector stored
     for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+        HOST_DATA_TYPE local_col_sum = 0.0;
         for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
-            d->b[j] += d->A[executionSettings->programSettings->matrixSize*i+j];
+            local_col_sum += d->A[executionSettings->programSettings->matrixSize*i+j];
         }
+        HOST_DATA_TYPE row_sum = 0.0;
+        MPI_Allreduce(&local_col_sum, &(d->b[j]), 1, MPI_FLOAT, MPI_SUM, col_communicator);      
     }
     return d;
 }
@@ -271,6 +301,71 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
               << data.b[n-1]-1 << std::endl;
 
     return residn < 100;
+}
+
+void 
+linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data) {
+    uint matrix_size = executionSettings->programSettings->matrixSize;
+    uint block_size = executionSettings->programSettings->blockSize;
+    // if 0= diagonal rank, if negative= lower rank, if positive = upper rank
+    int op_mode = torus_col - torus_row;
+    auto b_tmp = std::vector<HOST_DATA_TYPE>(matrix_size);
+    // create a communicator to exchange the rows
+    MPI_Comm row_communicator;
+    MPI_Comm_split(MPI_COMM_WORLD, torus_row, 0,&row_communicator);
+
+    std::fill(b_tmp.begin(), b_tmp.end(), 0);
+    b_tmp[0] = data.b[0];
+
+    // solve l*y = b
+    // For each row in matrix
+    for (int k = 0; k < matrix_size - 1; k++) {
+        size_t start_offset = k + 1;
+        if (op_mode < 0) {
+            // is a rank lower the diagonal
+            start_offset = (k/block_size + 1) * block_size;
+        }
+        else if (op_mode > 0) {            
+            // is a rank upper the diagonal
+            start_offset = (k/block_size) * block_size;
+        }
+        // For each row below add
+        for (int i = start_offset; i < matrix_size; i++) {
+            // add solved upper row to current row
+            b_tmp[i] += b_tmp[k] * data.A[matrix_size * k + i];
+        }
+        HOST_DATA_TYPE next_b;
+        MPI_Allreduce(&b_tmp[k+1], &next_b, 1, MPI_FLOAT, MPI_SUM, row_communicator);
+        b_tmp[k+1] = next_b + data.b[k+1];
+    }
+
+    auto b_tmp2 = std::vector<HOST_DATA_TYPE>(matrix_size);
+    std::fill(b_tmp2.begin(), b_tmp2.end(), 0);
+    // now solve  u*x = y
+    for (int k = matrix_size - 1; k >= 0; k--) {
+        HOST_DATA_TYPE next_b;
+        MPI_Allreduce(&b_tmp2[k], &next_b, 1, MPI_FLOAT, MPI_SUM, row_communicator);
+        b_tmp2[k] = next_b + b_tmp[k];
+        HOST_DATA_TYPE diagonal_element = data.A[matrix_size * k + k];
+        MPI_Bcast(&diagonal_element, 1, MPI_FLOAT, torus_row, row_communicator);
+        HOST_DATA_TYPE scale = b_tmp2[k] * diagonal_element;
+        b_tmp2[k] = -scale;
+        size_t end_offset = k;
+        if (op_mode < 0) {
+            // is a rank lower the diagonal
+            end_offset = (k/block_size + 1) * block_size;
+        }
+        else if (op_mode > 0) {            
+            // is a rank upper the diagonal
+            end_offset = (k/block_size) * block_size;
+        }
+        for (int i = 0; i < end_offset; i++) {
+            b_tmp2[i] += scale * data.A[matrix_size * k + i];
+        }
+    }
+    for (int k = 0; k < matrix_size; k++) {
+        data.b[k] = b_tmp2[k];
+    }
 }
 
 /**
@@ -409,30 +504,30 @@ void
 linpack::gesl_ref_nopvt(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, unsigned n, unsigned lda) {
     auto b_tmp = new HOST_DATA_TYPE[n];
 
-        for (int k = 0; k < n; k++) {
-            b_tmp[k] = b[k];
-        }
+    for (int k = 0; k < n; k++) {
+        b_tmp[k] = b[k];
+    }
 
-        // solve l*y = b
-        // For each row in matrix
-        for (int k = 0; k < n - 1; k++) {
-            // For each row below add
-            for (int i = k + 1; i < n; i++) {
-                // add solved upper row to current row
-                b_tmp[i] += b_tmp[k] * a[lda * k + i];
-            }
+    // solve l*y = b
+    // For each row in matrix
+    for (int k = 0; k < n - 1; k++) {
+        // For each row below add
+        for (int i = k + 1; i < n; i++) {
+            // add solved upper row to current row
+            b_tmp[i] += b_tmp[k] * a[lda * k + i];
         }
+    }
 
-        // now solve  u*x = y
-        for (int k = n - 1; k >= 0; k--) {
-            HOST_DATA_TYPE scale = b_tmp[k] * a[lda * k + k];
-            b_tmp[k] = -scale;
-            for (int i = 0; i < k; i++) {
-                b_tmp[i] += scale * a[lda * k + i];
-            }
+    // now solve  u*x = y
+    for (int k = n - 1; k >= 0; k--) {
+        HOST_DATA_TYPE scale = b_tmp[k] * a[lda * k + k];
+        b_tmp[k] = -scale;
+        for (int i = 0; i < k; i++) {
+            b_tmp[i] += scale * a[lda * k + i];
         }
-        for (int k = 0; k < n; k++) {
-            b[k] = b_tmp[k];
-        }
+    }
+    for (int k = 0; k < n; k++) {
+        b[k] = b_tmp[k];
+    }
     delete [] b_tmp;
 }

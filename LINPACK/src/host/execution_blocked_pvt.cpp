@@ -113,7 +113,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
 
         // For every row of blocks create kernels and enqueue them
-        for (int block_row=0; block_row < config.programSettings->matrixSize >> LOCAL_MEM_BLOCK_LOG; block_row++) {
+        for (int block_row=0; block_row < config.programSettings->matrixSize / config.programSettings->blockSize; block_row++) {
 
             // Create Command queues
             lu_queues.emplace_back(*config.context, *config.device, 0, &err);
@@ -388,9 +388,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                                         sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
     }
 #endif
-
-    std::cout << "WARNING: GESL calculated on CPU!" << std::endl;
-    linpack::gesl_ref_nopvt(A,b,config.programSettings->matrixSize,config.programSettings->matrixSize);
 
     std::unique_ptr<linpack::LinpackExecutionTimings> results(
                     new linpack::LinpackExecutionTimings{gefaExecutionTimes, geslExecutionTimes});
