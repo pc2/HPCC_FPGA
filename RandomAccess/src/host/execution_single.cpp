@@ -32,6 +32,9 @@ SOFTWARE.
 /* External library headers */
 #include "CL/cl.hpp"
 
+#ifdef INTEL_FPGA
+#include "CL/cl_ext_intelfpga.h"
+#endif
 
 namespace bm_execution {
 

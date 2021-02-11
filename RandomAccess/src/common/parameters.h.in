@@ -26,6 +26,7 @@
 // Combine address calculation and data read loop to a single loop
 #cmakedefine COMBINE_LOOPS
 #cmakedefine USE_SVM
+#cmakedefine USE_HBM
 
 /*
 Short description of the program.
