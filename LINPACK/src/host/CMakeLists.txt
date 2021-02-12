@@ -1,6 +1,6 @@
 
 add_subdirectory(../../../shared ${CMAKE_BINARY_DIR}/lib/hpccbase)
-set(HOST_SOURCE execution_blocked_pvt.cpp linpack_benchmark.cpp)
+set(HOST_SOURCE execution_blocked_pvt.cpp linpack_benchmark.cpp gmres.c blas.c)
 
 set(HOST_EXE_NAME Linpack)
 set(LIB_NAME lp)

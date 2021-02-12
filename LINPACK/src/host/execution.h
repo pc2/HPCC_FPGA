@@ -27,7 +27,7 @@ SOFTWARE.
 #include <vector>
 
 /* External library headers */
-#include "CL/cl.hpp"
+#include "CL/cl2.hpp"
 #include "parameters.h"
 #include "linpack_benchmark.hpp"
 

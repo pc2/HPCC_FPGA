@@ -78,12 +78,11 @@ build:LINPACK:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOCAL_MEM_BLOCK_LOG=5 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
     - make -j 40 all
   artifacts:
     paths:
-      - build/bin/lu_blocked_pvt_emulate.aocx
-      - build/bin/lu_blocked_pvt_test_emulate.aocx
+      - build/bin/hpl_torus_emulate.aocx
       - build/bin/Linpack_intel
       - build/bin/Linpack_test_intel
   only:
@@ -275,7 +274,7 @@ test:LINPACK:
   stage: test
   script:
     - cd build
-    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0  -DLOCAL_MEM_BLOCK_LOG=5 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
     - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:LINPACK
