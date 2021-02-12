@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 linpack::LinpackProgramSettings::LinpackProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["m"].as<uint>()), blockSize(1 << (results["b"].as<uint>())), isDiagonallyDominant(results.count("uniform") == 0) {
+    matrixSize(results["m"].as<uint>() * (1 << (results["b"].as<uint>()))), blockSize(1 << (results["b"].as<uint>())), isDiagonallyDominant(results.count("uniform") == 0) {
 
 }
 
@@ -239,17 +239,50 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     for (int i = 0; i < n; i++) {
         newdata->b[i] = -newdata->b[i];
     }
-    linpack::dmxpy(n, newdata->b, n, n, data.b, newdata->A, false);
+    //linpack::dmxpy(n, newdata->b, n, n, data.b, newdata->A, false);
+    MPI_Comm col_communicator;
+    MPI_Comm_split(MPI_COMM_WORLD, torus_col, 0,&col_communicator);
+    // Calcuate distributed mxpy
+    for (int i=0; i < n; i++) {
+        HOST_DATA_TYPE local_mulsum = 0.0;
+        for (int j=0; j < n; j++) {
+            local_mulsum += data.b[j] * newdata->A[n*j + i];
+        }
+        HOST_DATA_TYPE global_mulsum = 0.0;
+        MPI_Allreduce(&local_mulsum, &global_mulsum, 1, MPI_FLOAT, MPI_SUM, col_communicator);
+        newdata->b[i] = newdata->b[i] + global_mulsum;
+    }
+
+    if (torus_row > 0) {
+        // All ranks in higher rows can already leave, since they do not need to 
+        // calulate the error
+        return true;
+    }
+
+    MPI_Comm row_communicator;
+    MPI_Comm_split(MPI_COMM_WORLD, torus_row, 0,&row_communicator);
+
+    HOST_DATA_TYPE local_resid = 0.0;
+    HOST_DATA_TYPE local_normx = 0.0;
+
+    for (int i = 0; i < n; i++) {
+        local_resid = (local_resid > fabs(newdata->b[i])) ? local_resid : fabs(newdata->b[i]);
+        local_normx = (local_normx > fabs(data.b[i])) ? local_normx : fabs(data.b[i]);
+    }
+
     HOST_DATA_TYPE resid = 0.0;
     HOST_DATA_TYPE normx = 0.0;
 
-    for (int i = 0; i < n; i++) {
-        resid = (resid > fabs(newdata->b[i])) ? resid : fabs(newdata->b[i]);
-        normx = (normx > fabs(data.b[i])) ? normx : fabs(data.b[i]);
+    MPI_Reduce(&local_resid, &resid, 1, MPI_FLOAT, MPI_MAX, 0, row_communicator);
+    MPI_Reduce(&local_normx, &normx, 1, MPI_FLOAT, MPI_MAX, 0, row_communicator);
+
+    if (mpi_comm_rank > 0) {
+        // Now all other ranks can leave
+        return true;
     }
 
     HOST_DATA_TYPE eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
-    HOST_DATA_TYPE residn = resid / (n*newdata->norma*normx*eps);
+    HOST_DATA_TYPE residn = resid / (n*mpi_comm_size*newdata->norma*normx*eps);
 
 #ifndef NDEBUG
     if (residn > 1) {
