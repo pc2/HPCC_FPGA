@@ -150,7 +150,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 // create the LU kernel
                 cl::Kernel gefakernel(*config.program, "lu",
                                             &err);
+#ifndef NDEBUG
                 std::cout << "LU     " << local_block_row << "," << local_block_row <<  std::endl;
+#endif
                 err = gefakernel.setArg(0, Buffer_a);
                 ASSERT_CL(err);
                 err = gefakernel.setArg(1, local_block_row);
@@ -172,7 +174,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 for (int tops=start_index; tops < (config.programSettings->matrixSize / config.programSettings->blockSize); tops++) {
                     cl::Kernel topkernel(*config.program, "top_update",
                                                     &err);
+#ifndef NDEBUG
                     std::cout << "Top    " << tops << "," << local_block_row <<  std::endl;
+#endif
                     ASSERT_CL(err);     
                     err = topkernel.setArg(0, Buffer_a);
                     ASSERT_CL(err);    
@@ -198,7 +202,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 for (int tops=start_index; tops < (config.programSettings->matrixSize / config.programSettings->blockSize); tops++) {
                     cl::Kernel leftkernel(*config.program, "left_update",
                                                     &err);
+#ifndef NDEBUG
                     std::cout << "Left   " << local_block_row << "," << tops <<  std::endl;
+#endif
                     ASSERT_CL(err);     
                     err = leftkernel.setArg(0, Buffer_a);
                     ASSERT_CL(err);    
@@ -253,7 +259,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 // Create the network kernel
                 cl::Kernel networkkernel(*config.program, "network_layer",
                                             &err);
+#ifndef NDEBUG
                 std::cout << "Nw     " << op_flags << "," << network_forward_flags <<  std::endl;
+#endif
                 ASSERT_CL(err);
                 err = networkkernel.setArg(0, Buffer_network_scaling);
                 ASSERT_CL(err);
@@ -293,7 +301,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     // with a round-robin scheme
                     cl::Kernel innerkernel(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                         &err);
+#ifndef NDEBUG
                     std::cout << "Inner  " << static_cast<cl_uint>(local_block_row + 1 + std::distance(top_buffers.back().begin(), t)) << "," << static_cast<cl_uint>(local_block_row + 1 + std::distance(left_buffers.back().begin(), l)) <<  std::endl;
+#endif   
                     ASSERT_CL(err);
                     err = innerkernel.setArg(0, Buffer_a);
                     ASSERT_CL(err);
@@ -325,8 +335,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     ASSERT_CL(err) 
                 }
             }
+#ifndef NDEBUG
             std::cout << "---------------" << std::endl;
-
+#endif
             // Execute GEFA
             if (block_row == 0) {
                 t1 = std::chrono::high_resolution_clock::now();
