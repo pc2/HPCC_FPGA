@@ -36,7 +36,14 @@ SOFTWARE.
 
 linpack::LinpackProgramSettings::LinpackProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     matrixSize(results["m"].as<uint>() * (1 << (results["b"].as<uint>()))), blockSize(1 << (results["b"].as<uint>())), isDiagonallyDominant(results.count("uniform") == 0) {
-
+    int mpi_comm_rank;
+    int mpi_comm_size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
+    // calculate the row and column of the MPI rank in the torus 
+    torus_row = (mpi_comm_rank / std::sqrt(mpi_comm_size));
+    torus_col = (mpi_comm_rank % static_cast<int>(std::sqrt(mpi_comm_size)));
+    torus_width = static_cast<int>(std::sqrt(mpi_comm_size));
 }
 
 std::map<std::string, std::string>
@@ -78,10 +85,6 @@ linpack::LinpackData::~LinpackData() {
 }
 
 linpack::LinpackBenchmark::LinpackBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
-    // calculate the row and column of the MPI rank in the torus 
-    torus_row = (mpi_comm_rank / std::sqrt(mpi_comm_size));
-    torus_col = (mpi_comm_rank % static_cast<int>(std::sqrt(mpi_comm_size)));
-    torus_width = static_cast<int>(std::sqrt(mpi_comm_size));
     setupBenchmark(argc, argv);
     if (static_cast<int>(std::sqrt(mpi_comm_size) * std::sqrt(mpi_comm_size)) != mpi_comm_size) {
         throw std::runtime_error("ERROR: MPI communication size must be a square number!");
@@ -187,11 +190,11 @@ linpack::LinpackBenchmark::generateInputData() {
     if (executionSettings->programSettings->isDiagonallyDominant) {
         // create a communicator to exchange the rows
         MPI_Comm row_communicator;
-        MPI_Comm_split(MPI_COMM_WORLD, torus_row, 0,&row_communicator);
+        MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_row, 0,&row_communicator);
         // Caclulate the sum for every row and insert in into the matrix
         for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
             // set the diagonal elements of the matrix to 0
-            if (torus_row == torus_col) {
+            if (executionSettings->programSettings->torus_row == executionSettings->programSettings->torus_col) {
                 d->A[executionSettings->programSettings->matrixSize*j + j] = 0.0;
             }
             HOST_DATA_TYPE local_row_sum = 0.0;
@@ -199,9 +202,9 @@ linpack::LinpackBenchmark::generateInputData() {
                 local_row_sum += d->A[executionSettings->programSettings->matrixSize*j + i];
             } 
             HOST_DATA_TYPE row_sum = 0.0;
-            MPI_Reduce(&local_row_sum, &row_sum, 1, MPI_FLOAT, MPI_SUM, torus_row, row_communicator);
+            MPI_Reduce(&local_row_sum, &row_sum, 1, MPI_FLOAT, MPI_SUM, executionSettings->programSettings->torus_row, row_communicator);
             // insert row sum into matrix if it contains the diagonal block
-            if (torus_row == torus_col) {
+            if (executionSettings->programSettings->torus_row == executionSettings->programSettings->torus_col) {
                 // update norm of local matrix
                 d->norma = (row_sum > d->norma) ? row_sum : d->norma;
                 d->A[executionSettings->programSettings->matrixSize*j + j] = row_sum;
@@ -216,7 +219,7 @@ linpack::LinpackBenchmark::generateInputData() {
     }
 
     MPI_Comm col_communicator;
-    MPI_Comm_split(MPI_COMM_WORLD, torus_col, 0,&col_communicator);
+    MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_col, 0,&col_communicator);
 
     // Generate vector b by accumulating the columns of the matrix.
     // This will lead to a result vector x with ones on every position
@@ -241,7 +244,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     }
     //linpack::dmxpy(n, newdata->b, n, n, data.b, newdata->A, false);
     MPI_Comm col_communicator;
-    MPI_Comm_split(MPI_COMM_WORLD, torus_col, 0,&col_communicator);
+    MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_col, 0,&col_communicator);
     // Calcuate distributed mxpy
     for (int i=0; i < n; i++) {
         HOST_DATA_TYPE local_mulsum = 0.0;
@@ -253,14 +256,14 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
         newdata->b[i] = newdata->b[i] + global_mulsum;
     }
 
-    if (torus_row > 0) {
+    if (executionSettings->programSettings->torus_row > 0) {
         // All ranks in higher rows can already leave, since they do not need to 
         // calulate the error
         return true;
     }
 
     MPI_Comm row_communicator;
-    MPI_Comm_split(MPI_COMM_WORLD, torus_row, 0,&row_communicator);
+    MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_row, 0,&row_communicator);
 
     HOST_DATA_TYPE local_resid = 0.0;
     HOST_DATA_TYPE local_normx = 0.0;
@@ -341,11 +344,11 @@ linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data
     uint matrix_size = executionSettings->programSettings->matrixSize;
     uint block_size = executionSettings->programSettings->blockSize;
     // if 0= diagonal rank, if negative= lower rank, if positive = upper rank
-    int op_mode = torus_col - torus_row;
+    int op_mode = executionSettings->programSettings->torus_col - executionSettings->programSettings->torus_row;
     auto b_tmp = std::vector<HOST_DATA_TYPE>(matrix_size);
     // create a communicator to exchange the rows
     MPI_Comm row_communicator;
-    MPI_Comm_split(MPI_COMM_WORLD, torus_row, 0,&row_communicator);
+    MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_row, 0,&row_communicator);
 
     std::fill(b_tmp.begin(), b_tmp.end(), 0);
     b_tmp[0] = data.b[0];
@@ -380,7 +383,7 @@ linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data
         MPI_Allreduce(&b_tmp2[k], &next_b, 1, MPI_FLOAT, MPI_SUM, row_communicator);
         b_tmp2[k] = next_b + b_tmp[k];
         HOST_DATA_TYPE diagonal_element = data.A[matrix_size * k + k];
-        MPI_Bcast(&diagonal_element, 1, MPI_FLOAT, torus_row, row_communicator);
+        MPI_Bcast(&diagonal_element, 1, MPI_FLOAT, executionSettings->programSettings->torus_row, row_communicator);
         HOST_DATA_TYPE scale = b_tmp2[k] * diagonal_element;
         b_tmp2[k] = -scale;
         size_t end_offset = k;

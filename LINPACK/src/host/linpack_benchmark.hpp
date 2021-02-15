@@ -66,6 +66,24 @@ public:
     bool isDiagonallyDominant;
 
     /**
+     * @brief The row position of this MPI rank in the torus
+     * 
+     */
+    int torus_row;
+
+    /**
+     * @brief The rcolumn position of this MPI rank in the torus
+     * 
+     */
+    int torus_col;
+
+    /**
+     * @brief Width of the torus in number of ranks
+     * 
+     */
+    int torus_width;
+
+    /**
      * @brief Construct a new Linpack Program Settings object
      * 
      * @param results the result map from parsing the program input parameters
@@ -163,24 +181,6 @@ public:
 class LinpackBenchmark : public hpcc_base::HpccFpgaBenchmark<LinpackProgramSettings, LinpackData, LinpackExecutionTimings> {
 
 protected:
-
-    /**
-     * @brief The row position of this MPI rank in the torus
-     * 
-     */
-    int torus_row;
-
-    /**
-     * @brief The rcolumn position of this MPI rank in the torus
-     * 
-     */
-    int torus_col;
-
-    /**
-     * @brief Width of the torus in number of ranks
-     * 
-     */
-    int torus_width;
 
     /**
      * @brief Additional input parameters of the Linpack benchmark
