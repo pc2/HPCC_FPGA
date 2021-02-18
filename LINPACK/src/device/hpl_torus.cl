@@ -29,15 +29,15 @@ SOFTWARE.
 typedef struct tmp_channel_chunk { DEVICE_DATA_TYPE data[GEMM_BLOCK];} ch_chunk_t;
 
 // external channels to other devices
-channel ch_chunk_t ch_top_in __attribute((io("kernel_input_ch0")));
-channel ch_chunk_t ch_right_out __attribute((io("kernel_output_ch3")));
-channel ch_chunk_t ch_bottom_out __attribute((io("kernel_output_ch1")));
-channel ch_chunk_t ch_left_in __attribute((io("kernel_input_ch2")));
+channel ch_chunk_t ch_top_in __attribute((io("kernel_input_ch0"), depth(1)));
+channel ch_chunk_t ch_right_out __attribute((io("kernel_output_ch3"), depth(1)));
+channel ch_chunk_t ch_bottom_out __attribute((io("kernel_output_ch1"), depth(1)));
+channel ch_chunk_t ch_left_in __attribute((io("kernel_input_ch2"), depth(1)));
 
-channel ch_chunk_t ch_top_out __attribute((io("kernel_output_ch0")));
-channel ch_chunk_t ch_right_in __attribute((io("kernel_input_ch3")));
-channel ch_chunk_t ch_bottom_in __attribute((io("kernel_input_ch1")));
-channel ch_chunk_t ch_left_out __attribute((io("kernel_output_ch2")));
+channel ch_chunk_t ch_top_out __attribute((io("kernel_output_ch0"), depth(1)));
+channel ch_chunk_t ch_right_in __attribute((io("kernel_input_ch3"), depth(1)));
+channel ch_chunk_t ch_bottom_in __attribute((io("kernel_input_ch1"), depth(1)));
+channel ch_chunk_t ch_left_out __attribute((io("kernel_output_ch2"), depth(1)));
 
 // channels to and from the local kernels
 channel ch_chunk_t ch_lu_col_out;
@@ -895,7 +895,7 @@ void inner_update_mm/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE* restrict a,
 	for (int i =0; i < BLOCK_SIZE/GEMM_BLOCK; i++) {
 		for (int ii =0; ii < GEMM_BLOCK; ii++) {
 			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
-				__attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
+				__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 				for (int jj =0; jj < GEMM_BLOCK; jj++) {
 					a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
 				}
