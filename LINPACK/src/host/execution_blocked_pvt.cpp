@@ -280,11 +280,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
                 if (std::distance(it,network_layer_op_flags.end()) == 1) {
                     all_events.back().emplace_back();
-                    err = inner_queues.back()[0].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));
+                    err = network_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));
                     ASSERT_CL(err) 
                 }
                 else {
-                    err = inner_queues.back()[0].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))));
+                    err = network_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))));
                     ASSERT_CL(err)    
                 }
 
