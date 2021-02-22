@@ -84,6 +84,7 @@ def parse_single_file(file_name, used_parse_functions):
             break
     if df is None:
         print("File content could not be parsed: %s" % file_name, file=sys.stderr)
+    df['filename'] = [file_name]
     return df
 
 
@@ -94,15 +95,30 @@ def parse_file_or_folder(file_name, used_parse_functions):
         for f in files_in_dir:
             df = df.append(parse_file_or_folder(f, used_parse_functions))
     else:
-        df = df.append(parse_single_file(file_name, used_parse_functions))
+        tmp = parse_single_file(file_name, used_parse_functions)
+        if not tmp is None:
+            df = df.append(tmp)
     return df
         
+def parse_raw_inputs(input_paths, recursive=True, parse_functions=parse_map):
 
+    if type(input_paths) is not list:
+        input_paths = list(input_paths)
+
+    df = pd.DataFrame()
+    for ifile in input_paths:
+        if recursive:
+            df = df.append(parse_file_or_folder(ifile, parse_functions))
+        elif not os.path.isdir(ifile):
+            df = df.append(parse_single_file(ifile, parse_functions))
+        else:
+            print("Directory was specified, but no recursive execution", file=sys.stderr)
+    return df
 
 def parse_script_called_directly():
     # Define input parameters
     parser = argparse.ArgumentParser(description="Parse plain text outputs of HPCC benchmarks to CSV")
-    parser.add_argument('-i', dest="input_path",
+    parser.add_argument('-i', dest="input_paths", nargs='+',
                         help="Path to a text file containing the output of an HPCC benchmark. If not given, stdin is used.",
                         default="-")
     parser.add_argument('-r', dest='recursive', action='store_const',
@@ -116,12 +132,7 @@ def parse_script_called_directly():
     if args.benchmark in parse_map.keys():
         used_parse_functions = [parse_map[args.benchmark]]
 
-    if args.recursive:
-        df = parse_file_or_folder(args.input_path, used_parse_functions)
-    elif not os.path.isdir(args.input_path):
-        df = parse_single_file(args.input_path, used_parse_functions)
-    else:
-        print("Directory was sspecified, but no recursive execution", file=sys.stderr)
+    df = parse_raw_inputs(args.input_paths, args.recursive, used_parse_functions)
 
     if df is None:
         print("No files could be parsed", file=sys.stderr)
