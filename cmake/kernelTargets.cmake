@@ -22,8 +22,8 @@ function(generate_kernel_targets_xilinx)
         else()
             set(source_f "${CMAKE_BINARY_DIR}/${base_file_part}_copied_xilinx.cl")
         endif()
-        set(bitstream_compile ${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile/${kernel_file_name}.xo)
-        set(bitstream_compile_emulate ${EXECUTABLE_OUTPUT_PATH}/xilinx_tmp_compile/${kernel_file_name}_emulate.xo)
+        set(bitstream_compile xilinx_tmp_compile/${kernel_file_name}.xo)
+        set(bitstream_compile_emulate xilinx_tmp_compile/${kernel_file_name}_emulate.xo)
         set(bitstream_emulate_f
             ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.xclbin)
         set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.xclbin)
@@ -123,9 +123,9 @@ function(generate_kernel_targets_intel)
         else()
             set(source_f "${CMAKE_BINARY_DIR}/${base_file_part}_copied_intel.cl")
         endif()
-        set(report_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_report_intel)
-        set(bitstream_emulate_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_emulate.aocx)
-        set(bitstream_f ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}.aocx)
+        set(report_f ${kernel_file_name}_report_intel/reports/report.html)
+        set(bitstream_emulate_f ${kernel_file_name}_emulate.aocx)
+        set(bitstream_f ${kernel_file_name}.aocx)
         if (KERNEL_REPLICATION_ENABLED)
                 set(codegen_parameters -p num_replications=${NUM_REPLICATIONS} -p num_total_replications=${NUM_REPLICATIONS})
                 if (INTEL_CODE_GENERATION_SETTINGS)
@@ -141,6 +141,18 @@ function(generate_kernel_targets_intel)
                         MAIN_DEPENDENCY ${base_file}
                 )
         endif()
+        add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/${bitstream_emulate_f}
+                COMMAND ${CMAKE_COMMAND} -E copy  ${bitstream_emulate_f} ${EXECUTABLE_OUTPUT_PATH}/${bitstream_emulate_f}
+                DEPENDS ${bitstream_emulate_f}
+        )
+        add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports/report.html
+                COMMAND ${CMAKE_COMMAND} -E copy_directory  ${kernel_file_name}_report_intel/reports/ ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports/
+                DEPENDS ${report_f}
+        )
+        add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/${bitstream_f}
+                COMMAND ${CMAKE_COMMAND} -E copy  ${bitstream_f} ${EXECUTABLE_OUTPUT_PATH}/${bitstream_f} && ${CMAKE_COMMAND} -E copy_directory ${kernel_file_name}_intel/reports ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_synth_reports && ${CMAKE_COMMAND} -E copy ${kernel_file_name}_intel/acl_quartus_report.txt ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_synth_reports/acl_quartus_report.txt
+                DEPENDS ${bitstream_f}
+        )
         add_custom_command(OUTPUT ${bitstream_emulate_f}
                 COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -legacy-emulator -march=emulator
                 -o ${bitstream_emulate_f}
@@ -155,16 +167,16 @@ function(generate_kernel_targets_intel)
                 )
         add_custom_command(OUTPUT ${report_f}
                 COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -rtl -report -board=${FPGA_BOARD_NAME}
-                -o ${report_f}
+                -o ${kernel_file_name}_report_intel
                 MAIN_DEPENDENCY ${source_f}
                 DEPENDS ${CMAKE_BINARY_DIR}/src/common/parameters.h
                 )
         add_custom_target(${kernel_file_name}_report_intel 
-                DEPENDS ${report_f})
+                DEPENDS ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports/report.html)
         add_custom_target(${kernel_file_name}_intel 
-                DEPENDS ${bitstream_f})
+                DEPENDS ${EXECUTABLE_OUTPUT_PATH}/${bitstream_f})
         add_custom_target(${kernel_file_name}_emulate_intel 
-                DEPENDS ${bitstream_emulate_f})
+                DEPENDS ${EXECUTABLE_OUTPUT_PATH}/${bitstream_emulate_f})
         list(APPEND kernel_emulation_targets_intel ${kernel_file_name}_emulate_intel)
         set(kernel_emulation_targets_intel ${kernel_emulation_targets_intel} CACHE INTERNAL "Kernel emulation targets used to define dependencies for the tests for intel devices")
     endforeach ()
