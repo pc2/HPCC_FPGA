@@ -41,7 +41,7 @@ Output separator
 #define LEFT_BLOCK_OUT (1 << 4)
 #define TOP_BLOCK_OUT (1 << 5)
 #define STORE_LEFT_INNER (1 << 6)
-#define STORE_TOP_INNER (1 << 6)
+#define STORE_TOP_INNER (1 << 7)
 
 #define NETWORK_FWD_TOP (1 << 0)
 #define NETWORK_FWD_RIGHT (1 << 1)
