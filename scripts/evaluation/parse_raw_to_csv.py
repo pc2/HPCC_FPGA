@@ -84,7 +84,7 @@ def parse_single_file(file_name, used_parse_functions):
             break
     if df is None:
         print("File content could not be parsed: %s" % file_name, file=sys.stderr)
-    df['filename'] = [file_name]
+    df['filename'] = file_name
     return df
 
 
