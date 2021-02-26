@@ -343,7 +343,9 @@ public:
     parseProgramParameters(int argc, char *argv[]) {
         std::stringstream ss;
         ss << PROGRAM_DESCRIPTION << std::endl;
+#ifdef _USE_MPI_
         ss << "MPI Version:  " << MPI_VERSION << "." << MPI_SUBVERSION << std::endl;
+#endif
         ss << "Config. Time: " << CONFIG_TIME << std::endl;
         ss << "Git Commit:   " << GIT_COMMIT_HASH << std::endl; 
         // Defining and parsing program options
