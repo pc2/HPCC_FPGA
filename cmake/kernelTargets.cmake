@@ -68,12 +68,12 @@ function(generate_kernel_targets_xilinx)
         endif()
 
         add_custom_command(OUTPUT ${bitstream_compile_emulate}
-                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_COMPILE_FLAGS} -f ${FPGA_BOARD_NAME} -g -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile_emulate} ${source_f}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} -DEMULATE -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_COMPILE_FLAGS} -f ${FPGA_BOARD_NAME} -g -c ${XILINX_COMPILE_FLAGS} -o ${bitstream_compile_emulate} ${source_f}
                 MAIN_DEPENDENCY ${source_f}
                 DEPENDS ${XILINX_COMPILE_SETTINGS_FILE}
                 )
         add_custom_command(OUTPUT ${bitstream_emulate_f}
-            COMMAND ${Vitis_COMPILER} ${local_CL_FLAGS} -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
+            COMMAND ${Vitis_COMPILER} ${local_CL_FLAGS} -DEMULATE -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
                 MAIN_DEPENDENCY ${bitstream_compile_emulate}
                 DEPENDS ${xilinx_link_settings}
                 )
@@ -142,30 +142,32 @@ function(generate_kernel_targets_intel)
                 )
         endif()
         add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/${bitstream_emulate_f}
-                COMMAND ${CMAKE_COMMAND} -E copy  ${bitstream_emulate_f} ${EXECUTABLE_OUTPUT_PATH}/${bitstream_emulate_f}
-                DEPENDS ${bitstream_emulate_f}
+                COMMAND ${CMAKE_COMMAND} -E copy  ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_emulate_f} ${EXECUTABLE_OUTPUT_PATH}/${bitstream_emulate_f}
+                DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_emulate_f}
         )
         add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports/report.html
-                COMMAND ${CMAKE_COMMAND} -E copy_directory  ${kernel_file_name}_report_intel/reports/ ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports/
-                DEPENDS ${report_f}
+                COMMAND ${CMAKE_COMMAND} -E copy_directory  ${CMAKE_CURRENT_BINARY_DIR}/${kernel_file_name}_report_intel/reports/ ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_reports/
+                DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${report_f}
         )
         add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/${bitstream_f}
-                COMMAND ${CMAKE_COMMAND} -E copy  ${bitstream_f} ${EXECUTABLE_OUTPUT_PATH}/${bitstream_f} && ${CMAKE_COMMAND} -E copy_directory ${kernel_file_name}_intel/reports ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_synth_reports && ${CMAKE_COMMAND} -E copy ${kernel_file_name}_intel/acl_quartus_report.txt ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_synth_reports/acl_quartus_report.txt
-                DEPENDS ${bitstream_f}
+                COMMAND ${CMAKE_COMMAND} -E copy  ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_f} ${EXECUTABLE_OUTPUT_PATH}/${bitstream_f} 
+                COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/${kernel_file_name}_intel/reports ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_synth_reports
+                COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${kernel_file_name}_intel/acl_quartus_report.txt ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_synth_reports/acl_quartus_report.txt
+                DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_f}
         )
-        add_custom_command(OUTPUT ${bitstream_emulate_f}
-                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -legacy-emulator -march=emulator
-                -o ${bitstream_emulate_f}
+        add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_emulate_f}
+                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DEMULATE -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -legacy-emulator -march=emulator
+                -o ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_emulate_f}
                 MAIN_DEPENDENCY ${source_f}
                 DEPENDS ${CMAKE_BINARY_DIR}/src/common/parameters.h
                 )
-        add_custom_command(OUTPUT ${bitstream_f}
+        add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_f}
                 COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -board=${FPGA_BOARD_NAME}
-                -o ${bitstream_f}
+                -o ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_f}
                 MAIN_DEPENDENCY ${source_f}
                 DEPENDS ${CMAKE_BINARY_DIR}/src/common/parameters.h
                 )
-        add_custom_command(OUTPUT ${report_f}
+        add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${report_f}
                 COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -rtl -report -board=${FPGA_BOARD_NAME}
                 -o ${kernel_file_name}_report_intel
                 MAIN_DEPENDENCY ${source_f}
