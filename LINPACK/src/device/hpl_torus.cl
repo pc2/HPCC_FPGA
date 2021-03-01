@@ -24,8 +24,6 @@ SOFTWARE.
 #define BLOCK_SIZE (1 << LOCAL_MEM_BLOCK_LOG)
 #define GEMM_BLOCK (1 << REGISTER_BLOCK_LOG)
 
-#define EMULATE
-
 #pragma OPENCL EXTENSION cl_intel_channels : enable
 
 typedef struct tmp_channel_chunk { DEVICE_DATA_TYPE data[GEMM_BLOCK];} ch_chunk_t;
