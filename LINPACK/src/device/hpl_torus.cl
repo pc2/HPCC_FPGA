@@ -28,16 +28,21 @@ SOFTWARE.
 
 typedef struct tmp_channel_chunk { DEVICE_DATA_TYPE data[GEMM_BLOCK];} ch_chunk_t;
 
-// external channels to other devices
-channel ch_chunk_t ch_top_in __attribute((io("kernel_input_ch0"), depth(2)));
-channel ch_chunk_t ch_right_out __attribute((io("kernel_output_ch3"), depth(2)));
-channel ch_chunk_t ch_bottom_out __attribute((io("kernel_output_ch1"), depth(2)));
-channel ch_chunk_t ch_left_in __attribute((io("kernel_input_ch2"), depth(2)));
+// external channels from other devices
+// depth is set to a single block row so calculation kernels do not need to stall
+// until the network kernel has received everything
+channel ch_chunk_t ch_top_in __attribute((io("kernel_input_ch0"), depth(BLOCK_SIZE/GEMM_BLOCK)));
+channel ch_chunk_t ch_bottom_in __attribute((io("kernel_input_ch1"), depth(BLOCK_SIZE/GEMM_BLOCK)));
+channel ch_chunk_t ch_left_in __attribute((io("kernel_input_ch2"), depth(BLOCK_SIZE/GEMM_BLOCK)));
+channel ch_chunk_t ch_right_in __attribute((io("kernel_input_ch3"), depth(BLOCK_SIZE/GEMM_BLOCK)));
 
-channel ch_chunk_t ch_top_out __attribute((io("kernel_output_ch0"), depth(2)));
-channel ch_chunk_t ch_right_in __attribute((io("kernel_input_ch3"), depth(2)));
-channel ch_chunk_t ch_bottom_in __attribute((io("kernel_input_ch1"), depth(2)));
-channel ch_chunk_t ch_left_out __attribute((io("kernel_output_ch2"), depth(2)));
+// external channels to other devices
+// depth is set only to 1 because the receiver will buffer everything
+channel ch_chunk_t ch_top_out __attribute((io("kernel_output_ch0"), depth(1)));
+channel ch_chunk_t ch_bottom_out __attribute((io("kernel_output_ch1"), depth(1))));
+channel ch_chunk_t ch_left_out __attribute((io("kernel_output_ch2"), depth(1)));
+channel ch_chunk_t ch_right_out __attribute((io("kernel_output_ch3"), depth(1)));
+
 
 // channels to and from the local kernels
 channel ch_chunk_t ch_lu_col_out;
