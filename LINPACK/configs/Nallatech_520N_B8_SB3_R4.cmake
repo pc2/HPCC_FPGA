@@ -10,7 +10,7 @@ set(USE_MPI Yes CACHE BOOL "" FORCE)
 set(USE_SVM No CACHE BOOL "" FORCE)
 set(USE_HBM No CACHE BOOL "" FORCE)
 set(FPGA_BOARD_NAME "p520_max_sg280l" CACHE STRING "" FORCE)
-set(AOC_FLAGS "-fpc -fp-relaxed -global-ring -duplicate-ring" CACHE STRING "" FORCE)
+set(AOC_FLAGS "-fpc -fp-relaxed -global-ring -duplicate-ring -seed=7" CACHE STRING "" FORCE)
 
 # LINPACK specific options
 set(DEFAULT_MATRIX_SIZE 1024 CACHE STRING "Default matrix size" FORCE)
