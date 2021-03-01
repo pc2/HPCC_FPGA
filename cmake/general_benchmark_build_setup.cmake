@@ -73,6 +73,25 @@ if (USE_MPI)
     include_directories(${MPI_CXX_INCLUDE_PATH})
     link_libraries(${MPI_LIBRARIES})
 endif()
+
+# Add configuration time to build
+string(TIMESTAMP CONFIG_TIME "%a %b %d %H:%M:%S UTC %Y" UTC)
+add_definitions(-DCONFIG_TIME="${CONFIG_TIME}")
+
+# Add git commit to build
+find_package(Git)
+if (${GIT_FOUND})
+execute_process(COMMAND ${GIT_EXECUTABLE} describe --dirty --always
+RESULT_VARIABLE GIT_COMMIT_RESULT
+OUTPUT_VARIABLE GIT_COMMIT_HASH 
+OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+message(STATUS ${GIT_COMMIT_HASH})
+if (${GIT_COMMIT_RESULT} OR NOT ${GIT_FOUND})
+set(GIT_COMMIT_HASH "Not in version control")
+endif()
+add_definitions(-DGIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
+
 find_package(IntelFPGAOpenCL)
 find_package(Vitis)
 find_package(Python3)
