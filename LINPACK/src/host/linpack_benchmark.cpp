@@ -35,7 +35,8 @@ SOFTWARE.
 #include "parameters.h"
 
 linpack::LinpackProgramSettings::LinpackProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["m"].as<uint>() * (1 << (results["b"].as<uint>()))), blockSize(1 << (results["b"].as<uint>())), isDiagonallyDominant(results.count("uniform") == 0) {
+    matrixSize(results["m"].as<uint>() * (1 << (results["b"].as<uint>()))), blockSize(1 << (results["b"].as<uint>())), 
+    isEmulationKernel(results.count("emulation") > 0), isDiagonallyDominant(results.count("uniform") == 0) {
     int mpi_comm_rank;
     int mpi_comm_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
@@ -51,6 +52,7 @@ linpack::LinpackProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["Matrix Size"] = std::to_string(matrixSize);
         map["Block Size"] = std::to_string(blockSize);
+        map["Emulate"] = (isEmulationKernel) ? "Yes" : "No";
         return map;
 }
 
@@ -98,7 +100,8 @@ linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
         ("b", "Log2 of the block size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(LOCAL_MEM_BLOCK_LOG)))
-        ("uniform", "Generate a uniform matrix instead of a diagonally dominant. This has to be supported by the FPGA kernel!");
+        ("uniform", "Generate a uniform matrix instead of a diagonally dominant. This has to be supported by the FPGA kernel!")
+        ("emulation", "Use kernel arguments for emulation. This may be necessary to simulate persistent local memory on the FPGA");
 }
 
 std::unique_ptr<linpack::LinpackExecutionTimings>

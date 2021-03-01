@@ -266,12 +266,13 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 std::cout << "Nw     " << op_flags << "," << network_forward_flags <<  std::endl;
 #endif
                 ASSERT_CL(err);
-
-                err = kernels.back().back().setArg(0, Buffer_network_scaling);
-                ASSERT_CL(err);
-                err = kernels.back().back().setArg(1, op_flags);
+                if (config.programSettings->isEmulationKernel) {
+                    err = kernels.back().back().setArg(0, Buffer_network_scaling);
+                    ASSERT_CL(err);
+                }
+                err = kernels.back().back().setArg((config.programSettings->isEmulationKernel) ? 1 : 0, op_flags);
                 ASSERT_CL(err)
-                err = kernels.back().back().setArg(2, network_forward_flags);
+                err = kernels.back().back().setArg((config.programSettings->isEmulationKernel) ? 2 : 1, network_forward_flags);
                 ASSERT_CL(err)
 
                 // err = kernels.back().back().setArg(0, Buffer_network_scaling);

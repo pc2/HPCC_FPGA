@@ -66,6 +66,13 @@ public:
     bool isDiagonallyDominant;
 
     /**
+     * @brief True, if the used kernel is an emulation kernel. Different kernel arguments may be used in this case to
+     *          simulate persistent local memory.
+     * 
+     */
+    bool isEmulationKernel;
+
+    /**
      * @brief The row position of this MPI rank in the torus
      * 
      */
