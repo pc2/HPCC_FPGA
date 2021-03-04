@@ -110,8 +110,62 @@ linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
     if (mpi_comm_rank == 0) {
         std::cout << "WARNING: GESL calculated on CPU!" << std::endl;
     }
-    distributed_gesl_nopvt_ref(data);
-    //gesl_ref_nopvt(data.A, data.b, executionSettings->programSettings->matrixSize, executionSettings->programSettings->matrixSize);
+    if (mpi_comm_rank > 0) {
+        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
+                MPI_Send(&data.A[executionSettings->programSettings->matrixSize * j + i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+            }
+        }
+        if (executionSettings->programSettings->torus_row == 0) {
+            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
+                MPI_Send(&data.b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+            }
+        }
+    }
+    else {
+        MPI_Status status;
+        size_t current_offset = 0;
+        std::vector<HOST_DATA_TYPE> total_b(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
+        std::vector<HOST_DATA_TYPE> total_a(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width*executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
+        for (int j = 0; j < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; j++) {
+            for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
+                int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+                int recvrow= (j / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+                int recvrank = executionSettings->programSettings->torus_width * recvrow + recvcol;
+                if (recvrank > 0) {
+                    MPI_Recv(&total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i],executionSettings->programSettings->blockSize, MPI_FLOAT, recvrank, 0, MPI_COMM_WORLD,  &status);
+                }
+                else {
+                    for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
+                        total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i + k] = data.A[current_offset + k];
+                    }
+                    current_offset += executionSettings->programSettings->blockSize;
+                }
+            }
+        }
+        current_offset = 0;
+        for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
+            int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+            if (recvcol > 0) {
+                MPI_Recv(&total_b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, recvcol, 0, MPI_COMM_WORLD, &status);
+            }
+            else {
+                for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
+                    total_b[i + k] = data.b[current_offset + k];
+                }
+                current_offset += executionSettings->programSettings->blockSize;
+            }
+        }
+        gesl_ref_nopvt(total_a.data(), total_b.data(), executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width, executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width);
+        double sum = 0;
+        for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i++) {
+            
+            sum += std::abs(total_b[i]);
+        }
+        std::cout << "Sum = " << sum << std::endl;
+    }
+    //distributed_gesl_nopvt_ref(data);
+    gesl_ref_nopvt(data.A, data.b, executionSettings->programSettings->matrixSize, executionSettings->programSettings->matrixSize);
     return timings;
 }
 
@@ -125,29 +179,45 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
     double lu_min = std::numeric_limits<double>::max();
     double sl_min = std::numeric_limits<double>::max();
 
-    double gflops_lu = ((2.0e0*(static_cast<double>(executionSettings->programSettings->matrixSize)
-                        *static_cast<double>(executionSettings->programSettings->matrixSize)
-                        *static_cast<double>(executionSettings->programSettings->matrixSize)))/ 3.0) / 1.0e9; 
-    double gflops_sl = (2.0*(static_cast<double>(executionSettings->programSettings->matrixSize)
-                        *static_cast<double>(executionSettings->programSettings->matrixSize)))/1.0e9;
-    for (int i =0; i < output.gefaTimings.size(); i++) {
-        double currentTime = output.gefaTimings[i] + output.geslTimings[i];
+#ifndef NDEBUG
+    std::cout << "Rank " << mpi_comm_rank << ": Result collection started" << std::endl;
+#endif
+
+    std::vector<double> global_lu_times(output.gefaTimings.size());
+    MPI_Reduce(output.gefaTimings.data(), global_lu_times.data(), output.gefaTimings.size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    std::vector<double> global_sl_times(output.geslTimings.size());
+    MPI_Reduce(output.geslTimings.data(), global_sl_times.data(), output.geslTimings.size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+#ifndef NDEBUG
+    std::cout << "Rank " << mpi_comm_rank << ": Result collection done" << std::endl;
+#endif
+
+
+    if (mpi_comm_rank > 0) {
+        // Only the master rank needs to calculate and print result
+        return;
+    }
+
+    double total_matrix_size = static_cast<double>(executionSettings->programSettings->matrixSize) * executionSettings->programSettings->torus_width;
+    double gflops_lu = ((2.0e0*total_matrix_size * total_matrix_size * total_matrix_size)/ 3.0) / 1.0e9; 
+    double gflops_sl = (2.0*(total_matrix_size * total_matrix_size))/1.0e9;
+    for (int i =0; i < global_lu_times.size(); i++) {
+        double currentTime = global_lu_times[i] + global_sl_times[i];
         tmean +=  currentTime;
-        tlumean +=  output.gefaTimings[i];
-        tslmean += output.geslTimings[i];
+        tlumean +=  global_lu_times[i];
+        tslmean += global_sl_times[i];
         if (currentTime < tmin) {
             tmin = currentTime;
         }
-        if (output.gefaTimings[i] < lu_min) {
-            lu_min = output.gefaTimings[i];
+        if (global_lu_times[i] < lu_min) {
+            lu_min = global_lu_times[i];
         }
-        if (output.geslTimings[i] < sl_min) {
-            sl_min = output.geslTimings[i];
+        if (global_sl_times[i] < sl_min) {
+            sl_min = global_sl_times[i];
         }
     }
-    tmean = tmean / output.gefaTimings.size();
-    tlumean = tlumean / output.gefaTimings.size();
-    tslmean = tslmean / output.geslTimings.size();
+    tmean = tmean / global_lu_times.size();
+    tlumean = tlumean / global_lu_times.size();
+    tslmean = tslmean / global_sl_times.size();
 
      std::cout << std::setw(ENTRY_SPACE)
               << "Method" << std::setw(ENTRY_SPACE)
@@ -258,12 +328,9 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
         MPI_Allreduce(&local_mulsum, &global_mulsum, 1, MPI_FLOAT, MPI_SUM, col_communicator);
         newdata->b[i] = newdata->b[i] + global_mulsum;
     }
-
-    if (executionSettings->programSettings->torus_row > 0) {
-        // All ranks in higher rows can already leave, since they do not need to 
-        // calulate the error
-        return true;
-    }
+#ifndef NDEBUG
+    std::cout << "Rank " << mpi_comm_rank << ": XPY done" << std::endl;
+#endif
 
     MPI_Comm row_communicator;
     MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_row, 0,&row_communicator);
@@ -282,16 +349,25 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     MPI_Reduce(&local_resid, &resid, 1, MPI_FLOAT, MPI_MAX, 0, row_communicator);
     MPI_Reduce(&local_normx, &normx, 1, MPI_FLOAT, MPI_MAX, 0, row_communicator);
 
+#ifndef NDEBUG
+    std::cout << "Rank " << mpi_comm_rank << ": resid: " << local_resid << std::endl;
+    std::cout << "Rank " << mpi_comm_rank << ": Reduce done" << std::endl;
+#endif
+
     if (mpi_comm_rank > 0) {
         // Now all other ranks can leave
         return true;
     }
 
     HOST_DATA_TYPE eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
-    HOST_DATA_TYPE residn = resid / (n*mpi_comm_size*newdata->norma*normx*eps);
+    std::cout << (static_cast<double>(n*mpi_comm_size)) << std::endl;
+    std::cout << (static_cast<double>(newdata->norma)) << std::endl;
+    std::cout << (static_cast<double>(normx)) << std::endl;
+    std::cout << (static_cast<double>(eps)) << std::endl;
+    HOST_DATA_TYPE residn = resid / (static_cast<double>(n*mpi_comm_size)*newdata->norma*normx*eps);
 
 #ifndef NDEBUG
-    if (residn > 1) {
+    if (residn > 1 &&  mpi_comm_size == 1) {
         auto ref_result = generateInputData();
         // For each column right of current diagonal element
         for (int j = 0; j < n; j++) {
@@ -346,64 +422,89 @@ void
 linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data) {
     uint matrix_size = executionSettings->programSettings->matrixSize;
     uint block_size = executionSettings->programSettings->blockSize;
-    // if 0= diagonal rank, if negative= lower rank, if positive = upper rank
-    int op_mode = executionSettings->programSettings->torus_col - executionSettings->programSettings->torus_row;
-    auto b_tmp = std::vector<HOST_DATA_TYPE>(matrix_size);
     // create a communicator to exchange the rows
     MPI_Comm row_communicator;
     MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_row, 0,&row_communicator);
+    MPI_Comm col_communicator;
+    MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_col, 0,&col_communicator);
+    std::vector<HOST_DATA_TYPE> b_tmp(matrix_size);
+    // if 0= diagonal rank, if negative= lower rank, if positive = upper rank
+    int op_mode = executionSettings->programSettings->torus_col - executionSettings->programSettings->torus_row;
 
-    std::fill(b_tmp.begin(), b_tmp.end(), 0);
-    b_tmp[0] = data.b[0];
+
+    for (int k = 0; k < matrix_size; k++) {
+        b_tmp[k] = data.b[k];
+    }
 
     // solve l*y = b
     // For each row in matrix
-    for (int k = 0; k < matrix_size - 1; k++) {
-        size_t start_offset = k + 1;
+    for (int k = 0; k < matrix_size * executionSettings->programSettings->torus_width - 1; k++) {
+        size_t local_k_index_col = std::max(static_cast<uint>(0), std::min(matrix_size - 1, k - executionSettings->programSettings->torus_col * block_size - (k/(block_size * executionSettings->programSettings->torus_width)* (block_size * (executionSettings->programSettings->torus_width - 1)))));
+        size_t local_k_index_row = std::max(static_cast<uint>(0), std::min(matrix_size - 1, k - executionSettings->programSettings->torus_row * block_size - (k/(block_size * executionSettings->programSettings->torus_width)* (block_size * (executionSettings->programSettings->torus_width - 1)))));
+        HOST_DATA_TYPE current_k;
+        int current_bcast = (k / block_size) % executionSettings->programSettings->torus_width;
+        current_k = b_tmp[local_k_index_col];
+        MPI_Bcast(&current_k, 1, MPI_FLOAT,  current_bcast, row_communicator);
+        size_t start_offset = local_k_index_col + 1;
         if (op_mode < 0) {
             // is a rank lower the diagonal
-            start_offset = (k/block_size + 1) * block_size;
+            start_offset = (local_k_index_col/block_size + 1) * block_size;
         }
         else if (op_mode > 0) {            
             // is a rank upper the diagonal
-            start_offset = (k/block_size) * block_size;
+            start_offset = (local_k_index_col/block_size) * block_size;
         }
-        // For each row below add
-        for (int i = start_offset; i < matrix_size; i++) {
+
+        std::vector<HOST_DATA_TYPE> tmp_scaled_b(matrix_size, 0.0);
+        if ((k / block_size) % executionSettings->programSettings->torus_width == executionSettings->programSettings->torus_row) {
+            // For each row below add
+            for (int i = start_offset; i < matrix_size; i++) {
+                // add solved upper row to current row
+                tmp_scaled_b[i] = current_k * data.A[matrix_size * local_k_index_row + i];
+            }
+        }
+        std::vector<HOST_DATA_TYPE> tmp_scaled_collected_b(matrix_size, 0.0);
+        MPI_Allreduce(tmp_scaled_b.data(), tmp_scaled_collected_b.data(), matrix_size, MPI_FLOAT, MPI_SUM, col_communicator);
+        for (int i = 0; i < matrix_size; i++) {
             // add solved upper row to current row
-            b_tmp[i] += b_tmp[k] * data.A[matrix_size * k + i];
+            b_tmp[i] += tmp_scaled_collected_b[i];
         }
-        HOST_DATA_TYPE next_b;
-        MPI_Allreduce(&b_tmp[k+1], &next_b, 1, MPI_FLOAT, MPI_SUM, row_communicator);
-        b_tmp[k+1] = next_b + data.b[k+1];
     }
 
-    auto b_tmp2 = std::vector<HOST_DATA_TYPE>(matrix_size);
-    std::fill(b_tmp2.begin(), b_tmp2.end(), 0);
     // now solve  u*x = y
-    for (int k = matrix_size - 1; k >= 0; k--) {
-        HOST_DATA_TYPE next_b;
-        MPI_Allreduce(&b_tmp2[k], &next_b, 1, MPI_FLOAT, MPI_SUM, row_communicator);
-        b_tmp2[k] = next_b + b_tmp[k];
-        HOST_DATA_TYPE diagonal_element = data.A[matrix_size * k + k];
-        MPI_Bcast(&diagonal_element, 1, MPI_FLOAT, executionSettings->programSettings->torus_row, row_communicator);
-        HOST_DATA_TYPE scale = b_tmp2[k] * diagonal_element;
-        b_tmp2[k] = -scale;
-        size_t end_offset = k;
+    for (int k = matrix_size * executionSettings->programSettings->torus_width - 1; k >= 0; k--) {
+        size_t local_k_index_col = std::max(static_cast<uint>(0), std::min(matrix_size - 1, k - executionSettings->programSettings->torus_col * block_size - (k/(block_size * executionSettings->programSettings->torus_width)* (block_size * (executionSettings->programSettings->torus_width - 1)))));
+        size_t local_k_index_row = std::max(static_cast<uint>(0), std::min(matrix_size - 1, k - executionSettings->programSettings->torus_row * block_size - (k/(block_size * executionSettings->programSettings->torus_width)* (block_size * (executionSettings->programSettings->torus_width - 1)))));
+        HOST_DATA_TYPE scale_element = b_tmp[local_k_index_col] * data.A[matrix_size * local_k_index_row + local_k_index_col];
+        MPI_Bcast(&scale_element, 1, MPI_FLOAT, executionSettings->programSettings->torus_row, row_communicator);
+        if (executionSettings->programSettings->torus_row == executionSettings->programSettings->torus_col) {
+            b_tmp[local_k_index_col ] = -scale_element;
+        }
+        size_t end_offset = local_k_index_col;
         if (op_mode < 0) {
             // is a rank lower the diagonal
-            end_offset = (k/block_size + 1) * block_size;
+            end_offset = (local_k_index_col/block_size + 1) * block_size;
         }
         else if (op_mode > 0) {            
             // is a rank upper the diagonal
-            end_offset = (k/block_size) * block_size;
+            end_offset = (local_k_index_col/block_size) * block_size;
         }
-        for (int i = 0; i < end_offset; i++) {
-            b_tmp2[i] += scale * data.A[matrix_size * k + i];
+        std::vector<HOST_DATA_TYPE> tmp_scaled_b(matrix_size, 0.0);
+        if ((k / block_size) % executionSettings->programSettings->torus_width == executionSettings->programSettings->torus_row) {
+            // For each row below add
+            for (int i = 0; i < end_offset; i++) {
+                tmp_scaled_b[i] = scale_element * data.A[matrix_size * local_k_index_row + i];
+            }
+        }
+        std::vector<HOST_DATA_TYPE> tmp_scaled_collected_b(matrix_size, 0.0);
+        MPI_Allreduce(tmp_scaled_b.data(), tmp_scaled_collected_b.data(), matrix_size, MPI_FLOAT, MPI_SUM, col_communicator);
+        for (int i = 0; i < matrix_size; i++) {
+            // add solved upper row to current row
+            b_tmp[i] += tmp_scaled_collected_b[i];
         }
     }
     for (int k = 0; k < matrix_size; k++) {
-        data.b[k] = b_tmp2[k];
+        data.b[k] = b_tmp[k];
     }
 }
 
