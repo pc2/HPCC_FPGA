@@ -55,48 +55,40 @@ channel ch_chunk_t ch_inner_row_in;
 channel ch_chunk_t ch_inner_col_in;
 
 /**
-Takes care of the external channels.
-Will forward data from calculation kernels to the external channels and will forward data if required.
+Takes care of the external channels in top -> bottom and left -> right direction.
+Will receive or forward data from the LU kernel to the top and left kernel and other FPGAs
 
-operation_type: 0:inner, 1: left, 4:top, 8:lu and every combination of it
-forward: 0: top, 1: right, 4: bottom, 8: left or every combination of it
+It is necessary to split the network kernel into two directions to prevent stalls.
+They could happen if data needs to be received from left and right because the data may need to travel 
+paths of different length through the torus.
+
+Another advantage of two network kernels is, that the compute and network kernels can now form a single pipeline
+where the data can stream from LU to the Inner kernel like this:
+
+LU or Channel ---> NW 1 ---> Left or Channel ---> NW 2 ---> Inner or Channel
+					\------> Top or Channel ---->/
+
+So the internal channels do not form a cycle because of the network kernel.
+
  */
  __attribute__((uses_global_work_offset(0)))
 __kernel
-void network_layer(
-#ifdef EMULATE
-	__global DEVICE_DATA_TYPE* restrict lu_scale_buffer,
-#endif
-				   const uint operation_type,
-				   const uint forward_type) {
-
-	DEVICE_DATA_TYPE current_scale;
-#ifndef EMULATE
-	// If not emulation, store LU row in local memory to get rid of stallable IO in this kernel
-	DEVICE_DATA_TYPE lu_scale_buffer[BLOCK_SIZE];
-#endif
+void network_layer_bottomright( const uint operation_type,
+				   				const uint forward_type) {
 
 	// For every row or column of the block, something needs to be sent
 	#pragma loop_coalesce
-	#pragma ivdep array(lu_scale_buffer)
 	for (uint row = 0; row < BLOCK_SIZE; row++) {
 		// Number of chunks that has to be processed
-		#pragma ivdep array(lu_scale_buffer)
 		for (uint chunk = 0; chunk < BLOCK_SIZE/GEMM_BLOCK; chunk++) {
 
 			// Registers to store incoming and outgoing data chunks
 			ch_chunk_t to_right;
 			ch_chunk_t to_bottom;
-			ch_chunk_t to_left;
-			ch_chunk_t to_top;
 
 			if ((operation_type & (LU_BLOCK_OUT)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 				to_right = read_channel_intel(ch_lu_col_out);
 				to_bottom = read_channel_intel(ch_lu_row_out);
-				if (chunk == 0) {
-					current_scale = to_right.data[row & (GEMM_BLOCK - 1)];
-					lu_scale_buffer[row] = current_scale;
-				}
 			}
 			// If LU block is not calculated on this FPGA
 			// If left block, read from top and forward to bottom
@@ -110,13 +102,8 @@ void network_layer(
 				ch_chunk_t from_left = read_channel_intel(ch_left_in);
 				// Forward chunk to the next top block
 				to_right = from_left;
-				if (chunk == 0) {
-					current_scale = from_left.data[row & (GEMM_BLOCK - 1)];
-				}
 			}
-			if (!(operation_type & (LU_BLOCK_OUT)) && !(operation_type & (TOP_BLOCK)) && (operation_type & (TOP_BLOCK_OUT)) && chunk == 0) {
-				current_scale = lu_scale_buffer[row];
-			}
+
 			//END LU block is not calculated on this FPGA
 
 			if ((operation_type & (LEFT_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
@@ -125,6 +112,37 @@ void network_layer(
 			if ((operation_type & (TOP_BLOCK)) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
 				write_channel_intel(ch_top_col_in, to_right);
 			}
+
+
+			if ((forward_type & NETWORK_FWD_RIGHT) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+				write_channel_intel(ch_right_out, to_right);
+			}
+			if ((forward_type & NETWORK_FWD_BOTTOM) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
+				write_channel_intel(ch_bottom_out, to_bottom);
+			}
+		}
+	}
+}
+
+/**
+Takes care of the external channels in bottom -> top and right -> left direction.
+Will receive or forward data from the Left and Top kernel to the Inner kernel and other FPGAs.
+ */
+ __attribute__((uses_global_work_offset(0)))
+__kernel
+void network_layer_topleft(const uint operation_type,
+				   			const uint forward_type) {
+
+
+	// For every row or column of the block, something needs to be sent
+	#pragma loop_coalesce
+	for (uint row = 0; row < BLOCK_SIZE; row++) {
+		// Number of chunks that has to be processed
+		for (uint chunk = 0; chunk < BLOCK_SIZE/GEMM_BLOCK; chunk++) {
+
+			// Registers to store incoming and outgoing data chunks
+			ch_chunk_t to_left;
+			ch_chunk_t to_top;
 
 			if (operation_type & (LEFT_BLOCK_OUT)) {
 				to_left = read_channel_intel(ch_left_col_out);
@@ -144,10 +162,6 @@ void network_layer(
 
 			if (operation_type & (TOP_BLOCK_OUT)) {
 				ch_chunk_t from_top_kernel = read_channel_intel(ch_top_row_out);
-				#pragma unroll
-				for (int i = 0; i < GEMM_BLOCK; i++) {
-					to_top.data[i] = from_top_kernel.data[i] * current_scale;
-				}
 			}
 			// If inner block, receive from right and bottom and forward to left and top
 			if (!(operation_type & (TOP_BLOCK_OUT)) && (operation_type & (STORE_TOP_INNER))) {
@@ -160,12 +174,6 @@ void network_layer(
 				write_channel_intel(ch_inner_row_in, to_top);
 			}
 
-			if ((forward_type & NETWORK_FWD_RIGHT) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-				write_channel_intel(ch_right_out, to_right);
-			}
-			if ((forward_type & NETWORK_FWD_BOTTOM) && chunk < BLOCK_SIZE/GEMM_BLOCK - (row >> REGISTER_BLOCK_LOG)) {
-				write_channel_intel(ch_bottom_out, to_bottom);
-			}
 			if ((forward_type & NETWORK_FWD_LEFT)) {
 				write_channel_intel(ch_left_out, to_left);
 			}
@@ -595,14 +603,6 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a,
 			for (int i =0; i < GEMM_BLOCK; i++) {
 				scale_chunk[i] = a_buffer[k][col][kk][i];
 			}
-
-			// Store chunk for later update and forward it over external channel
-			ch_chunk_t row_out;
-			#pragma unroll
-			for (int i =0; i < GEMM_BLOCK; i++) {
-				row_out.data[i] = scale_chunk[i];
-			}
-			write_channel_intel(ch_top_row_out, row_out);
 			
 			// if current column data is still available read it in and store it in buffer
 			if (col < BLOCK_SIZE / GEMM_BLOCK - k) {
@@ -635,6 +635,14 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a,
 			for (int i =0; i < GEMM_BLOCK; i++) {
 				scale_chunk[i] = scale_chunk[i] * current_scale;
 			}
+
+			// Forward scaled chunk to network kernel
+			ch_chunk_t row_out;
+			#pragma unroll
+			for (int i =0; i < GEMM_BLOCK; i++) {
+				row_out.data[i] = scale_chunk[i];
+			}
+			write_channel_intel(ch_top_row_out, row_out);
 
 			#pragma unroll
 			for (int i =0; i < GEMM_BLOCK; i++) {
