@@ -161,7 +161,7 @@ void network_layer_topleft(const uint operation_type,
 			}
 
 			if (operation_type & (TOP_BLOCK_OUT)) {
-				ch_chunk_t from_top_kernel = read_channel_intel(ch_top_row_out);
+				to_top = read_channel_intel(ch_top_row_out);
 			}
 			// If inner block, receive from right and bottom and forward to left and top
 			if (!(operation_type & (TOP_BLOCK_OUT)) && (operation_type & (STORE_TOP_INNER))) {
