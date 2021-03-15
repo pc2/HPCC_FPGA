@@ -5,9 +5,8 @@
 # Submit this script to sbatch in this folder!
 #
 #SBATCH -p fpgasyn
-#SBATCH -J PTRANS
 
-module load intelFPGA_pro/20.4.0
+module load intelFPGA_pro/20.3.0
 module load nalla_pcie/19.4.0_max
 module load intel
 module load devel/CMake/3.15.3-GCCcore-8.3.0
@@ -16,12 +15,12 @@ SCRIPT_PATH=${SLURM_SUBMIT_DIR}
 
 BENCHMARK_DIR=${SCRIPT_PATH}/../
 
-SYNTH_DIR=${PFS_SCRATCH}/synth/520n/multi_fpga/PTRANS
+SYNTH_DIR=${PFS_SCRATCH}/synth/520n/PTRANS
 
-CONFIG_NAMES=("Nallatech_520N_ch2_interleave" "Nallatech_520N")
+CONFIG_NAMES=("Nallatech_520N_interleave")
 
 for r in "${CONFIG_NAMES[@]}"; do
-    BUILD_DIR=${SYNTH_DIR}/20.4.0-19.4.0_max-${r}
+    BUILD_DIR=${SYNTH_DIR}/20.3.0-19.4.0_max-${r}
 
     mkdir -p ${BUILD_DIR}
     cd ${BUILD_DIR}
