@@ -98,7 +98,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         std::list<cl::CommandQueue> lu_queues;
         std::list<cl::CommandQueue> top_queues;
         std::list<cl::CommandQueue> left_queues;
-        std::list<cl::CommandQueue> network_queues_bottomright;
         std::list<cl::CommandQueue> network_queues_topleft;
         std::list<cl::CommandQueue> network_queues_bottomright;
         std::list<std::vector<cl::Buffer>> left_buffers;
@@ -130,7 +129,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 inner_queues.back().emplace_back(*config.context, *config.device, 0, &err);
                 ASSERT_CL(err)
             }
-            network_queues.emplace_back(*config.context, *config.device, 0, &err);
+            network_queues_bottomright.emplace_back(*config.context, *config.device, 0, &err);
+            ASSERT_CL(err)
+            network_queues_topleft.emplace_back(*config.context, *config.device, 0, &err);
             ASSERT_CL(err)
 
             left_buffers.emplace_back();
