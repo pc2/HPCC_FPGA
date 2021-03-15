@@ -270,9 +270,14 @@ If you are using one of the benchmarks contained in the HPCC FPGA benchmark suit
 
 #### Bibtex
 
-    @article{hpcc_fpga,
-      title={Evaluating {FPGA} Accelerator Performance with a Parameterized OpenCL Adaptation of the {HPCChallenge} Benchmark Suite},
-      author={Meyer, Marius and Kenter, Tobias and Plessl, Christian},
-      journal={arXiv preprint arXiv:2004.11059},
-      year={2020}
+
+    @INPROCEEDINGS{hpcc_fpga,
+        author={M. {Meyer} and T. {Kenter} and C. {Plessl}},
+        booktitle={2020 IEEE/ACM International Workshop on Heterogeneous High-performance Reconfigurable Computing (H2RC)}, 
+        title={Evaluating FPGA Accelerator Performance with a Parameterized OpenCL Adaptation of Selected Benchmarks of the HPCChallenge Benchmark Suite}, 
+        year={2020},
+        pages={10-18},
+        organization={IEEE},
+        doi={10.1109/H2RC51942.2020.00007}
     }
+
