@@ -153,6 +153,8 @@ function(generate_kernel_targets_intel)
                 COMMAND ${CMAKE_COMMAND} -E copy  ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_f} ${EXECUTABLE_OUTPUT_PATH}/${bitstream_f} 
                 COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/${kernel_file_name}/reports ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_synth_reports
                 COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${kernel_file_name}/acl_quartus_report.txt ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_synth_reports/acl_quartus_report.txt
+                COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${kernel_file_name}/quartus_sh_compile.log ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_synth_reports/quartus_sh_compile.log
+                COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${kernel_file_name}/${kernel_file_name}.log ${EXECUTABLE_OUTPUT_PATH}/${kernel_file_name}_synth_reports/${kernel_file_name}.log
                 DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_f}
         )
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_emulate_f}
