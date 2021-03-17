@@ -110,60 +110,62 @@ linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
     if (mpi_comm_rank == 0) {
         std::cout << "WARNING: GESL calculated on CPU!" << std::endl;
     }
-    // if (mpi_comm_rank > 0) {
-    //     for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
-    //         for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
-    //             MPI_Send(&data.A[executionSettings->programSettings->matrixSize * j + i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
-    //         }
-    //     }
-    //     if (executionSettings->programSettings->torus_row == 0) {
-    //         for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
-    //             MPI_Send(&data.b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
-    //         }
-    //     }
-    // }
-    // else {
-    //     MPI_Status status;
-    //     size_t current_offset = 0;
-    //     std::vector<HOST_DATA_TYPE> total_b(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
-    //     std::vector<HOST_DATA_TYPE> total_a(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width*executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
-    //     for (int j = 0; j < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; j++) {
-    //         for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
-    //             int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
-    //             int recvrow= (j / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
-    //             int recvrank = executionSettings->programSettings->torus_width * recvrow + recvcol;
-    //             if (recvrank > 0) {
-    //                 MPI_Recv(&total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i],executionSettings->programSettings->blockSize, MPI_FLOAT, recvrank, 0, MPI_COMM_WORLD,  &status);
-    //             }
-    //             else {
-    //                 for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
-    //                     total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i + k] = data.A[current_offset + k];
-    //                 }
-    //                 current_offset += executionSettings->programSettings->blockSize;
-    //             }
-    //         }
-    //     }
-    //     current_offset = 0;
-    //     for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
-    //         int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
-    //         if (recvcol > 0) {
-    //             MPI_Recv(&total_b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, recvcol, 0, MPI_COMM_WORLD, &status);
-    //         }
-    //         else {
-    //             for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
-    //                 total_b[i + k] = data.b[current_offset + k];
-    //             }
-    //             current_offset += executionSettings->programSettings->blockSize;
-    //         }
-    //     }
-    //     gesl_ref_nopvt(total_a.data(), total_b.data(), executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width, executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width);
-    //     double sum = 0;
-    //     for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i++) {
+#ifndef NDEBUG
+    if (mpi_comm_rank > 0) {
+        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
+                MPI_Send(&data.A[executionSettings->programSettings->matrixSize * j + i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+            }
+        }
+        if (executionSettings->programSettings->torus_row == 0) {
+            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
+                MPI_Send(&data.b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+            }
+        }
+    }
+    else {
+        MPI_Status status;
+        size_t current_offset = 0;
+        std::vector<HOST_DATA_TYPE> total_b(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
+        std::vector<HOST_DATA_TYPE> total_a(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width*executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
+        for (int j = 0; j < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; j++) {
+            for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
+                int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+                int recvrow= (j / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+                int recvrank = executionSettings->programSettings->torus_width * recvrow + recvcol;
+                if (recvrank > 0) {
+                    MPI_Recv(&total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i],executionSettings->programSettings->blockSize, MPI_FLOAT, recvrank, 0, MPI_COMM_WORLD,  &status);
+                }
+                else {
+                    for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
+                        total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i + k] = data.A[current_offset + k];
+                    }
+                    current_offset += executionSettings->programSettings->blockSize;
+                }
+            }
+        }
+        current_offset = 0;
+        for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
+            int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+            if (recvcol > 0) {
+                MPI_Recv(&total_b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, recvcol, 0, MPI_COMM_WORLD, &status);
+            }
+            else {
+                for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
+                    total_b[i + k] = data.b[current_offset + k];
+                }
+                current_offset += executionSettings->programSettings->blockSize;
+            }
+        }
+        gesl_ref_nopvt(total_a.data(), total_b.data(), executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width, executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width);
+        double sum = 0;
+        for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i++) {
             
-    //         sum += std::abs(total_b[i]);
-    //     }
-    //     std::cout << "Sum = " << sum << std::endl;
-    // }
+            sum += std::abs(total_b[i]);
+        }
+        std::cout << "Sum = " << sum << std::endl;
+    }
+#endif
     distributed_gesl_nopvt_ref(data);
     //gesl_ref_nopvt(data.A, data.b, executionSettings->programSettings->matrixSize, executionSettings->programSettings->matrixSize);
     return timings;
