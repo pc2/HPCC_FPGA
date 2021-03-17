@@ -82,6 +82,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     double t;
     std::vector<double> gefaExecutionTimes;
     std::vector<double> geslExecutionTimes;
+    std::vector<double> gefaWaitTimes;
     for (int i = 0; i < config.programSettings->numRepetitions; i++) {
 
         err = buffer_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
@@ -112,7 +113,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         all_events.emplace_back();
         all_events.back().emplace_back(start_event);
 
-        std::chrono::time_point<std::chrono::high_resolution_clock> t1, t2;
+        std::chrono::time_point<std::chrono::high_resolution_clock> t1, t2, twait1, twait2;
+        std::chrono::duration<double> currentwaittime = std::chrono::duration<double>::zero();
 
         // For every row of blocks create kernels and enqueue them
         for (int block_row=0; block_row < config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width; block_row++) {
@@ -413,7 +415,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 // Wait for all events that where executed 
                 // two iterations before and remove them from the data structure
                 // to free resources
+                twait1 = std::chrono::high_resolution_clock::now();
                 cl::Event::waitForEvents(all_events.front());
+                twait2 = std::chrono::high_resolution_clock::now();
+                currentwaittime += std::chrono::duration_cast<std::chrono::duration<double>>
+                                                                    (twait2 - twait1);
                 all_events.pop_front();
                 lu_queues.pop_front();
                 network_queues_bottomright.pop_front();
@@ -423,7 +429,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
                 // For the MM, an additional list of events was created. Check if it is already done
                 // and pop it afterwards
+                twait1 = std::chrono::high_resolution_clock::now();
                 cl::Event::waitForEvents(all_events.front());
+                twait2 = std::chrono::high_resolution_clock::now();
+                currentwaittime += std::chrono::duration_cast<std::chrono::duration<double>>
+                                                                    (twait2 - twait1);
                 all_events.pop_front();
 
                 left_buffers.pop_front();
@@ -436,6 +446,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
 
         }
+
+        std::cout << "Wait time: " << currentwaittime.count() << "s" << std::endl;
 
 #ifndef NDEBUG
             std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Exit    " << i <<  std::endl;
