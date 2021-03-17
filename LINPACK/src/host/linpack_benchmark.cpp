@@ -360,10 +360,6 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     }
 
     HOST_DATA_TYPE eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
-    std::cout << (static_cast<double>(n*mpi_comm_size)) << std::endl;
-    std::cout << (static_cast<double>(newdata->norma)) << std::endl;
-    std::cout << (static_cast<double>(normx)) << std::endl;
-    std::cout << (static_cast<double>(eps)) << std::endl;
     HOST_DATA_TYPE residn = resid / (static_cast<double>(n*mpi_comm_size)*newdata->norma*normx*eps);
 
 #ifndef NDEBUG

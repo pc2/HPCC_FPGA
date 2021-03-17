@@ -267,24 +267,29 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                                         sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize);
                     op_flags |= STORE_TOP_INNER;
                 }
-    
-                // Create the network kernel
-                kernels.back().emplace_back(*config.program, "network_layer_bottomright",
-                                            &err);
-#ifndef NDEBUG
-                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  " Nw     " << op_flags << "," << network_forward_flags <<  std::endl;
-#endif
-                ASSERT_CL(err);
-                err = kernels.back().back().setArg(0, op_flags);
-                ASSERT_CL(err)
-                err = kernels.back().back().setArg(1, network_forward_flags);
-                ASSERT_CL(err)
 
-                err = network_queues_bottomright.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))));
-                ASSERT_CL(err)   
+                if (it == network_layer_op_flags.begin()) {
+                    // Create the network kernel
+                    kernels.back().emplace_back(*config.program, "network_layer_bottomright",
+                                                &err);
+    #ifndef NDEBUG
+                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  " Nw ->    " << op_flags << "," << network_forward_flags <<  std::endl;
+    #endif
+                    ASSERT_CL(err);
+                    err = kernels.back().back().setArg(0, op_flags);
+                    ASSERT_CL(err)
+                    err = kernels.back().back().setArg(1, network_forward_flags);
+                    ASSERT_CL(err)
+
+                    err = network_queues_bottomright.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))));
+                    ASSERT_CL(err)   
+                }
                 // Create the network kernel
                 kernels.back().emplace_back(*config.program, "network_layer_topleft",
                                             &err);
+    #ifndef NDEBUG
+                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  " Nw <-    " << op_flags << "," << network_forward_flags <<  std::endl;
+    #endif
                 ASSERT_CL(err);
                 err = kernels.back().back().setArg(0, op_flags);
                 ASSERT_CL(err)
@@ -400,8 +405,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             
 #ifndef NDEBUG
             network_queues_bottomright.back().finish();
+            std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " NW -> Done    " << block_row <<  std::endl;
             network_queues_topleft.back().finish();
-            std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " NW Done    " << block_row <<  std::endl;
+            std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " NW <- Done    " << block_row <<  std::endl;
             inner_queues.back()[0].finish();
             std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " IS Done    " << block_row <<  std::endl;
             cl::Event::waitForEvents(all_events.back());
