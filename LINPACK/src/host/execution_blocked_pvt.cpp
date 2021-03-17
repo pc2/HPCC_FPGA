@@ -150,7 +150,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             int num_left_blocks = (in_same_col_as_lu) ? blocks_per_row - start_row_index : 0;
             int num_top_blocks = (in_same_row_as_lu) ? blocks_per_row - start_col_index : 0;
             int num_inner_block_rows = (blocks_per_row - start_row_index);
-            int num_inner_block_cols = (blocks_per_row - start_col_index);
+            int num_inner_block_cols = (num_inner_block_rows > 0) ? (blocks_per_row - start_col_index) : 0;
+            num_inner_block_rows = (num_inner_block_cols > 0) ?num_inner_block_rows : 0;
             int num_network_layer_executions = (config.programSettings->matrixSize / config.programSettings->blockSize) - std::min(start_col_index, start_row_index);
             num_network_layer_executions = std::max(num_network_layer_executions, 1);
             std::vector<cl_uint> network_layer_op_flags(num_network_layer_executions);
