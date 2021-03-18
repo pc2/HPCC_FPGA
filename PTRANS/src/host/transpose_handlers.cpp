@@ -80,6 +80,10 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedDiagonalTranspos
     }
     // Height of a matrix generated for a single memory bank on a single MPI rank
     int data_height_per_rank = blocks_per_rank * settings.programSettings->blockSize;
+
+#ifndef NDEBUG
+    std::cout << "Rank " << mpi_comm_rank << ": NumBlocks = " << blocks_per_rank << std::endl;
+#endif
     
     // Allocate memory for a single device and all its memory banks
     auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
