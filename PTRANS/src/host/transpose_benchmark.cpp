@@ -126,12 +126,15 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
         max_error = std::max(fabs(data.A[i]), max_error);
     }
 
+    double global_max_error = 0;
+    MPI_Reduce(&max_error, &global_max_error, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
     if (mpi_comm_rank == 0) {
-        std::cout << "Maximum error: " << max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
+        std::cout << "Maximum error: " << global_max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
         std::cout << "Mach. Epsilon: " << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl;
     }
 
-    return static_cast<double>(max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    return static_cast<double>(global_max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
 }
 
 void
