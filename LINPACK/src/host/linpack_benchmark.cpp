@@ -107,67 +107,6 @@ linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
 std::unique_ptr<linpack::LinpackExecutionTimings>
 linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
     auto timings = bm_execution::calculate(*executionSettings, data.A, data.b, data.ipvt);
-    if (mpi_comm_rank == 0) {
-        std::cout << "WARNING: GESL calculated on CPU!" << std::endl;
-    }
-#ifndef NDEBUG
-    if (mpi_comm_rank > 0) {
-        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
-            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
-                MPI_Send(&data.A[executionSettings->programSettings->matrixSize * j + i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
-            }
-        }
-        if (executionSettings->programSettings->torus_row == 0) {
-            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
-                MPI_Send(&data.b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
-            }
-        }
-    }
-    else {
-        MPI_Status status;
-        size_t current_offset = 0;
-        std::vector<HOST_DATA_TYPE> total_b(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
-        std::vector<HOST_DATA_TYPE> total_a(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width*executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
-        for (int j = 0; j < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; j++) {
-            for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
-                int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
-                int recvrow= (j / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
-                int recvrank = executionSettings->programSettings->torus_width * recvrow + recvcol;
-                if (recvrank > 0) {
-                    MPI_Recv(&total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i],executionSettings->programSettings->blockSize, MPI_FLOAT, recvrank, 0, MPI_COMM_WORLD,  &status);
-                }
-                else {
-                    for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
-                        total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i + k] = data.A[current_offset + k];
-                    }
-                    current_offset += executionSettings->programSettings->blockSize;
-                }
-            }
-        }
-        current_offset = 0;
-        for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
-            int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
-            if (recvcol > 0) {
-                MPI_Recv(&total_b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, recvcol, 0, MPI_COMM_WORLD, &status);
-            }
-            else {
-                for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
-                    total_b[i + k] = data.b[current_offset + k];
-                }
-                current_offset += executionSettings->programSettings->blockSize;
-            }
-        }
-        gesl_ref_nopvt(total_a.data(), total_b.data(), executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width, executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width);
-        double sum = 0;
-        for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i++) {
-            
-            sum += std::abs(total_b[i]);
-        }
-        std::cout << "Sum = " << sum << std::endl;
-    }
-#endif
-    distributed_gesl_nopvt_ref(data);
-    //gesl_ref_nopvt(data.A, data.b, executionSettings->programSettings->matrixSize, executionSettings->programSettings->matrixSize);
     return timings;
 }
 
@@ -312,108 +251,126 @@ linpack::LinpackBenchmark::generateInputData() {
 
 bool  
 linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &data) {
-    uint n= executionSettings->programSettings->matrixSize;
-    auto newdata = generateInputData();
-    for (int i = 0; i < n; i++) {
-        newdata->b[i] = -newdata->b[i];
-    }
-    //linpack::dmxpy(n, newdata->b, n, n, data.b, newdata->A, false);
-    MPI_Comm col_communicator;
-    MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_col, 0,&col_communicator);
-    // Calcuate distributed mxpy
-    for (int i=0; i < n; i++) {
-        HOST_DATA_TYPE local_mulsum = 0.0;
-        for (int j=0; j < n; j++) {
-            local_mulsum += data.b[j] * newdata->A[n*j + i];
-        }
-        HOST_DATA_TYPE global_mulsum = 0.0;
-        MPI_Allreduce(&local_mulsum, &global_mulsum, 1, MPI_FLOAT, MPI_SUM, col_communicator);
-        newdata->b[i] = newdata->b[i] + global_mulsum;
-    }
-#ifndef NDEBUG
-    std::cout << "Rank " << mpi_comm_rank << ": XPY done" << std::endl;
-#endif
-
-    MPI_Comm row_communicator;
-    MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_row, 0,&row_communicator);
-
-    HOST_DATA_TYPE local_resid = 0.0;
-    HOST_DATA_TYPE local_normx = 0.0;
-
-    for (int i = 0; i < n; i++) {
-        local_resid = (local_resid > fabs(newdata->b[i])) ? local_resid : fabs(newdata->b[i]);
-        local_normx = (local_normx > fabs(data.b[i])) ? local_normx : fabs(data.b[i]);
-    }
-
-    HOST_DATA_TYPE resid = 0.0;
-    HOST_DATA_TYPE normx = 0.0;
-
-    MPI_Reduce(&local_resid, &resid, 1, MPI_FLOAT, MPI_MAX, 0, row_communicator);
-    MPI_Reduce(&local_normx, &normx, 1, MPI_FLOAT, MPI_MAX, 0, row_communicator);
-
-#ifndef NDEBUG
-    std::cout << "Rank " << mpi_comm_rank << ": resid: " << local_resid << std::endl;
-    std::cout << "Rank " << mpi_comm_rank << ": Reduce done" << std::endl;
-#endif
+    uint n= executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width;
+    HOST_DATA_TYPE residn;
 
     if (mpi_comm_rank > 0) {
-        // Now all other ranks can leave
-        return true;
+        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
+                MPI_Send(&data.A[executionSettings->programSettings->matrixSize * j + i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+            }
+        }
+        if (executionSettings->programSettings->torus_row == 0) {
+            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
+                MPI_Send(&data.b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+            }
+        }
+        residn = 0;
+    }
+    else {
+        MPI_Status status;
+        size_t current_offset = 0;
+        std::vector<HOST_DATA_TYPE> total_b_original(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
+        std::vector<HOST_DATA_TYPE> total_b(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
+        std::vector<HOST_DATA_TYPE> total_a(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width*executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
+        for (int j = 0; j < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; j++) {
+            for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
+                int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+                int recvrow= (j / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+                int recvrank = executionSettings->programSettings->torus_width * recvrow + recvcol;
+                if (recvrank > 0) {
+                    MPI_Recv(&total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i],executionSettings->programSettings->blockSize, MPI_FLOAT, recvrank, 0, MPI_COMM_WORLD,  &status);
+                }
+                else {
+                    for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
+                        total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i + k] = data.A[current_offset + k];
+                    }
+                    current_offset += executionSettings->programSettings->blockSize;
+                }
+            }
+        }
+        current_offset = 0;
+        for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
+            int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+            if (recvcol > 0) {
+                MPI_Recv(&total_b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, recvcol, 0, MPI_COMM_WORLD, &status);
+            }
+            else {
+                for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
+                    total_b[i + k] = data.b[current_offset + k];
+                }
+                current_offset += executionSettings->programSettings->blockSize;
+            }
+        }
+        std::copy(total_b.begin(), total_b.end(), total_b_original.begin());
+        gesl_ref_nopvt(total_a.data(), total_b.data(), n, n);
+
+        HOST_DATA_TYPE resid = 0.0;
+        HOST_DATA_TYPE normx = 0.0;
+        double sum = 0;
+        for (int i = 0; i < n; i++) {
+            sum += total_b[i];
+            resid = (resid > fabs(total_b[i] - 1)) ? resid : fabs(total_b[i] - 1);
+            normx = (normx > fabs(total_b_original[i])) ? normx : fabs(total_b_original[i]);
+        }
+
+        std::cout << "SUM =  " << sum << std::endl;
+
+        HOST_DATA_TYPE eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+        residn = resid / (static_cast<double>(n)*normx*eps);
+
+    #ifndef NDEBUG
+        if (residn > 1 &&  mpi_comm_size == 1) {
+            auto ref_result = generateInputData();
+            // For each column right of current diagonal element
+            for (int j = 0; j < n; j++) {
+                // For each element below it
+                for (int i = 0; i < n; i++) {
+                    std::cout << ref_result->A[n * j + i] << ", ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+            // For each column right of current diagonal element
+            for (int j = 0; j < n; j++) {
+                // For each element below it
+                for (int i = 0; i < n; i++) {
+                    std::cout << data.A[n * j + i] << ", ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+            if (executionSettings->programSettings->isDiagonallyDominant) {
+                linpack::gefa_ref_nopvt(ref_result->A, n, n);
+                linpack::gesl_ref_nopvt(ref_result->A, ref_result->b, n, n);
+            }
+            else {
+                linpack::gefa_ref(ref_result->A, n, n, ref_result->ipvt);
+                linpack::gesl_ref(ref_result->A, ref_result->b, ref_result->ipvt, n, n);
+            }
+            // For each column right of current diagonal element
+            for (int j = 0; j < n; j++) {
+                // For each element below it
+                for (int i = 0; i < n; i++) {
+                    std::cout << ref_result->A[n * j + i] << ", ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+        }
+    #endif
+
+        //std::cout << resid << ", " << norma << ", " << normx << std::endl;
+        std::cout << "  norm. resid        resid       "\
+                    "machep       x[0]-1     x[n-1]-1" << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
+                << resid << std::setw(ENTRY_SPACE) << eps
+                << std::setw(ENTRY_SPACE) << total_b[0]-1 << std::setw(ENTRY_SPACE)
+                << total_b[n-1]-1 << std::endl;
+
     }
 
-    HOST_DATA_TYPE eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
-    HOST_DATA_TYPE residn = resid / (static_cast<double>(n*mpi_comm_size)*newdata->norma*normx*eps);
-
-#ifndef NDEBUG
-    if (residn > 1 &&  mpi_comm_size == 1) {
-        auto ref_result = generateInputData();
-        // For each column right of current diagonal element
-        for (int j = 0; j < n; j++) {
-            // For each element below it
-            for (int i = 0; i < n; i++) {
-                std::cout << ref_result->A[n * j + i] << ", ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-        // For each column right of current diagonal element
-        for (int j = 0; j < n; j++) {
-            // For each element below it
-            for (int i = 0; i < n; i++) {
-                std::cout << data.A[n * j + i] << ", ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-        if (executionSettings->programSettings->isDiagonallyDominant) {
-            linpack::gefa_ref_nopvt(ref_result->A, n, n);
-            linpack::gesl_ref_nopvt(ref_result->A, ref_result->b, n, n);
-        }
-        else {
-            linpack::gefa_ref(ref_result->A, n, n, ref_result->ipvt);
-            linpack::gesl_ref(ref_result->A, ref_result->b, ref_result->ipvt, n, n);
-        }
-        // For each column right of current diagonal element
-        for (int j = 0; j < n; j++) {
-            // For each element below it
-            for (int i = 0; i < n; i++) {
-                std::cout << ref_result->A[n * j + i] << ", ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-    }
-#endif
-
-    //std::cout << resid << ", " << norma << ", " << normx << std::endl;
-    std::cout << "  norm. resid        resid       "\
-                 "machep       x[0]-1     x[n-1]-1" << std::endl;
-    std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
-              << resid << std::setw(ENTRY_SPACE) << eps
-              << std::setw(ENTRY_SPACE) << data.b[0]-1 << std::setw(ENTRY_SPACE)
-              << data.b[n-1]-1 << std::endl;
-
-    return residn < 100;
+    return residn < 1;
 }
 
 void 
@@ -504,6 +461,14 @@ linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data
     for (int k = 0; k < matrix_size; k++) {
         data.b[k] = b_tmp[k];
     }
+#ifndef NDEBUG
+    double sum = 0;
+    for (int k = 0; k < matrix_size; k++) {
+        sum += std::abs(data.b[k]);
+    }
+
+    std::cout << "Rank " << mpi_comm_rank << " Dist.Sum: " << sum << std::endl;
+#endif
 }
 
 /**
