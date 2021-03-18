@@ -18,8 +18,8 @@ typedef struct {
 
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
 // Channel used to send the transposed blocks of A
-channel ch_data chan_a_out/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(i) + "\""*/)));
-channel ch_data chan_a_in/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(2 * (i // 2) + ((i + 1) % 2)) + "\""*/)));
+channel ch_data chan_a_out/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(i) + "\""*/), depth(1)));
+channel ch_data chan_a_in/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(2 * (i // 2) + ((i + 1) % 2)) + "\""*/), depth(1)));
 // PY_CODE_GEN block_end
 #endif
 
