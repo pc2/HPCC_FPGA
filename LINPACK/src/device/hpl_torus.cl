@@ -31,17 +31,17 @@ typedef struct tmp_channel_chunk { DEVICE_DATA_TYPE data[GEMM_BLOCK];} ch_chunk_
 // external channels from other devices
 // depth is set to a single block row so calculation kernels do not need to stall
 // until the network kernel has received everything
-channel ch_chunk_t ch_top_in __attribute((io("kernel_input_ch0")));
-channel ch_chunk_t ch_bottom_in __attribute((io("kernel_input_ch1")));
-channel ch_chunk_t ch_left_in __attribute((io("kernel_input_ch2")));
-channel ch_chunk_t ch_right_in __attribute((io("kernel_input_ch3")));
+channel ch_chunk_t ch_top_in __attribute((io("kernel_input_ch0"), depth(1)));
+channel ch_chunk_t ch_bottom_in __attribute((io("kernel_input_ch1"), depth(1)));
+channel ch_chunk_t ch_left_in __attribute((io("kernel_input_ch2"), depth(1)));
+channel ch_chunk_t ch_right_in __attribute((io("kernel_input_ch3"), depth(1)));
 
 // external channels to other devices
 // depth is set only to 1 because the receiver will buffer everything
-channel ch_chunk_t ch_top_out __attribute((io("kernel_output_ch0")));
-channel ch_chunk_t ch_bottom_out __attribute((io("kernel_output_ch1")));
-channel ch_chunk_t ch_left_out __attribute((io("kernel_output_ch2")));
-channel ch_chunk_t ch_right_out __attribute((io("kernel_output_ch3")));
+channel ch_chunk_t ch_top_out __attribute((io("kernel_output_ch0"), depth(1)));
+channel ch_chunk_t ch_bottom_out __attribute((io("kernel_output_ch1"), depth(1)));
+channel ch_chunk_t ch_left_out __attribute((io("kernel_output_ch2"), depth(1)));
+channel ch_chunk_t ch_right_out __attribute((io("kernel_output_ch3"), depth(1)));
 
 
 // channels to and from the local kernels
@@ -51,8 +51,6 @@ channel ch_chunk_t ch_top_col_in;
 channel ch_chunk_t ch_top_row_out;
 channel ch_chunk_t ch_left_row_in;
 channel ch_chunk_t ch_left_col_out;
-channel ch_chunk_t ch_inner_row_in;
-channel ch_chunk_t ch_inner_col_in;
 
 /**
 Takes care of the external channels in top -> bottom and left -> right direction.
@@ -130,7 +128,52 @@ Will receive or forward data from the Left and Top kernel to the Inner kernel an
  */
  __attribute__((uses_global_work_offset(0)))
 __kernel
-void network_layer_topleft(const uint operation_type,
+void network_layer_top(__global DEVICE_DATA_TYPE* restrict top_buffer,
+							const uint operation_type,
+				   			const uint forward_type) {
+
+
+	// For every row or column of the block, something needs to be sent
+	#pragma loop_coalesce
+	for (uint row = 0; row < BLOCK_SIZE; row++) {
+		// Number of chunks that has to be processed
+		for (uint chunk = 0; chunk < BLOCK_SIZE/GEMM_BLOCK; chunk++) {
+
+			// Registers to store incoming and outgoing data chunks
+			ch_chunk_t to_top;
+
+			if (operation_type & (TOP_BLOCK_OUT)) {
+				to_top = read_channel_intel(ch_top_row_out);
+			}
+			// If inner block, receive from right and bottom and forward to left and top
+			if (!(operation_type & (TOP_BLOCK_OUT)) && ((operation_type & (STORE_TOP_INNER))|| (forward_type & NETWORK_FWD_TOP))) {
+				ch_chunk_t from_bottom = read_channel_intel(ch_bottom_in);
+				// Forward chunk to the next top block
+				to_top = from_bottom;
+			}
+
+			if (operation_type & (STORE_TOP_INNER)) {
+				#pragma unroll
+				for (int i = 0; i < GEMM_BLOCK; i++) {
+					top_buffer[row * BLOCK_SIZE + chunk * GEMM_BLOCK + i] = to_top.data[i];
+				}
+			}
+
+			if ((forward_type & NETWORK_FWD_TOP)) {
+				write_channel_intel(ch_top_out, to_top);
+			}
+		}
+	}
+}
+
+/**
+Takes care of the external channels in bottom -> top and right -> left direction.
+Will receive or forward data from the Left and Top kernel to the Inner kernel and other FPGAs.
+ */
+ __attribute__((uses_global_work_offset(0)))
+__kernel
+void network_layer_left(__global DEVICE_DATA_TYPE* restrict left_buffer,
+							const uint operation_type,
 				   			const uint forward_type) {
 
 
@@ -142,43 +185,27 @@ void network_layer_topleft(const uint operation_type,
 
 			// Registers to store incoming and outgoing data chunks
 			ch_chunk_t to_left;
-			ch_chunk_t to_top;
 
 			if (operation_type & (LEFT_BLOCK_OUT)) {
 				to_left = read_channel_intel(ch_left_col_out);
 			}
 	
 			// If inner block, receive from right and bottom and forward to left and top
-			if (!(operation_type & (LEFT_BLOCK_OUT)) && (operation_type & (STORE_LEFT_INNER))) {
+			if (!(operation_type & (LEFT_BLOCK_OUT)) && ((operation_type & (STORE_LEFT_INNER)) || (forward_type & NETWORK_FWD_LEFT))) {
 				ch_chunk_t from_right = read_channel_intel(ch_right_in);
 				// Forward chunk to the next top block
 				to_left = from_right;
 			}
 
-
 			if (operation_type & (STORE_LEFT_INNER)) {
-				write_channel_intel(ch_inner_col_in, to_left);
-			}
-
-			if (operation_type & (TOP_BLOCK_OUT)) {
-				to_top = read_channel_intel(ch_top_row_out);
-			}
-			// If inner block, receive from right and bottom and forward to left and top
-			if (!(operation_type & (TOP_BLOCK_OUT)) && (operation_type & (STORE_TOP_INNER))) {
-				ch_chunk_t from_bottom = read_channel_intel(ch_bottom_in);
-				// Forward chunk to the next top block
-				to_top = from_bottom;
-			}
-
-			if (operation_type & (STORE_TOP_INNER)) {
-				write_channel_intel(ch_inner_row_in, to_top);
+				#pragma unroll
+				for (int i = 0; i < GEMM_BLOCK; i++) {
+					left_buffer[row * BLOCK_SIZE + chunk * GEMM_BLOCK + i] = to_left.data[i];
+				}
 			}
 
 			if ((forward_type & NETWORK_FWD_LEFT)) {
 				write_channel_intel(ch_left_out, to_left);
-			}
-			if ((forward_type & NETWORK_FWD_TOP)) {
-				write_channel_intel(ch_top_out, to_top);
 			}
 		}
 	}
@@ -270,7 +297,7 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 		for (int ii =0; ii < GEMM_BLOCK; ii++) {
 			__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 			for (int jj =0; jj < GEMM_BLOCK; jj++) {
-				current_block[ii][jj] = a[jj][ii] ;
+				current_block[ii][jj] = __fpga_reg(a[jj][ii]);
 			}
 		}
 	}
@@ -279,7 +306,7 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 		for (int ii =0; ii < GEMM_BLOCK; ii++) {
 			__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 			for (int jj =0; jj < GEMM_BLOCK; jj++) {
-				current_block[ii][jj] = a[ii][jj] ;
+				current_block[ii][jj] = __fpga_reg(a[ii][jj]);
 			}
 		}
 	}
@@ -341,7 +368,7 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 		for (int ii =0; ii < GEMM_BLOCK; ii++) {
 			__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 			for (int jj =0; jj < GEMM_BLOCK; jj++) {
-				out[ii][jj] = tmp[jj][ii];
+				out[ii][jj] = __fpga_reg(tmp[jj][ii]);
 			}
 		}
 	}
@@ -350,7 +377,7 @@ update_block(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
 		for (int ii =0; ii < GEMM_BLOCK; ii++) {
 			__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 			for (int jj =0; jj < GEMM_BLOCK; jj++) {
-				out[ii][jj] = tmp[ii][jj];
+				out[ii][jj] = __fpga_reg(tmp[ii][jj]);
 			}
 		}		
 	}
@@ -460,21 +487,21 @@ lu(__global DEVICE_DATA_TYPE* restrict a,
 							// left matrix block will be calculated
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int jj =0; jj < GEMM_BLOCK; jj++) {
-								second_input[jj] = lu_a_buffer_out_row[jj];
+								second_input[jj] = __fpga_reg(lu_a_buffer_out_row[jj]);
 							}
 						}
 						else if (i == k) {
 							// top matrix block will be calculated
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int jj =0; jj < GEMM_BLOCK; jj++) {
-								second_input[jj] = lu_a_buffer_out_col[jj];
+								second_input[jj] = __fpga_reg(lu_a_buffer_out_col[jj]);
 							}
 						}
 						else {
 							// inner block will be calculated
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int jj =0; jj < GEMM_BLOCK; jj++) {
-								second_input[jj] = left_buffer[ti & 1][jj];
+								second_input[jj] = __fpga_reg(left_buffer[ti & 1][jj]);
 							}
 						}
 						DEVICE_DATA_TYPE a_input[GEMM_BLOCK][GEMM_BLOCK];
@@ -482,14 +509,14 @@ lu(__global DEVICE_DATA_TYPE* restrict a,
 						for (int ii =0; ii < GEMM_BLOCK; ii++) {
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int jj = 0; jj < GEMM_BLOCK; jj++) {
-								a_input[ii][jj] = a_buffer[i][j][ii][jj];
+								a_input[ii][jj] = __fpga_reg(a_buffer[i][j][ii][jj]);
 							}
 						}
 						DEVICE_DATA_TYPE top_input[GEMM_BLOCK];
 						if (ttj >= BLOCK_SIZE/GEMM_BLOCK) {
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int jj =0; jj < GEMM_BLOCK; jj++) {
-								top_input[jj] = top_buffer[j][jj];
+								top_input[jj] = __fpga_reg(top_buffer[j][jj]);
 							}
 						}
 						DEVICE_DATA_TYPE out[GEMM_BLOCK][GEMM_BLOCK] __attribute__((register));
@@ -503,20 +530,20 @@ lu(__global DEVICE_DATA_TYPE* restrict a,
 							// only update in the first row
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int jj =0; jj < GEMM_BLOCK; jj++) {
-								top_buffer[ttj][jj] = out[kk][jj];
+								top_buffer[ttj][jj] = __fpga_reg(out[kk][jj]);
 							}
 						}
 						if (i > k && j == k) {
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int ii =0; ii < GEMM_BLOCK; ii++) {
-								left_buffer[(ti + 1) & 1][ii] = out[ii][kk];
+								left_buffer[(ti + 1) & 1][ii] = __fpga_reg(out[ii][kk]);
 							}
 						}
 						__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 						for (int ii =0; ii < GEMM_BLOCK; ii++) {
 							__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
 							for (int jj = 0; jj < GEMM_BLOCK; jj++) {
-								a_buffer[i][j][ii][jj] = out[ii][jj];
+								a_buffer[i][j][ii][jj] = __fpga_reg(out[ii][jj]);
 							}
 						}
 					}
@@ -811,39 +838,6 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a,
 	}
 }
 
-
- __attribute__((uses_global_work_offset(0)))
-__kernel
-void inner_store(__global DEVICE_DATA_TYPE* restrict left_buffer,
-				__global DEVICE_DATA_TYPE* restrict top_buffer,
-				const uint operation_type) {
-
-	#pragma loop_coalesce
-	for (int row = 0; row < BLOCK_SIZE; row++) {
-		for (int chunk = 0; chunk < BLOCK_SIZE / GEMM_BLOCK; chunk++) {
-
-			if (operation_type & STORE_LEFT_INNER) {
-				// Store left buffer
-				ch_chunk_t to_left = read_channel_intel(ch_inner_col_in);
-
-				#pragma unroll
-				for (int i = 0; i < GEMM_BLOCK; i++) {
-					left_buffer[row * BLOCK_SIZE + chunk * GEMM_BLOCK + i] = to_left.data[i];
-				}
-			}
-			if (operation_type & STORE_TOP_INNER) {
-				// Store top buffer
-				ch_chunk_t to_top = read_channel_intel(ch_inner_row_in);
-
-				#pragma unroll
-				for (int i = 0; i < GEMM_BLOCK; i++) {
-					top_buffer[row * BLOCK_SIZE + chunk * GEMM_BLOCK + i] = to_top.data[i];
-				}
-			}
-		}
-	}		
-}
-
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
 
 /**
@@ -919,7 +913,7 @@ void inner_update_mm/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE* restrict a,
 			for (int i = 0; i < GEMM_BLOCK; i++) {
 				#pragma unroll
 				for (int j = 0; j < GEMM_BLOCK; j++) {
-					result_sub[i][j] = ((k > 0) ? result_sub[i][j] : a_buffer[row][curr_col][i][j]) + left_sub[k][i] * top_sub[k][j];
+					result_sub[i][j] = ((k > 0) ? __fpga_reg(result_sub[i][j]) : __fpga_reg(a_buffer[row][curr_col][i][j])) + left_sub[k][i] * top_sub[k][j];
 				}
 			}
 		}
@@ -928,7 +922,7 @@ void inner_update_mm/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE* restrict a,
 		for (int i = 0; i < GEMM_BLOCK; i++) {
 			#pragma unroll
 			for (int j=0; j < GEMM_BLOCK; j++) {
-				a_buffer[row][curr_col][i][j] = result_sub[i][j];
+				a_buffer[row][curr_col][i][j] = __fpga_reg(result_sub[i][j]);
 			}
 		}
 	}

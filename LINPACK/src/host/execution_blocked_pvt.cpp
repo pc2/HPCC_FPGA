@@ -263,25 +263,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             }
 
 
-            uint network_forward_flags = 0;
-            if (!((local_block_row + 1 == blocks_per_row) && (config.programSettings->torus_row + 1 == config.programSettings->torus_width)) && 
-            //((local_block_row_remainder + config.programSettings->torus_row + 1) % config.programSettings->torus_width > 0) && 
-            (network_layer_op_flags[0] & (LEFT_BLOCK_OUT | LU_BLOCK_OUT)) && block_row + 1 !=config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width) {
-                network_forward_flags |= NETWORK_FWD_BOTTOM;
-            }
-            if (!((local_block_row_remainder + 1) % config.programSettings->torus_width == config.programSettings->torus_row) && 
-            ((num_top_blocks + num_inner_block_rows > 0) || (local_block_row_remainder < config.programSettings->torus_col))) {
-                network_forward_flags |= NETWORK_FWD_TOP;
-            }
-            if (!((local_block_row + 1 == blocks_per_row) && (config.programSettings->torus_col + 1 == config.programSettings->torus_width)) && 
-            //((local_block_row_remainder + config.programSettings->torus_col + 1) % config.programSettings->torus_width > 0) && 
-            (network_layer_op_flags[0] & (TOP_BLOCK_OUT | LU_BLOCK_OUT)) && block_row + 1 != config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width) {
-                network_forward_flags |= NETWORK_FWD_RIGHT;
-            }
-            if (!((local_block_row_remainder + 1) % config.programSettings->torus_width == config.programSettings->torus_col) && 
-            ((num_left_blocks + num_inner_block_cols > 0) || (local_block_row_remainder < config.programSettings->torus_row))) {
-                network_forward_flags |= NETWORK_FWD_LEFT;
-            }
             if (network_layer_op_flags.size() == 0) {
                 // create at least a single network kernel to forward data if required!
                 network_layer_op_flags.emplace_back(0);
@@ -289,6 +270,32 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             // Create network kernels
             int nw_exe_count = 0;
             for (auto it = network_layer_op_flags.begin(); it < network_layer_op_flags.end(); it++) {
+
+                uint network_forward_flags = 0;
+                if (!((local_block_row + 1 == blocks_per_row) && (config.programSettings->torus_row + 1 == config.programSettings->torus_width)) && 
+                !((config.programSettings->torus_width + local_block_row_remainder - 1) % config.programSettings->torus_width == config.programSettings->torus_row) && 
+                (network_layer_op_flags[0] & (LEFT_BLOCK_OUT | LU_BLOCK_OUT)) && block_row + 1 !=config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width) {
+                    network_forward_flags |= NETWORK_FWD_BOTTOM;
+                }
+                if (!((local_block_row_remainder + 1) % config.programSettings->torus_width == config.programSettings->torus_row) && 
+                ((num_top_blocks + num_inner_block_rows > 0) || (local_block_row_remainder < config.programSettings->torus_col)) &&
+                // Do only forward if there are inner block cols to be calculated
+                //TODO think about method here to allow forwarding in first iteration even if fpga has no own inner blocks!
+                (nw_exe_count < num_inner_block_cols || (local_block_row + 1 == config.programSettings->matrixSize / config.programSettings->blockSize && local_block_row_remainder < config.programSettings->torus_col))) {
+                    network_forward_flags |= NETWORK_FWD_TOP;
+                }
+                if (!((local_block_row + 1 == blocks_per_row) && (config.programSettings->torus_col + 1 == config.programSettings->torus_width)) && 
+                !((config.programSettings->torus_width + local_block_row_remainder - 1) % config.programSettings->torus_width == config.programSettings->torus_col) && 
+                (network_layer_op_flags[0] & (TOP_BLOCK_OUT | LU_BLOCK_OUT)) && block_row + 1 != config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width) {
+                    network_forward_flags |= NETWORK_FWD_RIGHT;
+                }
+                if (!((local_block_row_remainder + 1) % config.programSettings->torus_width == config.programSettings->torus_col) && 
+                ((num_left_blocks + num_inner_block_cols > 0) || (local_block_row_remainder < config.programSettings->torus_row)) &&
+                // Do only forwward if there are inner block rows to be calculated
+                //TODO think about method here to allow forwarding in first iteration even if fpga has no own inner blocks!
+                (nw_exe_count < num_inner_block_rows || (local_block_row + 1 == config.programSettings->matrixSize / config.programSettings->blockSize && local_block_row_remainder < config.programSettings->torus_row))) {
+                    network_forward_flags |= NETWORK_FWD_LEFT;
+                }
 
                 uint op_flags = *it;
                 bool left_block_is_received = num_inner_block_rows > nw_exe_count;
