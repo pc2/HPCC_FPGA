@@ -72,7 +72,7 @@ fft::FFTData::~FFTData() {
 #endif
 }
 
-fft::FFTBenchmark::FFTBenchmark(int argc, char* argv[]) {
+fft::FFTBenchmark::FFTBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
 }
 
