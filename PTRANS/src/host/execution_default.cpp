@@ -122,13 +122,13 @@ namespace bm_execution {
         #endif
                 // TODO If SVM, the start index might be different because all replcations 
                 // access the same buffer!
-                err = transposeWriteKernel.setArg(2, 0);
+                err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(0));
                 ASSERT_CL(err) 
-                err = transposeReadKernel.setArg(1, 0);
+                err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(0));
                 ASSERT_CL(err) 
-                err = transposeWriteKernel.setArg(3, static_cast<cl_uint>(blocks_per_replication));
+                err = transposeWriteKernel.setArg(3, static_cast<cl_ulong>(blocks_per_replication));
                 ASSERT_CL(err) 
-                err = transposeReadKernel.setArg(2, static_cast<cl_uint>(blocks_per_replication));
+                err = transposeReadKernel.setArg(2, static_cast<cl_ulong>(blocks_per_replication));
                 ASSERT_CL(err)     
 
                 cl::CommandQueue readQueue(*config.context, *config.device, 0, &err);
@@ -198,6 +198,11 @@ namespace bm_execution {
                 readCommandQueueList[r].finish();
             }
             auto endCalculation = std::chrono::high_resolution_clock::now();
+#ifndef NDEBUG
+                int mpi_rank;
+                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+                std::cout << "Rank " << mpi_rank << ": " << "Done i=" << repetition << std::endl;
+#endif
             std::chrono::duration<double> calculationTime =
                     std::chrono::duration_cast<std::chrono::duration<double>>
                             (endCalculation - startCalculation);
