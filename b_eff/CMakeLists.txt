@@ -9,6 +9,7 @@ set(DEFAULT_MAX_LOOP_LENGTH 65536 CACHE STRING "Maximum number of repetitions do
 set(DEFAULT_MIN_LOOP_LENGTH 256 CACHE STRING "Minimum number of repetitions done for a single message size")#
 set(DEFAULT_LOOP_LENGTH_OFFSET 11 CACHE STRING "Offset that is used for the message sizes before reducing the number of repetitions")
 set(DEFAULT_LOOP_LENGTH_DECREASE 7 CACHE STRING "Number of steps that are used to decrease the number of repetitions to its minimum")
+set(NUM_REPLICATIONS 2 CACHE STRING "")
 
 set(USE_MPI Yes)
 set(USE_DEPRECATED_HPP_HEADER No)
@@ -16,9 +17,8 @@ set(USE_DEPRECATED_HPP_HEADER No)
 set(DATA_TYPE char)
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
 unset(DATA_TYPE CACHE)
-if (NOT MPI_FOUND) 
-    message(ERROR "Benchmarks host code requires MPI, but MPI could not be found.")
-endif()
+find_package(MPI REQUIRED)
+
 if (NOT INTELFPGAOPENCL_FOUND)
     message(ERROR "Benchmark does only support the Intel OpenCL SDK")
 endif()
