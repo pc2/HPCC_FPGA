@@ -118,6 +118,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         left_buffers.emplace_back();
         top_buffers.emplace_back();
         kernels.emplace_back();
+        inner_queues.emplace_back();
+        for (uint rep = 0; rep < config.programSettings->kernelReplications; rep++) {
+            inner_queues.back().emplace_back(*config.context, *config.device, 0, &err);
+            ASSERT_CL(err)
+        }
 
         std::chrono::time_point<std::chrono::high_resolution_clock> t1, t2, twait1, twait2;
         std::chrono::duration<double> currentwaittime = std::chrono::duration<double>::zero();
@@ -132,11 +137,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             ASSERT_CL(err)
             left_queues.emplace_back(*config.context, *config.device, 0, &err);
             ASSERT_CL(err)
-            inner_queues.emplace_back();
-            for (uint rep = 0; rep < config.programSettings->kernelReplications; rep++) {
-                inner_queues.back().emplace_back(*config.context, *config.device, 0, &err);
-                ASSERT_CL(err)
-            }
             network_queues_bottomright.emplace_back(*config.context, *config.device, 0, &err);
             ASSERT_CL(err)
             network_queues_top.emplace_back(*config.context, *config.device, 0, &err);
@@ -280,7 +280,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 if (!((local_block_row_remainder + 1) % config.programSettings->torus_width == config.programSettings->torus_row) && 
                 ((num_top_blocks + num_inner_block_rows > 0) || (local_block_row_remainder < config.programSettings->torus_col)) &&
                 // Do only forward if there are inner block cols to be calculated
-                //TODO think about method here to allow forwarding in first iteration even if fpga has no own inner blocks!
                 (nw_exe_count < num_inner_block_cols || (local_block_row + 1 == config.programSettings->matrixSize / config.programSettings->blockSize && local_block_row_remainder < config.programSettings->torus_col))) {
                     network_forward_flags |= NETWORK_FWD_TOP;
                 }
@@ -292,7 +291,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 if (!((local_block_row_remainder + 1) % config.programSettings->torus_width == config.programSettings->torus_col) && 
                 ((num_left_blocks + num_inner_block_cols > 0) || (local_block_row_remainder < config.programSettings->torus_row)) &&
                 // Do only forwward if there are inner block rows to be calculated
-                //TODO think about method here to allow forwarding in first iteration even if fpga has no own inner blocks!
                 (nw_exe_count < num_inner_block_rows || (local_block_row + 1 == config.programSettings->matrixSize / config.programSettings->blockSize && local_block_row_remainder < config.programSettings->torus_row))) {
                     network_forward_flags |= NETWORK_FWD_LEFT;
                 }
@@ -323,9 +321,15 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     ASSERT_CL(err)
                     err = kernels.back().back().setArg(1, network_forward_flags);
                     ASSERT_CL(err)
-
-                    err = network_queues_bottomright.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))));
-                    ASSERT_CL(err)   
+                    if (std::distance(it,network_layer_op_flags.end()) == 1) {
+                        all_events.back().emplace_back();
+                        err = network_queues_bottomright.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));
+                        ASSERT_CL(err) 
+                    }
+                    else {
+                        err = network_queues_bottomright.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))));
+                        ASSERT_CL(err)    
+                    }
                 }
                 // Create the network kernel for down -> top direction
                 kernels.back().emplace_back(*config.program, "network_layer_top",
@@ -463,6 +467,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             // count the inner MM already to next iteration by creating new buffers in the queue
             all_events.emplace_back();
             kernels.emplace_back();
+            inner_queues.emplace_back();
+            for (uint rep = 0; rep < config.programSettings->kernelReplications; rep++) {
+                inner_queues.back().emplace_back(*config.context, *config.device, 0, &err);
+                ASSERT_CL(err)
+            }
 
             for (auto l = std::next(left_buffers.back().begin()); l < left_buffers.back().end(); l++) {
                 for (auto t = std::next(top_buffers.back().begin()); t < top_buffers.back().end(); t++) {
@@ -555,6 +564,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 #endif
             // Execute GEFA
             if (block_row == 0) {
+                MPI_Barrier(MPI_COMM_WORLD);
                 t1 = std::chrono::high_resolution_clock::now();
                 // Trigger the user event that will start the first tasks in the queue
                 start_event.setStatus(CL_COMPLETE);
@@ -622,9 +632,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
         }
 
-        std::cout << "Wait time: " << currentwaittime.count() << "s" << std::endl;
-
 #ifndef NDEBUG
+            std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "Wait time: " << currentwaittime.count() << "s" << std::endl;
             std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Exit    " << i <<  std::endl;
 #endif
 
@@ -677,6 +686,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
     std::unique_ptr<linpack::LinpackExecutionTimings> results(
                     new linpack::LinpackExecutionTimings{gefaExecutionTimes, geslExecutionTimes});
+    
+    MPI_Barrier(MPI_COMM_WORLD);
 
     return results;
 }
