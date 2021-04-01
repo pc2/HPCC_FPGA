@@ -127,6 +127,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         std::chrono::time_point<std::chrono::high_resolution_clock> t1, t2, twait1, twait2;
         std::chrono::duration<double> currentwaittime = std::chrono::duration<double>::zero();
 
+        uint current_replication = 0;
+
         // For every row of blocks create kernels and enqueue them
         for (int block_row=0; block_row < config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width; block_row++) {
 
@@ -321,15 +323,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     ASSERT_CL(err)
                     err = kernels.back().back().setArg(1, network_forward_flags);
                     ASSERT_CL(err)
-                    if (std::distance(it,network_layer_op_flags.end()) == 1) {
-                        all_events.back().emplace_back();
-                        err = network_queues_bottomright.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));
-                        ASSERT_CL(err) 
-                    }
-                    else {
-                        err = network_queues_bottomright.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))));
-                        ASSERT_CL(err)    
-                    }
+                    
+                    err = network_queues_bottomright.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))));
+                    ASSERT_CL(err) 
                 }
                 // Create the network kernel for down -> top direction
                 kernels.back().emplace_back(*config.program, "network_layer_top",
@@ -386,9 +382,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             // update all remaining inner blocks using only global memory
 
             all_events.emplace_back(all_events.back());
+            //auto communication_events = all_events.back();
 
             uint current_update = 0;
-            uint current_replication = 0;
             uint total_inner_updates_first_row = top_buffers.back().size();
             uint updates_per_replication = total_inner_updates_first_row / config.programSettings->kernelReplications;
             uint total_inner_updates = (top_buffers.back().size() - 1) * (left_buffers.back().size() - 1);
@@ -399,10 +395,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                                     &err);
 
                 int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols);
-                int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));
-#ifndef NDEBUG
-                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner " << block_row << "," << block_col <<  std::endl;
-#endif   
+                int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));  
                 ASSERT_CL(err);
                 err = kernels.back().back().setArg(0, Buffer_a);
                 ASSERT_CL(err);
@@ -417,12 +410,29 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 err = kernels.back().back().setArg(5, blocks_per_row);
                 ASSERT_CL(err)
 
-                // Distribute the workload over all available matrix multiplication kernels
-                err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))));         
+                if ((left_buffers.back().size() - 1) - current_update <= config.programSettings->kernelReplications) {
+#ifndef NDEBUG
+                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner L Ev " << block_row << "," << block_col <<  std::endl;
+#endif 
+                    // this is the last taks that will be enqueued in this queue, so create an event
+                    all_events.back().emplace_back();
+                    // Distribute the workload over all available matrix multiplication kernels
+                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));         
+                    //err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &communication_events, &(all_events.back().back()));         
+                }
+                else {
+#ifndef NDEBUG
+                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner L " << block_row << "," << block_col <<  std::endl;
+#endif 
+                    // Distribute the workload over all available matrix multiplication kernels
+                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))));         
+                    //err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &communication_events);         
+                }
+                current_update++;
                 current_replication = (current_replication + 1) % config.programSettings->kernelReplications;
-                ASSERT_CL(err) 
             }
 
+            current_update = 0;
             for (auto t = top_buffers.back().begin(); t < top_buffers.back().end(); t++) {
                 // select the matrix multiplication kernel that should be used for this block updated 
                 kernels.back().emplace_back(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
@@ -430,9 +440,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
                 int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols + std::distance(top_buffers.back().begin(), t));
                 int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows);
-#ifndef NDEBUG
-                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner " << block_row << "," << block_col <<  std::endl;
-#endif   
+
                 ASSERT_CL(err);
                 err = kernels.back().back().setArg(0, Buffer_a);
                 ASSERT_CL(err);
@@ -447,27 +455,32 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 err = kernels.back().back().setArg(5, blocks_per_row);
                 ASSERT_CL(err)
                 // If number of blocks is not dividable by the number of replications, the first replications will do one update more
-                uint updates_for_current_replication = updates_per_replication + ((current_replication < total_inner_updates_first_row % config.programSettings->kernelReplications) ? 1 : 0);
-                if ((current_update + 1) == updates_for_current_replication) {
+                if (top_buffers.back().size() - current_update <= config.programSettings->kernelReplications) {
+#ifndef NDEBUG
+                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner T Ev " << block_row << "," << block_col <<  std::endl;
+#endif 
                     // this is the last taks that will be enqueued in this queue, so create an event
                     all_events.back().emplace_back();
                     // Distribute the workload over all available matrix multiplication kernels
                     err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));         
-                    current_update = 0;
-                    current_replication = (current_replication + 1) % config.programSettings->kernelReplications;
                 }
                 else {
+#ifndef NDEBUG
+                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner T " << block_row << "," << block_col <<  std::endl;
+#endif 
                     // Distribute the workload over all available matrix multiplication kernels
                     err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))));         
-                    current_update++;
                 }
                 ASSERT_CL(err) 
+                current_update++;
+                current_replication = (current_replication + 1) % config.programSettings->kernelReplications;
             }
             
             // count the inner MM already to next iteration by creating new buffers in the queue
             all_events.emplace_back();
             kernels.emplace_back();
             inner_queues.emplace_back();
+            current_update = 0;
             for (uint rep = 0; rep < config.programSettings->kernelReplications; rep++) {
                 inner_queues.back().emplace_back(*config.context, *config.device, 0, &err);
                 ASSERT_CL(err)
@@ -481,9 +494,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
                     int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols + std::distance(top_buffers.back().begin(), t));
                     int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));
-#ifndef NDEBUG
-                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner " << block_row << "," << block_col <<  std::endl;
-#endif   
+  
                     ASSERT_CL(err);
                     err = kernels.back().back().setArg(0, Buffer_a);
                     ASSERT_CL(err);
@@ -499,22 +510,26 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     ASSERT_CL(err)
 
                     // If number of blocks is not dividable by the number of replications, the first replications will do one update more
-                    uint updates_for_current_replication = total_updates_per_replication + ((current_replication < total_inner_updates % config.programSettings->kernelReplications) ? 1 : 0);
-                    if ((current_update + 1) == updates_for_current_replication) {
+                    if (((top_buffers.back().size() - 1) * (left_buffers.back().size() - 1)) - current_update <= config.programSettings->kernelReplications) {
+#ifndef NDEBUG
+                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner Ev " << block_row << "," << block_col <<  std::endl;
+#endif 
                         // this is the last taks that will be enqueued in this queue, so create an event
                         all_events.back().emplace_back();
                         // Distribute the workload over all available matrix multiplication kernels
                         err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(std::prev(all_events.end())))), &(all_events.back().back()));         
-                        current_update = 0;
-                        current_replication = (current_replication + 1) % config.programSettings->kernelReplications;
                     }
                     else {
+#ifndef NDEBUG
+                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner " << block_row << "," << block_col <<  std::endl;
+#endif 
                         // Distribute the workload over all available matrix multiplication kernels
                         err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(std::prev(all_events.end())))));         
-                        current_update++;
                     }
 
                     ASSERT_CL(err)
+                    current_update++;
+                    current_replication = (current_replication + 1) % config.programSettings->kernelReplications;
 //             uint total_inner_updates = left_buffers.back().size() * top_buffers.back().size();
 //             uint updates_per_replication = total_inner_updates / config.programSettings->kernelReplications;
 //             for (auto l = left_buffers.back().begin(); l < left_buffers.back().end(); l++) {
@@ -561,14 +576,15 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 #ifndef NDEBUG
             MPI_Barrier(MPI_COMM_WORLD);
             if (is_calulating_lu_block) std::cout << "---------------" << std::endl;
-#endif
-            // Execute GEFA
+
+            // // Execute GEFA
             if (block_row == 0) {
                 MPI_Barrier(MPI_COMM_WORLD);
                 t1 = std::chrono::high_resolution_clock::now();
                 // Trigger the user event that will start the first tasks in the queue
                 start_event.setStatus(CL_COMPLETE);
             }
+#endif
 
 #ifndef NDEBUG
             network_queues_bottomright.back().finish();
@@ -579,58 +595,74 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " NW L <- Done    " << block_row <<  std::endl;
             cl::Event::waitForEvents(all_events.back());
             std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Done    " << block_row <<  std::endl;
-#endif
 
-            if (block_row == blocks_per_row - 1) {
+            if (block_row == blocks_per_row * config.programSettings->torus_width - 1) {
                 // wait until the last LU queue is done since it will be the last required operation
                 lu_queues.back().finish();
                 t2 = std::chrono::high_resolution_clock::now();
 
                 // Finish all other queues
-                lu_queues.back().finish();
                 network_queues_bottomright.back().finish();
                 network_queues_top.back().finish();
                 network_queues_left.back().finish();
                 top_queues.back().finish();
                 left_queues.back().finish();
+                cl::Event::waitForEvents(all_events.back());
 
             }
+#endif
             
-            if (block_row > 1) {
-                if (block_row == 2) {
-                    // additionally remove the user event in the first cleanup
-                    all_events.pop_front();
-                }
+            // if (block_row > 1) {
+            //     if (block_row == 2) {
+            //         // additionally remove the user event in the first cleanup
+            //         all_events.pop_front();
+            //     }
 
-                // For the MM, an additional list of events was created. Check if it is already done
-                // and pop it afterwards
-                twait1 = std::chrono::high_resolution_clock::now();
-                cl::Event::waitForEvents(*std::next(all_events.begin()));
-                twait2 = std::chrono::high_resolution_clock::now();
-                currentwaittime += std::chrono::duration_cast<std::chrono::duration<double>>
-                                                                    (twait2 - twait1);
+            //     // For the MM, an additional list of events was created. Check if it is already done
+            //     // and pop it afterwards
+            //     twait1 = std::chrono::high_resolution_clock::now();
+            //     cl::Event::waitForEvents(*std::next(all_events.begin()));
+            //     twait2 = std::chrono::high_resolution_clock::now();
+            //     currentwaittime += std::chrono::duration_cast<std::chrono::duration<double>>
+            //                                                         (twait2 - twait1);
 
 
-                all_events.pop_front();
-                all_events.pop_front();
+            //     all_events.pop_front();
+            //     all_events.pop_front();
 
-                lu_queues.pop_front();
-                network_queues_bottomright.pop_front();
-                network_queues_top.pop_front();
-                network_queues_left.pop_front();
-                top_queues.pop_front();
-                left_queues.pop_front();
+            //     lu_queues.pop_front();
+            //     network_queues_bottomright.pop_front();
+            //     network_queues_top.pop_front();
+            //     network_queues_left.pop_front();
+            //     top_queues.pop_front();
+            //     left_queues.pop_front();
 
-                left_buffers.pop_front();
-                top_buffers.pop_front();
-                // remove inner block queues 
-                // (now MM events are all completed!)
-                inner_queues.pop_front();
-                kernels.pop_front();
-            }
+            //     left_buffers.pop_front();
+            //     top_buffers.pop_front();
+            //     // remove inner block queues 
+            //     // (now MM events are all completed!)
+            //     inner_queues.pop_front();
+            //     kernels.pop_front();
+            // }
 
 
         }
+#ifdef NDEBUG
+        std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "Start! " << std::endl;
+        MPI_Barrier(MPI_COMM_WORLD);
+        t1 = std::chrono::high_resolution_clock::now();
+        // Trigger the user event that will start the first tasks in the queue
+        start_event.setStatus(CL_COMPLETE);
+        int count = 0;
+        for (auto evs : all_events) {
+            count++;
+            cl::Event::waitForEvents(evs);
+            // std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "Step " << count << " of " << all_events.size() << std::endl;
+        }
+        lu_queues.back().finish();
+        t2 = std::chrono::high_resolution_clock::now();
+        std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "End! " << std::endl;
+#endif
 
 #ifndef NDEBUG
             std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "Wait time: " << currentwaittime.count() << "s" << std::endl;
