@@ -110,7 +110,7 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedDiagonalTranspos
 
 void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose::TransposeData& data) {
 #ifndef NDEBUG
-    std::cout << "Start data exchange " << mpi_comm_rank << std::endl;
+    // std::cout << "Start data exchange " << mpi_comm_rank << std::endl;
 #endif
     // Only need to exchange data, if rank has a partner
     if (mpi_comm_rank < mpi_comm_size - num_diagonal_ranks) {
@@ -132,7 +132,7 @@ void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose:
         while (remaining_data_size > 0) {
             int next_chunk = (remaining_data_size > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max(): remaining_data_size;
 #ifndef NDEBUG
-    std::cout << "Rank " << mpi_comm_rank << " " << next_chunk << " to " << pair_rank << std::endl;
+    // std::cout << "Rank " << mpi_comm_rank << " " << next_chunk << " to " << pair_rank << std::endl;
 #endif      
             if (pair_rank > mpi_comm_rank) {
                 MPI_Send(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD);
@@ -148,14 +148,14 @@ void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose:
             }
             // MPI_Sendrecv_replace(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
  #ifndef NDEBUG
-    std::cout << "Rank " << mpi_comm_rank << " Done!"<< std::endl;
+    // std::cout << "Rank " << mpi_comm_rank << " Done!"<< std::endl;
 #endif  
             remaining_data_size -= next_chunk;
             offset += next_chunk;
         }
     }
 #ifndef NDEBUG
-    std::cout << "End data exchange " << mpi_comm_rank << std::endl;
+    // std::cout << "End data exchange " << mpi_comm_rank << std::endl;
 #endif
 }
 
