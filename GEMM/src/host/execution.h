@@ -26,9 +26,6 @@ SOFTWARE.
 #include <memory>
 #include <vector>
 
-/* External library headers */
-#include "CL/cl.hpp"
-
 #include "parameters.h"
 #include "gemm_benchmark.hpp"
 
