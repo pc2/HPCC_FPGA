@@ -38,11 +38,11 @@ channel ch_data chan_a_in2/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"ker
 void
 load_chunk_of_a(__global DEVICE_DATA_TYPE *restrict A,
         DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
-        const int current_block,
-        const int row,
-        const int col) {
+        const ulong  current_block,
+        const ulong  row,
+        const ulong col) {
 
-        unsigned local_mem_converted_row = row * (BLOCK_SIZE / CHANNEL_WIDTH) + col;
+        ulong local_mem_converted_row = row * (BLOCK_SIZE / CHANNEL_WIDTH) + col;
 
         DEVICE_DATA_TYPE rotate_in[CHANNEL_WIDTH];
 
@@ -79,13 +79,13 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
 */
 void
 send_chunk_of_a/*PY_CODE_GEN i*/(const DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
-        const int row,
-        const int col) {
+        const ulong row,
+        const ulong col) {
 
         DEVICE_DATA_TYPE rotate_out[CHANNEL_WIDTH];
 
-        unsigned base = col * BLOCK_SIZE;
-        unsigned offset = row / CHANNEL_WIDTH;
+        ulong base = col * BLOCK_SIZE;
+        ulong offset = row / CHANNEL_WIDTH;
 
 
 __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
@@ -137,8 +137,8 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH/2)))
 __attribute__((max_global_work_dim(0)))
 __kernel
 void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
-            const uint block_offset,
-            const uint number_of_blocks) {
+            const ulong block_offset,
+            const ulong number_of_blocks) {
 
     // local memory double buffer for a matrix block
     DEVICE_DATA_TYPE a_block[2][BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH] __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,1))) __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,2)));
@@ -146,10 +146,10 @@ void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
     // transpose the matrix block-wise from global memory
     // One extra iteration to empty double buffer
     #pragma loop_coalesce
-    for (int block = block_offset; block < block_offset + number_of_blocks + 1; block++) {
+    for (ulong block = block_offset; block < block_offset + number_of_blocks + 1; block++) {
         // read in block from global memory and store it in a memory efficient manner
-        for (int row = 0; row < BLOCK_SIZE; row++) {
-            for (int col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
+        for (ulong row = 0; row < BLOCK_SIZE; row++) {
+            for (ulong col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
                 if (block < number_of_blocks) {
                     load_chunk_of_a(A, a_block[block & 1], block, row, col);
                 }
@@ -179,14 +179,14 @@ __attribute__((max_global_work_dim(0)))
 __kernel
 void transpose_write/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict B,
             __global DEVICE_DATA_TYPE *restrict A_out,
-            const uint block_offset,
-            const uint number_of_blocks) {
+            const ulong block_offset,
+            const ulong number_of_blocks) {
 
     #pragma loop_coalesce
-    for (int current_block = block_offset; current_block < block_offset + number_of_blocks; current_block++) {
+    for (ulong current_block = block_offset; current_block < block_offset + number_of_blocks; current_block++) {
         // complete matrix transposition and write the result back to global memory
-        for (int row = 0; row < BLOCK_SIZE; row++) {
-            for (int col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
+        for (ulong row = 0; row < BLOCK_SIZE; row++) {
+            for (ulong col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
 
                 DEVICE_DATA_TYPE channel_data[CHANNEL_WIDTH];
 

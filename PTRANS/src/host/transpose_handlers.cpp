@@ -109,6 +109,9 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedDiagonalTranspos
 }
 
 void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose::TransposeData& data) {
+#ifndef NDEBUG
+    std::cout << "Start data exchange " << mpi_comm_rank << std::endl;
+#endif
     // Only need to exchange data, if rank has a partner
     if (mpi_comm_rank < mpi_comm_size - num_diagonal_ranks) {
         int first_upper_half_rank = (mpi_comm_size - num_diagonal_ranks)/2;
@@ -128,11 +131,32 @@ void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose:
         size_t offset = 0;
         while (remaining_data_size > 0) {
             int next_chunk = (remaining_data_size > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max(): remaining_data_size;
-            MPI_Sendrecv_replace(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
+#ifndef NDEBUG
+    std::cout << "Rank " << mpi_comm_rank << " " << next_chunk << " to " << pair_rank << std::endl;
+#endif      
+            if (pair_rank > mpi_comm_rank) {
+                MPI_Send(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD);
+                MPI_Recv(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD, &status);
+            }
+            else {
+                std::vector<HOST_DATA_TYPE> buffer(next_chunk);
+                for (int i = 0; i < next_chunk; i++) {
+                    buffer[i] = data.A[offset + i];
+                }
+                MPI_Recv(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD, &status);
+                MPI_Send(buffer.data(), next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD);
+            }
+            // MPI_Sendrecv_replace(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
+ #ifndef NDEBUG
+    std::cout << "Rank " << mpi_comm_rank << " Done!"<< std::endl;
+#endif  
             remaining_data_size -= next_chunk;
             offset += next_chunk;
         }
     }
+#ifndef NDEBUG
+    std::cout << "End data exchange " << mpi_comm_rank << std::endl;
+#endif
 }
 
 #endif
