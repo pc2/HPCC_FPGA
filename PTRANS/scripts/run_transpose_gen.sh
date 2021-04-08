@@ -11,7 +11,6 @@
 #
 #    ../../scripts/code_generator/generator.py -p "N=5" --comment="#" --comment-ml-start="$" --comment-ml-end="$" run_transpose_gen.sh -o run_transpose_n9.sh
 #
-# PY_CODE_GEN N=10
 # PY_CODE_GEN block_start replace()
 #SBATCH -p fpga
 #SBATCH --constraint=19.4.0_max
@@ -34,16 +33,16 @@
 #PY_CODE_GEN block_end
 
 
-module load intelFPGA_pro/20.3.0
+module load intelFPGA_pro/20.4.0
 module load bittware_520n/19.4.0_max
 module load intel
 module load devel/CMake/3.15.3-GCCcore-8.3.0
 
 # Path to the host executable
-BIN_FILE=/scratch/pc2-mitarbeiter/mariusme/devel/HPCC_FPGA_ptrans/build/520n/PTRANS/bin/Transpose_intel
+BIN_FILE=/scratch/pc2-mitarbeiter/mariusme/synth/520n/multi_fpga/PTRANS-d1/20.4.0-19.4.0_max-Nallatech_520N/bin/Transpose_intel
 
 # Path to the bitstream
-AOCX_FILE=$PFS_SCRATCH/synth/520n/PTRANS/20.3.0-19.4.0_max-Nallatech_520N-noloop/bin/transpose_diagonal.aocx
+AOCX_FILE=/scratch/pc2-mitarbeiter/mariusme/synth/520n/multi_fpga/PTRANS-d1/20.4.0-19.4.0_max-Nallatech_520N/bin/transpose_diagonal.aocx
 
 # Execute the benchmark with matrices of 2GB size each 
 # -m 48 width of 48 blocks of 512 data items of SP floating point = 2GB

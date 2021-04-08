@@ -57,10 +57,16 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedDiagonalTranspos
     num_diagonal_ranks = std::max(avg_diagonal_blocks, 1);
 
     if (num_diagonal_ranks % 2 != mpi_comm_size % 2) {
+    #ifndef NDEBUG
+        std::cout << "Rank " << mpi_comm_rank << ": Fail 1!" << std::endl;
+    #endif
         // Abort if there is a too high difference in the number of matrix blocks between the MPI ranks
         throw std::runtime_error("Matrix size and MPI ranks to not allow fair distribution of blocks! Increase or reduce the number of MPI ranks by 1.");
     }
     if ((mpi_comm_size - num_diagonal_ranks) % 2 != 0 || (mpi_comm_size - num_diagonal_ranks) == 0 && width_in_blocks > 1) {
+    #ifndef NDEBUG
+        std::cout << "Rank " << mpi_comm_rank << ": Fail 2!" << std::endl;
+    #endif
         throw std::runtime_error("Not possible to create pairs of MPI ranks for lower and upper half of matrix. Increase number of MPI ranks!.");
     }
     bool this_rank_is_diagonal = mpi_comm_rank >= (mpi_comm_size - num_diagonal_ranks);
@@ -80,15 +86,19 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedDiagonalTranspos
     }
     // Height of a matrix generated for a single memory bank on a single MPI rank
     int data_height_per_rank = blocks_per_rank * settings.programSettings->blockSize;
+
+#ifndef NDEBUG
+    std::cout << "Rank " << mpi_comm_rank << ": NumBlocks = " << blocks_per_rank << std::endl;
+#endif
     
     // Allocate memory for a single device and all its memory banks
     auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
 
     // Fill the allocated memory with pseudo random values
-    std::mt19937 gen(7);
+    std::mt19937 gen(mpi_comm_rank);
     std::uniform_real_distribution<> dis(-100.0, 100.0);
-    for (int i = 0; i < data_height_per_rank; i++) {
-        for (int j = 0; j < settings.programSettings->blockSize; j++) {
+    for (size_t i = 0; i < data_height_per_rank; i++) {
+        for (size_t j = 0; j < settings.programSettings->blockSize; j++) {
             d->A[i * settings.programSettings->blockSize + j] = dis(gen);
             d->B[i * settings.programSettings->blockSize + j] = dis(gen);
             d->result[i * settings.programSettings->blockSize + j] = 0.0;
@@ -99,9 +109,13 @@ std::unique_ptr<transpose::TransposeData> transpose::DistributedDiagonalTranspos
 }
 
 void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose::TransposeData& data) {
+#ifndef NDEBUG
+    std::cout << "Start data exchange " << mpi_comm_rank << std::endl;
+#endif
     // Only need to exchange data, if rank has a partner
     if (mpi_comm_rank < mpi_comm_size - num_diagonal_ranks) {
-        int pair_rank = (mpi_comm_rank % 2) ? mpi_comm_rank - 1 : mpi_comm_rank + 1;
+        int first_upper_half_rank = (mpi_comm_size - num_diagonal_ranks)/2;
+        int pair_rank = (mpi_comm_rank >= first_upper_half_rank) ? mpi_comm_rank - first_upper_half_rank : mpi_comm_rank + first_upper_half_rank;
 
         // To re-calculate the matrix transposition locally on this host, we need to 
         // exchange matrix A for every kernel replication
@@ -113,8 +127,36 @@ void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose:
         // 1 . . .
         // 3 2 . .
         MPI_Status status;
-        MPI_Sendrecv_replace(data.A, data.blockSize * data.blockSize * data.numBlocks, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
+        size_t remaining_data_size = static_cast<size_t>(data.blockSize) * data.blockSize * data.numBlocks;
+        size_t offset = 0;
+        while (remaining_data_size > 0) {
+            int next_chunk = (remaining_data_size > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max(): remaining_data_size;
+#ifndef NDEBUG
+    std::cout << "Rank " << mpi_comm_rank << " " << next_chunk << " to " << pair_rank << std::endl;
+#endif      
+            if (pair_rank > mpi_comm_rank) {
+                MPI_Send(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD);
+                MPI_Recv(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD, &status);
+            }
+            else {
+                std::vector<HOST_DATA_TYPE> buffer(next_chunk);
+                for (int i = 0; i < next_chunk; i++) {
+                    buffer[i] = data.A[offset + i];
+                }
+                MPI_Recv(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD, &status);
+                MPI_Send(buffer.data(), next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD);
+            }
+            // MPI_Sendrecv_replace(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
+ #ifndef NDEBUG
+    std::cout << "Rank " << mpi_comm_rank << " Done!"<< std::endl;
+#endif  
+            remaining_data_size -= next_chunk;
+            offset += next_chunk;
+        }
     }
+#ifndef NDEBUG
+    std::cout << "End data exchange " << mpi_comm_rank << std::endl;
+#endif
 }
 
 #endif
