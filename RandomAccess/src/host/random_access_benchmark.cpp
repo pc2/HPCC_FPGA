@@ -97,7 +97,6 @@ random_access::RandomAccessBenchmark::collectAndPrintResults(const random_access
     int mpi_size = mpi_comm_size;
     MPI_Reduce(output.times.data(),avgTimings.data(),output.times.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     std::for_each(avgTimings.begin(),avgTimings.end(), [mpi_size](double& x) {x /= mpi_size;});
-    
 #else
     std::copy(output.times.begin(), output.times.end(), avgTimings.begin());
 #endif

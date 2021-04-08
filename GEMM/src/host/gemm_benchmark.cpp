@@ -126,7 +126,7 @@ gemm::GEMMBenchmark::collectAndPrintResults(const gemm::GEMMExecutionTimings &ou
         double tmean = 0;
         double tmin = std::numeric_limits<double>::max();
 
-        double gflops = 2.0 * (static_cast<double>(executionSettings->programSettings->matrixSize)
+        double gflops = mpi_comm_size * 2.0 * (static_cast<double>(executionSettings->programSettings->matrixSize)
                             *static_cast<double>(executionSettings->programSettings->matrixSize)
                             *static_cast<double>(executionSettings->programSettings->matrixSize))/1.0e9;
         for (double currentTime : avg_measures) {

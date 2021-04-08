@@ -14,7 +14,7 @@ set(AOC_FLAGS "-fpc -fp-relaxed -no-interleaving=default" CACHE STRING "" FORCE)
 
 # GEMM specific options
 set(DEFAULT_MATRIX_SIZE 8 CACHE STRING "Default size of the used matrices" FORCE)
-set(BLOCK_SIZE 256 CACHE STRING "Block size used in the FPGA kernel" FORCE)
+set(BLOCK_SIZE 512 CACHE STRING "Block size used in the FPGA kernel" FORCE)
 set(GEMM_BLOCK 8 CACHE STRING "Block size used in the FPGA kernel for the cannon algorithm" FORCE)
 set(DATA_TYPE float CACHE STRING "Data type used for kernel and host code" FORCE)
 set(GLOBAL_MEM_UNROLL 8 CACHE STRING "Unrolling factor used to stream data" FORCE)

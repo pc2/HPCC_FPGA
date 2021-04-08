@@ -145,7 +145,7 @@ stream::StreamBenchmark::collectAndPrintResults(const stream::StreamExecutionTim
 
             std::cout << std::setw(ENTRY_SPACE) << v.first;
             std::cout << std::setw(ENTRY_SPACE)
-            << (static_cast<double>(sizeof(HOST_DATA_TYPE)) * output.arraySize * bm_execution::multiplicatorMap[v.first] / minTime) * 1.0e-6
+            << (static_cast<double>(sizeof(HOST_DATA_TYPE)) * output.arraySize * bm_execution::multiplicatorMap[v.first] / minTime) * 1.0e-6 * mpi_comm_size
                     << std::setw(ENTRY_SPACE) << avgTime
                     << std::setw(ENTRY_SPACE) << minTime
                     << std::setw(ENTRY_SPACE) << maxTime << std::endl;
