@@ -8,9 +8,14 @@ set(LOCAL_MEM_BLOCK_LOG 5 CACHE STRING "Used to define the width and height of t
 set(REGISTER_BLOCK_LOG 3 CACHE STRING "Size of the block that will be manipulated in registers")
 set(NUM_REPLICATIONS 1 CACHE STRING "Number of times the matrix multiplication kernel will be replicated")
 set(TEST_UNIFORM No CACHE BOOL "All tests executed by CTest will be executed with uniformly generated matrices")
+set(TEST_EMULATION Yes CACHE BOOL "All tests executed by CTest will be executed with emulation kernels")
 
 if (TEST_UNIFORM)
     set(TEST_HOST_FLAGS "--uniform")
+endif()
+
+if (TEST_EMULATION)
+    set(TEST_HOST_FLAGS "--emulation")
 endif()
 
 set(DATA_TYPE float)
@@ -22,4 +27,6 @@ else()
 endif()
 
 set(USE_OPENMP Yes)
+set(USE_MPI Yes)
+
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
