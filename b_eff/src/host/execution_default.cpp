@@ -52,7 +52,7 @@ namespace bm_execution {
         std::vector<cl::Buffer> validationBuffers;
 
         // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
-        for (int r = 0; r < 2; r++) {
+        for (int r = 0; r < config.programSettings->kernelReplications; r++) {
 
             validationBuffers.push_back(cl::Buffer(*config.context, CL_MEM_WRITE_ONLY, sizeof(HOST_DATA_TYPE) * validationData.size(),0,&err));
             ASSERT_CL(err)
@@ -90,23 +90,42 @@ namespace bm_execution {
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             MPI_Barrier(MPI_COMM_WORLD);
             auto startCalculation = std::chrono::high_resolution_clock::now();
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 sendQueues[i].enqueueNDRangeKernel(sendKernels[i], cl::NullRange, cl::NDRange(1));
                 recvQueues[i].enqueueNDRangeKernel(recvKernels[i], cl::NullRange, cl::NDRange(1));
+                #ifndef NDEBUG
+                        int current_rank;
+                        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+                        std::cout << "Rank " << current_rank << ": Enqueued " << r << "," << i << std::endl;
+                #endif
             }
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 sendQueues[i].finish();
+                #ifndef NDEBUG
+                        int current_rank;
+                        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+                        std::cout << "Rank " << current_rank << ": Send done " << r << "," << i << std::endl;
+                #endif
                 recvQueues[i].finish();
+                #ifndef NDEBUG
+                        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+                        std::cout << "Rank " << current_rank << ": Recv done " << r << "," << i << std::endl;
+                #endif
             }
             auto endCalculation = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> calculationTime =
                     std::chrono::duration_cast<std::chrono::duration<double>>
                             (endCalculation - startCalculation);
             calculationTimings.push_back(calculationTime.count());
+#ifndef NDEBUG
+        int current_rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+        std::cout << "Rank " << current_rank << ": Done " << r << std::endl;
+#endif
         }
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
-        for (int r = 0; r < 2; r++) {
+        for (int r = 0; r < config.programSettings->kernelReplications; r++) {
             err = recvQueues[r].enqueueReadBuffer(validationBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * validationData.size() / 2, &validationData.data()[r * validationData.size() / 2]);
             ASSERT_CL(err);
         }
