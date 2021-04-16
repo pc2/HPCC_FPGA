@@ -482,11 +482,11 @@ linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data
                 tmp_scaled_b[i] = scale_element * data.A[matrix_size * local_k_index_row + i];
             }
         }
-        std::vector<HOST_DATA_TYPE> tmp_scaled_collected_b(matrix_size, 0.0);
-        MPI_Allreduce(tmp_scaled_b.data(), tmp_scaled_collected_b.data(), matrix_size, MPI_FLOAT, MPI_SUM, col_communicator);
+        int current_bcast = (k / block_size) % executionSettings->programSettings->torus_width;
+        MPI_Bcast(tmp_scaled_b.data(), matrix_size, MPI_FLOAT, current_bcast, col_communicator);
         for (int i = 0; i < matrix_size; i++) {
             // add solved upper row to current row
-            b_tmp[i] += tmp_scaled_collected_b[i];
+            b_tmp[i] += tmp_scaled_b[i];
         }
     }
     for (int k = 0; k < matrix_size; k++) {
