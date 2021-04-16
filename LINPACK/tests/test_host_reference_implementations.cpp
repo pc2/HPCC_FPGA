@@ -52,9 +52,7 @@ TEST_F(LinpackHostTest, GenerateDiagonallyDominantMatrixWorksCorrectly) {
     }
 }
 
-// TODO Disabled, because validation contains currently GESL, which was not intended when writing this test. 
-//      In future versions, GESL should be executied in executeKernel instead!
-TEST_F(LinpackHostTest, DISABLED_ReferenceSolveGMRES) {
+TEST_F(LinpackHostTest, ReferenceSolveGMRES) {
     data = bm->generateInputData();
     auto A = std::unique_ptr<double[]>(new double[array_size * array_size]);
     auto LU = std::unique_ptr<double[]>(new double[array_size * array_size]);
@@ -78,9 +76,7 @@ TEST_F(LinpackHostTest, DISABLED_ReferenceSolveGMRES) {
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 }
 
-// TODO Disabled, because validation contains currently GESL, which was not intended when writing this test
-//       In future versions, GESL should be executied in executeKernel instead!
-TEST_F(LinpackHostTest, DISABLED_ReferenceSolveWithPivoting) {
+TEST_F(LinpackHostTest, ReferenceSolveWithPivoting) {
     bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
     data = bm->generateInputData();
     linpack::gefa_ref(data->A, array_size, array_size, data->ipvt);
@@ -92,7 +88,7 @@ TEST_F(LinpackHostTest, DISABLED_ReferenceSolveWithPivoting) {
 TEST_F(LinpackHostTest, ReferenceSolveWithoutPivoting) {
     data = bm->generateInputData();
     linpack::gefa_ref_nopvt(data->A, array_size, array_size);
-    //linpack::gesl_ref_nopvt(data->A, data->b, array_size, array_size);
+    linpack::gesl_ref_nopvt(data->A, data->b, array_size, array_size);
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 }
 

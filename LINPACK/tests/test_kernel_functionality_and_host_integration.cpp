@@ -41,7 +41,6 @@ struct LinpackKernelTest : testing::TestWithParam<uint> {
  */
 TEST_P(LinpackKernelTest, FPGACorrectResultsOneRepetition) {
     auto result = bm->executeKernel(*data);
-    linpack::gesl_ref_nopvt(data->A, data->b, array_size, array_size);
     for (int i = 0; i < array_size; i++) {
         EXPECT_NEAR(data->b[i], 1.0, 1.0e-3);
     }
