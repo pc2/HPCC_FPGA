@@ -442,8 +442,8 @@ linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data
                 tmp_scaled_b[i] = current_k * data.A[matrix_size * local_k_index_row + i];
             }
         }
-        MPI_Bcast(tmp_scaled_b.data(), matrix_size, MPI_FLOAT, current_bcast, col_communicator);
-        for (int i = 0; i < matrix_size; i++) {
+        MPI_Bcast(&tmp_scaled_b.data()[start_offset], matrix_size - start_offset, MPI_FLOAT, current_bcast, col_communicator);
+        for (int i = start_offset; i < matrix_size; i++) {
             // add solved upper row to current row
             b_tmp[i] += tmp_scaled_b[i];
         }
@@ -483,8 +483,8 @@ linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data
             }
         }
         int current_bcast = (k / block_size) % executionSettings->programSettings->torus_width;
-        MPI_Bcast(tmp_scaled_b.data(), matrix_size, MPI_FLOAT, current_bcast, col_communicator);
-        for (int i = 0; i < matrix_size; i++) {
+        MPI_Bcast(tmp_scaled_b.data(), end_offset, MPI_FLOAT, current_bcast, col_communicator);
+        for (int i = 0; i < end_offset; i++) {
             // add solved upper row to current row
             b_tmp[i] += tmp_scaled_b[i];
         }
