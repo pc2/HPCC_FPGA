@@ -56,7 +56,7 @@ The execution of the kernels is divided into two steps which are repeated for ev
 A visualization of the exchange phase is given in :numref:`kernel_exchange`_.
 All kernels will load a block of the matrix into the local memory buffer. The update will be executed row- or column-wise -- depending on the kernel.
 The LU kernel sends the current, already updated row and column to the kernels working on the top and left block. 
-They will use the data to update their current row or column and forward it to the kernel updating the inner block.
+They will use the data to update their current row or column and forward it to the inner kernel..
 Additionally, the kernels will store the received row and column in a global memory buffer which sustains between kernel executions.
 This buffer will be used to update additional left and top blocks after the LU block was already updated.
 So the exchange phase will be the same, except that the LU kernel will not be executed anymore.
@@ -173,7 +173,7 @@ Multi-FPGA Implementation
 -------------------------
 
 .. _fpga_2d_torus_data:
-.. figure:: torus_data_forward_rev.drawio.png
+.. figure:: torus_data_forward.drawio.png
   :width: 480
   :align: center
 
