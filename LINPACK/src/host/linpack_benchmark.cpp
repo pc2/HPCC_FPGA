@@ -197,10 +197,11 @@ linpack::LinpackBenchmark::generateInputData() {
         // fill a single column of the matrix
         for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
                 HOST_DATA_TYPE temp = dis(gen);
-                d->A[executionSettings->programSettings->matrixSize*j+i] = dis(gen);
+                d->A[executionSettings->programSettings->matrixSize*j+i] = temp;
                 d->norma = (temp > d->norma) ? temp : d->norma;
         }
     }
+
 
     // If the matrix should be diagonally dominant, we need to exchange the sum of the rows with
     // the ranks that share blocks in the same column
@@ -247,7 +248,8 @@ linpack::LinpackBenchmark::generateInputData() {
             local_col_sum += d->A[executionSettings->programSettings->matrixSize*i+j];
         }
         HOST_DATA_TYPE row_sum = 0.0;
-        MPI_Allreduce(&local_col_sum, &(d->b[j]), 1, MPI_FLOAT, MPI_SUM, col_communicator);      
+        MPI_Allreduce(&local_col_sum, &(d->b[j]), 1, MPI_FLOAT, MPI_SUM, col_communicator);   
+        d->normb = (d->b[j] > d->normb) ? d->b[j] : d->normb;   
     }
     return d;
 }
@@ -316,12 +318,11 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
         }
     }
 #else
-    auto unchanged_data = generateInputData();
     double local_resid = 0;
-    double local_normx = 0;
+    double local_normx = data.normb;
+    #pragma omp parallel for reduction(max:local_resid)
     for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
         local_resid = (local_resid > std::abs(data.b[i] - 1)) ? local_resid : std::abs(data.b[i] - 1);
-        local_normx = (local_normx > std::abs(unchanged_data->b[i])) ? local_normx : std::abs(unchanged_data->b[i]);
     }
 #ifndef NDEBUG
     std::cout << "Rank " << mpi_comm_rank << ": resid=" << local_resid << ", normx=" << local_normx << std::endl;

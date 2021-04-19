@@ -145,6 +145,12 @@ public:
     HOST_DATA_TYPE norma;
 
     /**
+     * @brief The maximum value of A that will be used for the error calculation
+     * 
+     */
+    HOST_DATA_TYPE normb;
+
+    /**
      * @brief Construct a new Linpack Data object
      * 
      * @param context The OpenCL context used to allocate memory in SVM mode
