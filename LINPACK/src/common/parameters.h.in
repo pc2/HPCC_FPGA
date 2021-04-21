@@ -22,6 +22,7 @@
 #define NUM_REPLICATIONS @NUM_REPLICATIONS@
 
 #cmakedefine USE_SVM
+#cmakedefine DISTRIBUTED_VALIDATION
 
 /*
 Short description of the program

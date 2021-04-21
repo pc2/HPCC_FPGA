@@ -909,8 +909,7 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalResultisSameAsRef) {
 
 
 TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalResultisCorrect) {
-    // GESL is done during validation and can be skippd here
-    // linpack::gesl_ref_nopvt(data->A, data->b, bm->getExecutionSettings().programSettings->matrixSize,bm->getExecutionSettings().programSettings->matrixSize);
+    linpack::gesl_ref_nopvt(data->A, data->b, bm->getExecutionSettings().programSettings->matrixSize,bm->getExecutionSettings().programSettings->matrixSize);
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 
 }
