@@ -35,8 +35,9 @@ SOFTWARE.
 #include "parameters.h"
 
 random_access::RandomAccessProgramSettings::RandomAccessProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    dataSize(results["d"].as<size_t>()),
-    kernelReplications(results["r"].as<uint>()) {
+    dataSize((1 << results["d"].as<size_t>())),
+    kernelReplications(results["r"].as<uint>()),
+    numRngs((1 << results["g"].as<uint>())) {
 
 }
 
@@ -51,6 +52,7 @@ random_access::RandomAccessProgramSettings::getSettingsMap() {
     ss << dataSize << " (" << static_cast<double>(dataSize * sizeof(HOST_DATA_TYPE) * mpi_size) << " Byte )";
     map["Array Size"] = ss.str();
     map["Kernel Replications"] = std::to_string(kernelReplications);
+    map["#RNGs"] = std::to_string(numRngs);
     return map;
 }
 
@@ -79,8 +81,10 @@ random_access::RandomAccessBenchmark::RandomAccessBenchmark(int argc, char* argv
 void
 random_access::RandomAccessBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
-        ("d", "Size of the data array",
-            cxxopts::value<size_t>()->default_value(std::to_string(DEFAULT_ARRAY_LENGTH)));
+        ("d", "Log2 of the size of the data array",
+            cxxopts::value<size_t>()->default_value(std::to_string(DEFAULT_ARRAY_LENGTH_LOG)))
+        ("g", "Log2 of the number of random number generators",
+            cxxopts::value<uint>()->default_value(std::to_string(HPCC_FPGA_RA_RNG_COUNT_LOG)));
 }
 
 std::unique_ptr<random_access::RandomAccessExecutionTimings>

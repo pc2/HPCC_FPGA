@@ -49,8 +49,28 @@ namespace bm_execution {
 
         std::vector<cl::CommandQueue> compute_queue;
         std::vector<cl::Buffer> Buffer_data;
-        std::vector<cl::Buffer> Buffer_random;
+        cl::Buffer Buffer_random(*config.context,
+                        CL_MEM_READ_ONLY,
+                        sizeof(HOST_DATA_TYPE)*config.programSettings->numRngs);
         std::vector<cl::Kernel> accesskernel;
+
+        // Calculate RNG initial values
+        HOST_DATA_TYPE* random_inits;
+        posix_memalign(reinterpret_cast<void**>(&random_inits), 4096, sizeof(HOST_DATA_TYPE)*config.programSettings->numRngs);
+        HOST_DATA_TYPE chunk = config.programSettings->dataSize * mpi_size * 4 / std::min(static_cast<size_t>(config.programSettings->numRngs), config.programSettings->dataSize * 4 * mpi_size);
+        HOST_DATA_TYPE ran = 1;
+        random_inits[0] = ran;
+        for (HOST_DATA_TYPE r=0; r < config.programSettings->numRngs - 1; r++) {
+            for (HOST_DATA_TYPE run = 0; run < chunk; run++) {
+                HOST_DATA_TYPE_SIGNED v = 0;
+                if (((HOST_DATA_TYPE_SIGNED) ran) < 0) {
+                    v = POLY;
+                }
+                ran = (ran << 1) ^v;
+            }
+            random_inits[r + 1] = ran;
+        }
+
 
         /* --- Prepare kernels --- */
 
@@ -89,12 +109,16 @@ namespace bm_execution {
 #endif
 
             ASSERT_CL(err);
-            err = accesskernel[r].setArg(1, HOST_DATA_TYPE(config.programSettings->dataSize * mpi_size));
+            err = accesskernel[r].setArg(1, Buffer_random);
             ASSERT_CL(err);
-            err = accesskernel[r].setArg(2,
-                                         HOST_DATA_TYPE((config.programSettings->dataSize / config.programSettings->kernelReplications)));
+            err = accesskernel[r].setArg(2, HOST_DATA_TYPE(config.programSettings->dataSize * mpi_size));
             ASSERT_CL(err);
             err = accesskernel[r].setArg(3,
+                                         HOST_DATA_TYPE((config.programSettings->dataSize / config.programSettings->kernelReplications)));
+            ASSERT_CL(err);
+            err = accesskernel[r].setArg(4,(1));
+            ASSERT_CL(err);
+            err = accesskernel[r].setArg(5,
                                          cl_uint(mpi_rank * config.programSettings->kernelReplications + r));
             ASSERT_CL(err);
         }
@@ -122,6 +146,9 @@ namespace bm_execution {
                                                         &data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]);
 #endif
                     ASSERT_CL(err)
+                    err = compute_queue[r].enqueueWriteBuffer(Buffer_random, CL_TRUE, 0,
+                                                        sizeof(HOST_DATA_TYPE) * config.programSettings->numRngs,
+                                                        random_inits);
                 }
 #pragma omp master
                 {
@@ -161,6 +188,8 @@ namespace bm_execution {
 #endif
             ASSERT_CL(err)
         }
+
+        free(random_inits);
 
         return std::unique_ptr<random_access::RandomAccessExecutionTimings>(new random_access::RandomAccessExecutionTimings{executionTimes});
     }

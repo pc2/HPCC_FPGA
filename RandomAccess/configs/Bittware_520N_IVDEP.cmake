@@ -13,7 +13,9 @@ set(FPGA_BOARD_NAME "p520_hpc_sg280l" CACHE STRING "" FORCE)
 set(AOC_FLAGS "-fpc -fp-relaxed -no-interleaving=default" CACHE STRING "" FORCE)
 
 # RA specific options
-set(DEFAULT_ARRAY_LENGTH 536870912 CACHE STRING "" FORCE)
-set(INTEL_USE_PRAGMA_IVDEP Yes CACHE BOOL "" FORCE)
-set(DEVICE_BUFFER_SIZE 1 CACHE STRING "" FORCE)
-set(NUM_REPLICATIONS 4 CACHE STRING "" FORCE)
+set(HPCC_FPGA_RA_DEFAULT_ARRAY_LENGTH_LOG 29 CACHE STRING "" FORCE)
+set(HPCC_FPGA_RA_INTEL_USE_PRAGMA_IVDEP Yes CACHE BOOL "" FORCE)
+set(HPCC_FPGA_RA_DEVICE_BUFFER_SIZE_LOG 0 CACHE STRING "" FORCE)
+set(HPCC_FPGA_RA_NUM_REPLICATIONS 4 CACHE STRING "" FORCE)
+set(HPCC_FPGA_RA_RNG_COUNT_LOG 6 CACHE BOOL "Log2 of the number of random number generators that will be used concurrently" FORCE)
+set(HPCC_FPGA_RA_RNG_DISTANCE 5 CACHE BOOL "Distance between RNGs in shift register. Used to relax data dependencies and increase clock frequency" FORCE)
