@@ -8,6 +8,7 @@ set(HPCC_FPGA_RA_DEVICE_BUFFER_SIZE_LOG 10 CACHE STRING "Buffer size in number o
 set(HPCC_FPGA_RA_INTEL_USE_PRAGMA_IVDEP No CACHE BOOL "Use the pragma ivdep in the main loop to remove dependency of global memory reads and writes. This might lead to non validating kernel.") 
 set(HPCC_FPGA_RA_RNG_COUNT_LOG 7 CACHE BOOL "Log2 of the number of random number generators that will be used concurrently")
 set(HPCC_FPGA_RA_RNG_DISTANCE 5 CACHE BOOL "Distance between RNGs in shift register. Used to relax data dependencies and increase clock frequency")
+set(HPCC_FPGA_RA_GLOBAL_MEM_UNROLL_LOG 3 CACHE BOOL "Log2 of the global memory burst size in number of values that can be read from memory in a single clock cycle")
 
 set(DATA_TYPE long)
 set(HOST_DATA_TYPE cl_ulong)
