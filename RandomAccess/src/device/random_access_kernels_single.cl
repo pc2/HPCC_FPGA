@@ -27,12 +27,11 @@ Constant used to update the pseudo random number
 */
 #define POLY 7
 
-#define BUFFER_SIZE (1 << BUFFER_SIZE_LOG)
 #define CONCURRENT_GEN_LOG HPCC_FPGA_RA_RNG_COUNT_LOG
 #define CONCURRENT_GEN (1 << CONCURRENT_GEN_LOG)
 #define SHIFT_GAP HPCC_FPGA_RA_RNG_DISTANCE
 
-#define BLOCK_SIZE_LOG 3
+#define BLOCK_SIZE_LOG GLOBAL_MEM_UNROLL_LOG
 #define BLOCK_SIZE (1 << BLOCK_SIZE_LOG)
 
 /* PY_CODE_GEN 
