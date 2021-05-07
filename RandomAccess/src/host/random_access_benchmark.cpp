@@ -35,9 +35,9 @@ SOFTWARE.
 #include "parameters.h"
 
 random_access::RandomAccessProgramSettings::RandomAccessProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    dataSize((1 << results["d"].as<size_t>())),
+    dataSize((1UL << results["d"].as<size_t>())),
     kernelReplications(results["r"].as<uint>()),
-    numRngs((1 << results["g"].as<uint>())) {
+    numRngs((1UL << results["g"].as<uint>())) {
 
 }
 
@@ -137,7 +137,7 @@ random_access::RandomAccessBenchmark::checkInputParameters() {
         std::cerr << "ERROR: Number of MPI ranks is " << mpi_comm_size << " which is not a power of two!" << std::endl;
         validationResult = false;
     }
-    int data_per_replication = executionSettings->programSettings->dataSize / executionSettings->programSettings->kernelReplications;
+    size_t data_per_replication = executionSettings->programSettings->dataSize / executionSettings->programSettings->kernelReplications;
     if ((data_per_replication == 0) || (data_per_replication & (data_per_replication - 1))) {
         std::cerr << "ERROR: Data chunk size for each kernel replication is not a power of 2!" << std::endl;
         validationResult = false;
