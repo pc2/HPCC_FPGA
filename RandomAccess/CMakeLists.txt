@@ -1,15 +1,14 @@
 cmake_minimum_required(VERSION 3.13)
-project(RandomAccess VERSION 2.4)
+project(RandomAccess VERSION 2.5)
 
 # Additional benchmark specific build parameters
-set(DEFAULT_ARRAY_LENGTH 536870912 CACHE STRING "Default size of the data arrays")
-set(PARALLEL_MEM_ACCESSES 1 CACHE STRING "Unrolling factor that is used for all loops in the kernels that access the global memory.")
-set(NUM_REPLICATIONS 4 CACHE STRING "Number of times the kernels will be replicated")
-set(DEVICE_BUFFER_SIZE 1 CACHE STRING "Buffer size in number of values that is used within the single kernel implementation.")
-set(COMBINE_LOOPS Yes CACHE BOOL "If enabled this will combine the address calculation loop and the load darta loop to a single loop. This can improve the performance when all loops are running sequentially")
-set(INTEL_USE_PRAGMA_IVDEP No CACHE BOOL "Use the pragma ivdep in the main loop to remove dependency of global memory reads and writes. This might lead to non validating kernel.") 
-
-mark_as_advanced(PARALLEL_MEM_ACCESSES COMBINE_LOOPS)
+set(DEFAULT_ARRAY_LENGTH_LOG 29 CACHE STRING "Default size of the data arrays")
+set(HPCC_FPGA_RA_NUM_REPLICATIONS 4 CACHE STRING "Number of times the kernels will be replicated")
+set(HPCC_FPGA_RA_DEVICE_BUFFER_SIZE_LOG 0 CACHE STRING "Buffer size in number of values that is used within the single kernel implementation.")
+set(HPCC_FPGA_RA_INTEL_USE_PRAGMA_IVDEP No CACHE BOOL "Use the pragma ivdep in the main loop to remove dependency of global memory reads and writes. This might lead to non validating kernel.") 
+set(HPCC_FPGA_RA_RNG_COUNT_LOG 5 CACHE BOOL "Log2 of the number of random number generators that will be used concurrently")
+set(HPCC_FPGA_RA_RNG_DISTANCE 5 CACHE BOOL "Distance between RNGs in shift register. Used to relax data dependencies and increase clock frequency")
+set(HPCC_FPGA_RA_GLOBAL_MEM_UNROLL_LOG 3 CACHE BOOL "Log2 of the global memory burst size in number of values that can be read from memory in a single clock cycle")
 
 set(DATA_TYPE long)
 set(HOST_DATA_TYPE cl_ulong)

@@ -19,7 +19,7 @@ The code has the following dependencies:
 
 - C++ compiler with C++11 support
 - Intel FPGA SDK for OpenCL or Xilinx Vitis
-- CMake 3.1 for building
+- CMake 3.15 for building
 
 CMake is used as the build system.
 The targets below can be used to build the benchmark and its kernels:
@@ -53,10 +53,12 @@ Next to the common configuration options given in the [README](../README.md) of 
 
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
-`DEFAULT_ARRAY_LENGTH`| 536870912 | Length of each input array (4GB) |
-`NUM_REPLICATIONS`| 4        | Replicates the kernels the given number of times |
-`DEVICE_BUFFER_SIZE`| 1       | Number of values that are stored in the local memory in the single kernel approach |
-`INTEL_USE_PRAGMA_IVDEP`| No       | Use the ivdep pragma in the main loop to remove the data dependency between reads and writes. This might lead to an error larger than 1%, but might also increase performance! |
+`DEFAULT_ARRAY_LENGTH`| 29 | Length of each input array in log2 (4GB) |
+`HPCC_FPGA_RA_NUM_REPLICATIONS`| 4        | Replicates the kernels the given number of times |
+`HPCC_FPGA_RA_DEVICE_BUFFER_SIZE_LOG`| 0       | Number of values that are stored in the local memory in the single kernel approach |
+`HPCC_FPGA_RA_INTEL_USE_PRAGMA_IVDEP`| No       | Use the ivdep pragma in the main loop to remove the data dependency between reads and writes. This might lead to an error larger than 1%, but might also increase performance! |
+`HPCC_FPGA_RA_RNG_COUNT_LOG`| 5      | Log2 of the number of random number generators that will be used concurrently |
+`HPCC_FPGA_RA_RNG_DISTANCE`| 5       | Distance between RNGs in shift register. Used to relax data dependencies and increase clock frequency |
 
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.
