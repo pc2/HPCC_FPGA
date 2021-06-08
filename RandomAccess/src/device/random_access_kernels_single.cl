@@ -119,69 +119,72 @@ void accessMemory_/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attribut
 
         DEVICE_DATA_TYPE_UNSIGNED local_address_buffer[BUFFER_SIZE];
         DEVICE_DATA_TYPE_UNSIGNED loaded_data_buffer[BUFFER_SIZE];
-        DEVICE_DATA_TYPE_UNSIGNED update_val_buffer[BUFFER_SIZE];
 
-        __attribute__((opencl_unroll_hint(1)))
-        for (uint i = 0; i < BUFFER_SIZE; i++) {
-            // Fully unrolled loop resembling the RNGs
-            // They put a new random number into the shift register if it does not already contain a valid random number indicated by the valid bit
-            __attribute__((opencl_unroll_hint(CONCURRENT_GEN)))
-            for (int r=0; r < CONCURRENT_GEN; r++) {
-                DEVICE_DATA_TYPE_UNSIGNED total_updates = (mupdate >> CONCURRENT_GEN_LOG) + ((r < (mupdate & (CONCURRENT_GEN - 1)) ? 1 : 0));
-                number_count[r] = !random_number_valid[(r + 1) * SHIFT_GAP] ? number_count[r] + 1 : number_count[r];
-                bool is_inrange = false;
-                if (!random_number_valid[(r + 1) * SHIFT_GAP] && number_count[r] <= total_updates) {
-                    DEVICE_DATA_TYPE_UNSIGNED v = ((DEVICE_DATA_TYPE) ran[r] < 0) ? POLY : 0UL;
-                    ran[r] = (ran[r] << 1) ^ v;
-                    DEVICE_DATA_TYPE_UNSIGNED address = (ran[r] >> 3) & (m - 1);
-                    #ifndef SINGLE_KERNEL
-                    DEVICE_DATA_TYPE_UNSIGNED local_address = address - address_start;
-                    #else
-                    DEVICE_DATA_TYPE_UNSIGNED local_address = address;
-                    #endif
-                    is_inrange = (local_address < data_chunk);
-                    random_number_shift[(r + 1) * SHIFT_GAP] = ran[r];
-                    // printf("Update: %d, address: %lu, with: %lu\n", (local_address < data_chunk), local_address, ran[r]);
+#ifdef INTEL_FPGA
+#ifdef HPCC_FPGA_RA_INTEL_USE_PRAGMA_IVDEP
+        __attribute__((opencl_unroll_hint(2*BUFFER_SIZE)))
+#endif
+#endif
+        for (uint i = 0; i < 2 * BUFFER_SIZE; i++) {
+            if (i < BUFFER_SIZE) {
+                // Fully unrolled loop resembling the RNGs
+                // They put a new random number into the shift register if it does not already contain a valid random number indicated by the valid bit
+                __attribute__((opencl_unroll_hint(CONCURRENT_GEN)))
+                for (int r=0; r < CONCURRENT_GEN; r++) {
+                    DEVICE_DATA_TYPE_UNSIGNED total_updates = (mupdate >> CONCURRENT_GEN_LOG) + ((r < (mupdate & (CONCURRENT_GEN - 1)) ? 1 : 0));
+                    number_count[r] = !random_number_valid[(r + 1) * SHIFT_GAP] ? number_count[r] + 1 : number_count[r];
+                    bool is_inrange = false;
+                    if (!random_number_valid[(r + 1) * SHIFT_GAP] && number_count[r] <= total_updates) {
+                        DEVICE_DATA_TYPE_UNSIGNED v = ((DEVICE_DATA_TYPE) ran[r] < 0) ? POLY : 0UL;
+                        ran[r] = (ran[r] << 1) ^ v;
+                        DEVICE_DATA_TYPE_UNSIGNED address = (ran[r] >> 3) & (m - 1);
+                        #ifndef SINGLE_KERNEL
+                        DEVICE_DATA_TYPE_UNSIGNED local_address = address - address_start;
+                        #else
+                        DEVICE_DATA_TYPE_UNSIGNED local_address = address;
+                        #endif
+                        is_inrange = (local_address < data_chunk);
+                        random_number_shift[(r + 1) * SHIFT_GAP] = ran[r];
+                        // printf("Update: %d, address: %lu, with: %lu\n", (local_address < data_chunk), local_address, ran[r]);
+                    }
+                    // update the status bits of the shift register accordingly
+                    random_number_valid[(r + 1) * SHIFT_GAP] = (random_number_valid[(r + 1) * SHIFT_GAP] || is_inrange);
+                    random_number_done_shift[(r + 1) * SHIFT_GAP] = (number_count[r] >= total_updates && (random_number_done_shift[(r + 1) * SHIFT_GAP] || r == CONCURRENT_GEN - 1));
                 }
-                // update the status bits of the shift register accordingly
-                random_number_valid[(r + 1) * SHIFT_GAP] = (random_number_valid[(r + 1) * SHIFT_GAP] || is_inrange);
-                random_number_done_shift[(r + 1) * SHIFT_GAP] = (number_count[r] >= total_updates && (random_number_done_shift[(r + 1) * SHIFT_GAP] || r == CONCURRENT_GEN - 1));
+
+                // Get random number from shift register and do update
+                DEVICE_DATA_TYPE_UNSIGNED random_number = random_number_shift[0];
+                bool valid = random_number_valid[0];
+                done = random_number_done_shift[0];
+                DEVICE_DATA_TYPE_UNSIGNED address = (random_number >> 3) & (m - 1);
+                #ifndef SINGLE_KERNEL
+                DEVICE_DATA_TYPE_UNSIGNED local_address = address - address_start;
+                #else
+                DEVICE_DATA_TYPE_UNSIGNED local_address = address;
+                #endif
+
+                local_address_buffer[i] = local_address;
+
+                if (valid) {
+                    loaded_data_buffer[i] = data[local_address] ^ random_number;
+                }
+
+                // Shift the contents of the shift register
+                __attribute__((opencl_unroll_hint((CONCURRENT_GEN + 1) * SHIFT_GAP)))
+                for (int r = 0; r < (CONCURRENT_GEN + 1) * SHIFT_GAP; r++) {
+                    random_number_shift[r] = random_number_shift[r + 1];
+                    random_number_done_shift[r] = random_number_done_shift[r + 1];
+                    random_number_valid[r] = random_number_valid[r + 1];
+                }
+                // Set the last value in the shift register to invalid so the RNGs can update it
+                random_number_valid[(CONCURRENT_GEN + 1) * SHIFT_GAP] = false;
+                random_number_done_shift[(CONCURRENT_GEN + 1) * SHIFT_GAP] = false;
             }
-
-            // Get random number from shift register and do update
-            DEVICE_DATA_TYPE_UNSIGNED random_number = random_number_shift[0];
-            bool valid = random_number_valid[0];
-            done = random_number_done_shift[0];
-            DEVICE_DATA_TYPE_UNSIGNED address = (random_number >> 3) & (m - 1);
-            #ifndef SINGLE_KERNEL
-            DEVICE_DATA_TYPE_UNSIGNED local_address = address - address_start;
-            #else
-            DEVICE_DATA_TYPE_UNSIGNED local_address = address;
-            #endif
-
-            local_address_buffer[i] = local_address;
-
-            if (valid) {
-                loaded_data_buffer[i] = data[local_address] ^ random_number;
-            }
-
-            // Shift the contents of the shift register
-            __attribute__((opencl_unroll_hint((CONCURRENT_GEN + 1) * SHIFT_GAP)))
-            for (int r = 0; r < (CONCURRENT_GEN + 1) * SHIFT_GAP; r++) {
-                random_number_shift[r] = random_number_shift[r + 1];
-                random_number_done_shift[r] = random_number_done_shift[r + 1];
-                random_number_valid[r] = random_number_valid[r + 1];
-            }
-            // Set the last value in the shift register to invalid so the RNGs can update it
-            random_number_valid[(CONCURRENT_GEN + 1) * SHIFT_GAP] = false;
-            random_number_done_shift[(CONCURRENT_GEN + 1) * SHIFT_GAP] = false;
-        }
-
-        __attribute__((opencl_unroll_hint(1)))
-        for (uint i = 0; i < BUFFER_SIZE; i++) {
-            DEVICE_DATA_TYPE_UNSIGNED local_address = local_address_buffer[i];
-            if (local_address < data_chunk) {
-                data[local_address] = loaded_data_buffer[i];
+            else {
+                DEVICE_DATA_TYPE_UNSIGNED local_address = local_address_buffer[i - BUFFER_SIZE];
+                if (local_address < data_chunk) {
+                    data[local_address] = loaded_data_buffer[i - BUFFER_SIZE];
+                }
             }
         }
     }
