@@ -30,7 +30,6 @@ SOFTWARE.
 #include <vector>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #ifdef INTEL_FPGA
 #include "CL/cl_ext_intelfpga.h"
 #endif
@@ -215,7 +214,7 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
 #endif
         auto t1 = std::chrono::high_resolution_clock::now();
         for (int i=0; i < config.programSettings->kernelReplications; i++) {
-            compute_queues[i].enqueueTask(gemmkernels[i]);
+            compute_queues[i].enqueueNDRangeKernel(gemmkernels[i], cl::NullRange, cl::NDRange(1));
         }
         for (int i=0; i < config.programSettings->kernelReplications; i++) {
             compute_queues[i].finish();
