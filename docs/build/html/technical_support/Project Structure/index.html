@@ -1,0 +1,296 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Structure of the Benchmark Suite &mdash; HPCC FPGA Documentation  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/custom.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Multi-FPGA Benchmarking" href="../multi_fpga/index.html" />
+    <link rel="prev" title="Execution of a Benchmark" href="../Host Input Parameters/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.3
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../STREAM/index.html">STREAM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../RandomAccess/index.html">RandomAccess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../FFT/index.html">FFT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../GEMM/index.html">GEMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../PTRANS/index.html">PTRANS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../LINPACK/index.html">LINPACK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../b_eff/index.html">b_eff</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Technical Support:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Host Input Parameters/index.html">Execution of a Benchmark</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Structure of the Benchmark Suite</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#root-directory">Root Directory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#benchmark-folders">Benchmark Folders</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../RandomAccess/results/index.html">RandomAccess FPGA Benchmark Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">HPCC FPGA Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Structure of the Benchmark Suite</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+
+           <div itemprop="articleBody">
+            
+  <div class="section" id="structure-of-the-benchmark-suite">
+<h1>Structure of the Benchmark Suite<a class="headerlink" href="#structure-of-the-benchmark-suite" title="Permalink to this headline">¶</a></h1>
+<p>The structure of the sources of the benchmark suite aims to reduce the redundancy of code and documentation.
+Therefore, we describe the basic structure in this section to make it easier to get started.</p>
+<div class="section" id="root-directory">
+<h2>Root Directory<a class="headerlink" href="#root-directory" title="Permalink to this headline">¶</a></h2>
+<p>In general, the root folder of the project contains separate folders for every benchmark.
+Additionally, there are folders for commonly used code and scripts that will be explained in the following.
+A brief description of the benchmark suite is also given in the <a class="reference external" href="https://github.com/pc2/HPCC_FPGA#readme">README.md</a> with further help on how to get started and on vendor compatability.</p>
+<dl class="simple">
+<dt><strong>b_eff, FFT, GEMM, LINPACK, PTRANS, RandomAccess, STREAM</strong>:</dt><dd><p>These are the folders for each of the seven benchmarks of the suite.
+The contents of these folders are organized very similar. The contents of these <em>benchmark folders</em> will be explained in more detail in another section.
+One main design principle of the benchmark suite is, that only a single benchmark can be configured at a time, because the configurations for two benchmarks may be incompatible.
+However, it is easly possible to configure and build multiple benchmarks from the same sources by creating separate build directories for each benchmark.</p>
+</dd>
+<dt><strong>cmake</strong>:</dt><dd><p>Contains CMake scripts that are used by all benchmarks to generate build targets for the kernel codes and testing. Files in here may require changes, if
+the kernel build process needs to be changed or additional parameters are required to build the kernels of a benchmark.</p>
+</dd>
+<dt><strong>docs</strong>:</dt><dd><p>This folder contains the Sphinx documentation and a Doxyfile to generate the code documentation. You may hae to enable the HTML output in the Doxyfile to
+create the classic HTML documentation.</p>
+</dd>
+<dt><strong>extern</strong>:</dt><dd><p>This folder contains references to external dependencies. These are projects that are used within the benchmarks, i.e. for input parameter parsing. The
+dependencies are managed using CMakes fetch support and will be checked out during the first configuration of a benchmark, so internet connection will be required.</p>
+</dd>
+<dt><strong>scripts</strong>:</dt><dd><p>Contains different helper scripts for code generation, that are used within the CMake build process of ech benchmark. Moreover it contains useful scripts
+to parse the benchmark outputs to CSV files or simply power measurements and testing.</p>
+</dd>
+<dt><strong>shared</strong>:</dt><dd><p>This folder contains the host source code for the host that is commonly used by all benchmarks. It implements the basic fucntionality of all benchmarks by going through
+the steps <em>parameter parsing</em>, <em>Setup and programming of FPGAs</em>, <em>input data generation</em>, <em>execution</em> and <em>validation</em>. The individual behavior in these five stages is defined in the benchmark specific code in the <em>benchmark folders</em>.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="benchmark-folders">
+<h2>Benchmark Folders<a class="headerlink" href="#benchmark-folders" title="Permalink to this headline">¶</a></h2>
+<p>The folders for each benchmark are structured in the same way and all contain the same sub-folders.
+A brief description of the benchmark and its configuration parameters is given in the README.md file.
+Every benchmark folder also contains a CHANGELOG file which documents code changes and changes in the benchmark rules.</p>
+<dl class="simple">
+<dt><strong>configs</strong>:</dt><dd><p>This folder contains CMake files that contain predefined configurations for selected FPGA boards. This simplifies the coniguration for these boards
+because the different parameters do not need to be modified manually. Instead, they can be used with the <code class="docutils literal notranslate"><span class="pre">HPCC_FPGA_CONFIG</span></code> flag to configure a build for one of the boards.</p>
+</dd>
+<dt><strong>scripts</strong>:</dt><dd><p>Contains helper scripts to build or execute the benchmark on an HPC system with WLM. The scripts can be used as a base to create own scripts for the target machine. Most likely they will not work out of the box since they are written for a specific system.</p>
+</dd>
+<dt><strong>settings</strong>:</dt><dd><p>For some benchmarks it is required to give additional information to the build system. This can be done with settings files in this folder. For example it contains the compile and link settings for specific Xilinx devices. Settings files are device specific, so they may need to be modified.</p>
+</dd>
+<dt><strong>src</strong>:</dt><dd><p>Contains the source code for the host executable - which makes heavily used of the shared code in the <em>shared</em> folder in the root directory. In most cases, the host code consists of a <em>_benchmark.cpp</em> file which contains the benchmark specific implementations of the data generation, validation and parameter parsing.
+The <em>execution.cpp</em> contains a single <em>calculate</em> function which executes the benchmark kernels and measures the time.</p>
+</dd>
+<dt><strong>tests</strong>:</dt><dd><p>Every benchmark comes with Unit tests targeting basic functionality of the host code and with a focus on the correctness of the device (OpenCL) code.</p>
+</dd>
+</dl>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+    <a href="https://github.com/pc2/hpcc_fpga">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub">
+    </a>
+
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../multi_fpga/index.html" class="btn btn-neutral float-right" title="Multi-FPGA Benchmarking" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../Host Input Parameters/index.html" class="btn btn-neutral float-left" title="Execution of a Benchmark" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Marius Meyer
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

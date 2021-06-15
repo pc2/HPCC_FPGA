@@ -38,7 +38,7 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="b_eff" href="../b_eff/index.html" />
+    <link rel="next" title="Implementation Details" href="implementation/index.html" />
     <link rel="prev" title="PTRANS" href="../PTRANS/index.html" /> 
 </head>
 
@@ -95,7 +95,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../FFT/index.html">FFT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../GEMM/index.html">GEMM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../PTRANS/index.html">PTRANS</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">LINPACK</a><ul class="simple">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">LINPACK</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="implementation/index.html">Implementation Details</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../b_eff/index.html">b_eff</a></li>
@@ -104,6 +105,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Host Input Parameters/index.html">Execution of a Benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/Project Structure/index.html">Structure of the Benchmark Suite</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Benchmark Results:</span></p>
@@ -178,10 +180,19 @@
             
   <div class="section" id="linpack">
 <h1>LINPACK<a class="headerlink" href="#linpack" title="Permalink to this headline">¶</a></h1>
-<p>This section contains all information related to the LINPACK benchmark.</p>
-<p><em>Currently, the documentation is work in progress and some sections are still missing.
-They will be added step by step to complete the documentation.</em></p>
+<p>The LINPACK benchmark solves a large equation system <span class="math notranslate nohighlight">\(A \cdot x = b\)</span> for <span class="math notranslate nohighlight">\(x\)</span>, where <span class="math notranslate nohighlight">\(A \in \Bbb R^{n \times n}\)</span> and <span class="math notranslate nohighlight">\(b,x \in \Bbb R^{n}\)</span>.
+The implementation does this in two separate steps: First a LU factorization is calculated for matrix <span class="math notranslate nohighlight">\(A\)</span>. The resulting matrices <span class="math notranslate nohighlight">\(L\)</span> and <span class="math notranslate nohighlight">\(U\)</span> are used
+to solve the equations <span class="math notranslate nohighlight">\(L \cdot y = b\)</span> and finally <span class="math notranslate nohighlight">\(U \cdot x = y\)</span> to get the result for the vector <span class="math notranslate nohighlight">\(x\)</span>.</p>
 <div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="implementation/index.html">Implementation Details</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="implementation/index.html#kernel-design-for-lu-factorization">Kernel Design for LU Factorization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="implementation/index.html#performance-model-for-lu-factorization-on-single-fpga">Performance Model for LU factorization on single FPGA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="implementation/index.html#multi-fpga-implementation">Multi-FPGA Implementation</a></li>
+</ul>
+</li>
+</ul>
 </div>
 </div>
 
@@ -197,7 +208,7 @@ They will be added step by step to complete the documentation.</em></p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../b_eff/index.html" class="btn btn-neutral float-right" title="b_eff" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="implementation/index.html" class="btn btn-neutral float-right" title="Implementation Details" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="../PTRANS/index.html" class="btn btn-neutral float-left" title="PTRANS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

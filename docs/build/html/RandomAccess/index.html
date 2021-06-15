@@ -108,6 +108,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Host Input Parameters/index.html">Execution of a Benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/Project Structure/index.html">Structure of the Benchmark Suite</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Benchmark Results:</span></p>
@@ -208,11 +209,17 @@ All other parameters can also later be changed with the host code during runtime
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NUM_REPLICATIONS</span></code></p></td>
 <td><p>Replicates all kernels the given number of times. This allows to simultaneously schedule multiple kernels with different input data. The data set might be split between the available kernels to speed up execution.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DEVICE_BUFFER_SIZE</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">HPCC_FPGA_RA_DEVICE_BUFFER_SIZE</span></code></p></td>
 <td><p>Size of the local memory buffer that stores intermediate values read from global memory. Used to reduce the impact of memory latency on the execution time.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">INTEL_USE_PRAGMA_IVDEP</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">HPCC_FPGA_RA_INTEL_USE_PRAGMA_IVDEP</span></code></p></td>
 <td><p>Use the pragma <code class="docutils literal notranslate"><span class="pre">ivdep</span></code> on the outer loop of the kernel implementation. This will tell the compiler to ignore the dependencies between read and write to the global memory and allows the implementation in a single pipeline (use together with <code class="docutils literal notranslate"><span class="pre">DEVICE_BUFFER_SIZE=1</span></code>. NOTE: This might lead to a increased error above the allowed threshold!)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">HPCC_FPGA_RA_RNG_COUNT_LOG</span></code></p></td>
+<td><p>Log2 of the number of random number generators that will be generated per replication. This allows to achieve a better scaling behavior for large number of replications.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">HPCC_FPGA_RA_RNG_DISTANCE</span></code></p></td>
+<td><p>Distance between RNGs in shift register. Used to relax timing and increase clock frequency.</p></td>
 </tr>
 </tbody>
 </table>
@@ -229,32 +236,37 @@ The same updates are applied to the data array such that the data array should c
 The incorrect items are counted, and the error percentage is calculated with <span class="math notranslate nohighlight">\(\frac{error}{n} \cdot 100\)</span>.
 An error of <span class="math notranslate nohighlight">\(&lt;1\%\)</span> has to be accomplished to pass the validation. Hence, update errors caused by concurrent data accesses are tolerated to some degree.
 The performance of the implementation is mainly bound by the memory bandwidth and latency. So the kernel should be replicated to utilize all available memory banks.</p>
-<p>The benchmark requires <span class="math notranslate nohighlight">\(4 \cdot n\)</span> updates on the array of length n using two pipelines.
-The first pipeline reads data items from global memory.
+<p>The benchmark requires <span class="math notranslate nohighlight">\(4 \cdot n\)</span> updates on the array of length n.
 Therefore, it uses a pseudo random sequence generator that is implemented in every kernel replication.
-The index of the value will be extracted from the random number.
+The index in the data array as well as the value of the update will be extracted from the random number.
 For a more detailed description of the used pseudo random number scheme refer to the description on the <a class="reference external" href="https://icl.utk.edu/projectsfiles/hpcc/RandomAccess/">HPC Challenge website</a>.
 Since every replication of the kernel is in charge of a distinct range of addresses that is placed in their memory bank, the kernel has to check if the calculated address is actually within its range.
-Only then the value will be loaded from global memory and stored in a local memory buffer which size can be configured over the <code class="docutils literal notranslate"><span class="pre">DEVICE_BUFFER_SIZE</span></code> parameter.
-In the second pipeline, the data in local memory is used to update the values in global memory.
+Only then the value will be loaded from global memory and stored in a local memory buffer which size can be configured over the <code class="docutils literal notranslate"><span class="pre">HPCC_FPGA_RA_DEVICE_BUFFER_SIZE</span></code> parameter.
+When the buffer is full, the benchmark will write back the updated values from the buffer to global memory.
 With this approach, read after write dependencies will be relaxed which prevents pipeline stalls caused by pending load operations.
-Thus, the memory latency will only have a smaller effect on the overall performance.
-On the one hand, this will improve the performance of the kernel.
-On the other hand, this mechanism will lead to errors if the same memory address is loaded multiple times into the buffer.
+However, the buffer introduces update errors, if the same value is loaded multiple times since there are no additional checks implemented.
 Since the benchmark allows a small amount of errors, changing the buffer size can be used as a trade-off between benchmark error and performance.
-Also it has to be noted that the memory accesses are followign a pseudo random order.
+Also it has to be noted that the memory accesses are following a pseudo random order.
 This means that the measured memory bandwidth will be considerably lower than for sequential memory accesses.
 One cause are the missing memory bursts which usually increase the efficiency.
-Moreover, the values are most likelylocated in different pages of the DDR memory which will introduce additional overheads.</p>
+Moreover, the values are most likely located in different pages of the DDR memory which will introduce additional overheads.</p>
+<p>The parameter <code class="docutils literal notranslate"><span class="pre">HPCC_FPGA_RA_RNG_COUNT_LOG</span></code> allows to increase the amount of pseudo-random number generators per replications.
+This increases the probability, that a valid index for every kernel replication will be generated in every clock cycle.
+However, this also increases the logic usage and may lead to lower kernel frequencies.
+On systems with many separate global memory banks like HBM boards or multi-FPGA setups where a lot of kernel replications are required, increasing the amount of RNGs
+can increase the performance since the benchmark may get calculation bound by the RNGs otherwise.</p>
 </div>
 <div class="section" id="configuration-hints">
 <h2>Configuration Hints<a class="headerlink" href="#configuration-hints" title="Permalink to this headline">¶</a></h2>
 <p>The random access benchmark is not only limited by the random access global memory bandwidth but also by the calculation of the pseudo random number sequence.
-Every kernel replication needs to calculate all random number in the sequence to check if they are in their range of responsibility.
+Every kernel replication needs to calculate all random numbers in the sequence to check if they are in their range of responsibility.
 For a high number of replications this will have a considerable impact in the measured performance because the number of updates per calculated random number will decrease.
 Nevetheless, the number of replications should still be matched with the number of available memory banks to get the best performance.
-<code class="docutils literal notranslate"><span class="pre">DEVICE_BUFFER_SIZE</span></code> has to be picked as large as possible to reduce the impact of the memory latency.
-It should not be too large to not exceed the allowed error of 1%.</p>
+<code class="docutils literal notranslate"><span class="pre">HPCC_FPGA_RA_DEVICE_BUFFER_SIZE</span></code> has to be picked as large as possible to reduce the impact of the memory latency.
+It should not be too large to not exceed the allowed error of 1% or reduce the kernel frequency.
+Additionally, the amount of pseudo-random number generators should be increased for high numbers of kernel replications while keeping an eye on the kernel frequency.
+Choosing values for <code class="docutils literal notranslate"><span class="pre">HPCC_FPGA_RA_RNG_COUNT_LOG</span></code> which are higher than log2(<code class="docutils literal notranslate"><span class="pre">NUM_REPLICATIONS</span></code>) will not give much performance benefits, because a single kernel replication can
+only process a single address per clock cycle.</p>
 </div>
 </div>
 

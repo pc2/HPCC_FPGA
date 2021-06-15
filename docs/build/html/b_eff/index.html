@@ -39,7 +39,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Basic Build Setup" href="../technical_support/Basic Setup/index.html" />
-    <link rel="prev" title="LINPACK" href="../LINPACK/index.html" /> 
+    <link rel="prev" title="Implementation Details" href="../LINPACK/implementation/index.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -110,6 +110,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/Host Input Parameters/index.html">Execution of a Benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../technical_support/Project Structure/index.html">Structure of the Benchmark Suite</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Benchmark Results:</span></p>
@@ -254,10 +255,10 @@ Thus, a message is streamed chunk-wise over two channels to the receiver in a pi
 At kernel start, the <cite>send</cite> kernel will generate a message chunk that is filled with bytes of the value <span class="math notranslate nohighlight">\(ld(m) mod 256\)</span>.
 The message chunk will be used continuously for sending and will be stored in global memory after the last transmission.
 This allows verifying the correct transmission of the data chunk over the whole range of repetitions.</p>
-<p>A schematic view of the channel connections for the kernel implementation is given in <a class="reference internal" href="#network-kernel-flow"><span class="std std-numref">Fig. 8</span></a>.</p>
+<p>A schematic view of the channel connections for the kernel implementation is given in <a class="reference internal" href="#network-kernel-flow"><span class="std std-numref">Fig. 14</span></a>.</p>
 <div class="figure align-center" id="id2">
 <span id="network-kernel-flow"></span><a class="reference internal image-reference" href="../_images/network_topology_setup.drawio.png"><img alt="Connection of external channels to FPGA kernels" src="../_images/network_topology_setup.drawio.png" style="width: 360px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 8 </span><span class="caption-text">The different kernels of the implementation are connected over bidirectional external channels to kernels running on other FPGAs. It this example two FPGAs form a bidirectional ring and will send and receive data from the other FPGA.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 14 </span><span class="caption-text">The different kernels of the implementation are connected over bidirectional external channels to kernels running on other FPGAs. It this example two FPGAs form a bidirectional ring and will send and receive data from the other FPGA.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
 </div>
 <p>The host code will start all kernels simultaneously and measure the time until all kernels are finished and use this time to calculate the achieved bandwidth for the execution.
 Overall, the kernels will be executed sequentially for all message sizes and the host processes will be synchronized with an MPI barrier before every execution.</p>
@@ -315,10 +316,10 @@ inaccuracy. So the equation reduces to:</p>
 <div class="math notranslate nohighlight">
 \[b_{L} = \frac{L}{\frac{\lceil\frac{L}{64B}\rceil}{156.25MHz} + 520ns}\]</div>
 <p>where everything except <span class="math notranslate nohighlight">\(L\)</span> is constant.
-This means the bandwidth depends on the used message size which is shown for a kernel that uses two channels for transmission in <a class="reference internal" href="#network-bandwidth-model"><span class="std std-numref">Fig. 9</span></a>.</p>
+This means the bandwidth depends on the used message size which is shown for a kernel that uses two channels for transmission in <a class="reference internal" href="#network-bandwidth-model"><span class="std std-numref">Fig. 15</span></a>.</p>
 <div class="figure align-center" id="id4">
 <span id="network-bandwidth-model"></span><a class="reference internal image-reference" href="../_images/network_bandwidth_model.jpg"><img alt="Model bandwidth over used message sizes" src="../_images/network_bandwidth_model.jpg" style="width: 360px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 9 </span><span class="caption-text">Expected network bandwidth depending on the used message size based on the model.</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 15 </span><span class="caption-text">Expected network bandwidth depending on the used message size based on the model.</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
 </div>
 <p>The effective bandwidth for a single kernel pair is then calculated with:</p>
 <div class="math notranslate nohighlight">
@@ -400,7 +401,7 @@ It is the mean of the achieved bandwidths for all used message sizes.</p>
         <a href="../technical_support/Basic Setup/index.html" class="btn btn-neutral float-right" title="Basic Build Setup" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../LINPACK/index.html" class="btn btn-neutral float-left" title="LINPACK" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../LINPACK/implementation/index.html" class="btn btn-neutral float-left" title="Implementation Details" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
