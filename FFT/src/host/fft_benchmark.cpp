@@ -72,7 +72,7 @@ fft::FFTData::~FFTData() {
 #endif
 }
 
-fft::FFTBenchmark::FFTBenchmark(int argc, char* argv[]) {
+fft::FFTBenchmark::FFTBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
 }
 
@@ -94,18 +94,29 @@ fft::FFTBenchmark::executeKernel(FFTData &data) {
 
 void
 fft::FFTBenchmark::collectAndPrintResults(const fft::FFTExecutionTimings &output) {
-    double gflop = static_cast<double>(5 * (1 << LOG_FFT_SIZE) * LOG_FFT_SIZE) * executionSettings->programSettings->iterations * 1.0e-9;
+    double gflop = static_cast<double>(5 * (1 << LOG_FFT_SIZE) * LOG_FFT_SIZE) * executionSettings->programSettings->iterations * 1.0e-9 * mpi_comm_size;
 
-    double minTime = *min_element(output.timings.begin(), output.timings.end());
-    double avgTime = accumulate(output.timings.begin(), output.timings.end(), 0.0)
-                                                                                / output.timings.size();
+    uint number_measurements = output.timings.size();
+    std::vector<double> avg_measures(number_measurements);
+#ifdef _USE_MPI_
+    // Copy the object variable to a local variable to make it accessible to the lambda function
+    int mpi_size = mpi_comm_size;
+    MPI_Reduce(output.timings.data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    std::for_each(avg_measures.begin(),avg_measures.end(), [mpi_size](double& x) {x /= mpi_size;});
+#else
+    std::copy(output.timings.begin(), output.timings.end(), avg_measures.begin());
+#endif
+    if (mpi_comm_rank == 0) {
+        double minTime = *min_element(avg_measures.begin(), avg_measures.end());
+        double avgTime = accumulate(avg_measures.begin(), avg_measures.end(), 0.0) / avg_measures.size();
 
-    std::cout << std::setw(ENTRY_SPACE) << " " << std::setw(ENTRY_SPACE) << "avg"
-              << std::setw(ENTRY_SPACE) << "best" << std::endl;
-    std::cout << std::setw(ENTRY_SPACE) << "Time in s:" << std::setw(ENTRY_SPACE) << avgTime / executionSettings->programSettings->iterations
-                << std::setw(ENTRY_SPACE) << minTime / executionSettings->programSettings->iterations << std::endl;
-    std::cout << std::setw(ENTRY_SPACE) << "GFLOPS:" << std::setw(ENTRY_SPACE) << gflop / avgTime
-                << std::setw(ENTRY_SPACE) << gflop / minTime << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << " " << std::setw(ENTRY_SPACE) << "avg"
+                << std::setw(ENTRY_SPACE) << "best" << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << "Time in s:" << std::setw(ENTRY_SPACE) << avgTime / (executionSettings->programSettings->iterations * executionSettings->programSettings->kernelReplications)
+                    << std::setw(ENTRY_SPACE) << minTime / (executionSettings->programSettings->iterations * executionSettings->programSettings->kernelReplications) << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << "GFLOPS:" << std::setw(ENTRY_SPACE) << gflop / avgTime
+                    << std::setw(ENTRY_SPACE) << gflop / minTime << std::endl;
+    }
 }
 
 std::unique_ptr<fft::FFTData>

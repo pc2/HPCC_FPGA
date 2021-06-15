@@ -86,7 +86,7 @@ transpose::TransposeBenchmark::collectAndPrintResults(const transpose::Transpose
 
 
     if (mpi_comm_rank == 0) {
-        std::cout << "              calc    calc FLOPS    Net [GB/s]    Mem [GB/s]" << std::endl;
+        std::cout << "              calc    calc FLOPS    Net [B/s]    Mem [B/s]" << std::endl;
         std::cout << "avg:   " << avgCalculationTime
                 << "   " << avgCalcFLOPS
                 << "   " << avgNetworkBandwidth
@@ -111,10 +111,10 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
     // exchange the data using MPI depending on the chosen distribution scheme
     dataHandler->exchangeData(data);
 
-    int block_offset = executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize;
-    for (int b = 0; b < data.numBlocks; b++) {
-        for (int i = 0; i < executionSettings->programSettings->blockSize; i++) {
-            for (int j = 0; j < executionSettings->programSettings->blockSize; j++) {
+    size_t block_offset = executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize;
+    for (size_t b = 0; b < data.numBlocks; b++) {
+        for (size_t i = 0; i < executionSettings->programSettings->blockSize; i++) {
+            for (size_t j = 0; j < executionSettings->programSettings->blockSize; j++) {
                 data.A[b * block_offset + j * executionSettings->programSettings->blockSize + i] -= (data.result[b * block_offset + i * executionSettings->programSettings->blockSize + j] 
                                                                             - data.B[b * block_offset + i * executionSettings->programSettings->blockSize + j]);
             }
@@ -122,16 +122,19 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
     }
 
     double max_error = 0.0;
-    for (int i = 0; i < executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize * data.numBlocks; i++) {
+    for (size_t i = 0; i < executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize * data.numBlocks; i++) {
         max_error = std::max(fabs(data.A[i]), max_error);
     }
 
+    double global_max_error = 0;
+    MPI_Reduce(&max_error, &global_max_error, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
     if (mpi_comm_rank == 0) {
-        std::cout << "Maximum error: " << max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
+        std::cout << "Maximum error: " << global_max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
         std::cout << "Mach. Epsilon: " << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl;
     }
 
-    return static_cast<double>(max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    return static_cast<double>(global_max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
 }
 
 void

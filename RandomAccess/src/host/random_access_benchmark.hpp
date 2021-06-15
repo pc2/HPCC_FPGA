@@ -57,6 +57,12 @@ public:
     uint kernelReplications;
 
     /**
+     * @brief Number of random number generators that are used per kernel replication
+     * 
+     */
+    uint numRngs;
+
+    /**
      * @brief Construct a new random access Program Settings object
      * 
      * @param results the result map from parsing the program input parameters

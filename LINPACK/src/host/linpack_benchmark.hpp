@@ -30,6 +30,9 @@ SOFTWARE.
 /* Project's headers */
 #include "hpcc_benchmark.hpp"
 #include "parameters.h"
+extern "C" {
+    #include "gmres.h"
+}
 
 /**
  * @brief Contains all classes and methods needed by the LINPACK benchmark
@@ -45,10 +48,47 @@ class LinpackProgramSettings : public hpcc_base::BaseSettings {
 
 public:
     /**
-     * @brief The size of the whole matrix
+     * @brief The size of the local matrix in number of blocks in one dimension
      * 
      */
     uint matrixSize;
+
+    /**
+     * @brief Size of a single block of the matrix in values in one dimension
+     * 
+     */
+    uint blockSize;
+
+    /**
+     * @brief Indicates if the generated input matrix should be diagonally dominant
+     * 
+     */
+    bool isDiagonallyDominant;
+
+    /**
+     * @brief True, if the used kernel is an emulation kernel. Different kernel arguments may be used in this case to
+     *          simulate persistent local memory.
+     * 
+     */
+    bool isEmulationKernel;
+
+    /**
+     * @brief The row position of this MPI rank in the torus
+     * 
+     */
+    int torus_row;
+
+    /**
+     * @brief The rcolumn position of this MPI rank in the torus
+     * 
+     */
+    int torus_col;
+
+    /**
+     * @brief Width of the torus in number of ranks
+     * 
+     */
+    int torus_width;
 
     /**
      * @brief Construct a new Linpack Program Settings object
@@ -105,12 +145,18 @@ public:
     HOST_DATA_TYPE norma;
 
     /**
+     * @brief The maximum value of A that will be used for the error calculation
+     * 
+     */
+    HOST_DATA_TYPE normb;
+
+    /**
      * @brief Construct a new Linpack Data object
      * 
      * @param context The OpenCL context used to allocate memory in SVM mode
      * @param size Size of the allocated square matrix and vectors
      */
-    LinpackData(cl::Context context, uint size);
+    LinpackData(cl::Context context, size_t size);
 
     /**
      * @brief Destroy the Linpack Data object. Free the allocated memory
@@ -127,10 +173,17 @@ public:
 class LinpackExecutionTimings {
 public:
     /**
-     * @brief A vector containing the timings for all repetitions for the kernel execution
+     * @brief A vector containing the timings for all repetitions for the kernel execution for the gefa kernel
      * 
      */
-    std::vector<double> timings;
+    std::vector<double> gefaTimings;
+
+    /**
+     * @brief A vector containing the timings for all repetitions for the kernel execution for the gesl kernel
+     * 
+     */
+    std::vector<double> geslTimings;
+
 
 };
 
@@ -149,6 +202,14 @@ protected:
      */
     void
     addAdditionalParseOptions(cxxopts::Options &options) override;
+
+    /**
+     * @brief Distributed solving of l*y=b and u*x = y 
+     * 
+     * @param data The local data. b will contain the solution for the unknows that were handeled by this rank
+     */
+    void 
+    distributed_gesl_nopvt_ref(linpack::LinpackData& data);
 
 public:
 
@@ -212,10 +273,10 @@ public:
  * @param x
  * @param m
  */
-void dmxpy(unsigned n1, HOST_DATA_TYPE* y, unsigned n2, unsigned ldm, HOST_DATA_TYPE* x, HOST_DATA_TYPE* m);
+void dmxpy(unsigned n1, HOST_DATA_TYPE* y, unsigned n2, unsigned ldm, HOST_DATA_TYPE* x, HOST_DATA_TYPE* m, bool transposed);
 
 /**
-Gaussian elemination reference implementation without pivoting.
+Gaussian elemination reference implementation with partial pivoting.
 Can be used in exchange with kernel functions for functionality testing
 
 @param a the matrix with size of n*n
@@ -239,6 +300,30 @@ where A is a matrix of size n*n
 
 */
 void gesl_ref(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, cl_int* ipvt, unsigned n, unsigned lda);
+
+/**
+Gaussian elemination reference implementation without pivoting.
+Can be used in exchange with kernel functions for functionality testing
+
+@param a the matrix with size of n*n
+@param n size of matrix A
+@param lda row with of the matrix. must be >=n
+
+*/
+void gefa_ref_nopvt(HOST_DATA_TYPE* a, unsigned n, unsigned lda);
+
+/**
+Solve linear equations using its LU decomposition without pivoting.
+Therefore solves A*x = b by solving L*y = b and then U*x = y with A = LU
+where A is a matrix of size n*n
+
+@param a the matrix a in LU representation calculated by gefa call
+@param b vector b of the given equation
+@param n size of matrix A
+@param lda row with of the matrix. must be >=n
+
+*/
+void gesl_ref_nopvt(HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, unsigned n, unsigned lda);
 
 } // namespace stream
 

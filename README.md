@@ -1,7 +1,8 @@
 # HPCC FPGA
 
 [![GitHub license](https://img.shields.io/github/license/pc2/HPCC_FPGA.svg)](https://github.com/pc2/HPCC_FPGA/blob/master/LICENSE)
-[![arXiv](http://img.shields.io/badge/cs.DC-arXiv%3A2004.11059-4FC1F2.svg)](https://arxiv.org/abs/2004.11059)
+[![DOI:10.1109/H2RC51942.2020.00007](https://zenodo.org/badge/DOI/10.1109/H2RC51942.2020.00007.svg)](https://doi.org/10.1109/H2RC51942.2020.00007)
+[![Open Source Love svg2](https://badges.frapsoft.com/os/v2/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
 [![GitHub release](https://img.shields.io/github/release/pc2/HPCC_FPGA.svg)](https://GitHub.com/pc2/HPCC_FPGA/releases/)
 
 HPCC FPGA is an OpenCL-based FPGA benchmark suite with a focus on high-performance computing.
@@ -38,7 +39,7 @@ Every benchmark comes with a separate CMake project with host and device code.
 All benchmarks come with the following build dependencies:
 
 - CMake >= 3.13
-- C++ compiler with C++11 support
+- C++ compiler with C++11 and <regex> support (GCC 4.9.0+)
 - Intel OpenCL FPGA SDK or Xilinx Vitis
 - Python 3 for code generation and with [pandas](https://pandas.pydata.org) installed for the evaluation scripts
 
@@ -77,7 +78,7 @@ Name             | Default     | Description                          |
 `DEFAULT_REPETITIONS`| 10          | Number of times the kernel will be executed |
 `FPGA_BOARD_NAME`| p520_hpc_sg280l | Name of the target board |
 
-Additionally the compile options for the Intel or Xilinx compiler have to be specified. 
+Additionally, the compile options for the Intel or Xilinx compiler have to be specified. 
 For the Intel compiler these are:
 
 Name             | Default     | Description                          |
@@ -187,12 +188,14 @@ The generated documentation will be placed in `docs/html` and `docs/latex`.
 To view the HTML documentation, open `docs/html/index.html` with an internet browser.
 
 More general documentation is maintained using Sphinx. It can be generated using the makefile provided in the `docs/` folder.
-In this documentation a more general description of the benchmarks and how to use them is given.
-To generate the HTML documentation, execute the commands below:
+In this documentation, a more general description of the benchmarks and how to use them is given.
+The Sphinx documentation is also provided [online](https://pc2.github.io/HPCC_FPGA/build/html/index.html).
+To generate the HTML documentation offline, execute the commands below:
 
     cd docs
     make html
 
+The documentation will be created in the folder `docs/source`.
 ## Custom Kernels
 
 The benchmark suite also allows to use custom kernels for measurements.
@@ -210,6 +213,8 @@ After adding a new custom kernel to the folder, rerun CMake to generate build ta
 Now the same build commands that are used for the base implementations can be used for the custom implementations.
 This also means that the kernels will also be tested within the `make test` command.
 
+This feature also allows to easily add optimized kernel implementations for specific FPGA boards. 
+
 
 ## Notes on Vendor Compatibility
 
@@ -225,6 +230,8 @@ The following three tables contain an overview of the compatibility of all bench
 b_eff is not included since it does not use global memory.
 Full support of the benchmark is indicated with a **Yes**, functionally correct behavior but performance limitations are indicated with **(Yes)**, no support is indicated with **No**.
 For Xilinx, all benchmarks need a compatible compile- and link-settings-file to map the kernel memory ports to the available memory banks.
+LINPACK, PTRANS and b_eff are currently not working with Xilinx FPGAs because the implementations lack support for inter-FPGA communication on these devices.
+Support will be added subsequently.
 
 #### DDR memory
 
@@ -232,8 +239,8 @@ For Xilinx, all benchmarks need a compatible compile- and link-settings-file to 
 |--------------|------------|--------------|
 | STREAM       | Yes        |  Yes         |            
 | RandomAccess | Yes        |  Yes         |      
-| PTRANS       | Yes        |  Yes         |      
-| LINPACK      | (Yes)      |  (Yes)       |           
+| PTRANS       | Yes        |  No          |      
+| LINPACK      | Yes        |  No          |           
 | GEMM         | Yes        |  Yes         |      
 | FFT          | Yes        |  Yes         |       
 
@@ -246,10 +253,10 @@ For Xilinx, all benchmarks need a compatible compile- and link-settings-file to 
 |--------------|------------|--------------|
 | STREAM       | Yes        |  Yes         |            
 | RandomAccess | Yes        |  Yes         |      
-| PTRANS       | No         |  (Yes)       |      
-| LINPACK      | No         |  (Yes)       |           
-| GEMM         | Yes         |  Yes         |      
-| FFT          | Yes         |  Yes         | 
+| PTRANS       | No         |  No          |      
+| LINPACK      | No         |   No         |           
+| GEMM         | Yes         |  Yes        |      
+| FFT          | Yes         |  Yes        | 
 
 #### SVM
 
@@ -270,9 +277,14 @@ If you are using one of the benchmarks contained in the HPCC FPGA benchmark suit
 
 #### Bibtex
 
-    @article{hpcc_fpga,
-      title={Evaluating {FPGA} Accelerator Performance with a Parameterized OpenCL Adaptation of the {HPCChallenge} Benchmark Suite},
-      author={Meyer, Marius and Kenter, Tobias and Plessl, Christian},
-      journal={arXiv preprint arXiv:2004.11059},
-      year={2020}
+
+    @INPROCEEDINGS{hpcc_fpga,
+        author={M. {Meyer} and T. {Kenter} and C. {Plessl}},
+        booktitle={2020 IEEE/ACM International Workshop on Heterogeneous High-performance Reconfigurable Computing (H2RC)}, 
+        title={Evaluating FPGA Accelerator Performance with a Parameterized OpenCL Adaptation of Selected Benchmarks of the HPCChallenge Benchmark Suite}, 
+        year={2020},
+        pages={10-18},
+        organization={IEEE},
+        doi={10.1109/H2RC51942.2020.00007}
     }
+

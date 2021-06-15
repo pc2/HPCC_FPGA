@@ -179,157 +179,157 @@ namespace bm_execution {
         // Do actual benchmark measurements
         //
         for (uint r = 0; r < config.programSettings->numRepetitions; r++) {
-#pragma omp parallel
-            {
-#pragma omp single
-                startExecution = std::chrono::high_resolution_clock::now();
-#pragma omp for nowait
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+
+
+            startExecution = std::chrono::high_resolution_clock::now();
+
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
 #ifdef USE_SVM
-                    clEnqueueSVMMap(command_queues[i](), CL_FALSE,
-                                CL_MAP_READ | CL_MAP_WRITE,
-                                reinterpret_cast<void *>(&A[data_per_kernel * i]),
-                                sizeof(HOST_DATA_TYPE) * data_per_kernel, 0,
-                                NULL, NULL);
-                    clEnqueueSVMMap(command_queues[i](), CL_FALSE,
-                                CL_MAP_READ | CL_MAP_WRITE,
-                                reinterpret_cast<void *>(&B[data_per_kernel * i]),
-                                sizeof(HOST_DATA_TYPE) * data_per_kernel, 0,
-                                NULL, NULL);
-                    clEnqueueSVMMap(command_queues[i](), CL_FALSE,
-                                CL_MAP_READ | CL_MAP_WRITE,
-                                reinterpret_cast<void *>(&C[data_per_kernel * i]),
-                                sizeof(HOST_DATA_TYPE) * data_per_kernel, 0,
-                                NULL, NULL);
+                clEnqueueSVMMap(command_queues[i](), CL_FALSE,
+                            CL_MAP_READ | CL_MAP_WRITE,
+                            reinterpret_cast<void *>(&A[data_per_kernel * i]),
+                            sizeof(HOST_DATA_TYPE) * data_per_kernel, 0,
+                            NULL, NULL);
+                clEnqueueSVMMap(command_queues[i](), CL_FALSE,
+                            CL_MAP_READ | CL_MAP_WRITE,
+                            reinterpret_cast<void *>(&B[data_per_kernel * i]),
+                            sizeof(HOST_DATA_TYPE) * data_per_kernel, 0,
+                            NULL, NULL);
+                clEnqueueSVMMap(command_queues[i](), CL_FALSE,
+                            CL_MAP_READ | CL_MAP_WRITE,
+                            reinterpret_cast<void *>(&C[data_per_kernel * i]),
+                            sizeof(HOST_DATA_TYPE) * data_per_kernel, 0,
+                            NULL, NULL);
 #else
-                    command_queues[i].enqueueWriteBuffer(Buffers_A[i], CL_FALSE, 0,
-                                                         sizeof(HOST_DATA_TYPE) * data_per_kernel,
-                                                         &A[data_per_kernel * i]);
-                    command_queues[i].enqueueWriteBuffer(Buffers_B[i], CL_FALSE, 0,
-                                                         sizeof(HOST_DATA_TYPE) * data_per_kernel,
-                                                         &B[data_per_kernel * i]);
-                    command_queues[i].enqueueWriteBuffer(Buffers_C[i], CL_FALSE, 0,
-                                                         sizeof(HOST_DATA_TYPE) * data_per_kernel,
-                                                         &C[data_per_kernel * i]);
-#endif
-                }
-#pragma omp for
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].finish();
-                }
-#pragma omp single
-                {
-                    endExecution = std::chrono::high_resolution_clock::now();
-                    duration = std::chrono::duration_cast<std::chrono::duration<double>>
-                            (endExecution - startExecution);
-                    timingMap[PCIE_WRITE_KEY].push_back(duration.count());
-
-                    startExecution = std::chrono::high_resolution_clock::now();
-                }
-#pragma omp for nowait
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].enqueueTask(copy_kernels[i]);
-                }
-#pragma omp for
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].finish();
-                }
-#pragma omp single
-                {
-                    endExecution = std::chrono::high_resolution_clock::now();
-                    duration = std::chrono::duration_cast<std::chrono::duration<double>>
-                            (endExecution - startExecution);
-                    timingMap[COPY_KEY].push_back(duration.count());
-
-                    startExecution = std::chrono::high_resolution_clock::now();
-                }
-#pragma omp for nowait
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].enqueueTask(scale_kernels[i]);
-                }
-#pragma omp for
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].finish();
-                }
-#pragma omp single
-                {
-                    endExecution = std::chrono::high_resolution_clock::now();
-                    duration = std::chrono::duration_cast<std::chrono::duration<double>>
-                            (endExecution - startExecution);
-                    timingMap[SCALE_KEY].push_back(duration.count());
-
-                    startExecution = std::chrono::high_resolution_clock::now();
-                }
-#pragma omp for nowait
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].enqueueTask(add_kernels[i]);
-                }
-#pragma omp for
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].finish();
-                }
-#pragma omp single
-                {
-                    endExecution = std::chrono::high_resolution_clock::now();
-                    duration = std::chrono::duration_cast<std::chrono::duration<double>>
-                            (endExecution - startExecution);
-                    timingMap[ADD_KEY].push_back(duration.count());
-
-                    startExecution = std::chrono::high_resolution_clock::now();
-                }
-#pragma omp for nowait
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].enqueueTask(triad_kernels[i]);
-                }
-#pragma omp for
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].finish();
-                }
-#pragma omp single
-                {
-                    endExecution = std::chrono::high_resolution_clock::now();
-                    duration = std::chrono::duration_cast<std::chrono::duration<double>>
-                            (endExecution - startExecution);
-                    timingMap[TRIAD_KEY].push_back(duration.count());
-
-                    startExecution = std::chrono::high_resolution_clock::now();
-                }
-#pragma omp for nowait
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-#ifdef USE_SVM
-                    clEnqueueSVMUnmap(command_queues[i](),
-                                reinterpret_cast<void *>(&A[data_per_kernel * i]), 0,
-                                NULL, NULL);
-                    clEnqueueSVMUnmap(command_queues[i](),
-                                reinterpret_cast<void *>(&B[data_per_kernel * i]), 0,
-                                NULL, NULL);
-                    clEnqueueSVMUnmap(command_queues[i](),
-                                reinterpret_cast<void *>(&C[data_per_kernel * i]), 0,
-                                NULL, NULL);
-#else
-                    command_queues[i].enqueueReadBuffer(Buffers_A[i], CL_FALSE, 0,
+                command_queues[i].enqueueWriteBuffer(Buffers_A[i], CL_FALSE, 0,
                                                         sizeof(HOST_DATA_TYPE) * data_per_kernel,
                                                         &A[data_per_kernel * i]);
-                    command_queues[i].enqueueReadBuffer(Buffers_B[i], CL_FALSE, 0,
+                command_queues[i].enqueueWriteBuffer(Buffers_B[i], CL_FALSE, 0,
                                                         sizeof(HOST_DATA_TYPE) * data_per_kernel,
                                                         &B[data_per_kernel * i]);
-                    command_queues[i].enqueueReadBuffer(Buffers_C[i], CL_FALSE, 0,
+                command_queues[i].enqueueWriteBuffer(Buffers_C[i], CL_FALSE, 0,
                                                         sizeof(HOST_DATA_TYPE) * data_per_kernel,
                                                         &C[data_per_kernel * i]);
 #endif
-                }
-#pragma omp for
-                for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                    command_queues[i].finish();
-                }
-#pragma omp single
-                {
-                    endExecution = std::chrono::high_resolution_clock::now();
-                    duration = std::chrono::duration_cast<std::chrono::duration<double>>
-                            (endExecution - startExecution);
-                    timingMap[PCIE_READ_KEY].push_back(duration.count());
-                }
             }
+
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                command_queues[i].finish();
+            }
+
+
+            endExecution = std::chrono::high_resolution_clock::now();
+            duration = std::chrono::duration_cast<std::chrono::duration<double>>
+                    (endExecution - startExecution);
+            timingMap[PCIE_WRITE_KEY].push_back(duration.count());
+
+            int err;
+            cl::UserEvent copy_user_event(*config.context, &err);
+            ASSERT_CL(err);
+            std::vector<cl::Event> copy_start_events({copy_user_event});
+            std::vector<cl::Event> copy_events(config.programSettings->kernelReplications);
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                command_queues[i].enqueueTask(copy_kernels[i], &copy_start_events, &copy_events[i]);
+            }
+
+            cl::UserEvent scale_user_event(*config.context, &err);
+            ASSERT_CL(err);
+            std::vector<cl::Event> scale_start_events({scale_user_event});
+            std::vector<cl::Event> scale_events(config.programSettings->kernelReplications);
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                command_queues[i].enqueueTask(scale_kernels[i], &scale_start_events, &scale_events[i]);
+            }
+
+            cl::UserEvent add_user_event(*config.context, &err);
+            ASSERT_CL(err);
+            std::vector<cl::Event> add_start_events({add_user_event});
+            std::vector<cl::Event> add_events(config.programSettings->kernelReplications);
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                command_queues[i].enqueueTask(add_kernels[i], &add_start_events, &add_events[i]);
+            }
+
+            cl::UserEvent triad_user_event(*config.context, &err);
+            ASSERT_CL(err);
+            std::vector<cl::Event> triad_start_events({triad_user_event});
+            std::vector<cl::Event> triad_events(config.programSettings->kernelReplications);
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                command_queues[i].enqueueTask(triad_kernels[i], &triad_start_events, &triad_events[i]);
+            }
+
+            startExecution = std::chrono::high_resolution_clock::now();
+            copy_user_event.setStatus(CL_COMPLETE);
+            cl::Event::waitForEvents(copy_events);
+
+            endExecution = std::chrono::high_resolution_clock::now();
+            duration = std::chrono::duration_cast<std::chrono::duration<double>>
+                    (endExecution - startExecution);
+            timingMap[COPY_KEY].push_back(duration.count());
+
+            startExecution = std::chrono::high_resolution_clock::now();
+
+            scale_user_event.setStatus(CL_COMPLETE);
+            cl::Event::waitForEvents(scale_events);
+
+            endExecution = std::chrono::high_resolution_clock::now();
+            duration = std::chrono::duration_cast<std::chrono::duration<double>>
+                    (endExecution - startExecution);
+            timingMap[SCALE_KEY].push_back(duration.count());
+
+            startExecution = std::chrono::high_resolution_clock::now();
+
+            add_user_event.setStatus(CL_COMPLETE);
+            cl::Event::waitForEvents(add_events);
+
+            endExecution = std::chrono::high_resolution_clock::now();
+            duration = std::chrono::duration_cast<std::chrono::duration<double>>
+                    (endExecution - startExecution);
+            timingMap[ADD_KEY].push_back(duration.count());
+
+            startExecution = std::chrono::high_resolution_clock::now();
+
+            triad_user_event.setStatus(CL_COMPLETE);
+            cl::Event::waitForEvents(triad_events);
+
+            endExecution = std::chrono::high_resolution_clock::now();
+            duration = std::chrono::duration_cast<std::chrono::duration<double>>
+                    (endExecution - startExecution);
+            timingMap[TRIAD_KEY].push_back(duration.count());
+
+            startExecution = std::chrono::high_resolution_clock::now();
+
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+#ifdef USE_SVM
+                clEnqueueSVMUnmap(command_queues[i](),
+                            reinterpret_cast<void *>(&A[data_per_kernel * i]), 0,
+                            NULL, NULL);
+                clEnqueueSVMUnmap(command_queues[i](),
+                            reinterpret_cast<void *>(&B[data_per_kernel * i]), 0,
+                            NULL, NULL);
+                clEnqueueSVMUnmap(command_queues[i](),
+                            reinterpret_cast<void *>(&C[data_per_kernel * i]), 0,
+                            NULL, NULL);
+#else
+                command_queues[i].enqueueReadBuffer(Buffers_A[i], CL_FALSE, 0,
+                                                    sizeof(HOST_DATA_TYPE) * data_per_kernel,
+                                                    &A[data_per_kernel * i]);
+                command_queues[i].enqueueReadBuffer(Buffers_B[i], CL_FALSE, 0,
+                                                    sizeof(HOST_DATA_TYPE) * data_per_kernel,
+                                                    &B[data_per_kernel * i]);
+                command_queues[i].enqueueReadBuffer(Buffers_C[i], CL_FALSE, 0,
+                                                    sizeof(HOST_DATA_TYPE) * data_per_kernel,
+                                                    &C[data_per_kernel * i]);
+#endif
+            }
+
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                command_queues[i].finish();
+            }
+
+            endExecution = std::chrono::high_resolution_clock::now();
+            duration = std::chrono::duration_cast<std::chrono::duration<double>>
+                    (endExecution - startExecution);
+            timingMap[PCIE_READ_KEY].push_back(duration.count());
+
         }
 
         std::unique_ptr<stream::StreamExecutionTimings> result(new stream::StreamExecutionTimings{

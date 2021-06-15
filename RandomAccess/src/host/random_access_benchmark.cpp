@@ -35,8 +35,9 @@ SOFTWARE.
 #include "parameters.h"
 
 random_access::RandomAccessProgramSettings::RandomAccessProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    dataSize(results["d"].as<size_t>()),
-    kernelReplications(results["r"].as<uint>()) {
+    dataSize((1UL << results["d"].as<size_t>())),
+    kernelReplications(results["r"].as<uint>()),
+    numRngs((1UL << results["g"].as<uint>())) {
 
 }
 
@@ -51,6 +52,7 @@ random_access::RandomAccessProgramSettings::getSettingsMap() {
     ss << dataSize << " (" << static_cast<double>(dataSize * sizeof(HOST_DATA_TYPE) * mpi_size) << " Byte )";
     map["Array Size"] = ss.str();
     map["Kernel Replications"] = std::to_string(kernelReplications);
+    map["#RNGs"] = std::to_string(numRngs);
     return map;
 }
 
@@ -79,8 +81,10 @@ random_access::RandomAccessBenchmark::RandomAccessBenchmark(int argc, char* argv
 void
 random_access::RandomAccessBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
-        ("d", "Size of the data array",
-            cxxopts::value<size_t>()->default_value(std::to_string(DEFAULT_ARRAY_LENGTH)));
+        ("d", "Log2 of the size of the data array",
+            cxxopts::value<size_t>()->default_value(std::to_string(DEFAULT_ARRAY_LENGTH_LOG)))
+        ("g", "Log2 of the number of random number generators",
+            cxxopts::value<uint>()->default_value(std::to_string(HPCC_FPGA_RA_RNG_COUNT_LOG)));
 }
 
 std::unique_ptr<random_access::RandomAccessExecutionTimings>
@@ -97,7 +101,6 @@ random_access::RandomAccessBenchmark::collectAndPrintResults(const random_access
     int mpi_size = mpi_comm_size;
     MPI_Reduce(output.times.data(),avgTimings.data(),output.times.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     std::for_each(avgTimings.begin(),avgTimings.end(), [mpi_size](double& x) {x /= mpi_size;});
-    
 #else
     std::copy(output.times.begin(), output.times.end(), avgTimings.begin());
 #endif
@@ -134,7 +137,7 @@ random_access::RandomAccessBenchmark::checkInputParameters() {
         std::cerr << "ERROR: Number of MPI ranks is " << mpi_comm_size << " which is not a power of two!" << std::endl;
         validationResult = false;
     }
-    int data_per_replication = executionSettings->programSettings->dataSize / executionSettings->programSettings->kernelReplications;
+    size_t data_per_replication = executionSettings->programSettings->dataSize / executionSettings->programSettings->kernelReplications;
     if ((data_per_replication == 0) || (data_per_replication & (data_per_replication - 1))) {
         std::cerr << "ERROR: Data chunk size for each kernel replication is not a power of 2!" << std::endl;
         validationResult = false;

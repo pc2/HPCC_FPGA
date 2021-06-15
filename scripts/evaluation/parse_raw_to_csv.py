@@ -11,10 +11,10 @@ import sys
 # Regular expressions for the raw output of all 
 fft_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Batch\\sSize\\s+(?P<batch_size>\d+)\nFFT\\sSize\\s+(?P<size>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s+res\.\\serror\\s+mach\.\\seps\n\\s+(?P<error>(\d|\.|\+|-|e)+)\\s+(?P<epsilon>(\d|\.|\+|-|e)+)(.*\n)+\\s+avg\\s+best\n\\s+Time\\s+in\\s+s:\\s+(?P<avg_time>(\d|\.|\+|-|e)+)\\s+(?P<best_time>(\d|\.|\+|-|e)+)\n\\s+GFLOPS:\\s+(?P<avg_flops>(\d|\.|\+|-|e)+)\\s+(?P<best_flops>(\d|\.|\+|-|e)+)"
 gemm_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s+norm\.\\sresid\\s+resid\\s+machep\n\\s+(?P<error>(\d|\.|\+|-|e)+)\\s+(?P<resid>(\d|\.|\+|-|e)+)\\s+(?P<epsilon>(\d|\.|\+|-|e)+)(.*\n)+\\s+best\\s+mean\\s+GFLOPS\n\\s+(?P<best_time>.+)\\s+(?P<avg_time>.+)\\s+(?P<gflops>.+)"
-ra_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Array\\sSize\\s+(?P<size>(\d|\.|\+|-|e)+)(.*\n)+Kernel\\sReplications\\s+(?P<replications>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+Error:\\s+(?P<error>(\d|\.|\+|-|e)+)(.*\n)+\\s+best\\s+mean\\s+GUOPS\n\\s+(?P<best_time>.+)\\s+(?P<avg_time>.+)\\s+(?P<gops>.+)"
-trans_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s*Maximum\\serror:\\s+(?P<error>(\d|\.|\+|-|e)+)(.*\n)+\\s+calc\\s+calc\\s+FLOPS\\s+Net\\s+\\[GB/s\\]\\s+Mem\\s+\\[GB/s\\]\n\\s*avg:\\s+(?P<avg_calc_time>(\d|\.|\+|-|e)+)\\s+(?P<avg_calc_flops>(\d|\.|\+|-|e)+)\\s+(?P<avg_net_bw>(\d|\.|\+|-|e)+)\\s+(?P<avg_mem_bw>(\d|\.|\+|-|e)+)\n\\s*best:\\s+(?P<best_calc_time>(\d|\.|\+|-|e)+)\\s+(?P<best_calc_flops>(\d|\.|\+|-|e)+)\\s+(?P<best_net_bw>(\d|\.|\+|-|e)+)\\s+(?P<best_mem_bw>(\d|\.|\+|-|e)+)"
+ra_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Array\\sSize\\s+(?P<size>(\d|\.|\+|-|e)+)(.*\n)+Kernel\\sReplications\\s+(?P<replications>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+Error:\\s+(?P<error>(\d|\.|\+|-|e)+)(.*\n)+\\s+best\\s+mean\\s+GUOPS\n\\s+(?P<best_time>(\d|\.|\+|-|e)+)\\s+(?P<avg_time>(\d|\.|\+|-|e)+)\\s+(?P<gops>(\d|\.|\+|-|e)+)"
+trans_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s*Maximum\\serror:\\s+(?P<error>(\d|\.|\+|-|e)+)(.*\n)+\\s+calc\\s+calc\\s+FLOPS\\s+Net\\s+\\[B/s\\]\\s+Mem\\s+\\[B/s\\]\n\\s*avg:\\s+(?P<avg_calc_time>(\d|\.|\+|-|e)+)\\s+(?P<avg_calc_flops>(\d|\.|\+|-|e)+)\\s+(?P<avg_net_bw>(\d|\.|\+|-|e)+)\\s+(?P<avg_mem_bw>(\d|\.|\+|-|e)+)\n\\s*best:\\s+(?P<best_calc_time>(\d|\.|\+|-|e)+)\\s+(?P<best_calc_flops>(\d|\.|\+|-|e)+)\\s+(?P<best_net_bw>(\d|\.|\+|-|e)+)\\s+(?P<best_mem_bw>(\d|\.|\+|-|e)+)"
 stream_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Array\\sSize\\s+\\d+\\s+\\((?P<size>(\d|\.|\+|-|e)+)(.*\n)+Data\\sType\\s+(?P<data_type>.+)\n(.*\n)+Kernel\\sReplications\\s+(?P<replications>\d+)(.*\n)+Kernel\\sType\\s+(?P<type>.+)\n(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s+Function\\s+Best\\sRate\\sMB/s\\s+Avg\\stime\\ss\\s+Min\\stime\\s+Max\\stime\n\\s+Add\\s+(?P<add_rate>(\d|\.|\+|-|e)+)\\s+(?P<add_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<add_min_time>(\d|\.|\+|-|e)+)\\s+(?P<add_max_time>(\d|\.|\+|-|e)+)\n\\s+Copy\\s+(?P<copy_rate>(\d|\.|\+|-|e)+)\\s+(?P<copy_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<copy_min_time>(\d|\.|\+|-|e)+)\\s+(?P<copy_max_time>(\d|\.|\+|-|e)+)\n\\s+PCI\\sread\\s+(?P<pcir_rate>(\d|\.|\+|-|e)+)\\s+(?P<pcir_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<pcir_min_time>(\d|\.|\+|-|e)+)\\s+(?P<pcir_max_time>(\d|\.|\+|-|e)+)\n\\s+PCI\\swrite\\s+(?P<pciw_rate>(\d|\.|\+|-|e)+)\\s+(?P<pciw_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<pciw_min_time>(\d|\.|\+|-|e)+)\\s+(?P<pciw_max_time>(\d|\.|\+|-|e)+)\n\\s+Scale\\s+(?P<scale_rate>(\d|\.|\+|-|e)+)\\s+(?P<scale_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<scale_min_time>(\d|\.|\+|-|e)+)\\s+(?P<scale_max_time>(\d|\.|\+|-|e)+)\n\\s+Triad\\s+(?P<triad_rate>(\d|\.|\+|-|e)+)\\s+(?P<triad_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<triad_min_time>(\d|\.|\+|-|e)+)\\s+(?P<triad_max_time>(\d|\.|\+|-|e)+)"
-linpack_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s+norm\.\\sresid\\s+resid\\s+machep.+\n\\s+(?P<error>((\d|\.|\+|-|e)+|nan))\\s+(?P<resid>((\d|\.|\+|-|e)+|nan))\\s+(?P<epsilon>(\d|\.|\+|-|e)+)(.*\n)+\\s+best\\s+mean\\s+GFLOPS(.*\n)+\\s+(?P<best_time>(\d|\.|\+|-|e)+)\\s+(?P<avg_time>(\d|\.|\+|-|e)+)\\s+(?P<gflops>(\d|\.|\+|-|e)+)"
+linpack_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s+norm\.\\sresid\\s+resid\\s+machep.+\n\\s+(?P<error>((\d|\.|\+|-|e)+|nan))\\s+(?P<resid>((\d|\.|\+|-|e)+|nan))\\s+(?P<epsilon>(\d|\.|\+|-|e)+)(.*\n)+\\s+Method\\s+\\s+best\\s+mean\\s+GFLOPS(\\s*\n)\\s+total\\s+(?P<total_best_time>(\d|\.|\+|-|e)+)\\s+(?P<total_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<total_gflops>(\d|\.|\+|-|e)+)(\\s*\n)\\s+GEFA\\s+(?P<lu_best_time>(\d|\.|\+|-|e)+)\\s+(?P<lu_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<lu_gflops>(\d|\.|\+|-|e)+)(\\s*\n)\\s+GESL\\s+(?P<sl_best_time>(\d|\.|\+|-|e)+)\\s+(?P<sl_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<sl_gflops>(\d|\.|\+|-|e)+)"
    
 
 def parse_network(file_content):
@@ -63,24 +63,9 @@ parse_map = {
     "STREAM": lambda f: parse_by_regex(f, stream_regex, "STREAM")
 }
 
-
-if __name__ == "__main__":
-    # Define input parameters
-    parser = argparse.ArgumentParser(description="Parse plain text outputs of HPCC benchmarks to CSV")
-    parser.add_argument('-i', dest="input_path",
-                        help="Path to a text file containing the output of an HPCC benchmark. If not given, stdin is used.",
-                        default="-")
-    parser.add_argument('-b', dest='benchmark', help="Restrict parsing just to the named benchmark. Valid names are: %s" % list(parse_map.keys()), default="-")
-    parser.add_argument('-o', dest='output_file', help="Name of the output file. If not given stout is used.", default="-")
-    args = parser.parse_args()
-
-    # If a benchmark restriction is given just use its parsing function
-    used_parse_functions = parse_map.values()
-    if args.benchmark in parse_map.keys():
-        used_parse_functions = [parse_map[ARGS.benchmark]]
-
+def parse_single_file(file_name, used_parse_functions):
     # Read file content from stdin or a given file
-    if args.input_path == "-":
+    if file_name == "-":
         file_content = ""
         isopen = True
         while isopen:
@@ -89,7 +74,7 @@ if __name__ == "__main__":
                 isopen = False
             file_content += t
     else:
-        with open(args.input_path) as f:
+        with open(file_name) as f:
             file_content = f.read()
 
     # Try to parse the file content
@@ -98,11 +83,67 @@ if __name__ == "__main__":
         if not df is None:
             break
     if df is None:
-        print("File content could not be parsed", file=sys.stderr)
+        print("File content could not be parsed: %s" % file_name, file=sys.stderr)
+    df['filename'] = file_name
+    return df
+
+
+def parse_file_or_folder(file_name, used_parse_functions):
+    df = pd.DataFrame()
+    if os.path.isdir(file_name):
+        files_in_dir = os.listdir(file_name)
+        for f in files_in_dir:
+            df = df.append(parse_file_or_folder(f, used_parse_functions))
+    else:
+        tmp = parse_single_file(file_name, used_parse_functions)
+        if not tmp is None:
+            df = df.append(tmp)
+    return df
+        
+def parse_raw_inputs(input_paths, recursive=True, parse_functions=parse_map):
+
+    if type(input_paths) is not list:
+        input_paths = list(input_paths)
+
+    df = pd.DataFrame()
+    for ifile in input_paths:
+        if recursive:
+            df = df.append(parse_file_or_folder(ifile, parse_functions))
+        elif not os.path.isdir(ifile):
+            df = df.append(parse_single_file(ifile, parse_functions))
+        else:
+            print("Directory was specified, but no recursive execution", file=sys.stderr)
+    return df
+
+def parse_script_called_directly():
+    # Define input parameters
+    parser = argparse.ArgumentParser(description="Parse plain text outputs of HPCC benchmarks to CSV")
+    parser.add_argument('-i', dest="input_paths", nargs='+',
+                        help="Path to a text file containing the output of an HPCC benchmark. If not given, stdin is used.",
+                        default="-")
+    parser.add_argument('-r', dest='recursive', action='store_const',
+                    const=True, default=False, help="Recursively parse files in a folder")
+    parser.add_argument('-b', dest='benchmark', help="Restrict parsing just to the named benchmark. Valid names are: %s" % list(parse_map.keys()), default="-")
+    parser.add_argument('-o', dest='output_file', help="Name of the output file. If not given stout is used.", default="-")
+    args = parser.parse_args()
+
+    # If a benchmark restriction is given just use its parsing function
+    used_parse_functions = parse_map.values()
+    if args.benchmark in parse_map.keys():
+        used_parse_functions = [parse_map[args.benchmark]]
+
+    df = parse_raw_inputs(args.input_paths, args.recursive, used_parse_functions)
+
+    if df is None:
+        print("No files could be parsed", file=sys.stderr)
         exit(1)
-    
+
     # Write the resulting CSV data to stdout or a file
     if args.output_file == "-":
         df.to_csv(sys.stdout, header=True)
     else:
         df.to_csv(args.output_file, header=True)
+
+
+if __name__ == "__main__":
+    parse_script_called_directly()

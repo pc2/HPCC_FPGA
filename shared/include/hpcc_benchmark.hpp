@@ -130,7 +130,11 @@ public:
             defaultPlatform(results["platform"].as<int>()),
             defaultDevice(results["device"].as<int>()),
             kernelFileName(results["f"].as<std::string>()),
+#ifdef NUM_REPLICATIONS
+            kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : NUM_REPLICATIONS),
+#else
             kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : 1),
+#endif
             testOnly(static_cast<bool>(results.count("test"))) {}
 
     /**
@@ -341,8 +345,15 @@ public:
     */
     std::unique_ptr<TSettings>
     parseProgramParameters(int argc, char *argv[]) {
+        std::stringstream ss;
+        ss << PROGRAM_DESCRIPTION << std::endl;
+#ifdef _USE_MPI_
+        ss << "MPI Version:  " << MPI_VERSION << "." << MPI_SUBVERSION << std::endl;
+#endif
+        ss << "Config. Time: " << CONFIG_TIME << std::endl;
+        ss << "Git Commit:   " << GIT_COMMIT_HASH << std::endl; 
         // Defining and parsing program options
-        cxxopts::Options options(argv[0], PROGRAM_DESCRIPTION);
+        cxxopts::Options options(argv[0], ss.str());
         options.add_options()
                 ("f,file", "Kernel file name", cxxopts::value<std::string>())
                 ("n", "Number of repetitions",
@@ -410,8 +421,11 @@ public:
     printFinalConfiguration() {
         std::cout << PROGRAM_DESCRIPTION;
 #ifdef _USE_MPI_
-        std::cout << "MPI Version: " << MPI_VERSION << "." << MPI_SUBVERSION << std::endl;
+        std::cout << "MPI Version:  " << MPI_VERSION << "." << MPI_SUBVERSION << std::endl;
 #endif
+        std::cout << "Config. Time: " << CONFIG_TIME << std::endl;
+        std::cout << "Git Commit:   " << GIT_COMMIT_HASH << std::endl; 
+        
         std::cout << std::endl;
         std::cout << "Summary:" << std::endl;
         std::cout << *executionSettings << std::endl;

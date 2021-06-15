@@ -2,6 +2,17 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.5
+
+#### Changed:
+- Renamed all configuration parameters to start with `HPCC_FPGA_RA_`
+- Update the host code to use Log2 values as inputs for simplification
+
+#### Added:
+- Add support for multiple pseudo random number generators specified over `HPCC_FPGA_RA_RNG_COUNT_LOG`
+- Modify the number of steps in the shift register between the RNGs with `HPCC_FPGA_RA_RNG_DISTANCE`
+
+
 ## 2.4
 
 #### Changed:
