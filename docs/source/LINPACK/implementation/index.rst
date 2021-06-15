@@ -15,12 +15,12 @@ Kernel Design for LU Factorization
 ----------------------------------
 
 The implementation uses a blocked, right-looking variant for the LU factorization as it is described in [DHW98]_.
-For the update of a single row and column of blocks, we need to perform four different operations which a shown as colors in :numref:`lu_operations`.
+For the update of a single row and column of blocks, we need to perform three different operations which are shown as colors in :numref:`lu_operations`.
 In every iteration, the LU factorization for a block in the diagonal of the matrix is calculated which is marked green in the visualization.
 All grey-colored blocks on the left and top of this block are already updated and will require no further processing.
 The resulting lower matrix :math:`L` is used to update all blocks on the right of the LU block. Since they are the top-most blocks which still require an update, they are in the following called _top-blocks_. 
 The upper matrix :math:`U` is used to update all blocks below the current LU-block. These are the left-most blocks which require an update so they are called _left-blocks_ in the following.
-All other blocks are updated using the results of the left- and top-blocks.
+All other blocks are updated using the results of the left- and top-blocks and matrix multiplication.
 
 
 .. _lu_operations:
@@ -32,9 +32,9 @@ All other blocks are updated using the results of the left- and top-blocks.
   Visualization of the operations performed on different blocks of the matrix in a single iteration. The grey blocks will not be updated in the iteration.
 
 
-The decribed operations are implemented in four separate kernels.
-To make the best use of the hardware, all four kernels are executed simultaneoulsy and data is streamed through the kernels using a row-wise exchange-and-update-approach.
-Data is forwarded using channels and the required routing of data is handeld by a fifth kernel.
+The decribed operations are implemented in four separate kernel types with additional kernels for the network communication.
+To make the best use of the hardware, three of the kernels kernels are executed simultaneoulsy and data is streamed through the kernels using a row-wise exchange-and-update-approach.
+Data is forwarded using channels and the required routing of data is handled by the network kernels.
 Every calculation kernel will load a single block of the matrix into a local memory buffer and perform the update.
 The size of the block that will be loaded to local memory can be speicified with the ``LOCAL_MEM_BLOCK_LOG`` parameter, which is the logarithm of base two of the width of the block in number of values.
 It will affect the local memory usage of the design and also the performance because larger buffer sizes will increase the utilization of the calculation pipeline.
@@ -50,13 +50,13 @@ The execution of the kernels is divided into two steps which are repeated for ev
   :width: 480
   :align: center
 
-  Visualization of the kernel communication and the matrix blocks during the exchange phase. Every kernel will have a matrix block in a local memory buffer. These blocks are divided into smaller sub-blocks for the computation. Only single rows and columns are exchanged between the kernels. Note, that for the LU kernel only a part of the row and column are exchanged depending on the sub-block size.
+  Visualization of the kernel communication and the matrix blocks during the exchange phase. Every kernel will have a matrix block in a local memory buffer. These blocks are divided into smaller sub-blocks for the computation. The illustration shows a block divided into three sub-blocks in each dimension. The sub-blocks have a width that matches the width of the communication interface (i.e. 256bit). Only single rows and columns are exchanged between the kernels. Note, that for the LU kernel only a part of the row and column are exchanged depending on the sub-block size.
 
 
-A visualization of the exchange phase is given in :numref:`kernel_exchange`_.
+A visualization of the exchange phase is given in :numref:`kernel_exchange`.
 All kernels will load a block of the matrix into the local memory buffer. The update will be executed row- or column-wise -- depending on the kernel.
 The LU kernel sends the current, already updated row and column to the kernels working on the top and left block. 
-They will use the data to update their current row or column and forward it to the inner kernel..
+They will use the data to update their current row or column and forward it to the inner kernel.
 Additionally, the kernels will store the received row and column in a global memory buffer which sustains between kernel executions.
 This buffer will be used to update additional left and top blocks after the LU block was already updated.
 So the exchange phase will be the same, except that the LU kernel will not be executed anymore.
@@ -74,10 +74,8 @@ So the exchange phase will be used to do the following:
 
   Visualization of the update step. Every kernel updates the sub-blocks that are colored grey with the data received in the previous exchange step.
 
-During the update step, which can be seen in :numref:`kernel_update`_, the kernels do not communicate at all, but use the previously received data to update their block in local memory.
+During the update step, which can be seen in :numref:`kernel_update`, the kernels do not communicate at all, but use the previously received data to update their block in local memory.
 This is done in the granularity of sub-blocks, so the LU, left and top kernel will only need to update a part of the block, depending on the current row.
-Only the inner block will always need to update all sub-blocks. This is why this kernel will be the bottleneck in this calculation step.
-All kernels will need to wait for the inner kernel to complete the update until a new exchange phase can start.
 
 The steps in which the blocks are updated can be seen in :numref:`lu_operations_steps`.
 After the first execution of all four kernels, four blocks of the matrix will be completely updated for the current iteration.
@@ -109,13 +107,13 @@ The column of left blocks and the row of top blocks of the current iteration are
 Now they are used as input to update the inner blocks which also means that the kernel does not require any communication.
 The performance of the design can be further improved by adding more kernel replications of the matrix multiplication kernel using the parameter ``NUM_REPLICATIONS``. 
 A replication of the streaming kernels does not bring much benefit because the data dependencies in the LU kernel do not allow arbitrary parallelization.
+This step can be seen as a higher-level *update* phase.
 
 Performance Model for LU factorization on single FPGA
 -----------------------------------------------------
 
-As discussed in the implementation, the execution time is mainly depending on the inner update kernels.
-During the data streaming phase, the inner kernels will take the most time to update because they need to always update all sub-blocks of the local memory block.
-The LU, left and top kernel will run simultaneously but finish earlier.
+As discussed in the implementation, the execution time is mainly depending on the inner update using matrix multiplication.
+The LU, left and top kernel in the data streaming phase will run nearly simultaneoulsy, so only the LU kernel has to be considered.
 
 To create a model, we use the following parameters derived from the kernel configuration parameters described in the implementation section:
 
@@ -128,22 +126,7 @@ Moreover, we have to consider two different frequencies:
 - :math:`f_{mem}` = The frequency of the memory interface
 - :math:`f_{k}` = The frequency of the kernels
 
-The inner block update in the data streaming phase will need to execute the following steps to completely update a single block of the matrix:
-
-1. Load the block from global to local memory: :math:`\frac{bsize^2}{sbsize} \cdot \frac{1}{min(f_{mem}, f_{k})}` seconds
-2. Receive the current top row and left column :math:`bsize` times from other kernels (Exchange phase): :math:`\frac{bsize^2}{sbsize} \cdot  \frac{1}{f_{k}}` seconds
-3. Update the local memory block  with the received data (Update phase). This also has to be executed :math:`bsize` times - for every row that is received: :math:`bsize \cdot (\frac{bsize}{sbsize})^2  \cdot  \frac{1}{f_k}` seconds
-4. Store the block back to global memory: :math:`\frac{bsize^2}{sbsize} \cdot \frac{1}{min(f_{mem}, f_{k})}` seconds
-
-The inner block update using matrix multiplication is slightly different, because the kernel will read all data from the global memory and update block-wise instead of row-wise.
-So one step of the execution will be removed and the actual update will need lesser time:
-
-1. Load the inner block and the top and left block from global to local memory: :math:`\frac{bsize^2}{sbsize} \cdot \frac{1}{min(f_{mem}, f_{k})}` seconds
-2. Update the local memory block by updating whole sub-blocks (Update phase). This has to be executed :math:`\frac{bsize}{sbsize}` times: :math:`(\frac{bsize}{sbsize})^3 \cdot  \frac{1}{f_k}` seconds
-3. Store the inner block back to global memory: :math:`\frac{bsize^2}{sbsize} \cdot \frac{1}{min(f_{mem}, f_{k})}` seconds
-
-These two models are not enough to model the whole execution of the LU factorization.
-In the last iteration of the algorithm, only the LU kernel will need to be executed. This is why we also need to model the performance of this kernel:
+The LU block update in the data streaming phase will need to execute the following steps to completely update a single block of the matrix:
 
 1. Load the block from global to local memory: :math:`\frac{bsize^2}{sbsize} \cdot \frac{1}{min(f_{mem}, f_{k})}` seconds
 2. Send the LU row and column to the left and top kernel :math:`bsize` times (Exchange phase): :math:`\frac{bsize^2}{2 \cdot sbsize} \cdot  \frac{1}{f_{k}}` seconds
@@ -154,10 +137,17 @@ In the last iteration of the algorithm, only the LU kernel will need to be execu
 Note, that the exchange phase total duration gets divided by 2 because only the changed part of the row and column will be transferred.
 Also the update phase gets divided by 2, since only blocks need to be updated, that are below the current row.
 
-The total execution for a matrix of :math:`\#blocks` in width can then be calculated with:
-:math:`t_{total}= \sum_{row=1}^{\#blocks - 1} (row \cdot t_{inner} + \lceil \frac{(row - 1) \cdot row}{r} \rceil \cdot t_{inner\_mm} + (\frac{bsize}{sbsize})^2 \cdot \frac{1}{f_{k}}) + t_{lu}`
+The inner block update using matrix multiplication is slightly different, because the kernel will read all data from the global memory and update block-wise instead of row-wise.
+So one step of the execution will be removed and the actual update will need lesser time:
 
-where :math:`t_{inner}` is the time needed to calculate an inner block, :math:`t_{inner\_mm}` is the time needed to calculate an inner block using matrix multiplication, :math:`t_{lu}` the time needed to do LU factorization on a single block.
+1. Load the inner block and the top and left block from global to local memory: :math:`\frac{bsize^2}{sbsize} \cdot \frac{1}{min(f_{mem}, f_{k})}` seconds
+2. Update the local memory block by updating whole sub-blocks (Update phase). This has to be executed :math:`\frac{bsize}{sbsize}` times: :math:`(\frac{bsize}{sbsize})^3 \cdot  \frac{1}{f_k}` seconds
+3. Store the inner block back to global memory: :math:`\frac{bsize^2}{sbsize} \cdot \frac{1}{min(f_{mem}, f_{k})}` seconds
+
+The total execution for a matrix of :math:`\#blocks` in width can then be calculated with:
+:math:`t_{total}= \sum_{row=1}^{\#blocks - 1} (row \cdot t_{lu} + \lceil \frac{(row - 1) \cdot row}{r} \rceil \cdot t_{inner\_mm} + (\frac{bsize}{sbsize})^2 \cdot \frac{1}{f_{k}}) + t_{lu}`
+
+where :math:`t_{inner\_mm}` is the time needed to calculate an inner block using matrix multiplication and :math:`t_{lu}` the time needed to do LU factorization on a single block.
 One important part of the equation can be found in the sum. The very first time the data streaming phase is initialized, the LU kernel will need to do a single update of the block in advance. This is modelled by the :math:`(\frac{bsize}{sbsize})^2 \cdot \frac{1}{f_k}`.
 The sum goes over every block in one dimension of the matrix minus one. The last block will only need the LU factorization.
 
@@ -193,7 +183,7 @@ The usage of the different external channels by the four streaming kernels is sh
 Every channel is used by exactly two kernels. However, these kernels will never conflict in the channel access, because data will be forwarded internally if both kernels are active.
 
 
- .. _fpga_external_channels:
+.. _fpga_external_channels:
 .. figure:: external_channel_usage.drawio.png
   :width: 360
   :align: center
