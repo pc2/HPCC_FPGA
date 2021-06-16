@@ -26,10 +26,10 @@
 # Other node pairs
 #
 # PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(N - 1)]
-#SBATCH --fpgalink="n$PY_CODE_GEN f"{i:02d}"$:acl0:ch0-n$PY_CODE_GEN f"{i:02d}"$:acl1:ch1"
-#SBATCH --fpgalink="n$PY_CODE_GEN f"{i:02d}"$:acl0:ch2-n$PY_CODE_GEN f"{i:02d}"$:acl1:ch3"
-#SBATCH --fpgalink="n$PY_CODE_GEN f"{i:02d}"$:acl0:ch1-n$PY_CODE_GEN f"{i:02d}"$:acl1:ch0"
-#SBATCH --fpgalink="n$PY_CODE_GEN f"{i:02d}"$:acl0:ch3-n$PY_CODE_GEN f"{i:02d}"$:acl1:ch2"
+#SBATCH --fpgalink="n$PY_CODE_GEN f"{(i//2):02d}"$:acl$PY_CODE_GEN f"{(i % 2):01d}"$:ch0-n$PY_CODE_GEN f"{((i + (N - 1))//2):02d}"$:acl$PY_CODE_GEN f"{((i + (N - 1)) % 2):01d}"$:ch1"
+#SBATCH --fpgalink="n$PY_CODE_GEN f"{(i//2):02d}"$:acl$PY_CODE_GEN f"{(i % 2):01d}"$:ch2-n$PY_CODE_GEN f"{((i + (N - 1))//2):02d}"$:acl$PY_CODE_GEN f"{((i + (N - 1)) % 2):01d}"$:ch3"
+#SBATCH --fpgalink="n$PY_CODE_GEN f"{(i//2):02d}"$:acl$PY_CODE_GEN f"{(i % 2):01d}"$:ch1-n$PY_CODE_GEN f"{((i + (N - 1))//2):02d}"$:acl$PY_CODE_GEN f"{((i + (N - 1)) % 2):01d}"$:ch0"
+#SBATCH --fpgalink="n$PY_CODE_GEN f"{(i//2):02d}"$:acl$PY_CODE_GEN f"{(i % 2):01d}"$:ch3-n$PY_CODE_GEN f"{((i + (N - 1))//2):02d}"$:acl$PY_CODE_GEN f"{((i + (N - 1)) % 2):01d}"$:ch2"
 #PY_CODE_GEN block_end
 
 
