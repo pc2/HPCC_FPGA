@@ -16,6 +16,6 @@ set(AOC_FLAGS "-fpc -fp-relaxed -no-interleaving=default -seed=7" CACHE STRING "
 set(HPCC_FPGA_RA_DEFAULT_ARRAY_LENGTH_LOG 29 CACHE STRING "" FORCE)
 set(HPCC_FPGA_RA_INTEL_USE_PRAGMA_IVDEP Yes CACHE BOOL "" FORCE)
 set(HPCC_FPGA_RA_DEVICE_BUFFER_SIZE_LOG 0 CACHE STRING "" FORCE)
-set(HPCC_FPGA_RA_NUM_REPLICATIONS 4 CACHE STRING "" FORCE)
+set(NUM_REPLICATIONS 4 CACHE STRING "" FORCE)
 set(HPCC_FPGA_RA_RNG_COUNT_LOG 5 CACHE BOOL "Log2 of the number of random number generators that will be used concurrently" FORCE)
 set(HPCC_FPGA_RA_RNG_DISTANCE 5 CACHE BOOL "Distance between RNGs in shift register. Used to relax data dependencies and increase clock frequency" FORCE)
