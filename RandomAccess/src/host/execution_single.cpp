@@ -49,9 +49,7 @@ namespace bm_execution {
 
         std::vector<cl::CommandQueue> compute_queue;
         std::vector<cl::Buffer> Buffer_data;
-        cl::Buffer Buffer_random(*config.context,
-                        CL_MEM_READ_ONLY,
-                        sizeof(HOST_DATA_TYPE)*config.programSettings->numRngs);
+        std::vector<cl::Buffer> Buffer_randoms;
         std::vector<cl::Kernel> accesskernel;
 
         // Calculate RNG initial values
@@ -88,6 +86,10 @@ namespace bm_execution {
             Buffer_data.push_back(cl::Buffer(*config.context,
                         CL_MEM_READ_WRITE | memory_bank_info,
                         sizeof(HOST_DATA_TYPE)*(config.programSettings->dataSize / config.programSettings->kernelReplications)));
+
+            Buffer_randoms.emplace_back(*config.context,
+                        CL_MEM_READ_ONLY,
+                        sizeof(HOST_DATA_TYPE)*config.programSettings->numRngs);
 #ifdef INTEL_FPGA
             accesskernel.push_back(cl::Kernel(*config.program,
                         (RANDOM_ACCESS_KERNEL + std::to_string(r)).c_str() ,
@@ -104,12 +106,14 @@ namespace bm_execution {
 #ifdef USE_SVM
             err = clSetKernelArgSVMPointer(accesskernel[r](), 0,
                                         reinterpret_cast<void*>(&data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]));
+            err = clSetKernelArgSVMPointer(accesskernel[r](), 1,
+                                        reinterpret_cast<void*>(random_inits));
 #else
             err = accesskernel[r].setArg(0, Buffer_data[r]);
 #endif
 
             ASSERT_CL(err);
-            err = accesskernel[r].setArg(1, Buffer_random);
+            err = accesskernel[r].setArg(1, Buffer_randoms[r]);
             ASSERT_CL(err);
             err = accesskernel[r].setArg(2, HOST_DATA_TYPE(config.programSettings->dataSize * mpi_size));
             ASSERT_CL(err);
@@ -139,16 +143,24 @@ namespace bm_execution {
                                     sizeof(HOST_DATA_TYPE) *
                                     (config.programSettings->dataSize / config.programSettings->kernelReplications), 0,
                                     NULL, NULL);
+                    ASSERT_CL(err)
+                    err = clEnqueueSVMMap(compute_queue[r](), CL_TRUE,
+                                    CL_MAP_READ,
+                                    reinterpret_cast<void *>(random_inits),
+                                    sizeof(HOST_DATA_TYPE)  * config.programSettings->numRngs, 0,
+                                    NULL, NULL);
+                    ASSERT_CL(err)
 #else
                     err = compute_queue[r].enqueueWriteBuffer(Buffer_data[r], CL_TRUE, 0,
                                                         sizeof(HOST_DATA_TYPE) *
                                                         (config.programSettings->dataSize / config.programSettings->kernelReplications),
                                                         &data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]);
-#endif
                     ASSERT_CL(err)
-                    err = compute_queue[r].enqueueWriteBuffer(Buffer_random, CL_TRUE, 0,
+                    err = compute_queue[r].enqueueWriteBuffer(Buffer_randoms[r], CL_TRUE, 0,
                                                         sizeof(HOST_DATA_TYPE) * config.programSettings->numRngs,
                                                         random_inits);
+                    ASSERT_CL(err)
+#endif
                 }
 #pragma omp master
                 {
@@ -180,6 +192,9 @@ namespace bm_execution {
 #ifdef USE_SVM
             err = clEnqueueSVMUnmap(compute_queue[r](),
                                 reinterpret_cast<void *>(&data[r * (config.programSettings->dataSize / config.programSettings->kernelReplications)]), 0,
+                                NULL, NULL);
+            err = clEnqueueSVMUnmap(compute_queue[r](),
+                                reinterpret_cast<void *>(random_inits), 0,
                                 NULL, NULL);
 #else
             err = compute_queue[r].enqueueReadBuffer(Buffer_data[r], CL_TRUE, 0,
