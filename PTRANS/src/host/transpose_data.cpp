@@ -4,7 +4,7 @@
 transpose::TransposeProgramSettings::TransposeProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     matrixSize(results["m"].as<uint>() * results["b"].as<uint>()),
     blockSize(results["b"].as<uint>()), dataHandlerIdentifier(results["handler"].as<std::string>()),
-    distributeBuffers(results["distribute-buffers"].count() > 0) {
+    distributeBuffers(results["distribute-buffers"].count() > 0), communicationType(transpose::fpga_execution::stringToComm(results["connectivity"].as<std::string>())) {
 
 }
 
@@ -15,6 +15,7 @@ transpose::TransposeProgramSettings::getSettingsMap() {
         map["Block Size"] = std::to_string(blockSize);
         map["Dist. Buffers"] = distributeBuffers ? "Yes" : "No";
         map["Data Handler"] = dataHandlerIdentifier;
+        map["Communication Type"] = transpose::fpga_execution::commToString(communicationType);
         return map;
 }
 
