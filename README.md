@@ -22,7 +22,7 @@ You can find more information on how to build the benchmarks in the appropriate 
 - [b_eff](b_eff): Ths application sends messages of varying sizes of the inter-FPGA network and measures the achieved bandwidth.
 - [FFT](FFT): Executes multiple 1d-FFT of configurable size.
 - [GEMM](GEMM): Multiplies two quadratic matrices similar to the GEMM routine implemented in BLAS.
-- [LINPACK](LINPACK): Implementation of the [LINPACK benchmark](https://www.netlib.org/benchmark/hpl/) for FPGA. (WIP and currently only does a LU factorization with block-wise pivoting)
+- [LINPACK](LINPACK): Implementation of the [LINPACK benchmark](https://www.netlib.org/benchmark/hpl/) for FPGA without pivoting.
 - [PTRANS](PTRANS): Transposes a quadratic matrix.
 - [RandomAccess](RandomAccess): Executes updates on a data array following a pseudo-random number scheme.
 - [STREAM](STREAM): Implementation of the [STREAM benchmark](https://www.cs.virginia.edu/stream/) for FPGA.
