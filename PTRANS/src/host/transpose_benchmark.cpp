@@ -31,7 +31,9 @@ SOFTWARE.
 #include <random>
 
 /* Project's headers */
-#include "execution.h"
+#include "fpga_execution/execution_intel.hpp"
+#include "fpga_execution/execution_pcie.hpp"
+#include "fpga_execution/communication_types.h"
 #include "parameters.h"
 
 transpose::TransposeBenchmark::TransposeBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
@@ -46,6 +48,7 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
         ("b", "Block size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(BLOCK_SIZE)))
+        ("connectivity", "Specify the connectivity for the used bitstream", cxxopts::value<std::string>()->default_value(transpose::fpga_execution::comm_to_str_map.begin()->first))
         ("distribute-buffers", "Distribute buffers over memory banks. This will use three memory banks instead of one for a single kernel replication, but kernel replications may interfere. This is an Intel only attribute, since buffer placement is decided at compile time for Xilinx FPGAs.")
         ("handler", "Specify the used data handler that distributes the data over devices and memory banks",
             cxxopts::value<std::string>()->default_value(TRANSPOSE_HANDLERS_DIST_DIAG));
@@ -53,7 +56,11 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
 
 std::unique_ptr<transpose::TransposeExecutionTimings>
 transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
-    return bm_execution::calculate(*executionSettings, data);
+    switch (executionSettings->programSettings->communicationType) {
+        case transpose::fpga_execution::CommunicationType::intel_external_channels: return transpose::fpga_execution::intel::calculate(*executionSettings, data); break;
+        case transpose::fpga_execution::CommunicationType::pcie_mpi : return transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler); break;
+        default: throw new std::runtime_error("No calculate method implemented for communication type " + transpose::fpga_execution::commToString(executionSettings->programSettings->communicationType));
+    }
 }
 
 void

@@ -19,9 +19,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
-/* Related header files */
-#include "execution.h"
+#ifndef SRC_HOST_INTEL_EXECUTION_H_
+#define SRC_HOST_INTEL_EXECUTION_H_
 
 /* C++ standard library headers */
 #include <memory>
@@ -33,13 +32,18 @@ SOFTWARE.
 
 /* Project's headers */
 
-namespace bm_execution {
+namespace transpose {
+namespace fpga_execution {
+namespace intel {
 
-    /*
-    Implementation for the single kernel.
-     @copydoc bm_execution::calculate()
-    */
-    std::unique_ptr<transpose::TransposeExecutionTimings>
+    /**
+ * @brief Transpose and add the matrices using the OpenCL kernel
+ * 
+ * @param config The progrma configuration
+ * @param data data object that contains all required data for the execution on the FPGA
+ * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
+ */
+static  std::unique_ptr<transpose::TransposeExecutionTimings>
     calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data) {
         int err;
 
@@ -241,4 +245,8 @@ namespace bm_execution {
         return result;
     }
 
-}  // namespace bm_execution
+}  // namespace transpose
+}  // namespace fpga_execution
+}  // namespace intel
+
+#endif
