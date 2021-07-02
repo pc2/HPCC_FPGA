@@ -134,19 +134,7 @@ void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose:
 #ifndef NDEBUG
     // std::cout << "Rank " << mpi_comm_rank << " " << next_chunk << " to " << pair_rank << std::endl;
 #endif      
-            if (pair_rank > mpi_comm_rank) {
-                MPI_Send(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD);
-                MPI_Recv(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD, &status);
-            }
-            else {
-                std::vector<HOST_DATA_TYPE> buffer(next_chunk);
-                for (int i = 0; i < next_chunk; i++) {
-                    buffer[i] = data.A[offset + i];
-                }
-                MPI_Recv(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD, &status);
-                MPI_Send(buffer.data(), next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD);
-            }
-            // MPI_Sendrecv_replace(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
+            MPI_Sendrecv_replace(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
  #ifndef NDEBUG
     // std::cout << "Rank " << mpi_comm_rank << " Done!"<< std::endl;
 #endif  
