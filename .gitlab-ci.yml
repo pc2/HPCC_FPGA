@@ -73,6 +73,7 @@ build:PTRANS:
   artifacts:
     paths:
       - build/bin/transpose_diagonal_emulate.aocx
+      - build/bin/transpose_PCIE_emulate.aocx
       - build/bin/transpose_diagonal_c2_emulate.aocx
       - build/bin/Transpose_intel
       - build/bin/Transpose_test_intel
