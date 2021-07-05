@@ -28,11 +28,12 @@ load_chunk_of_a(__global DEVICE_DATA_TYPE *restrict A,
 
         DEVICE_DATA_TYPE rotate_in[CHANNEL_WIDTH];
 
+        ulong load_address = current_block * BLOCK_SIZE * BLOCK_SIZE + chunk * CHANNEL_WIDTH;
+
         // Blocks of a will be stored columnwise in global memory
 __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
         for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
-            ulong load_address = current_block * BLOCK_SIZE * BLOCK_SIZE + chunk * CHANNEL_WIDTH + unroll_count;
-            rotate_in[unroll_count] = A[load_address];
+            rotate_in[unroll_count] = A[load_address + unroll_count];
         }
 
         unsigned rot = (chunk / (BLOCK_SIZE / CHANNEL_WIDTH)) & (CHANNEL_WIDTH - 1);
@@ -58,8 +59,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
 *
 */
 void
-load_chunk_of_trans_a(__global DEVICE_DATA_TYPE *restrict A_trans,
-    const DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
+load_chunk_of_trans_a(const DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
     DEVICE_DATA_TYPE chunk_out[CHANNEL_WIDTH],
     const ulong chunk) {
 
@@ -86,6 +86,45 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
         }
 
         
+}
+
+void
+add_a_and_b(__global DEVICE_DATA_TYPE *restrict B,
+    const DEVICE_DATA_TYPE local_buffer_a[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
+    DEVICE_DATA_TYPE local_buffer_a_plus_b[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
+    const ulong block,
+    const ulong chunk) {
+
+    DEVICE_DATA_TYPE data_chunk[CHANNEL_WIDTH];
+
+    load_chunk_of_trans_a(local_buffer_a, data_chunk, chunk);
+
+    ulong ls_address = block * BLOCK_SIZE * BLOCK_SIZE + chunk * CHANNEL_WIDTH;
+    // load tranposed A from global memory
+    __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+    for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+        data_chunk[unroll_count] += B[ls_address + unroll_count];
+    }
+
+    __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+    for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+        local_buffer_a_plus_b[chunk][unroll_count] = data_chunk[unroll_count];
+    }
+}
+
+
+void
+store_a(__global DEVICE_DATA_TYPE *restrict A_out,
+    const DEVICE_DATA_TYPE local_buffer_a_plus_b[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
+    const ulong block,
+    const ulong chunk) {
+
+    ulong ls_address = block * BLOCK_SIZE * BLOCK_SIZE + chunk * CHANNEL_WIDTH;
+
+    __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+    for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+        A_out[ls_address + unroll_count] = local_buffer_a_plus_b[chunk][unroll_count];
+    }
 }
 
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
@@ -118,41 +157,19 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
     DEVICE_DATA_TYPE a_plus_b_block[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH] __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,1))) __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,2)));
 
     // transpose the matrix block-wise from global memory
-    // One extra iteration to empty double buffer
+    #pragma loop_coalesce
     for (ulong block = block_offset; block < block_offset + number_of_blocks; block++) {
-        // read in block of A from global memory and store it in a memory efficient manner
-        for (ulong chunk = 0; chunk < BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH; chunk++) {
-            load_chunk_of_a(A, a_block, block, chunk);
-        }
-        // read transposed block of A from local memory buffer and add B from global memory to it
-        for (ulong chunk = 0; chunk < BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH; chunk++) {
-            DEVICE_DATA_TYPE data_chunk[CHANNEL_WIDTH];
-
-            load_chunk_of_trans_a(A, a_block, data_chunk, chunk);
-
-            ulong ls_address = block * BLOCK_SIZE * BLOCK_SIZE + chunk * CHANNEL_WIDTH;
-            // load tranposed A from global memory
-            __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
-            for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
-                data_chunk[unroll_count] += B[ls_address + unroll_count];
+        // Combine all three steps in single pipeline to reduce overhead
+        for (ulong chunk = 0; chunk < 3 * BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH; chunk++) {
+            ulong current_chunk = chunk & (BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH - 1);
+            switch (chunk / (BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH)) {
+                // read in block of A from global memory and store it in a memory efficient manner for transpose
+                case 0: load_chunk_of_a(A, a_block, block, current_chunk); break;
+                // read transposed block of A from local memory buffer and add B from global memory to it
+                case 1: add_a_and_b(B, a_block, a_plus_b_block, block, current_chunk); break;
+                // Store result in global memory
+                case 2: store_a(A_out, a_plus_b_block, block, current_chunk); break;
             }
-
-            __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
-            for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
-                a_plus_b_block[chunk][unroll_count] = data_chunk[unroll_count];
-            }
-        }
-        // Store result in global memory
-        for (ulong chunk = 0; chunk < BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH; chunk++) {
-
-            ulong ls_address = block * BLOCK_SIZE * BLOCK_SIZE +
-                chunk * CHANNEL_WIDTH;
-
-            __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
-            for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
-                A_out[ls_address + unroll_count] = a_plus_b_block[chunk][unroll_count];
-            }
-
         }
     }
 }
