@@ -144,14 +144,20 @@ namespace transpose
                 for (int repetition = 0; repetition < config.programSettings->numRepetitions; repetition++)
                 {
 
+                    MPI_Barrier(MPI_COMM_WORLD);
+
                     auto startTransfer = std::chrono::high_resolution_clock::now();
                     size_t bufferOffset = 0;
-                    std::vector<HOST_DATA_TYPE*> transposedA;
+
+                    // Exchange A data via PCIe and MPI
+                    handler.exchangeData(data);
 
                     for (int r = 0; r < transposeKernelList.size(); r++)
                     {
                         transCommandQueueList[r].enqueueWriteBuffer(bufferListB[r], CL_FALSE, 0,
                                               bufferSizeList[r] * sizeof(HOST_DATA_TYPE), &data.B[bufferOffset]);
+                        transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
+                                                bufferSizeList[r] * sizeof(HOST_DATA_TYPE), &data.A[bufferOffset]);
                         bufferOffset += bufferSizeList[r];
                     }
                     for (int r = 0; r < transposeKernelList.size(); r++)
@@ -166,15 +172,6 @@ namespace transpose
 
                     auto startCalculation = std::chrono::high_resolution_clock::now();
 
-                    // Exchange A data via PCIe and MPI
-                    handler.exchangeData(data);
-                    bufferOffset = 0;
-                    for (int r = 0; r < transposeKernelList.size(); r++)
-                    {
-                        transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
-                                                bufferSizeList[r] * sizeof(HOST_DATA_TYPE), &data.A[bufferOffset]);
-                        bufferOffset += bufferSizeList[r];
-                    }
                     for (int r = 0; r < transposeKernelList.size(); r++)
                     {
                         transCommandQueueList[r].enqueueTask(transposeKernelList[r]);
@@ -194,6 +191,9 @@ namespace transpose
                     std::chrono::duration<double> calculationTime =
                         std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation);
                     calculationTimings.push_back(calculationTime.count());
+
+                    // Transfer back data for next repetition!
+                    handler.exchangeData(data);
 
                     bufferOffset = 0;
                     startTransfer = std::chrono::high_resolution_clock::now();
