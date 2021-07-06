@@ -33,6 +33,7 @@ SOFTWARE.
 /* Project's headers */
 #include "fpga_execution/execution_intel.hpp"
 #include "fpga_execution/execution_pcie.hpp"
+#include "fpga_execution/execution_cpu.hpp"
 #include "fpga_execution/communication_types.h"
 #include "parameters.h"
 
@@ -59,6 +60,9 @@ transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
     switch (executionSettings->programSettings->communicationType) {
         case transpose::fpga_execution::CommunicationType::intel_external_channels: return transpose::fpga_execution::intel::calculate(*executionSettings, data); break;
         case transpose::fpga_execution::CommunicationType::pcie_mpi : return transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler); break;
+#ifdef MKL_FOUND
+        case transpose::fpga_execution::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*executionSettings, data, *dataHandler); break;
+#endif
         default: throw new std::runtime_error("No calculate method implemented for communication type " + transpose::fpga_execution::commToString(executionSettings->programSettings->communicationType));
     }
 }
@@ -70,39 +74,50 @@ transpose::TransposeBenchmark::collectAndPrintResults(const transpose::Transpose
     // Number of experiment repetitions
     uint number_measurements = output.calculationTimings.size();
     std::vector<double> max_measures(number_measurements);
+    std::vector<double> max_transfers(number_measurements);
 #ifdef _USE_MPI_
         // Copy the object variable to a local variable to make it accessible to the lambda function
         int mpi_size = mpi_comm_size;
         MPI_Reduce(output.calculationTimings.data(), max_measures.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(output.transferTimings.data(), max_transfers.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 #else
         std::copy(output.calculationTimings.begin(), output.calculationTimings.end(), max_measures.begin());
+        std::copy(output.transferTimings.begin(), output.transferTimings.end(), max_transfers.begin());
 #endif
 
     double avgCalculationTime = accumulate(max_measures.begin(), max_measures.end(), 0.0)
                                 / max_measures.size();
     double minCalculationTime = *min_element(max_measures.begin(), max_measures.end());
 
+    double avgTransferTime = accumulate(max_transfers.begin(), max_transfers.end(), 0.0)
+                                / max_transfers.size();
+    double minTransferTime = *min_element(max_transfers.begin(), max_transfers.end());
+
     double avgCalcFLOPS = flops / avgCalculationTime;
     double maxCalcFLOPS = flops / minCalculationTime;
     double avgMemBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / avgCalculationTime;
-    double avgNetworkBandwidth = flops * sizeof(HOST_DATA_TYPE) / avgCalculationTime;
     double maxMemBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / minCalculationTime;
-    double maxNetworkBandwidth = flops * sizeof(HOST_DATA_TYPE) / minCalculationTime;
+    double avgTransferBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime;
+    double maxTransferBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime;
 
 
 
 
     if (mpi_comm_rank == 0) {
-        std::cout << "              calc    calc FLOPS    Net [B/s]    Mem [B/s]" << std::endl;
-        std::cout << "avg:   " << avgCalculationTime
+        std::cout << "       total [s]     transfer [s]  calc [s]      calc FLOPS    Mem [B/s]     PCIe [B/s]" << std::endl;
+        std::cout << "avg:   " << (avgTransferTime + avgCalculationTime)
+                << "   " << avgTransferTime
+                << "   " << avgCalculationTime
                 << "   " << avgCalcFLOPS
-                << "   " << avgNetworkBandwidth
                 << "   " << avgMemBandwidth
+                << "   " << avgTransferBandwidth
                 << std::endl;
-        std::cout << "best:  " << minCalculationTime
+        std::cout << "best:  " << (minTransferTime + minCalculationTime)
+                << "   " << minTransferTime
+                << "   " << minCalculationTime
                 << "   " << maxCalcFLOPS
-                << "   " << maxNetworkBandwidth
                 << "   " << maxMemBandwidth
+                << "   " << maxTransferBandwidth
                 << std::endl;
     }
 }

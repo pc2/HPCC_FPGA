@@ -41,13 +41,20 @@ typedef enum _CommunicationType {
      * @brief Copy the data from FPGA to CPU and send it via MPI
      * 
      */
-    pcie_mpi
+    pcie_mpi,
+
+    /**
+     * @brief Transpose the matrices on CPU instead of FPGA
+     * 
+     */
+    cpu_only
 
 } CommunicationType;
 
 static const std::map<const std::string, CommunicationType> comm_to_str_map{ 
     {"IEC", CommunicationType::intel_external_channels}, 
-    {"PCIE", CommunicationType::pcie_mpi}
+    {"PCIE", CommunicationType::pcie_mpi},
+    {"CPU", CommunicationType::cpu_only}
     };
 
 static std::string commToString(CommunicationType c) {
