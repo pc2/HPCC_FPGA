@@ -6,6 +6,7 @@ set(HOST_EXE_NAME Transpose)
 set(LIB_NAME trans)
 
 set(BLA_VENDOR Intel10_64lp)
+set(BLA_STATIC ON)
 find_package(BLAS)
 
 if (INTELFPGAOPENCL_FOUND)
