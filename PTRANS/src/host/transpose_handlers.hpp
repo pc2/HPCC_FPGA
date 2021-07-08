@@ -111,6 +111,12 @@ private:
      */
     int num_diagonal_ranks;
 
+    /**
+     * @brief MPI data for matrix blocks
+     * 
+     */
+    MPI_Datatype data_block;
+
 public:
 
     /**

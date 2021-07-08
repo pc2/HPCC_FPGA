@@ -47,6 +47,9 @@ transpose::DistributedDiagonalTransposeDataHandler::DistributedDiagonalTranspose
 
 
 std::unique_ptr<transpose::TransposeData> transpose::DistributedDiagonalTransposeDataHandler::generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) {
+    MPI_Type_contiguous(settings.programSettings->blockSize * settings.programSettings->blockSize, MPI_FLOAT, &data_block);
+    MPI_Type_commit(&data_block);
+    
     int width_in_blocks = settings.programSettings->matrixSize / settings.programSettings->blockSize;
 
     int avg_blocks_per_rank = (width_in_blocks * width_in_blocks) / mpi_comm_size;
@@ -127,19 +130,16 @@ void transpose::DistributedDiagonalTransposeDataHandler::exchangeData(transpose:
         // 1 . . .
         // 3 2 . .
         MPI_Status status;
-        size_t remaining_data_size = static_cast<size_t>(data.blockSize) * data.blockSize * data.numBlocks;
+
+        size_t remaining_data_size = data.numBlocks;
         size_t offset = 0;
         while (remaining_data_size > 0) {
             int next_chunk = (remaining_data_size > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max(): remaining_data_size;
-#ifndef NDEBUG
-    // std::cout << "Rank " << mpi_comm_rank << " " << next_chunk << " to " << pair_rank << std::endl;
-#endif      
-            MPI_Sendrecv_replace(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
- #ifndef NDEBUG
-    // std::cout << "Rank " << mpi_comm_rank << " Done!"<< std::endl;
-#endif  
+   
+            MPI_Sendrecv_replace(&data.A[offset], next_chunk, data_block, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
+
             remaining_data_size -= next_chunk;
-            offset += next_chunk;
+            offset += static_cast<size_t>(next_chunk) * static_cast<size_t>(data.blockSize * data.blockSize);
         }
     }
 #ifndef NDEBUG
