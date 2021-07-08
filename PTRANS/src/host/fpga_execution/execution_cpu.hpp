@@ -57,6 +57,10 @@ namespace transpose
                 std::vector<double> transferTimings;
                 std::vector<double> calculationTimings;
 
+                if (data.blockSize != BLOCK_SIZE) {
+                    throw std::runtime_error("Block size for CPU hardcoded to " + std::to_string(BLOCK_SIZE) + ". Recompile to use different block sizes!");
+                }
+
                 for (int repetition = 0; repetition < config.programSettings->numRepetitions; repetition++)
                 {
 
@@ -77,8 +81,8 @@ namespace transpose
 
                     #pragma omp parallel for 
                     for (int i=0; i < data.numBlocks; i++) {
-                        ulong offset = i * data.blockSize * data.blockSize;
-                        mkl_somatadd('R', 'T', 'N', data.blockSize, data.blockSize, 1.0, &data.A[offset], data.blockSize, 1.0, &data.B[offset], data.blockSize, &data.result[offset], data.blockSize);
+                        ulong offset = i * BLOCK_SIZE * BLOCK_SIZE;
+                        mkl_somatadd('R', 'T', 'N', BLOCK_SIZE, BLOCK_SIZE, 1.0, &data.A[offset], BLOCK_SIZE, 1.0, &data.B[offset], BLOCK_SIZE, &data.result[offset], BLOCK_SIZE);
                     }
                     auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
