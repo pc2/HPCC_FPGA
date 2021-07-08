@@ -94,13 +94,13 @@ namespace transpose
                         if (config.programSettings->distributeBuffers)
                         {
                             memory_bank_info_a = ((((r * 3) % 7) + 1) << 16);
-                            memory_bank_info_a = ((((r * 3 + 1) % 7) + 1) << 16);
+                            memory_bank_info_b = ((((r * 3 + 1) % 7) + 1) << 16);
                             memory_bank_info_out = ((((r * 3 + 2) % 7) + 1) << 16);
                         }
                         else
                         {
                             memory_bank_info_a = ((r + 1) << 16);
-                            memory_bank_info_a = ((r + 1) << 16);
+                            memory_bank_info_b = ((r + 1) << 16);
                             memory_bank_info_out = ((r + 1) << 16);
                         }
                     }
