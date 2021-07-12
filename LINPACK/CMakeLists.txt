@@ -21,7 +21,6 @@ if (TEST_EMULATION)
     set(TEST_HOST_FLAGS "--emulation")
 endif()
 
-set(DATA_TYPE float)
 if (DATA_TYPE STREQUAL "double")
     set(_DP Yes)
     message(STATUS "Set DP flag since data type seems to be double precision")

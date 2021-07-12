@@ -54,6 +54,7 @@ linpack::LinpackProgramSettings::getSettingsMap() {
         map["Matrix Size"] = std::to_string(matrixSize);
         map["Block Size"] = std::to_string(blockSize);
         map["Emulate"] = (isEmulationKernel) ? "Yes" : "No";
+        map["Data Type"] = STR(HOST_DATA_TYPE);
         return map;
 }
 
@@ -226,7 +227,7 @@ linpack::LinpackBenchmark::generateInputData() {
                 local_row_sum += d->A[executionSettings->programSettings->matrixSize*j + i];
             } 
             HOST_DATA_TYPE row_sum = 0.0;
-            MPI_Reduce(&local_row_sum, &row_sum, 1, MPI_FLOAT, MPI_SUM, executionSettings->programSettings->torus_row, row_communicator);
+            MPI_Reduce(&local_row_sum, &row_sum, 1, MPI_DATA_TYPE, MPI_SUM, executionSettings->programSettings->torus_row, row_communicator);
             // insert row sum into matrix if it contains the diagonal block
             if (executionSettings->programSettings->torus_row == executionSettings->programSettings->torus_col) {
                 // update norm of local matrix
@@ -254,7 +255,7 @@ linpack::LinpackBenchmark::generateInputData() {
             local_col_sum += d->A[executionSettings->programSettings->matrixSize*i+j];
         }
         HOST_DATA_TYPE row_sum = 0.0;
-        MPI_Allreduce(&local_col_sum, &(d->b[j]), 1, MPI_FLOAT, MPI_SUM, col_communicator);   
+        MPI_Allreduce(&local_col_sum, &(d->b[j]), 1, MPI_DATA_TYPE, MPI_SUM, col_communicator);   
         d->normb = (d->b[j] > d->normb) ? d->b[j] : d->normb;   
     }
     return d;
@@ -270,12 +271,12 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     if (mpi_comm_rank > 0) {
         for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
             for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
-                MPI_Send(&data.A[executionSettings->programSettings->matrixSize * j + i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+                MPI_Send(&data.A[executionSettings->programSettings->matrixSize * j + i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
             }
         }
         if (executionSettings->programSettings->torus_row == 0) {
             for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
-                MPI_Send(&data.b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+                MPI_Send(&data.b[i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
             }
         }
         residn = 0;
@@ -292,7 +293,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
                 int recvrow= (j / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
                 int recvrank = executionSettings->programSettings->torus_width * recvrow + recvcol;
                 if (recvrank > 0) {
-                    MPI_Recv(&total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i],executionSettings->programSettings->blockSize, MPI_FLOAT, recvrank, 0, MPI_COMM_WORLD,  &status);
+                    MPI_Recv(&total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i],executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvrank, 0, MPI_COMM_WORLD,  &status);
                 }
                 else {
                     for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
@@ -306,7 +307,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
         for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
             int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
             if (recvcol > 0) {
-                MPI_Recv(&total_b[i], executionSettings->programSettings->blockSize, MPI_FLOAT, recvcol, 0, MPI_COMM_WORLD, &status);
+                MPI_Recv(&total_b[i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvcol, 0, MPI_COMM_WORLD, &status);
             }
             else {
                 for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
@@ -442,14 +443,14 @@ linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data
         if ((k / block_size) % executionSettings->programSettings->torus_width == executionSettings->programSettings->torus_row) {
             HOST_DATA_TYPE current_k;
             current_k = (local_k_index_col < matrix_size) ? b_tmp[local_k_index_col] : 0.0;
-            MPI_Bcast(&current_k, 1, MPI_FLOAT,  current_bcast, row_communicator);
+            MPI_Bcast(&current_k, 1, MPI_DATA_TYPE,  current_bcast, row_communicator);
             // For each row below add
             for (int i = start_offset; i < matrix_size; i++) {
                 // add solved upper row to current row
                 tmp_scaled_b[i] = current_k * data.A[matrix_size * local_k_index_row + i];
             }
         }
-        MPI_Bcast(&tmp_scaled_b.data()[start_offset], matrix_size - start_offset, MPI_FLOAT, current_bcast, col_communicator);
+        MPI_Bcast(&tmp_scaled_b.data()[start_offset], matrix_size - start_offset, MPI_DATA_TYPE, current_bcast, col_communicator);
         for (int i = start_offset; i < matrix_size; i++) {
             // add solved upper row to current row
             b_tmp[i] += tmp_scaled_b[i];
@@ -475,11 +476,11 @@ linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data
         }
 
         HOST_DATA_TYPE scale_element = (local_k_index_col < matrix_size && local_k_index_row < matrix_size) ? b_tmp[local_k_index_col] * data.A[matrix_size * local_k_index_row + local_k_index_col] : 0.0;
-        MPI_Bcast(&scale_element, 1, MPI_FLOAT, executionSettings->programSettings->torus_col, col_communicator);
+        MPI_Bcast(&scale_element, 1, MPI_DATA_TYPE, executionSettings->programSettings->torus_col, col_communicator);
         if ((k / block_size) % executionSettings->programSettings->torus_width == executionSettings->programSettings->torus_col) {
             b_tmp[local_k_index_col] = -scale_element;
         }
-        MPI_Bcast(&scale_element, 1, MPI_FLOAT, executionSettings->programSettings->torus_row, row_communicator);
+        MPI_Bcast(&scale_element, 1, MPI_DATA_TYPE, executionSettings->programSettings->torus_row, row_communicator);
         size_t end_offset = local_k_index_col;
 
         std::vector<HOST_DATA_TYPE> tmp_scaled_b(matrix_size, 0.0);
@@ -490,7 +491,7 @@ linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data
             }
         }
         int current_bcast = (k / block_size) % executionSettings->programSettings->torus_width;
-        MPI_Bcast(tmp_scaled_b.data(), end_offset, MPI_FLOAT, current_bcast, col_communicator);
+        MPI_Bcast(tmp_scaled_b.data(), end_offset, MPI_DATA_TYPE, current_bcast, col_communicator);
         for (int i = 0; i < end_offset; i++) {
             // add solved upper row to current row
             b_tmp[i] += tmp_scaled_b[i];

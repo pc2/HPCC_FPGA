@@ -12,6 +12,12 @@
 #define DEFAULT_MATRIX_SIZE @DEFAULT_MATRIX_SIZE@
 #cmakedefine _DP @_DP@
 
+#ifdef _DP
+#define MPI_DATA_TYPE MPI_DOUBLE
+#else
+#define MPI_DATA_TYPE MPI_FLOAT
+#endif
+
 /**
  * Device specific parameters
  */

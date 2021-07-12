@@ -24,23 +24,21 @@ SOFTWARE.
 
 #include <memory>
 
-/* Project's headers */
-#include "setup/fpga_setup.hpp"
-#include "communication_types.hpp"
-#include "cxxopts.hpp"
-#include "parameters.h"
-
 /* External library headers */
 #ifdef USE_DEPRECATED_HPP_HEADER
 #include "CL/cl.hpp"
 #else
 #include OPENCL_HPP_HEADER
 #endif
-
 #ifdef _USE_MPI_
 #include "mpi.h"
 #endif
 
+/* Project's headers */
+#include "setup/fpga_setup.hpp"
+#include "cxxopts.hpp"
+#include "parameters.h"
+#include "communication_types.hpp"
 
 #define STR_EXPAND(tok) #tok
 #define STR(tok) STR_EXPAND(tok)
