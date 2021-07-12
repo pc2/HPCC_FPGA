@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(LINPACK VERSION 2.3)
+project(LINPACK VERSION 2.4)
 
 set(USE_DEPRECATED_HPP_HEADER No)
 
