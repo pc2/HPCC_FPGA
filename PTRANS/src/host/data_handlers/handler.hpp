@@ -27,20 +27,14 @@ SOFTWARE.
 #include <memory>
 
 /* Project's headers */
-#include "transpose_data.hpp"
-
-/**
- * @brief String that identifies the transpose::DistributedExternalTransposeDataHandler 
- * 
- */
-#define TRANSPOSE_HANDLERS_DIST_DIAG "distdiag" 
+#include "../transpose_data.hpp"
 
 /**
  * @brief Contains all classes and methods needed by the Transpose benchmark
  * 
  */
 namespace transpose {
-
+namespace data_handler {
 /**
  * @brief The parallel matrix transposition is designed to support different kinds of data distribution.
  *          This abstract class provides the necessary methods that need to be implemented for every data distribution scheme.
@@ -93,75 +87,7 @@ public:
 
 };
 
-#ifdef _USE_MPI_
-
-/**
- * @brief Transposes the data over external channels, so every part of a pair is located on a different FPGA.
- *         Data will be distributed to the ranks such that only a fixed pair of ranks will communicate to exchange
- *         the missing data. e.g. for N ranks, the pairs will be (0, N/2), (1, N/2 + 1), ...
- * 
- */
-class DistributedDiagonalTransposeDataHandler : public transpose::TransposeDataHandler {
-
-private:
-
-    /**
-     * @brief Number of diagonal ranks that will sent the blcoks to themselves
-     * 
-     */
-    int num_diagonal_ranks;
-
-    /**
-     * @brief MPI data for matrix blocks
-     * 
-     */
-    MPI_Datatype data_block;
-
-public:
-
-    /**
-     * @brief Generate data for transposition based on the implemented distribution scheme
-     * 
-     * @param settings The execution settings that contain information about the data size
-     * @return std::unique_ptr<TransposeData> The generated data
-     */
-    std::unique_ptr<TransposeData>
-    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) override;
-
-    /**
-     * @brief Exchange the data blocks for verification
-     * 
-     * @param data The data that was generated locally and will be exchanged with other MPI ranks 
-     *              Exchanged data will be stored in the same object.
-     */
-    void
-    exchangeData(TransposeData& data) override;
-
-    DistributedDiagonalTransposeDataHandler(int mpi_rank, int mpi_size);
-
-};
-
-#endif
-
-/**
- * @brief Generate a data handler object
- * 
- * @tparam T The class of the data handler object
- * @return std::unique_ptr<transpose::TransposeDataHandler> a unique poiinter to the generated data handler object
- */
-template<class T> 
-std::unique_ptr<transpose::TransposeDataHandler> 
-generateDataHandler(int rank, int size) {
-    return std::unique_ptr<T>(new T(rank, size));
 }
-
-/**
- * @brief A map that contains the mapping from plain strings to the data handler object that should be used in the program
- * 
- */
-extern std::map<std::string, std::unique_ptr<transpose::TransposeDataHandler> (*)(int rank, int size)> dataHandlerIdentifierMap;
-
-
 }
 
 #endif
