@@ -12,5 +12,6 @@ set(NUM_REPLICATIONS 2 CACHE STRING "Number of times the kernels will be replica
 mark_as_advanced(READ_KERNEL_NAME WRITE_KERNEL_NAME)
 
 set(USE_MPI Yes)
+set(USE_OPENMP Yes)
 
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
