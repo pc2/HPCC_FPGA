@@ -25,6 +25,7 @@ SOFTWARE.
 
 /* C++ standard library headers */
 #include <memory>
+#include <random>
 
 /* Project's headers */
 #include "handler.hpp"
