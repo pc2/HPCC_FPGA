@@ -29,6 +29,8 @@ SOFTWARE.
 /* Project's headers */
 #include "hpcc_benchmark.hpp"
 #include "fpga_execution/communication_types.h"
+#include "data_handlers/data_handler_types.h"
+
 
 /**
  * @brief Contains all classes and methods needed by the Transpose benchmark
@@ -59,7 +61,7 @@ public:
      * @brief Identifier of the used data handler
      * 
      */
-    std::string dataHandlerIdentifier;
+    transpose::data_handler::DataHandlerType dataHandlerIdentifier;
 
     /**
      * @brief If true, the three buffers for A,B and A_out will be placed on three different memory banks, if possible
@@ -72,6 +74,12 @@ public:
      * 
      */
     transpose::fpga_execution::CommunicationType communicationType;
+
+    /**
+     * @brief Height of the PQ grid, if this distribution scheme is used
+     * 
+     */
+    const uint pq_height;
 
     /**
      * @brief Construct a new Transpose Program Settings object

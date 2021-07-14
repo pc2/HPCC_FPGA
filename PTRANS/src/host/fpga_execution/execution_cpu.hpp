@@ -34,6 +34,7 @@ SOFTWARE.
 #include "mkl_trans.h"
 
 /* Project's headers */
+#include "data_handlers/handler.hpp"
 
 namespace transpose
 {
@@ -50,7 +51,7 @@ namespace transpose
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
             static std::unique_ptr<transpose::TransposeExecutionTimings>
-            calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings> &config, transpose::TransposeData &data, transpose::TransposeDataHandler &handler)
+            calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings> &config, transpose::TransposeData &data, transpose::data_handler::TransposeDataHandler &handler)
             {
                 int err;
 

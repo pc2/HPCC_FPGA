@@ -35,7 +35,13 @@ SOFTWARE.
 #include "fpga_execution/execution_pcie.hpp"
 #include "fpga_execution/execution_cpu.hpp"
 #include "fpga_execution/communication_types.h"
+
+#include "data_handlers/data_handler_types.h"
+#include "data_handlers/diagonal.hpp"
+#include "data_handlers/pq.hpp"
+
 #include "parameters.h"
+
 
 transpose::TransposeBenchmark::TransposeBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
@@ -49,10 +55,12 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
         ("b", "Block size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(BLOCK_SIZE)))
+        ("q", "Height of the PQ grid. The width will be determined by this number and the total number of ranks. Only used for PQ distribution. Ignored otherwise.",
+            cxxopts::value<uint>()->default_value(std::to_string(1)))
         ("connectivity", "Specify the connectivity for the used bitstream", cxxopts::value<std::string>()->default_value(transpose::fpga_execution::comm_to_str_map.begin()->first))
         ("distribute-buffers", "Distribute buffers over memory banks. This will use three memory banks instead of one for a single kernel replication, but kernel replications may interfere. This is an Intel only attribute, since buffer placement is decided at compile time for Xilinx FPGAs.")
         ("handler", "Specify the used data handler that distributes the data over devices and memory banks",
-            cxxopts::value<std::string>()->default_value(TRANSPOSE_HANDLERS_DIST_DIAG));
+            cxxopts::value<std::string>()->default_value(transpose::data_handler::comm_to_str_map.begin()->first));
 }
 
 std::unique_ptr<transpose::TransposeExecutionTimings>
@@ -160,9 +168,12 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
 }
 
 void
-transpose::TransposeBenchmark::setTransposeDataHandler(std::string dataHandlerIdentifier) {
-    if (transpose::dataHandlerIdentifierMap.find(dataHandlerIdentifier) == transpose::dataHandlerIdentifierMap.end()) {
-        throw std::runtime_error("Could not match selected data handler: " + dataHandlerIdentifier);
+transpose::TransposeBenchmark::setTransposeDataHandler(transpose::data_handler::DataHandlerType dataHandlerIdentifier) {
+    switch (dataHandlerIdentifier) {
+        case transpose::data_handler::DataHandlerType::diagonal: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler>(new transpose::data_handler::DistributedDiagonalTransposeDataHandler(mpi_comm_rank, mpi_comm_size)); break;
+        case transpose::data_handler::DataHandlerType::pq: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler>(new transpose::data_handler::DistributedPQTransposeDataHandler(mpi_comm_rank, mpi_comm_size)); break;
+        default: throw std::runtime_error("Could not match selected data handler: " + transpose::data_handler::handlerToString(dataHandlerIdentifier));
     }
-    dataHandler = transpose::dataHandlerIdentifierMap[dataHandlerIdentifier](mpi_comm_rank, mpi_comm_size);
+        
+
 }
