@@ -62,29 +62,42 @@ namespace transpose
                     throw std::runtime_error("Block size for CPU hardcoded to " + std::to_string(BLOCK_SIZE) + ". Recompile to use different block sizes!");
                 }
 
+                ulong local_matrix_width = std::sqrt(data.numBlocks);
+
                 for (int repetition = 0; repetition < config.programSettings->numRepetitions; repetition++)
                 {
 
-                    MPI_Barrier(MPI_COMM_WORLD);
-
-                    auto startTransfer = std::chrono::high_resolution_clock::now();
-
-                    // Exchange A data via PCIe and MPI
-                    handler.exchangeData(data);
-
-                    auto endTransfer = std::chrono::high_resolution_clock::now();
-                    std::chrono::duration<double> transferTime =
-                        std::chrono::duration_cast<std::chrono::duration<double>>(endTransfer - startTransfer);
+                    std::chrono::duration<double> transferTime(0);
 
                     MPI_Barrier(MPI_COMM_WORLD);
 
                     auto startCalculation = std::chrono::high_resolution_clock::now();
 
-                    #pragma omp parallel for 
-                    for (int i=0; i < data.numBlocks; i++) {
-                        ulong offset = i * BLOCK_SIZE * BLOCK_SIZE;
-                        mkl_somatadd('R', 'T', 'N', BLOCK_SIZE, BLOCK_SIZE, 1.0, &data.A[offset], BLOCK_SIZE, 1.0, &data.B[offset], BLOCK_SIZE, &data.result[offset], BLOCK_SIZE);
+                    // Exchange A data via PCIe and MPI
+                    handler.exchangeData(data);
+
+
+                    switch (config.programSettings->dataHandlerIdentifier) {
+                        case transpose::data_handler::DataHandlerType::diagonal: 
+                                #pragma omp parallel for 
+                                for (ulong offset=0; offset < data.numBlocks * BLOCK_SIZE * BLOCK_SIZE; offset += BLOCK_SIZE * BLOCK_SIZE) {
+                                    mkl_somatadd('R', 'T', 'N', BLOCK_SIZE, BLOCK_SIZE, 1.0, &data.A[offset], BLOCK_SIZE, 1.0, &data.B[offset], BLOCK_SIZE, &data.result[offset], BLOCK_SIZE);
+                                }
+                                break;
+                        case transpose::data_handler::DataHandlerType::pq: 
+                                #pragma omp parallel for 
+                                for (ulong yoffset=0; yoffset < BLOCK_SIZE * local_matrix_width; yoffset += BLOCK_SIZE) {
+                                    for (ulong xoffset=0; xoffset < BLOCK_SIZE * local_matrix_width; xoffset += BLOCK_SIZE) {
+                                        ulong toffset = xoffset * BLOCK_SIZE * local_matrix_width + yoffset;
+                                        ulong offset = yoffset * BLOCK_SIZE * local_matrix_width + xoffset;
+                                        mkl_somatadd('R', 'T', 'N', BLOCK_SIZE, BLOCK_SIZE, 1.0, &data.A[toffset], BLOCK_SIZE * local_matrix_width, 1.0, &data.B[offset], BLOCK_SIZE * local_matrix_width, &data.result[offset], BLOCK_SIZE * local_matrix_width);
+                                    }
+                                }
+                                break;
+                        default: throw std::runtime_error("Given data handler is not supported by CPU implementation: " + transpose::data_handler::handlerToString(config.programSettings->dataHandlerIdentifier));
                     }
+
+
                     auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
                     int mpi_rank;
