@@ -44,7 +44,15 @@ private:
      * @brief Number of diagonal ranks that will sent the blcoks to themselves
      * 
      */
-    int num_diagonal_ranks;
+    int width_per_rank;
+
+    int pq_row;
+
+    int pq_col;
+
+    int pq_width;
+
+    MPI_Datatype data_block;
 
 public:
 
@@ -57,22 +65,32 @@ public:
     std::unique_ptr<TransposeData>
     generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) override {
         int width_in_blocks = settings.programSettings->matrixSize / settings.programSettings->blockSize;
-        
-        // // Allocate memory for a single device and all its memory banks
-        // auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
 
-        // // Fill the allocated memory with pseudo random values
-        // std::mt19937 gen(mpi_comm_rank);
-        // std::uniform_real_distribution<> dis(-100.0, 100.0);
-        // for (size_t i = 0; i < data_height_per_rank; i++) {
-        //     for (size_t j = 0; j < settings.programSettings->blockSize; j++) {
-        //         d->A[i * settings.programSettings->blockSize + j] = dis(gen);
-        //         d->B[i * settings.programSettings->blockSize + j] = dis(gen);
-        //         d->result[i * settings.programSettings->blockSize + j] = 0.0;
-        //     }
-        // }
+        // A data block is strided!
+        MPI_Type_contiguous(settings.programSettings->blockSize * settings.programSettings->blockSize, MPI_FLOAT, &data_block);
+        MPI_Type_commit(&data_block);
+
+        width_per_rank = width_in_blocks / pq_width;
+        pq_row = mpi_comm_rank / pq_width;
+        pq_col = mpi_comm_rank % pq_width;
+
+        int blocks_per_rank = width_per_rank * width_per_rank;
         
-        // return d;
+        // Allocate memory for a single device and all its memory banks
+        auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
+
+        // Fill the allocated memory with pseudo random values
+        std::mt19937 gen(mpi_comm_rank);
+        std::uniform_real_distribution<> dis(-100.0, 100.0);
+        for (size_t i = 0; i < blocks_per_rank * settings.programSettings->blockSize; i++) {
+            for (size_t j = 0; j < settings.programSettings->blockSize; j++) {
+                d->A[i * settings.programSettings->blockSize + j] = dis(gen);
+                d->B[i * settings.programSettings->blockSize + j] = dis(gen);
+                d->result[i * settings.programSettings->blockSize + j] = 0.0;
+            }
+        }
+        
+        return d;
     }
 
     /**
@@ -84,10 +102,54 @@ public:
     void
     exchangeData(TransposeData& data) override {
 
+        if (pq_col != pq_row) {
+
+            int pair_rank = pq_width * pq_col + pq_row;
+
+            // To re-calculate the matrix transposition locally on this host, we need to 
+            // exchange matrix A for every kernel replication
+            // The order of the matrix blocks does not change during the exchange, because they are distributed diagonally 
+            // and will be handled in the order below:
+            //
+            // . . 1 3
+            // . . . 2
+            // 1 . . .
+            // 3 2 . .
+            MPI_Status status;        
+
+            size_t remaining_data_size = data.numBlocks;
+            size_t offset = 0;
+            while (remaining_data_size > 0) {
+                int next_chunk = (remaining_data_size > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max(): remaining_data_size;
+                MPI_Sendrecv(&data.A[offset], next_chunk, data_block, pair_rank, 0, &data.exchange[offset], next_chunk, data_block, pair_rank, 0, MPI_COMM_WORLD, &status);
+
+                remaining_data_size -= next_chunk;
+                offset += static_cast<size_t>(next_chunk) * static_cast<size_t>(data.blockSize * data.blockSize);
+            }
+            
+            // Exchange window pointers
+            HOST_DATA_TYPE* tmp = data.exchange;
+            data.exchange = data.A;
+            data.A = tmp;
+        }
+
+    }
+
+    void 
+    reference_transpose(TransposeData& data) {
+        for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+            for (size_t j = 0; j < width_per_rank * data.blockSize; j++) {
+                data.A[j * width_per_rank * data.blockSize + i] -= (data.result[i * width_per_rank * data.blockSize + j] - data.B[i * width_per_rank * data.blockSize + j]);
+            }
+        }
     }
 
     DistributedPQTransposeDataHandler(int mpi_rank, int mpi_size) : TransposeDataHandler(mpi_rank, mpi_size) {
-
+        int sqrt_size = std::sqrt(mpi_size);
+        if (sqrt_size * sqrt_size != mpi_size) {
+            throw std::runtime_error("Number of MPI ranks must have an integer as square root since P = Q has to hold!");
+        }
+        pq_width = std::sqrt(mpi_size);
     }
 
 };
