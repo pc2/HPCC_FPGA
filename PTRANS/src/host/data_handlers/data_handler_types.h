@@ -44,7 +44,14 @@ typedef enum _DataHandlerType {
      * @brief Classical distribution of the matrix in a PQ grid
      * 
      */
-    pq
+    pq,
+
+    /**
+     * @brief Automatically detect distribution scheme from kernel file name
+     * 
+     */
+    automatic
+
 
 
 } DataHandlerType;
@@ -52,6 +59,7 @@ typedef enum _DataHandlerType {
 static const std::map<const std::string, DataHandlerType> comm_to_str_map{ 
     {"DIAG", DataHandlerType::diagonal}, 
     {"PQ", DataHandlerType::pq},
+    {"AUTO", DataHandlerType::automatic}
     };
 
 static std::string handlerToString(DataHandlerType c) {
