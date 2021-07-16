@@ -150,21 +150,15 @@ namespace transpose
                     auto startTransfer = std::chrono::high_resolution_clock::now();
                     size_t bufferOffset = 0;
 
-                    // Exchange A data via PCIe and MPI
-                    handler.exchangeData(data);
-
                     for (int r = 0; r < transposeKernelList.size(); r++)
                     {
-                        transCommandQueueList[r].enqueueWriteBuffer(bufferListB[r], CL_FALSE, 0,
+                        transCommandQueueList[r].enqueueWriteBuffer(bufferListB[r], CL_TRUE, 0,
                                               bufferSizeList[r] * sizeof(HOST_DATA_TYPE), &data.B[bufferOffset]);
-                        transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
-                                                bufferSizeList[r] * sizeof(HOST_DATA_TYPE), &data.A[bufferOffset]);
+                        transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_TRUE, 0,
+                                              bufferSizeList[r] * sizeof(HOST_DATA_TYPE), &data.A[bufferOffset]);
                         bufferOffset += bufferSizeList[r];
                     }
-                    for (int r = 0; r < transposeKernelList.size(); r++)
-                    {
-                        transCommandQueueList[r].finish();
-                    }
+
                     auto endTransfer = std::chrono::high_resolution_clock::now();
                     std::chrono::duration<double> transferTime =
                         std::chrono::duration_cast<std::chrono::duration<double>>(endTransfer - startTransfer);
@@ -172,6 +166,24 @@ namespace transpose
                     MPI_Barrier(MPI_COMM_WORLD);
 
                     auto startCalculation = std::chrono::high_resolution_clock::now();
+                    bufferOffset = 0;
+                    for (int r = 0; r < transposeKernelList.size(); r++)
+                    {
+                        transCommandQueueList[r].enqueueReadBuffer(bufferListA[r], CL_TRUE, 0,
+                                               bufferSizeList[r] * sizeof(HOST_DATA_TYPE), &data.A[bufferOffset]);
+                        bufferOffset += bufferSizeList[r];
+                    }
+
+                    // Exchange A data via PCIe and MPI
+                    handler.exchangeData(data);
+
+                    bufferOffset = 0;
+                    for (int r = 0; r < transposeKernelList.size(); r++)
+                    {
+                        transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
+                                                bufferSizeList[r] * sizeof(HOST_DATA_TYPE), &data.A[bufferOffset]);
+                        bufferOffset += bufferSizeList[r];
+                    }
 
                     for (int r = 0; r < transposeKernelList.size(); r++)
                     {
