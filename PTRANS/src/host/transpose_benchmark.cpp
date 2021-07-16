@@ -55,12 +55,10 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
         ("b", "Block size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(BLOCK_SIZE)))
-        ("q", "Height of the PQ grid. The width will be determined by this number and the total number of ranks. Only used for PQ distribution. Ignored otherwise.",
-            cxxopts::value<uint>()->default_value(std::to_string(1)))
-        ("connectivity", "Specify the connectivity for the used bitstream", cxxopts::value<std::string>()->default_value(transpose::fpga_execution::comm_to_str_map.begin()->first))
+        ("connectivity", "Specify the connectivity for the used bitstream", cxxopts::value<std::string>()->default_value(DEFAULT_COMM_TYPE))
         ("distribute-buffers", "Distribute buffers over memory banks. This will use three memory banks instead of one for a single kernel replication, but kernel replications may interfere. This is an Intel only attribute, since buffer placement is decided at compile time for Xilinx FPGAs.")
         ("handler", "Specify the used data handler that distributes the data over devices and memory banks",
-            cxxopts::value<std::string>()->default_value(transpose::data_handler::comm_to_str_map.begin()->first));
+            cxxopts::value<std::string>()->default_value(DEFAULT_DIST_TYPE));
 }
 
 std::unique_ptr<transpose::TransposeExecutionTimings>
@@ -141,15 +139,7 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
     // exchange the data using MPI depending on the chosen distribution scheme
     dataHandler->exchangeData(data);
 
-    size_t block_offset = executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize;
-    for (size_t b = 0; b < data.numBlocks; b++) {
-        for (size_t i = 0; i < executionSettings->programSettings->blockSize; i++) {
-            for (size_t j = 0; j < executionSettings->programSettings->blockSize; j++) {
-                data.A[b * block_offset + j * executionSettings->programSettings->blockSize + i] -= (data.result[b * block_offset + i * executionSettings->programSettings->blockSize + j] 
-                                                                            - data.B[b * block_offset + i * executionSettings->programSettings->blockSize + j]);
-            }
-        }
-    }
+    dataHandler->reference_transpose(data);
 
     double max_error = 0.0;
     for (size_t i = 0; i < executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize * data.numBlocks; i++) {

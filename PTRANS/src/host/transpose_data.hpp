@@ -76,12 +76,6 @@ public:
     transpose::fpga_execution::CommunicationType communicationType;
 
     /**
-     * @brief Height of the PQ grid, if this distribution scheme is used
-     * 
-     */
-    const uint pq_height;
-
-    /**
      * @brief Construct a new Transpose Program Settings object
      * 
      * @param results the result map from parsing the program input parameters
@@ -121,6 +115,12 @@ public:
      * 
      */
     HOST_DATA_TYPE* result;
+
+    /**
+     * @brief Data buffer used during data exchange of matrices
+     * 
+     */
+    HOST_DATA_TYPE* exchange;
 
     /**
      * @brief Number of matrix blocks that are stored in every matrix A, B and result. Blocks are
