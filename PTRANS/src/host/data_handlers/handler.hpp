@@ -79,6 +79,9 @@ public:
     virtual void
     exchangeData(TransposeData& data) = 0;
 
+    virtual void
+    reference_transpose(TransposeData& data) = 0;
+
     /**
      * @brief Construct a new Transpose Data Handler object and initialize the MPI rank and MPI size variables if MPI is used
      * 

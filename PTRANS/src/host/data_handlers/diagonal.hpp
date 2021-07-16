@@ -142,11 +142,13 @@ public:
      */
     void
     exchangeData(TransposeData& data) override {
+
     #ifndef NDEBUG
         // std::cout << "Start data exchange " << mpi_comm_rank << std::endl;
     #endif
         // Only need to exchange data, if rank has a partner
         if (mpi_comm_rank < mpi_comm_size - num_diagonal_ranks) {
+
             int first_upper_half_rank = (mpi_comm_size - num_diagonal_ranks)/2;
             int pair_rank = (mpi_comm_rank >= first_upper_half_rank) ? mpi_comm_rank - first_upper_half_rank : mpi_comm_rank + first_upper_half_rank;
 
@@ -159,22 +161,39 @@ public:
             // . . . 2
             // 1 . . .
             // 3 2 . .
-            MPI_Status status;
+            MPI_Status status;        
 
             size_t remaining_data_size = data.numBlocks;
             size_t offset = 0;
             while (remaining_data_size > 0) {
                 int next_chunk = (remaining_data_size > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max(): remaining_data_size;
-    
-                MPI_Sendrecv_replace(&data.A[offset], next_chunk, data_block, pair_rank, 0, pair_rank, 0, MPI_COMM_WORLD, &status);
+                MPI_Sendrecv(&data.A[offset], next_chunk, data_block, pair_rank, 0, &data.exchange[offset], next_chunk, data_block, pair_rank, 0, MPI_COMM_WORLD, &status);
 
                 remaining_data_size -= next_chunk;
                 offset += static_cast<size_t>(next_chunk) * static_cast<size_t>(data.blockSize * data.blockSize);
             }
+            
+            // Exchange window pointers
+            HOST_DATA_TYPE* tmp = data.exchange;
+            data.exchange = data.A;
+            data.A = tmp;
         }
     #ifndef NDEBUG
         // std::cout << "End data exchange " << mpi_comm_rank << std::endl;
     #endif
+    }
+
+    void 
+    reference_transpose(TransposeData& data) {
+        size_t block_offset = data.blockSize * data.blockSize;
+        for (size_t b = 0; b < data.numBlocks; b++) {
+            for (size_t i = 0; i < data.blockSize; i++) {
+                for (size_t j = 0; j < data.blockSize; j++) {
+                    data.A[b * block_offset + j * data.blockSize + i] -= (data.result[b * block_offset + i * data.blockSize + j] 
+                                                                                - data.B[b * block_offset + i * data.blockSize + j]);
+                }
+            }
+        }
     }
 
     DistributedDiagonalTransposeDataHandler(int mpi_rank, int mpi_size): TransposeDataHandler(mpi_rank, mpi_size) {
