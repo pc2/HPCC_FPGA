@@ -61,9 +61,10 @@ build:PTRANS:
     - make -j 40 all
   artifacts:
     paths:
-      - build/bin/transpose_diagonal_emulate.aocx
-      - build/bin/transpose_PCIE_emulate.aocx
-      - build/bin/transpose_diagonal_c2_emulate.aocx
+      - build/bin/transpose_DIAG_IEC_emulate.aocx
+      - build/bin/transpose_PQ_IEC_emulate.aocx
+      - build/bin/transpose_DIAG_PQ_PCIE_emulate.aocx
+      - build/bin/transpose_c2_DIAG_IEC_emulate.aocx
       - build/bin/Transpose_intel
       - build/bin/Transpose_test_intel
   only:
