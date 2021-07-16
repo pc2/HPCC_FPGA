@@ -31,6 +31,7 @@ SOFTWARE.
 #include "CL/cl.hpp"
 
 /* Project's headers */
+#include "data_handlers/data_handler_types.h"
 
 namespace transpose {
 namespace fpga_execution {
@@ -126,10 +127,18 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         #endif
                 // TODO If SVM, the start index might be different because all replcations 
                 // access the same buffer!
-                err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(0));
-                ASSERT_CL(err) 
-                err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(0));
-                ASSERT_CL(err) 
+                if (config.programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::pq) {
+                        err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(std::sqrt(data.numBlocks)));
+                        ASSERT_CL(err) 
+                        err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(std::sqrt(data.numBlocks)));
+                        ASSERT_CL(err) 
+                }
+                else {
+                        err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(0));
+                        ASSERT_CL(err) 
+                        err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(0));
+                        ASSERT_CL(err) 
+                }
                 err = transposeWriteKernel.setArg(3, static_cast<cl_ulong>(blocks_per_replication));
                 ASSERT_CL(err) 
                 err = transposeReadKernel.setArg(2, static_cast<cl_ulong>(blocks_per_replication));
