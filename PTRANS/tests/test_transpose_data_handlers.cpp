@@ -15,6 +15,7 @@ struct TransposeHandlersTest : testing::Test {
 
     TransposeHandlersTest() {
         bm = std::unique_ptr<transpose::TransposeBenchmark>( new transpose::TransposeBenchmark(global_argc, global_argv));
+        bm->setTransposeDataHandler(transpose::data_handler::DataHandlerType::diagonal);
     }
 
     void SetUp() override {

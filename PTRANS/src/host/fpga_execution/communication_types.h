@@ -47,14 +47,21 @@ typedef enum _CommunicationType {
      * @brief Transpose the matrices on CPU instead of FPGA
      * 
      */
-    cpu_only
+    cpu_only,
+
+    /**
+     * @brief Automatically detect communication type from kernel file name
+     * 
+     */
+    automatic
 
 } CommunicationType;
 
 static const std::map<const std::string, CommunicationType> comm_to_str_map{ 
     {"IEC", CommunicationType::intel_external_channels}, 
     {"PCIE", CommunicationType::pcie_mpi},
-    {"CPU", CommunicationType::cpu_only}
+    {"CPU", CommunicationType::cpu_only},
+    {"AUTO", CommunicationType::automatic}
     };
 
 static std::string commToString(CommunicationType c) {
