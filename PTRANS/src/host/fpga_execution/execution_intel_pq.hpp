@@ -19,8 +19,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef SRC_HOST_INTEL_EXECUTION_H_
-#define SRC_HOST_INTEL_EXECUTION_H_
+#ifndef SRC_HOST_INTEL_PQ_EXECUTION_H_
+#define SRC_HOST_INTEL_PQ_EXECUTION_H_
 
 /* C++ standard library headers */
 #include <memory>
@@ -35,7 +35,7 @@ SOFTWARE.
 
 namespace transpose {
 namespace fpga_execution {
-namespace intel {
+namespace intel_pq {
 
     /**
  * @brief Transpose and add the matrices using the OpenCL kernel
@@ -48,11 +48,9 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
     calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data) {
         int err;
 
-        if (config.programSettings->dataHandlerIdentifier != transpose::data_handler::DataHandlerType::diagonal) {
-                throw std::runtime_error("Used data handler not supported by execution handler!");
-        }
-
         std::vector<size_t> bufferSizeList;
+        std::vector<size_t> bufferStartList;
+        std::vector<size_t> bufferOffsetList;
         std::vector<cl::Buffer> bufferListA;
         std::vector<cl::Buffer> bufferListB;
         std::vector<cl::Buffer> bufferListA_out;
@@ -61,23 +59,30 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         std::vector<cl::CommandQueue> readCommandQueueList;
         std::vector<cl::CommandQueue> writeCommandQueueList;
 
+        size_t local_matrix_width = std::sqrt(data.numBlocks);
+        size_t local_matrix_width_bytes = local_matrix_width * data.blockSize * sizeof(HOST_DATA_TYPE);
+
+        size_t total_offset = 0;
+
         // Setup the kernels depending on the number of kernel replications
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
 
                 // Calculate how many blocks the current kernel replication will need to process.
-                size_t blocks_per_replication = data.numBlocks / config.programSettings->kernelReplications;
-                size_t blocks_remainder = data.numBlocks % config.programSettings->kernelReplications;
+                size_t blocks_per_replication = (local_matrix_width / config.programSettings->kernelReplications * local_matrix_width);
+                size_t blocks_remainder = local_matrix_width % config.programSettings->kernelReplications;
                 if (blocks_remainder > r) {
                         // Catch the case, that the number of blocks is not divisible by the number of kernel replications
-                        blocks_per_replication += 1;
+                        blocks_per_replication += local_matrix_width;
                 }
                 if (blocks_per_replication < 1) {
                         continue;
                 }
 
-                size_t buffer_size = data.blockSize * (data.blockSize * blocks_per_replication);
-
+                size_t buffer_size = blocks_per_replication * data.blockSize * data.blockSize;
                 bufferSizeList.push_back(buffer_size);
+                bufferStartList.push_back(total_offset);
+
+                total_offset += blocks_per_replication;
 
                 int memory_bank_info_a = 0;
                 int memory_bank_info_b = 0;
@@ -98,7 +103,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 }
 #endif
                 cl::Buffer bufferA(*config.context, CL_MEM_READ_ONLY | memory_bank_info_a,
-                                buffer_size* sizeof(HOST_DATA_TYPE));
+                                data.numBlocks * data.blockSize * data.blockSize* sizeof(HOST_DATA_TYPE));
                 cl::Buffer bufferB(*config.context, CL_MEM_READ_ONLY | memory_bank_info_b,
                                 buffer_size * sizeof(HOST_DATA_TYPE));
                 cl::Buffer bufferA_out(*config.context, CL_MEM_WRITE_ONLY | memory_bank_info_out,
@@ -110,42 +115,29 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 cl::Kernel transposeWriteKernel(*config.program, (WRITE_KERNEL_NAME + std::to_string(r)).c_str(), &err);
                 ASSERT_CL(err)
 
-        #ifdef USE_SVM
-                err = clSetKernelArgSVMPointer(transposeReadKernel(), 0,
-                                                reinterpret_cast<void*>(data.A));
-                ASSERT_CL(err)
-                err = clSetKernelArgSVMPointer(transposeWriteKernel(), 0,
-                                                reinterpret_cast<void*>(data.B));
-                ASSERT_CL(err)
-                err = clSetKernelArgSVMPointer(transposeWriteKernel(), 1,
-                                                reinterpret_cast<void*>(data.result));
-                ASSERT_CL(err)
-        #else
                 err = transposeReadKernel.setArg(0, bufferA);
                 ASSERT_CL(err)   
                 err = transposeWriteKernel.setArg(0, bufferB);
                 ASSERT_CL(err)
                 err = transposeWriteKernel.setArg(1, bufferA_out);
                 ASSERT_CL(err)
+
+                // Row offset in blocks
+                err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(bufferStartList[r]));
+                ASSERT_CL(err)   
+                err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(0));
+                ASSERT_CL(err)
         
-        #endif
-                // TODO If SVM, the start index might be different because all replcations 
-                // access the same buffer!
-                if (config.programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::pq) {
-                        err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(std::sqrt(data.numBlocks)));
-                        ASSERT_CL(err) 
-                        err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(std::sqrt(data.numBlocks)));
-                        ASSERT_CL(err) 
-                }
-                else {
-                        err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(0));
-                        ASSERT_CL(err) 
-                        err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(0));
-                        ASSERT_CL(err) 
-                }
-                err = transposeWriteKernel.setArg(3, static_cast<cl_ulong>(blocks_per_replication));
+                // Width or heigth of the whole local matrix in blocks
+                err = transposeWriteKernel.setArg(3, static_cast<cl_ulong>(local_matrix_width));
                 ASSERT_CL(err) 
-                err = transposeReadKernel.setArg(2, static_cast<cl_ulong>(blocks_per_replication));
+                err = transposeReadKernel.setArg(2, static_cast<cl_ulong>(local_matrix_width));
+                ASSERT_CL(err) 
+
+                // total number of blocks that are processed in this replication
+                err = transposeWriteKernel.setArg(4, static_cast<cl_ulong>(blocks_per_replication));
+                ASSERT_CL(err) 
+                err = transposeReadKernel.setArg(3, static_cast<cl_ulong>(blocks_per_replication));
                 ASSERT_CL(err)     
 
                 cl::CommandQueue readQueue(*config.context, *config.device, 0, &err);
@@ -168,32 +160,15 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         for (int repetition = 0; repetition < config.programSettings->numRepetitions; repetition++) {
 
             auto startTransfer = std::chrono::high_resolution_clock::now();
-            size_t bufferOffset = 0;
-        #ifdef USE_SVM
-                clEnqueueSVMMap(readCommandQueueList[r](), CL_TRUE,
-                                CL_MAP_READ,
-                                reinterpret_cast<void *>(data.A),
-                                buffer_size, 0,
-                                NULL, NULL);
-                clEnqueueSVMMap(writeCommandQueueList[r](), CL_TRUE,
-                                CL_MAP_READ,
-                                reinterpret_cast<void *>(data.B),
-                                buffer_size, 0,
-                                NULL, NULL);
-                clEnqueueSVMMap(writeCommandQueueList[r](), CL_TRUE,
-                                CL_MAP_WRITE,
-                                reinterpret_cast<void *>(data.result),
-                                buffer_size, 0,
-                                NULL, NULL);
-        #else
-                for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                        readCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
-                                                bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.A[bufferOffset]);
-                        writeCommandQueueList[r].enqueueWriteBuffer(bufferListB[r], CL_FALSE, 0,
-                                                bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.B[bufferOffset]);
-                        bufferOffset += bufferSizeList[r];
-                }
-        #endif
+
+        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                writeCommandQueueList[r].enqueueWriteBuffer(bufferListB[r], CL_FALSE, 0,
+                                        bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.B[bufferStartList[r] * data.blockSize * data.blockSize]);
+                // TODO: The dull local buffer of A is written to each bank since data is read columnwise. Use write buffer rect to simplify this?
+                readCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
+                                        data.numBlocks * data.blockSize * data.blockSize * sizeof(HOST_DATA_TYPE), data.A);
+
+        }
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 readCommandQueueList[r].finish();
                 writeCommandQueueList[r].finish();
@@ -225,25 +200,12 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                             (endCalculation - startCalculation);
             calculationTimings.push_back(calculationTime.count());
 
-            bufferOffset = 0;
             startTransfer = std::chrono::high_resolution_clock::now();
-        #ifdef USE_SVM
-                clEnqueueSVMUnmap(readCommandQueueList[r](),
-                                        reinterpret_cast<void *>(data.A), 0,
-                                        NULL, NULL);
-                clEnqueueSVMUnmap(writeCommandQueueList[r](),
-                                        reinterpret_cast<void *>(data.B), 0,
-                                        NULL, NULL);
-                clEnqueueSVMUnmap(writeCommandQueueList[r](),
-                                        reinterpret_cast<void *>(data.result), 0,
-                                        NULL, NULL);
-        #else
+
                 for (int r = 0; r < transposeReadKernelList.size(); r++) {
                         writeCommandQueueList[r].enqueueReadBuffer(bufferListA_out[r], CL_TRUE, 0,
-                                                bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.result[bufferOffset]);
-                        bufferOffset += bufferSizeList[r];
+                                                bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.result[bufferStartList[r] * data.blockSize * data.blockSize]);
                 }
-        #endif
             endTransfer = std::chrono::high_resolution_clock::now();
             transferTime +=
                     std::chrono::duration_cast<std::chrono::duration<double>>

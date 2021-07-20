@@ -32,6 +32,7 @@ SOFTWARE.
 
 /* Project's headers */
 #include "fpga_execution/execution_intel.hpp"
+#include "fpga_execution/execution_intel_pq.hpp"
 #include "fpga_execution/execution_pcie.hpp"
 #include "fpga_execution/execution_cpu.hpp"
 #include "fpga_execution/communication_types.h"
@@ -64,7 +65,13 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
 std::unique_ptr<transpose::TransposeExecutionTimings>
 transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
     switch (executionSettings->programSettings->communicationType) {
-        case transpose::fpga_execution::CommunicationType::intel_external_channels: return transpose::fpga_execution::intel::calculate(*executionSettings, data); break;
+        case transpose::fpga_execution::CommunicationType::intel_external_channels: 
+                                if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
+                                    return transpose::fpga_execution::intel::calculate(*executionSettings, data);
+                                }
+                                else {
+                                    return transpose::fpga_execution::intel_pq::calculate(*executionSettings, data);
+                                } break;
         case transpose::fpga_execution::CommunicationType::pcie_mpi : return transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler); break;
 #ifdef MKL_FOUND
         case transpose::fpga_execution::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*executionSettings, data, *dataHandler); break;
