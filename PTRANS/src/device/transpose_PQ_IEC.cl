@@ -127,6 +127,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
 __attribute__((max_global_work_dim(0)))
 __kernel
 void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
+            const ulong offset,
             const ulong width_in_blocks,
             const ulong number_of_blocks) {
 
@@ -136,16 +137,16 @@ void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
     // transpose the matrix block-wise from global memory
     // One extra iteration to empty double buffer
     #pragma loop_coalesce
-    for (ulong block = 0; block < number_of_blocks + 1; block++) {
+    for (ulong block = offset; block < number_of_blocks + offset + 1; block++) {
         // read in block from global memory and store it in a memory efficient manner
         for (ulong row = 0; row < BLOCK_SIZE; row++) {
             for (ulong col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
-                if (block < number_of_blocks) {
+                if (block < number_of_blocks + offset) {
                     ulong block_col = block / width_in_blocks;
                     ulong block_row = block % width_in_blocks;
                     load_chunk_of_a(A, a_block[block & 1], block_row, block_col, width_in_blocks, row, col);
                 }
-                if (block > 0) {
+                if (block > offset) {
                     send_chunk_of_a/*PY_CODE_GEN i*/(a_block[(block - 1) & 1], row, col);
                 }
             }
@@ -171,28 +172,29 @@ __attribute__((max_global_work_dim(0)))
 __kernel
 void transpose_write/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict B,
             __global DEVICE_DATA_TYPE *restrict A_out,
+            const ulong offset,
             const ulong width_in_blocks,
             const ulong number_of_blocks) {
 
     #pragma loop_coalesce
-    for (ulong current_block_row = 0; current_block_row < width_in_blocks; current_block_row++) {
-        for (ulong current_block_col = 0; current_block_col < width_in_blocks; current_block_col++) {
-            // complete matrix transposition and write the result back to global memory
-            for (ulong row = 0; row < BLOCK_SIZE; row++) {
-                for (ulong col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
+    for (ulong block = offset; block < number_of_blocks + offset; block++) {
+        // complete matrix transposition and write the result back to global memory
+        for (ulong row = 0; row < BLOCK_SIZE; row++) {
+            for (ulong col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
 
-                    ch_data data = read_channel_intel(chan_a_in/*PY_CODE_GEN i*/); 
+                ch_data data = read_channel_intel(chan_a_in/*PY_CODE_GEN i*/); 
 
-                    unsigned rot_out = row & (CHANNEL_WIDTH - 1);
-                    // rotate temporary buffer to store data into local buffer
-    __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
-                    for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
-                        ulong ls_address = current_block_row * BLOCK_SIZE * BLOCK_SIZE * width_in_blocks +
-                                            current_block_col * BLOCK_SIZE +
-                                            row * BLOCK_SIZE * width_in_blocks + 
-                                            col * CHANNEL_WIDTH + unroll_count;
-                        A_out[ls_address] = data.data[unroll_count] + B[ls_address];
-                    }
+                ulong block_col = block % width_in_blocks;
+                ulong block_row = block / width_in_blocks;
+
+                // rotate temporary buffer to store data into local buffer
+__attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+                for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+                    ulong ls_address = block_row * BLOCK_SIZE * BLOCK_SIZE * width_in_blocks +
+                                        block_col * BLOCK_SIZE +
+                                        row * BLOCK_SIZE * width_in_blocks + 
+                                        col * CHANNEL_WIDTH + unroll_count;
+                    A_out[ls_address] = data.data[unroll_count] + B[ls_address];
                 }
             }
         }
