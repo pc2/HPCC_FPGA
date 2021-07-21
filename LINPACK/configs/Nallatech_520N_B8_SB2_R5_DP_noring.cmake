@@ -18,5 +18,5 @@ set(DATA_TYPE "double" CACHE STRING "The ued data type for calculation" FORCE)
 set(DEFAULT_MATRIX_SIZE 1024 CACHE STRING "Default matrix size" FORCE)
 set(LOCAL_MEM_BLOCK_LOG 8 CACHE STRING "Used to define the width and height of the block stored in local memory" FORCE)
 set(REGISTER_BLOCK_LOG 2 CACHE STRING "Size of the block that will be manipulated in registers" FORCE)
-set(NUM_REPLICATIONS 2 CACHE STRING "Number of times the matrix multiplication kernel will be replicated" FORCE)
+set(NUM_REPLICATIONS 5 CACHE STRING "Number of times the matrix multiplication kernel will be replicated" FORCE)
 
