@@ -61,6 +61,12 @@ if (NOT HOST_DATA_TYPE OR NOT DEVICE_DATA_TYPE)
     set(DEVICE_DATA_TYPE ${DATA_TYPE})
 endif()
 
+if (DATA_TYPE STREQUAL "double")
+    set(_DP Yes CACHE BOOL "Use double-precision specific code for host and device.")
+    message(STATUS "Set DP flag since data type seems to be double precision")
+    mark_as_advanced(_DP)
+endif()
+
 # check configuration sanity
 if (USE_SVM AND USE_HBM)
     message(ERROR "Misconfiguration: Can not use USE_HBM and USE_SVM at the same time because they target different memory architectures")

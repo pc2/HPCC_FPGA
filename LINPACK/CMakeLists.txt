@@ -21,13 +21,6 @@ if (TEST_EMULATION)
     set(TEST_HOST_FLAGS "--emulation")
 endif()
 
-if (DATA_TYPE STREQUAL "double")
-    set(_DP Yes)
-    message(STATUS "Set DP flag since data type seems to be double precision")
-else()
-    set(_DP No)
-endif()
-
 set(USE_OPENMP Yes)
 set(USE_MPI Yes)
 
