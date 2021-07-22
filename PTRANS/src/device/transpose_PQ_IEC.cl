@@ -129,6 +129,7 @@ __kernel
 void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
             const ulong offset,
             const ulong width_in_blocks,
+            const ulong height_in_blocks,
             const ulong number_of_blocks) {
 
     // local memory double buffer for a matrix block
@@ -142,8 +143,8 @@ void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
         for (ulong row = 0; row < BLOCK_SIZE; row++) {
             for (ulong col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
                 if (block < number_of_blocks + offset) {
-                    ulong block_col = block / width_in_blocks;
-                    ulong block_row = block % width_in_blocks;
+                    ulong block_col = block / height_in_blocks;
+                    ulong block_row = block % height_in_blocks;
                     load_chunk_of_a(A, a_block[block & 1], block_row, block_col, width_in_blocks, row, col);
                 }
                 if (block > offset) {

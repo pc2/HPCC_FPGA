@@ -24,6 +24,7 @@
 #define DEVICE_DATA_TYPE @DEVICE_DATA_TYPE@
 
 #cmakedefine USE_SVM
+#cmakedefine USE_BUFFER_WRITE_RECT_FOR_A
 
 /*
 Short description of the program.
