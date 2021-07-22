@@ -21,14 +21,22 @@
 void
 load_chunk_of_a(__global DEVICE_DATA_TYPE *restrict A,
         DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
-        const ulong current_block,
-        const ulong chunk) {
-
-        ulong local_mem_converted_row = chunk;
+        const uint current_block,
+        const uint width_in_blocks,
+        const uint chunk) {
 
         DEVICE_DATA_TYPE rotate_in[CHANNEL_WIDTH];
 
-        ulong load_address = current_block * BLOCK_SIZE * BLOCK_SIZE + chunk * CHANNEL_WIDTH;
+        ulong block_row = current_block / width_in_blocks;
+        ulong block_col = current_block % width_in_blocks;
+
+        uint row = chunk / (BLOCK_SIZE / CHANNEL_WIDTH);
+        uint col = chunk % (BLOCK_SIZE/CHANNEL_WIDTH);
+
+        ulong load_address = block_row * BLOCK_SIZE * BLOCK_SIZE * width_in_blocks +
+                            block_col * BLOCK_SIZE + 
+                            row * BLOCK_SIZE * width_in_blocks +
+                            col * CHANNEL_WIDTH;
 
         // Blocks of a will be stored columnwise in global memory
 __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
@@ -43,7 +51,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
         for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
             // every block of (N / CHANNEL_WIDTH), rotates the index by 1
             // store in double buffer
-            local_buffer[local_mem_converted_row][unroll_count] = rotate_in[(unroll_count + CHANNEL_WIDTH - rot)
+            local_buffer[chunk][unroll_count] = rotate_in[(unroll_count + CHANNEL_WIDTH - rot)
                                                                                         & (CHANNEL_WIDTH - 1)];
         }
 }
@@ -61,12 +69,12 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
 void
 load_chunk_of_trans_a(const DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
     DEVICE_DATA_TYPE chunk_out[CHANNEL_WIDTH],
-    const ulong chunk) {
+    const uint chunk) {
 
         DEVICE_DATA_TYPE rotate_out[CHANNEL_WIDTH];
 
-        ulong base = (chunk & (BLOCK_SIZE / CHANNEL_WIDTH - 1)) * BLOCK_SIZE;
-        ulong offset = (chunk / (BLOCK_SIZE / CHANNEL_WIDTH)) / CHANNEL_WIDTH;
+        uint base = (chunk & (BLOCK_SIZE / CHANNEL_WIDTH - 1)) * BLOCK_SIZE;
+        uint offset = (chunk / (BLOCK_SIZE / CHANNEL_WIDTH)) / CHANNEL_WIDTH;
 
 
 __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
@@ -92,8 +100,8 @@ void
 add_a_and_b(__global DEVICE_DATA_TYPE *restrict B,
     const DEVICE_DATA_TYPE local_buffer_a[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
     DEVICE_DATA_TYPE local_buffer_a_plus_b[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
-    const ulong block,
-    const ulong chunk) {
+    const uint block,
+    const uint chunk) {
 
     DEVICE_DATA_TYPE data_chunk[CHANNEL_WIDTH];
 
@@ -116,10 +124,20 @@ add_a_and_b(__global DEVICE_DATA_TYPE *restrict B,
 void
 store_a(__global DEVICE_DATA_TYPE *restrict A_out,
     const DEVICE_DATA_TYPE local_buffer_a_plus_b[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
-    const ulong block,
-    const ulong chunk) {
+    const uint block,
+    const uint width_in_blocks,
+    const uint chunk) {
 
-    ulong ls_address = block * BLOCK_SIZE * BLOCK_SIZE + chunk * CHANNEL_WIDTH;
+    ulong block_row = block / width_in_blocks;
+    ulong block_col = block % width_in_blocks;
+
+    uint row = chunk / (BLOCK_SIZE / CHANNEL_WIDTH);
+    uint col = chunk % (BLOCK_SIZE/CHANNEL_WIDTH);
+
+    ulong ls_address = block_row * BLOCK_SIZE * BLOCK_SIZE * width_in_blocks +
+                            block_col * BLOCK_SIZE + 
+                            row * BLOCK_SIZE * width_in_blocks +
+                            col * CHANNEL_WIDTH;
 
     __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
     for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
@@ -140,7 +158,6 @@ store_a(__global DEVICE_DATA_TYPE *restrict A_out,
  * @param A Buffer for matrix A
  * @param B Buffer for matrix B
  * @param A_out Buffer for result matrix
- * @param block_offset The first block that will be processed in the provided buffer
  * @param number_of_blocks The number of blocks that will be processed starting from the block offset
  */
 __attribute__((max_global_work_dim(0)))
@@ -148,8 +165,8 @@ __kernel
 void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
                                 __global DEVICE_DATA_TYPE *restrict B,
                                 __global DEVICE_DATA_TYPE *restrict A_out,
-            const ulong block_offset,
-            const ulong number_of_blocks) {
+            const uint number_of_blocks,
+            const uint width_in_blocks) {
 
     // local memory double buffer for a matrix block
     DEVICE_DATA_TYPE a_block[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH] __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,1))) __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,2)));
@@ -158,17 +175,17 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
 
     // transpose the matrix block-wise from global memory
     #pragma loop_coalesce
-    for (ulong block = block_offset; block < block_offset + number_of_blocks; block++) {
+    for (uint block = 0; block < number_of_blocks; block++) {
         // Combine all three steps in single pipeline to reduce overhead
-        for (ulong chunk = 0; chunk < 3 * BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH; chunk++) {
-            ulong current_chunk = chunk & (BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH - 1);
+        for (uint chunk = 0; chunk < 3 * BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH; chunk++) {
+            uint current_chunk = chunk & (BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH - 1);
             switch (chunk / (BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH)) {
                 // read in block of A from global memory and store it in a memory efficient manner for transpose
-                case 0: load_chunk_of_a(A, a_block, block, current_chunk); break;
+                case 0: load_chunk_of_a(A, a_block, block, width_in_blocks, current_chunk); break;
                 // read transposed block of A from local memory buffer and add B from global memory to it
                 case 1: add_a_and_b(B, a_block, a_plus_b_block, block, current_chunk); break;
                 // Store result in global memory
-                case 2: store_a(A_out, a_plus_b_block, block, current_chunk); break;
+                case 2: store_a(A_out, a_plus_b_block, block, width_in_blocks, current_chunk); break;
             }
         }
     }
