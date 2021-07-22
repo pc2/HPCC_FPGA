@@ -64,6 +64,8 @@ namespace transpose
                 std::vector<cl::Kernel> transposeKernelList;
                 std::vector<cl::CommandQueue> transCommandQueueList;
 
+                size_t local_matrix_width = std::sqrt(data.numBlocks);
+
                 // Setup the kernels depending on the number of kernel replications
                 for (int r = 0; r < config.programSettings->kernelReplications; r++)
                 {
@@ -124,10 +126,12 @@ namespace transpose
                     ASSERT_CL(err)
                     err = transposeKernel.setArg(2, bufferA_out);
                     ASSERT_CL(err)
-                    err = transposeKernel.setArg(3, static_cast<cl_ulong>(0));
+                    err = transposeKernel.setArg(3, static_cast<cl_uint>(blocks_per_replication));
                     ASSERT_CL(err)
-                    err = transposeKernel.setArg(4, static_cast<cl_ulong>(blocks_per_replication));
-                    ASSERT_CL(err)
+                    if (config.programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::pq) {
+                        err = transposeKernel.setArg(4, static_cast<cl_uint>(local_matrix_width));
+                        ASSERT_CL(err)
+                    }
 
                     cl::CommandQueue transQueue(*config.context, *config.device, 0, &err);
                     ASSERT_CL(err)
