@@ -102,8 +102,13 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                         }
                 }
 #endif
+#ifdef USE_BUFFER_WRITE_RECT_FOR_A
                 cl::Buffer bufferA(*config.context, CL_MEM_READ_ONLY | memory_bank_info_a,
-                                data.numBlocks * data.blockSize * data.blockSize* sizeof(HOST_DATA_TYPE));
+                                buffer_size * sizeof(HOST_DATA_TYPE));
+#else
+                cl::Buffer bufferA(*config.context, CL_MEM_READ_ONLY | memory_bank_info_a,
+                                data.numBlocks * data.blockSize * data.blockSize * sizeof(HOST_DATA_TYPE));
+#endif
                 cl::Buffer bufferB(*config.context, CL_MEM_READ_ONLY | memory_bank_info_b,
                                 buffer_size * sizeof(HOST_DATA_TYPE));
                 cl::Buffer bufferA_out(*config.context, CL_MEM_WRITE_ONLY | memory_bank_info_out,
@@ -123,21 +128,30 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 ASSERT_CL(err)
 
                 // Row offset in blocks
-                err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(bufferStartList[r]));
+                err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(0));
                 ASSERT_CL(err)   
                 err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(0));
                 ASSERT_CL(err)
         
-                // Width or heigth of the whole local matrix in blocks
+                // Width of the whole local matrix in blocks
                 err = transposeWriteKernel.setArg(3, static_cast<cl_ulong>(local_matrix_width));
                 ASSERT_CL(err) 
+#ifndef USE_BUFFER_WRITE_RECT_FOR_A
                 err = transposeReadKernel.setArg(2, static_cast<cl_ulong>(local_matrix_width));
+                ASSERT_CL(err) 
+#else
+                err = transposeReadKernel.setArg(2, static_cast<cl_ulong>((bufferSizeList[r]) / (local_matrix_width * data.blockSize * data.blockSize)));
+                ASSERT_CL(err) 
+#endif
+
+                // Height of the whole local matrix in blocks
+                err = transposeReadKernel.setArg(3, static_cast<cl_ulong>(local_matrix_width ));
                 ASSERT_CL(err) 
 
                 // total number of blocks that are processed in this replication
                 err = transposeWriteKernel.setArg(4, static_cast<cl_ulong>(blocks_per_replication));
                 ASSERT_CL(err) 
-                err = transposeReadKernel.setArg(3, static_cast<cl_ulong>(blocks_per_replication));
+                err = transposeReadKernel.setArg(4, static_cast<cl_ulong>(blocks_per_replication));
                 ASSERT_CL(err)     
 
                 cl::CommandQueue readQueue(*config.context, *config.device, 0, &err);
@@ -164,9 +178,25 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].enqueueWriteBuffer(bufferListB[r], CL_FALSE, 0,
                                         bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.B[bufferStartList[r] * data.blockSize * data.blockSize]);
-                // TODO: The dull local buffer of A is written to each bank since data is read columnwise. Use write buffer rect to simplify this?
+#ifdef USE_BUFFER_WRITE_RECT_FOR_A
+                cl::size_t<3> deviceOffset;
+                cl::size_t<3> hostOffset;
+                hostOffset[0] = (bufferStartList[r]) / (local_matrix_width) * data.blockSize * sizeof(HOST_DATA_TYPE);
+                cl::size_t<3> rectShape;
+                rectShape[0] = (bufferSizeList[r]) / (local_matrix_width * data.blockSize) * sizeof(HOST_DATA_TYPE);
+                rectShape[1] = local_matrix_width* data.blockSize;
+                rectShape[2] = 1L;
+                readCommandQueueList[r].enqueueWriteBufferRect(bufferListA[r],CL_FALSE, 
+                                                deviceOffset, 
+                                                hostOffset, 
+                                                rectShape,
+                                                (bufferSizeList[r]) / (local_matrix_width * data.blockSize) * sizeof(HOST_DATA_TYPE), 0,
+                                                local_matrix_width* data.blockSize*sizeof(HOST_DATA_TYPE), 0,
+                                                data.A);
+#else
                 readCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
                                         data.numBlocks * data.blockSize * data.blockSize * sizeof(HOST_DATA_TYPE), data.A);
+#endif
 
         }
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
