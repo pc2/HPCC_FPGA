@@ -11,6 +11,7 @@ This file contains all changes made to the source code for each release.
 #### Added:
 - CPU only implementation or diagonal and PQ data distribution
 - FPGA kernel with communication via PCIe and MPI for diagonal and PQ distribution
+- FPGA kernel with communication via external channels for PQ distribution
 
 
 ## 1.4
