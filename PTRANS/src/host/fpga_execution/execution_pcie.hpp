@@ -128,10 +128,6 @@ namespace transpose
                     ASSERT_CL(err)
                     err = transposeKernel.setArg(3, static_cast<cl_uint>(blocks_per_replication));
                     ASSERT_CL(err)
-                    if (config.programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::pq) {
-                        err = transposeKernel.setArg(4, static_cast<cl_uint>(local_matrix_width));
-                        ASSERT_CL(err)
-                    }
 
                     cl::CommandQueue transQueue(*config.context, *config.device, 0, &err);
                     ASSERT_CL(err)

@@ -19,8 +19,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef SRC_HOST_INTEL_PQ_EXECUTION_H_
-#define SRC_HOST_INTEL_PQ_EXECUTION_H_
+#ifndef SRC_HOST_PCIE_PQ_EXECUTION_H_
+#define SRC_HOST_PCIE_PQ_EXECUTION_H_
 
 /* C++ standard library headers */
 #include <memory>
@@ -35,7 +35,7 @@ SOFTWARE.
 
 namespace transpose {
 namespace fpga_execution {
-namespace intel_pq {
+namespace pcie_pq {
 
     /**
  * @brief Transpose and add the matrices using the OpenCL kernel
@@ -45,7 +45,7 @@ namespace intel_pq {
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
 static  std::unique_ptr<transpose::TransposeExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data) {
+    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data, transpose::data_handler::TransposeDataHandler &handler) {
         int err;
 
         std::vector<size_t> bufferSizeList;
@@ -54,10 +54,8 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         std::vector<cl::Buffer> bufferListA;
         std::vector<cl::Buffer> bufferListB;
         std::vector<cl::Buffer> bufferListA_out;
-        std::vector<cl::Kernel> transposeReadKernelList;
-        std::vector<cl::Kernel> transposeWriteKernelList;
-        std::vector<cl::CommandQueue> readCommandQueueList;
-        std::vector<cl::CommandQueue> writeCommandQueueList;
+        std::vector<cl::Kernel> transposeKernelList;
+        std::vector<cl::CommandQueue> transCommandQueueList;
 
         size_t local_matrix_width = std::sqrt(data.numBlocks);
         size_t local_matrix_width_bytes = local_matrix_width * data.blockSize * sizeof(HOST_DATA_TYPE);
@@ -115,61 +113,41 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                                 buffer_size * sizeof(HOST_DATA_TYPE));
 
                 // TODO the kernel name may need to be changed for Xilinx support
-                cl::Kernel transposeReadKernel(*config.program, (READ_KERNEL_NAME + std::to_string(r)).c_str(), &err);
-                ASSERT_CL(err)
-                cl::Kernel transposeWriteKernel(*config.program, (WRITE_KERNEL_NAME + std::to_string(r)).c_str(), &err);
+                cl::Kernel transposeKernel(*config.program, ("transpose" + std::to_string(r)).c_str(), &err);
                 ASSERT_CL(err)
 
-                err = transposeReadKernel.setArg(0, bufferA);
-                ASSERT_CL(err)   
-                err = transposeWriteKernel.setArg(0, bufferB);
-                ASSERT_CL(err)
-                err = transposeWriteKernel.setArg(1, bufferA_out);
-                ASSERT_CL(err)
 
-                // Row offset in blocks 
-                err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(0));
+                err = transposeKernel.setArg(0, bufferA);
                 ASSERT_CL(err)
-        
-                // Width of the whole local matrix in blocks
-                err = transposeWriteKernel.setArg(3, static_cast<cl_ulong>(local_matrix_width));
-                ASSERT_CL(err) 
+                err = transposeKernel.setArg(1, bufferB);
+                ASSERT_CL(err)
+                err = transposeKernel.setArg(2, bufferA_out);
+                ASSERT_CL(err)
+                err = transposeKernel.setArg(4, static_cast<cl_uint>(blocks_per_replication));
+                ASSERT_CL(err)
+                err = transposeKernel.setArg(5, static_cast<cl_uint>(local_matrix_width));
+                ASSERT_CL(err)
 #ifndef USE_BUFFER_WRITE_RECT_FOR_A
-                // Row offset in blocks
-                err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(bufferStartList[r]));
-                ASSERT_CL(err)   
-                err = transposeReadKernel.setArg(2, static_cast<cl_ulong>(local_matrix_width));
+                err = transposeKernel.setArg(6, static_cast<cl_uint>(local_matrix_width));
                 ASSERT_CL(err) 
+                err = transposeKernel.setArg(3, static_cast<cl_uint>(bufferStartList[r]));
+                ASSERT_CL(err)
 #else
-                // Row offset in blocks
-                err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(0));
+                err = transposeKernel.setArg(6, static_cast<cl_uint>((bufferSizeList[r]) / (local_matrix_width * data.blockSize * data.blockSize)));
                 ASSERT_CL(err) 
-                err = transposeReadKernel.setArg(2, static_cast<cl_ulong>((bufferSizeList[r]) / (local_matrix_width * data.blockSize * data.blockSize)));
-                ASSERT_CL(err) 
+                err = transposeKernel.setArg(3, static_cast<cl_uint>(0));
+                ASSERT_CL(err)
 #endif
+ 
 
-                // Height of the whole local matrix in blocks
-                err = transposeReadKernel.setArg(3, static_cast<cl_ulong>(local_matrix_width ));
-                ASSERT_CL(err) 
-
-                // total number of blocks that are processed in this replication
-                err = transposeWriteKernel.setArg(4, static_cast<cl_ulong>(blocks_per_replication));
-                ASSERT_CL(err) 
-                err = transposeReadKernel.setArg(4, static_cast<cl_ulong>(blocks_per_replication));
-                ASSERT_CL(err)     
-
-                cl::CommandQueue readQueue(*config.context, *config.device, 0, &err);
-                ASSERT_CL(err)
-                cl::CommandQueue writeQueue(*config.context, *config.device, 0, &err);
+                cl::CommandQueue transQueue(*config.context, *config.device, 0, &err);
                 ASSERT_CL(err)
 
-                readCommandQueueList.push_back(readQueue);
-                writeCommandQueueList.push_back(writeQueue);
+                transCommandQueueList.push_back(transQueue);
                 bufferListA.push_back(bufferA);
                 bufferListB.push_back(bufferB);
                 bufferListA_out.push_back(bufferA_out);
-                transposeReadKernelList.push_back(transposeReadKernel);
-                transposeWriteKernelList.push_back(transposeWriteKernel);
+                transposeKernelList.push_back(transposeKernel);
         }
 
         std::vector<double> transferTimings;
@@ -179,8 +157,8 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 
             auto startTransfer = std::chrono::high_resolution_clock::now();
 
-        for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                writeCommandQueueList[r].enqueueWriteBuffer(bufferListB[r], CL_FALSE, 0,
+        for (int r = 0; r < transposeKernelList.size(); r++) {
+                transCommandQueueList[r].enqueueWriteBuffer(bufferListB[r], CL_FALSE, 0,
                                         bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.B[bufferStartList[r] * data.blockSize * data.blockSize]);
 #ifdef USE_BUFFER_WRITE_RECT_FOR_A
                 cl::size_t<3> deviceOffset;
@@ -190,7 +168,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 rectShape[0] = (bufferSizeList[r]) / (local_matrix_width * data.blockSize) * sizeof(HOST_DATA_TYPE);
                 rectShape[1] = local_matrix_width* data.blockSize;
                 rectShape[2] = 1L;
-                readCommandQueueList[r].enqueueWriteBufferRect(bufferListA[r],CL_FALSE, 
+                transCommandQueueList[r].enqueueWriteBufferRect(bufferListA[r],CL_FALSE, 
                                                 deviceOffset, 
                                                 hostOffset, 
                                                 rectShape,
@@ -198,14 +176,13 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                                                 local_matrix_width* data.blockSize*sizeof(HOST_DATA_TYPE), 0,
                                                 data.A);
 #else
-                readCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
+                transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
                                         data.numBlocks * data.blockSize * data.blockSize * sizeof(HOST_DATA_TYPE), data.A);
 #endif
 
         }
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                readCommandQueueList[r].finish();
-                writeCommandQueueList[r].finish();
+            for (int r = 0; r < transposeKernelList.size(); r++) {
+                transCommandQueueList[r].finish();
             }
             auto endTransfer = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> transferTime =
@@ -215,20 +192,74 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
             MPI_Barrier(MPI_COMM_WORLD);
 
             auto startCalculation = std::chrono::high_resolution_clock::now();
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                writeCommandQueueList[r].enqueueTask(transposeWriteKernelList[r]);
-                readCommandQueueList[r].enqueueTask(transposeReadKernelList[r]);
-            }
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                writeCommandQueueList[r].finish();
-                readCommandQueueList[r].finish();
-            }
+
+        for (int r = 0; r < transposeKernelList.size(); r++)
+        {
+#ifdef USE_BUFFER_WRITE_RECT_FOR_A
+                cl::size_t<3> deviceOffset;
+                cl::size_t<3> hostOffset;
+                hostOffset[0] = (bufferStartList[r]) / (local_matrix_width) * data.blockSize * sizeof(HOST_DATA_TYPE);
+                cl::size_t<3> rectShape;
+                rectShape[0] = (bufferSizeList[r]) / (local_matrix_width * data.blockSize) * sizeof(HOST_DATA_TYPE);
+                rectShape[1] = local_matrix_width* data.blockSize;
+                rectShape[2] = 1L;
+                transCommandQueueList[r].enqueueReadBufferRect(bufferListA[r],CL_FALSE, 
+                                                deviceOffset, 
+                                                hostOffset, 
+                                                rectShape,
+                                                (bufferSizeList[r]) / (local_matrix_width * data.blockSize) * sizeof(HOST_DATA_TYPE), 0,
+                                                local_matrix_width* data.blockSize*sizeof(HOST_DATA_TYPE), 0,
+                                                data.A);
+#else
+                transCommandQueueList[r].enqueueReadBuffer(bufferListA[r], CL_FALSE, 0,
+                                        data.numBlocks * data.blockSize * data.blockSize * sizeof(HOST_DATA_TYPE), data.A);
+#endif
+        }
+
+        // Exchange A data via PCIe and MPI
+        handler.exchangeData(data);
+
+        for (int r = 0; r < transposeKernelList.size(); r++)
+        {
+#ifdef USE_BUFFER_WRITE_RECT_FOR_A
+                cl::size_t<3> deviceOffset;
+                cl::size_t<3> hostOffset;
+                hostOffset[0] = (bufferStartList[r]) / (local_matrix_width) * data.blockSize * sizeof(HOST_DATA_TYPE);
+                cl::size_t<3> rectShape;
+                rectShape[0] = (bufferSizeList[r]) / (local_matrix_width * data.blockSize) * sizeof(HOST_DATA_TYPE);
+                rectShape[1] = local_matrix_width* data.blockSize;
+                rectShape[2] = 1L;
+                transCommandQueueList[r].enqueueWriteBufferRect(bufferListA[r],CL_FALSE, 
+                                                deviceOffset, 
+                                                hostOffset, 
+                                                rectShape,
+                                                (bufferSizeList[r]) / (local_matrix_width * data.blockSize) * sizeof(HOST_DATA_TYPE), 0,
+                                                local_matrix_width* data.blockSize*sizeof(HOST_DATA_TYPE), 0,
+                                                data.A);
+#else
+                transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
+                                        data.numBlocks * data.blockSize * data.blockSize * sizeof(HOST_DATA_TYPE), data.A);
+#endif
+        }
+
+        for (int r = 0; r < transposeKernelList.size(); r++)
+        {
+        transCommandQueueList[r].enqueueTask(transposeKernelList[r]);
+        }
+        for (int r = 0; r < transposeKernelList.size(); r++)
+        {
+        transCommandQueueList[r].finish();
+        }
             auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
                 int mpi_rank;
                 MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
                 std::cout << "Rank " << mpi_rank << ": " << "Done i=" << repetition << std::endl;
 #endif
+
+        // Transfer back data for next repetition!
+        handler.exchangeData(data);
+
             std::chrono::duration<double> calculationTime =
                     std::chrono::duration_cast<std::chrono::duration<double>>
                             (endCalculation - startCalculation);
@@ -236,8 +267,8 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 
             startTransfer = std::chrono::high_resolution_clock::now();
 
-                for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                        writeCommandQueueList[r].enqueueReadBuffer(bufferListA_out[r], CL_TRUE, 0,
+                for (int r = 0; r < transposeKernelList.size(); r++) {
+                        transCommandQueueList[r].enqueueReadBuffer(bufferListA_out[r], CL_TRUE, 0,
                                                 bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.result[bufferStartList[r] * data.blockSize * data.blockSize]);
                 }
             endTransfer = std::chrono::high_resolution_clock::now();

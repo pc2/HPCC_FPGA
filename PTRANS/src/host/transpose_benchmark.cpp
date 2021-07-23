@@ -34,6 +34,7 @@ SOFTWARE.
 #include "fpga_execution/execution_intel.hpp"
 #include "fpga_execution/execution_intel_pq.hpp"
 #include "fpga_execution/execution_pcie.hpp"
+#include "fpga_execution/execution_pcie_pq.hpp"
 #include "fpga_execution/execution_cpu.hpp"
 #include "fpga_execution/communication_types.h"
 
@@ -72,7 +73,13 @@ transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
                                 else {
                                     return transpose::fpga_execution::intel_pq::calculate(*executionSettings, data);
                                 } break;
-        case transpose::fpga_execution::CommunicationType::pcie_mpi : return transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler); break;
+        case transpose::fpga_execution::CommunicationType::pcie_mpi :                                 
+                                if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
+                                    return transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler);
+                                }
+                                else {
+                                    return transpose::fpga_execution::pcie_pq::calculate(*executionSettings, data, *dataHandler);
+                                } break;
 #ifdef MKL_FOUND
         case transpose::fpga_execution::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*executionSettings, data, *dataHandler); break;
 #endif
