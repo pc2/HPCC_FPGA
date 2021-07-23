@@ -74,7 +74,8 @@ build:PTRANS:
     paths:
       - build/bin/transpose_DIAG_IEC_emulate.aocx
       - build/bin/transpose_PQ_IEC_emulate.aocx
-      - build/bin/transpose_DIAG_PQ_PCIE_emulate.aocx
+      - build/bin/transpose_PQ_PCIE_emulate.aocx
+      - build/bin/transpose_DIAG_PCIE_emulate.aocx
       - build/bin/transpose_c2_DIAG_IEC_emulate.aocx
       - build/bin/Transpose_intel
       - build/bin/Transpose_test_intel
