@@ -38,15 +38,23 @@ namespace fpga_execution {
 namespace pcie_pq {
 
     /**
- * @brief Transpose and add the matrices using the OpenCL kernel
+ * @brief Transpose and add the matrices using the OpenCL kernel using a PQ distribution and PCIe+MPI over the host for communication
  * 
  * @param config The progrma configuration
  * @param data data object that contains all required data for the execution on the FPGA
+ * @param handler data handler instance that should be used to exchange data between hosts
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
 static  std::unique_ptr<transpose::TransposeExecutionTimings>
     calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data, transpose::data_handler::TransposeDataHandler &handler) {
         int err;
+
+        if (config.programSettings->dataHandlerIdentifier != transpose::data_handler::DataHandlerType::pq) {
+                throw std::runtime_error("Used data handler not supported by execution handler!");
+        }
+#ifdef USE_SVM
+        throw new std::runtime_error("SVM not supported in the host implementation of this communication method");
+#endif
 
         std::vector<size_t> bufferSizeList;
         std::vector<size_t> bufferStartList;

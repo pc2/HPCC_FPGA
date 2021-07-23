@@ -42,10 +42,11 @@ namespace transpose
         {
 
             /**
- * @brief Transpose and add the matrices using the OpenCL kernel
+ * @brief Transpose and add the matrices using the OpenCL kernel using a diagonal distribution and PCIe+MPI over the host for communication
  * 
  * @param config The progrma configuration
  * @param data data object that contains all required data for the execution on the FPGA
+ * @param handler data handler instance that should be used to exchange data between hosts
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
             static std::unique_ptr<transpose::TransposeExecutionTimings>
@@ -56,6 +57,9 @@ namespace transpose
 #ifdef USE_SVM
                 throw new std::runtime_error("SVM not supported in the host implementation of this communication method");
 #endif
+                if (config.programSettings->dataHandlerIdentifier != transpose::data_handler::DataHandlerType::diagonal) {
+                        throw std::runtime_error("Used data handler not supported by execution handler!");
+                }
 
                 std::vector<size_t> bufferSizeList;
                 std::vector<cl::Buffer> bufferListA;

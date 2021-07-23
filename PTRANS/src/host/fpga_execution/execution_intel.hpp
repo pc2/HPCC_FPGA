@@ -38,7 +38,7 @@ namespace fpga_execution {
 namespace intel {
 
     /**
- * @brief Transpose and add the matrices using the OpenCL kernel
+ * @brief Transpose and add the matrices using the OpenCL kernel using a diagonal distribution and Intel external channels for communication
  * 
  * @param config The progrma configuration
  * @param data data object that contains all required data for the execution on the FPGA
