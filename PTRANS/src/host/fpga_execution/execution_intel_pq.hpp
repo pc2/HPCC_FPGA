@@ -229,7 +229,17 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
             }
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].finish();
+#ifndef NDEBUG
+                int mpi_rank;
+                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+                std::cout << "Rank " << mpi_rank << ": " << "Write done r=" << r << ", i=" << repetition << std::endl;
+#endif
                 readCommandQueueList[r].finish();
+#ifndef NDEBUG
+                mpi_rank;
+                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+                std::cout << "Rank " << mpi_rank << ": " << "Read done r=" << r << ", i=" << repetition << std::endl;
+#endif
             }
             auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
