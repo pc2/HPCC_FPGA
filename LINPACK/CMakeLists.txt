@@ -11,6 +11,9 @@ set(TEST_UNIFORM No CACHE BOOL "All tests executed by CTest will be executed wit
 set(TEST_EMULATION Yes CACHE BOOL "All tests executed by CTest will be executed with emulation kernels")
 set(DISTRIBUTED_VALIDATION Yes CACHE BOOL "Use the distributed validation scheme instead of validation on rank 0")
 
+# TODO Change this to be a runtime decision similar to b_eff implementation in SMI branch
+set(USE_PCIE_MPI_COMMUNICATION No CACHE BOOL "If true, use PCIe + MPI communication. Use Intel externl channels otherwise. Needs a compatible bitstream to work!")
+
 if (TEST_UNIFORM)
     set(TEST_HOST_FLAGS "--uniform")
 endif()

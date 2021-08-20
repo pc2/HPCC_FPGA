@@ -369,7 +369,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
             for (int j = 0; j < n; j++) {
                 // For each element below it
                 for (int i = 0; i < n; i++) {
-                    std::cout << ref_result->A[n * j + i] << ", ";
+                    std::cout << std::abs(ref_result->A[n * j + i] - data.A[n * j + i]) << ", ";
                 }
                 std::cout << std::endl;
             }
