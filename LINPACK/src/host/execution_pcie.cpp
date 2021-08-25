@@ -31,7 +31,6 @@ SOFTWARE.
 #include <list>
 
 /* External library headers */
-#include "CL/cl2.hpp"
 #if QUARTUS_MAJOR_VERSION > 18
 #include "CL/cl_ext_intelfpga.h"
 #endif
@@ -325,10 +324,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             left_queues.back().finish();
 
             // Send the left and top blocks to all other ranks so they can be used to update all inner blocks
-            for (int lbi=0; lbi < blocks_per_row; lbi++) {
+            for (int lbi=0; lbi < blocks_per_row - local_block_row; lbi++) {
                 MPI_Bcast(left_blocks[lbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_FLOAT, local_block_row_remainder, row_communicator);
             }
-            for (int tbi=0; tbi < blocks_per_row; tbi++) {
+            for (int tbi=0; tbi < blocks_per_row  - local_block_row; tbi++) {
                 MPI_Bcast(top_blocks[tbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_FLOAT, local_block_row_remainder, col_communicator);
             }
 
