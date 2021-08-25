@@ -31,7 +31,6 @@ SOFTWARE.
 #include <list>
 
 /* External library headers */
-#include "CL/cl2.hpp"
 #if QUARTUS_MAJOR_VERSION > 18
 #include "CL/cl_ext_intelfpga.h"
 #endif
