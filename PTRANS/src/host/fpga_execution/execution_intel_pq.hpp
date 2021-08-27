@@ -27,10 +27,8 @@ SOFTWARE.
 #include <vector>
 #include <chrono>
 
-/* External library headers */
-#include "CL/cl.hpp"
-
 /* Project's headers */
+#include "transpose_benchmark.hpp"
 #include "data_handlers/data_handler_types.h"
 
 namespace transpose {
