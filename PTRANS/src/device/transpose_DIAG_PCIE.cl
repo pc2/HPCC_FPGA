@@ -127,7 +127,7 @@ store_a(__global DEVICE_DATA_TYPE *restrict A_out,
     }
 }
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
+// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
 
 /**
  * Read blocks of matrix A and transpose them in memory.
