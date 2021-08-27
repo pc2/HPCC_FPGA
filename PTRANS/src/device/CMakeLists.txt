@@ -1,4 +1,6 @@
 
+set(KERNEL_REPLICATION_ENABLED Yes CACHE INTERNAL "Enables kernel replication in the CMake target generation function")
+
 include(${CMAKE_SOURCE_DIR}/../cmake/kernelTargets.cmake)
 
 if (INTELFPGAOPENCL_FOUND)
@@ -9,9 +11,9 @@ if (INTELFPGAOPENCL_FOUND)
 endif()
 
 if (VITIS_FOUND)
-    generate_kernel_targets_xilinx(transpose_diagonal)
-    add_test(NAME test_emulation_diagonal_xilinx COMMAND Transpose_xilinx -f transpose_diagonal_emulate.xclbin -n 1 -m 1 WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
-    add_test(NAME test_output_parsing_xilinx COMMAND ${CMAKE_SOURCE_DIR}/../scripts/evaluation/execute_and_parse.sh ./Transpose_xilinx -f transpose_diagonal_emulate.xclbin -n 1 -m 1
+    generate_kernel_targets_xilinx(transpose_PQ_PCIE transpose_DIAG_PCIE)
+    add_test(NAME test_emulation_PQ_PCIE_xilinx COMMAND Transpose_xilinx -f transpose_PQ_PCIE_emulate.xclbin -n 1 -m 1 WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+    add_test(NAME test_output_parsing_xilinx COMMAND ${CMAKE_SOURCE_DIR}/../scripts/evaluation/execute_and_parse.sh ./Transpose_xilinx -f transpose_PQ_PCIE_emulate.xclbin -n 1 -m 1
             WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 endif()
 
