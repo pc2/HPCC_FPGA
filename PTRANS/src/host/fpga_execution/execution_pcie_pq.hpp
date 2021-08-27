@@ -27,10 +27,8 @@ SOFTWARE.
 #include <vector>
 #include <chrono>
 
-/* External library headers */
-#include "CL/cl.hpp"
-
 /* Project's headers */
+#include "transpose_benchmark.hpp"
 #include "data_handlers/data_handler_types.h"
 
 namespace transpose {
@@ -120,10 +118,16 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 cl::Buffer bufferA_out(*config.context, CL_MEM_WRITE_ONLY | memory_bank_info_out,
                                 buffer_size * sizeof(HOST_DATA_TYPE));
 
-                // TODO the kernel name may need to be changed for Xilinx support
+#ifdef INTEL_FPGA
                 cl::Kernel transposeKernel(*config.program, ("transpose" + std::to_string(r)).c_str(), &err);
                 ASSERT_CL(err)
-
+#endif
+#ifdef XILINX_FPGA
+        // create the kernels
+        cl::Kernel transposeKernel(*config.program, ("transpose0:{transpose0_" +  std::to_string(r + 1) + "}").c_str(),
+                                        &err);
+        ASSERT_CL(err);
+#endif
 
                 err = transposeKernel.setArg(0, bufferA);
                 ASSERT_CL(err)
