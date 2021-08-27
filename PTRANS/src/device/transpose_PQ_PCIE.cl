@@ -105,9 +105,9 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
                     rotate_in[unroll_count] = A[ls_address_trans + col * CHANNEL_WIDTH + unroll_count];
                 }
 
-                uint chunk = row * BLOCK_SIZE + col;
+                uint chunk = row * (BLOCK_SIZE / CHANNEL_WIDTH) + col;
 
-                unsigned rot = (chunk / (BLOCK_SIZE / CHANNEL_WIDTH)) & (CHANNEL_WIDTH - 1);
+                unsigned rot = (row) & (CHANNEL_WIDTH - 1);
 
                 // rotate temporary buffer to store data into local buffer
                 __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
