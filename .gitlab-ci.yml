@@ -97,7 +97,8 @@ build:LINPACK:
     - make -j 40 all
   artifacts:
     paths:
-      - build/bin/hpl_torus_emulate.aocx
+      - build/bin/hpl_torus_IEC_emulate.aocx
+      - build/bin/hpl_torus_PCIE_emulate.aocx
       - build/bin/Linpack_intel
       - build/bin/Linpack_test_intel
   only:
