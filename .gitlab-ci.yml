@@ -93,11 +93,10 @@ build:LINPACK:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3 -DUSE_PCIE_MPI_COMMUNICATION=Yes
     - make -j 40 all
   artifacts:
     paths:
-      - build/bin/hpl_torus_IEC_emulate.aocx
       - build/bin/hpl_torus_PCIE_emulate.aocx
       - build/bin/Linpack_intel
       - build/bin/Linpack_test_intel
