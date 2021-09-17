@@ -2,6 +2,15 @@ stages:
     - build
     - test
 
+variables:
+  SCHEDULER_PARAMETERS: "-A pc2-mitarbeiter -p short"
+
+default:
+  tags:
+    - jacamar
+  before_script:
+    - module load intelFPGA_pro/20.4.0_max bittware_520n/20.4.0_max intel devel/CMake/3.15.3-GCCcore-8.3.0
+
 ###
 #
 # Build all benchmarks
