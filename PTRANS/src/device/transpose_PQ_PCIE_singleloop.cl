@@ -44,9 +44,8 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
     DEVICE_DATA_TYPE a_plus_b_block[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH] __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,1))) __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,2)));
 
     // transpose the matrix block-wise from global memory
+    #pragma loop_coalesce
     for (uint tblock = 0; tblock < 3 * number_of_blocks; tblock++) {
-        // Load A to local memory
-        #pragma loop_coalesce
         for (uint row = 0; row < BLOCK_SIZE; row++) {
             __attribute__((xcl_pipeline_loop(1)))
             for (uint col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
