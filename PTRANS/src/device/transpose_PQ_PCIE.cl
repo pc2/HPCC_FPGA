@@ -8,47 +8,6 @@
 
 #include "parameters.h"
 
-
-/**
-* send a chunk of A into local memory in a reordered fashion
-* to transpose it half-way
-*
-*
-* @param A Buffer for matrix A
-* @param local_buffer The local memory buffer the block is stored into
-* @param current_block Index of the current block used to calculate the offset in global memory
-*
-*/
-void
-load_chunk_of_trans_a(const DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
-    DEVICE_DATA_TYPE chunk_out[CHANNEL_WIDTH],
-    const uint chunk) {
-
-        DEVICE_DATA_TYPE rotate_out[CHANNEL_WIDTH];
-
-        uint base = (chunk & (BLOCK_SIZE / CHANNEL_WIDTH - 1)) * BLOCK_SIZE;
-        uint offset = (chunk / (BLOCK_SIZE / CHANNEL_WIDTH)) / CHANNEL_WIDTH;
-
-
-__attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
-        for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
-            unsigned rot = ((CHANNEL_WIDTH + unroll_count - (chunk / (BLOCK_SIZE / CHANNEL_WIDTH))) * (BLOCK_SIZE / CHANNEL_WIDTH)) &
-                                                                                        (BLOCK_SIZE - 1);
-            unsigned row_rotate = base + offset + rot;
-            rotate_out[unroll_count] = local_buffer[row_rotate][unroll_count];
-        }
-
-        unsigned rot_out = (chunk / (BLOCK_SIZE / CHANNEL_WIDTH)) & (CHANNEL_WIDTH - 1);
-
-        // rotate temporary buffer to store data into local buffer
-        __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
-        for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
-            chunk_out[unroll_count] = rotate_out[(unroll_count + rot_out) & (CHANNEL_WIDTH - 1)];
-        }
-
-        
-}
-
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
 
 /**
@@ -89,6 +48,7 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
         // Load A to local memory
         #pragma loop_coalesce
         for (uint row = 0; row < BLOCK_SIZE; row++) {
+            __attribute__((xcl_pipeline_loop(1)))
             for (uint col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
                 ulong block_row_a = (block + offset) / width_in_blocks;
                 ulong block_col_a = (block + offset) % width_in_blocks;
@@ -123,6 +83,7 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
         // Read transposed A from local memory and add B 
         #pragma loop_coalesce
         for (uint row = 0; row < BLOCK_SIZE; row++) {
+            __attribute__((xcl_pipeline_loop(1)))
             for (uint col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
                 ulong block_row = block / width_in_blocks;
                 ulong block_col = block % width_in_blocks;
@@ -130,9 +91,28 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
                         block_col * BLOCK_SIZE + 
                         row * BLOCK_SIZE * width_in_blocks;
                 uint chunk = row * (BLOCK_SIZE / CHANNEL_WIDTH) + col;
-                DEVICE_DATA_TYPE data_chunk[CHANNEL_WIDTH];
 
-                load_chunk_of_trans_a(a_block, data_chunk, chunk);
+                DEVICE_DATA_TYPE data_chunk[CHANNEL_WIDTH];
+                DEVICE_DATA_TYPE rotate_out[CHANNEL_WIDTH];
+
+                uint base = col * BLOCK_SIZE;
+                uint offset = row / CHANNEL_WIDTH;
+
+                __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+                for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+                    unsigned rot = ((CHANNEL_WIDTH + unroll_count - row) * (BLOCK_SIZE / CHANNEL_WIDTH)) &
+                                                                                                (BLOCK_SIZE - 1);
+                    unsigned row_rotate = base + offset + rot;
+                    rotate_out[unroll_count] = a_block[row_rotate][unroll_count];
+                }
+
+                unsigned rot_out = row & (CHANNEL_WIDTH - 1);
+
+                // rotate temporary buffer to store data into local buffer
+                __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
+                for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH; unroll_count++) {
+                    data_chunk[unroll_count] = rotate_out[(unroll_count + rot_out) & (CHANNEL_WIDTH - 1)];
+                }
 
                 // load tranposed A from global memory
                 __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
@@ -149,6 +129,7 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
         // Write back result
         #pragma loop_coalesce
         for (uint row = 0; row < BLOCK_SIZE; row++) {
+            __attribute__((xcl_pipeline_loop(1)))
             for (uint col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
                 ulong block_row = block / width_in_blocks;
                 ulong block_col = block % width_in_blocks;
