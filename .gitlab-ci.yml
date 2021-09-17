@@ -37,6 +37,7 @@ build:STREAM:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
       
       
 build:RandomAccess:
@@ -58,6 +59,7 @@ build:RandomAccess:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
 
 
 build:PTRANS:
@@ -80,6 +82,7 @@ build:PTRANS:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
 
 build:LINPACK:
   stage: build
@@ -100,6 +103,7 @@ build:LINPACK:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
 
 build:GEMM:
   stage: build
@@ -120,6 +124,7 @@ build:GEMM:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
 
 build:GEMM_HP_REP2:
   stage: build
@@ -140,6 +145,7 @@ build:GEMM_HP_REP2:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
 
 build:FFT:
   stage: build
@@ -160,6 +166,7 @@ build:FFT:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
 
 build:FFT_small:
   stage: build
@@ -180,6 +187,7 @@ build:FFT_small:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
 
 build:b_eff:
   stage: build
@@ -202,6 +210,7 @@ build:b_eff:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
 
 ###
 #
@@ -227,6 +236,7 @@ test:STREAM:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
   needs: ["build:STREAM"]
     
 test:RandomAccess:
@@ -247,6 +257,7 @@ test:RandomAccess:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
   needs: ["build:RandomAccess"]
 
 test:PTRANS:
@@ -277,6 +288,7 @@ test:PTRANS:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
   needs: ["build:PTRANS"]
 
 test:LINPACK:
@@ -297,6 +309,7 @@ test:LINPACK:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
   needs: ["build:LINPACK"]
 
 test:GEMM:
@@ -317,6 +330,7 @@ test:GEMM:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
   needs: ["build:GEMM"]
 
 test:GEMM_HP_REP2:
@@ -337,6 +351,7 @@ test:GEMM_HP_REP2:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
   needs: ["build:GEMM_HP_REP2"]
 
 test:FFT:
@@ -357,6 +372,7 @@ test:FFT:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
   needs: ["build:FFT"]
 
 test:FFT_small:
@@ -377,6 +393,7 @@ test:FFT_small:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
   needs: ["build:FFT_small"]
 
 test:b_eff:
@@ -407,6 +424,7 @@ test:b_eff:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
   needs: ["build:b_eff"]
 
 
