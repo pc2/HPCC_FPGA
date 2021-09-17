@@ -16,7 +16,7 @@ set(XILINX_COMPILE_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.compile.x
 # STREAM specific options
 # Defaults to a total of ~12GB data
 set(DEFAULT_MATRIX_SIZE 8 CACHE STRING "Default size of the used matrices" FORCE)
-set(BLOCK_SIZE 512 CACHE STRING "Block size used in the FPGA kernel" FORCE)
+set(BLOCK_SIZE 256 CACHE STRING "Block size used in the FPGA kernel" FORCE)
 set(CHANNEL_WIDTH 16 CACHE STRING "Width of a single channel in number of values. Also specifies the width of memory" FORCE)
 set(NUM_REPLICATIONS 2 CACHE STRING "Number of kernel replications (should match number of external channels here)" FORCE)
 
