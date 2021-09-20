@@ -249,11 +249,13 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                                                 local_matrix_width* data.blockSize*sizeof(HOST_DATA_TYPE), 0,
                                                 data.A);
 #else
-                transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
+                transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_TRUE, 0,
                                         data.numBlocks * data.blockSize * data.blockSize * sizeof(HOST_DATA_TYPE), data.A);
 #endif
         }
-
+#ifndef NDEBUG
+        auto startKernelCalculation = std::chrono::high_resolution_clock::now();
+#endif
         for (int r = 0; r < transposeKernelList.size(); r++)
         {
         transCommandQueueList[r].enqueueNDRangeKernel(transposeKernelList[r], cl::NullRange, cl::NDRange(1));
@@ -267,6 +269,9 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 int mpi_rank;
                 MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
                 std::cout << "Rank " << mpi_rank << ": " << "Done i=" << repetition << std::endl;
+                std::cout << "Kernel execution time: " << std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startKernelCalculation).count() 
+                        << "s (" << ((config.programSettings->matrixSize * config.programSettings->matrixSize * sizeof(HOST_DATA_TYPE) * 3) 
+                                / std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startKernelCalculation).count()) << " GB/s)" << std::endl;
 #endif
 
         // Transfer back data for next repetition!
