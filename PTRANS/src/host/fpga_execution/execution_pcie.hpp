@@ -28,7 +28,6 @@ SOFTWARE.
 #include <chrono>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #include "mpi.h"
 
 /* Project's headers */
@@ -191,7 +190,7 @@ namespace transpose
 
                     for (int r = 0; r < transposeKernelList.size(); r++)
                     {
-                        transCommandQueueList[r].enqueueTask(transposeKernelList[r]);
+                        transCommandQueueList[r].enqueueNDRangeKernel(transposeKernelList[r], cl::NullRange, cl::NDRange(1));
                     }
                     for (int r = 0; r < transposeKernelList.size(); r++)
                     {

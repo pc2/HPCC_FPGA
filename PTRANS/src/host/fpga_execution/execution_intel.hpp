@@ -205,8 +205,8 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 
             auto startCalculation = std::chrono::high_resolution_clock::now();
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                writeCommandQueueList[r].enqueueTask(transposeWriteKernelList[r]);
-                readCommandQueueList[r].enqueueTask(transposeReadKernelList[r]);
+                writeCommandQueueList[r].enqueueNDRangeKernel(transposeWriteKernelList[r], cl::NullRange, cl::NDRange(1));
+                readCommandQueueList[r].enqueueNDRangeKernel(transposeReadKernelList[r], cl::NullRange, cl::NDRange(1));
             }
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].finish();
