@@ -11,8 +11,9 @@ set(CHANNEL_WIDTH 8 CACHE STRING "Width of a single channel in number of values.
 # NUM_REPLICATIONS set to 2 by default to allow build and execution of both versions of the transpose kernel
 set(NUM_REPLICATIONS 2 CACHE STRING "Number of times the kernels will be replicated")
 set(USE_BUFFER_WRITE_RECT_FOR_A No CACHE BOOL "Only valid for PQ with IEC. Use the enqueueWriteBufferRect call to copy only the relevant part of A to memory bank of each replication. Whole matrix A will be copied otherwise.")
+set(XILINX_UNROLL_INNER_LOOPS No CACHE BOOL "When building for Xilinx devices, unroll the inner loops to create a single pipeline per block and keep memory bursts. This is a tradeoff between resource usage and performance.")
 
-mark_as_advanced(READ_KERNEL_NAME WRITE_KERNEL_NAME USE_BUFFER_WRITE_RECT_FOR_A)
+mark_as_advanced(READ_KERNEL_NAME WRITE_KERNEL_NAME USE_BUFFER_WRITE_RECT_FOR_A XILINX_UNROLL_INNER_LOOPS)
 
 set(USE_MPI Yes)
 set(USE_OPENMP Yes)

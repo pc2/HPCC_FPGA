@@ -25,6 +25,7 @@
 
 #cmakedefine USE_SVM
 #cmakedefine USE_BUFFER_WRITE_RECT_FOR_A
+#cmakedefine XILINX_UNROLL_INNER_LOOPS
 
 /*
 Short description of the program.
