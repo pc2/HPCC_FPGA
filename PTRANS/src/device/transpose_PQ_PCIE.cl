@@ -45,10 +45,21 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
 
     // transpose the matrix block-wise from global memory
     for (uint block = 0; block < number_of_blocks; block++) {
+#ifdef INTEL_FPGA
         // Load A to local memory
         #pragma loop_coalesce
+#endif
+#ifdef XILINX_FPGA
+#ifdef XILINX_UNROLL_INNER_LOOPS
+        __attribute__((xcl_pipeline_loop(BLOCK_SIZE / CHANNEL_WIDTH)))
+#endif
+#endif
         for (uint row = 0; row < BLOCK_SIZE; row++) {
-            __attribute__((xcl_pipeline_loop(1)))
+#ifdef XILINX_FPGA
+#ifndef XILINX_UNROLL_INNER_LOOPS
+        __attribute__((xcl_pipeline_loop(1)))
+#endif
+#endif
             for (uint col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
                 ulong block_row_a = (block + offset) / width_in_blocks;
                 ulong block_col_a = (block + offset) % width_in_blocks;
@@ -81,9 +92,21 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
         }
 
         // Read transposed A from local memory and add B 
+#ifdef INTEL_FPGA
+        // Load A to local memory
         #pragma loop_coalesce
+#endif
+#ifdef XILINX_FPGA
+#ifdef XILINX_UNROLL_INNER_LOOPS
+        __attribute__((xcl_pipeline_loop(BLOCK_SIZE / CHANNEL_WIDTH)))
+#endif
+#endif
         for (uint row = 0; row < BLOCK_SIZE; row++) {
-            __attribute__((xcl_pipeline_loop(1)))
+#ifdef XILINX_FPGA
+#ifndef XILINX_UNROLL_INNER_LOOPS
+        __attribute__((xcl_pipeline_loop(1)))
+#endif
+#endif
             for (uint col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
                 ulong block_row = block / width_in_blocks;
                 ulong block_col = block % width_in_blocks;
@@ -127,9 +150,21 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
             }
         }
         // Write back result
+#ifdef INTEL_FPGA
+        // Load A to local memory
         #pragma loop_coalesce
+#endif
+#ifdef XILINX_FPGA
+#ifdef XILINX_UNROLL_INNER_LOOPS
+        __attribute__((xcl_pipeline_loop(BLOCK_SIZE / CHANNEL_WIDTH)))
+#endif
+#endif
         for (uint row = 0; row < BLOCK_SIZE; row++) {
-            __attribute__((xcl_pipeline_loop(1)))
+#ifdef XILINX_FPGA
+#ifndef XILINX_UNROLL_INNER_LOOPS
+        __attribute__((xcl_pipeline_loop(1)))
+#endif
+#endif
             for (uint col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
                 ulong block_row = block / width_in_blocks;
                 ulong block_col = block % width_in_blocks;
