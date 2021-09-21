@@ -535,6 +535,7 @@ void top_update(__global DEVICE_DATA_TYPE* restrict a,
 		#pragma loop_coalesce
 		for (int row = 0; row < BLOCK_SIZE/GEMM_BLOCK - k; row++) {
 			// Update whole rows!
+			__attribute__((xcl_pipeline_loop(1)))
 			for (int curr_col = 0; curr_col < BLOCK_SIZE/GEMM_BLOCK; curr_col++) {
 				DEVICE_DATA_TYPE colbuf[GEMM_BLOCK];
 				__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
@@ -655,7 +656,12 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a,
 		// Update only remaining row chunks
 		#pragma ivdep
 		for (int curr_col = 0; curr_col < BLOCK_SIZE/GEMM_BLOCK - k; curr_col++) {
+#ifdef INTEL_FPGA
 			#pragma ivdep
+#endif
+#ifdef XILINX_FPGA
+			__attribute__((xcl_pipeline_loop(1)))
+#endif
 			for (int row = 0; row < BLOCK_SIZE/GEMM_BLOCK; row++) {
 				DEVICE_DATA_TYPE colbuf[GEMM_BLOCK];
 				__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
