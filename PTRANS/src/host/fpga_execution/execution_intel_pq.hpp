@@ -189,10 +189,21 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 writeCommandQueueList[r].enqueueWriteBuffer(bufferListB[r], CL_FALSE, 0,
                                         bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.B[bufferStartList[r] * data.blockSize * data.blockSize]);
 #ifdef USE_BUFFER_WRITE_RECT_FOR_A
+#ifndef USE_DEPRECATED_HPP_HEADER
+                cl::array<size_t,3> deviceOffset;
+                cl::array<size_t,3> hostOffset;
+                cl::array<size_t,3> rectShape;
+#else
                 cl::size_t<3> deviceOffset;
                 cl::size_t<3> hostOffset;
-                hostOffset[0] = (bufferStartList[r]) / (local_matrix_width) * data.blockSize * sizeof(HOST_DATA_TYPE);
                 cl::size_t<3> rectShape;
+#endif
+                deviceOffset[0] = 0;
+                deviceOffset[1] = 0;
+                deviceOffset[2] = 0;
+                hostOffset[0] = (bufferStartList[r]) / local_matrix_width * data.blockSize * sizeof(HOST_DATA_TYPE);
+                hostOffset[1] = 0;
+                hostOffset[2] = 0;
                 rectShape[0] = (bufferSizeList[r]) / (local_matrix_width * data.blockSize) * sizeof(HOST_DATA_TYPE);
                 rectShape[1] = local_matrix_width* data.blockSize;
                 rectShape[2] = 1L;
