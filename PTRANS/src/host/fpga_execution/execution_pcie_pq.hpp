@@ -306,7 +306,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 std::cout << "Rank " << mpi_rank << ": " << "Done i=" << repetition << std::endl;
                 std::cout << "Kernel execution time: " << std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startKernelCalculation).count() 
                         << "s (" << ((config.programSettings->matrixSize * config.programSettings->matrixSize * sizeof(HOST_DATA_TYPE) * 3) 
-                                / std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startKernelCalculation).count()) << " GB/s)" << std::endl;
+                                / std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startKernelCalculation).count() * 1.0e-9) << " GB/s)" << std::endl;
 #endif
 
         // Transfer back data for next repetition!
