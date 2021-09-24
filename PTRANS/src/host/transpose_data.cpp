@@ -1,3 +1,4 @@
+#include <cmath>
 
 #include "transpose_data.hpp"
 #include "data_handlers/data_handler_types.h"
@@ -38,7 +39,11 @@ transpose::TransposeProgramSettings::TransposeProgramSettings(cxxopts::ParseResu
 std::map<std::string, std::string>
 transpose::TransposeProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
-        map["Matrix Size"] = std::to_string(matrixSize);
+        int mpi_size;
+#ifdef _USE_MPI_
+        MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+#endif
+        map["Matrix Size"] = std::to_string(matrixSize * static_cast<int>(std::sqrt(mpi_size)));
         map["Block Size"] = std::to_string(blockSize);
         map["Dist. Buffers"] = distributeBuffers ? "Yes" : "No";
         map["Data Handler"] = transpose::data_handler::handlerToString(dataHandlerIdentifier);
