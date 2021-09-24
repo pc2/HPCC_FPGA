@@ -36,7 +36,7 @@ SOFTWARE.
 #include "fpga_execution/execution_pcie.hpp"
 #include "fpga_execution/execution_pcie_pq.hpp"
 #include "fpga_execution/execution_cpu.hpp"
-#include "fpga_execution/communication_types.h"
+#include "communication_types.hpp"
 
 #include "data_handlers/data_handler_types.h"
 #include "data_handlers/diagonal.hpp"
@@ -58,7 +58,6 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
         ("b", "Block size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(BLOCK_SIZE)))
-        ("connectivity", "Specify the connectivity for the used bitstream", cxxopts::value<std::string>()->default_value(DEFAULT_COMM_TYPE))
         ("distribute-buffers", "Distribute buffers over memory banks. This will use three memory banks instead of one for a single kernel replication, but kernel replications may interfere. This is an Intel only attribute, since buffer placement is decided at compile time for Xilinx FPGAs.")
         ("handler", "Specify the used data handler that distributes the data over devices and memory banks",
             cxxopts::value<std::string>()->default_value(DEFAULT_DIST_TYPE));
@@ -67,14 +66,14 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
 std::unique_ptr<transpose::TransposeExecutionTimings>
 transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
     switch (executionSettings->programSettings->communicationType) {
-        case transpose::fpga_execution::CommunicationType::intel_external_channels: 
+        case hpcc_base::CommunicationType::intel_external_channels: 
                                 if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
                                     return transpose::fpga_execution::intel::calculate(*executionSettings, data);
                                 }
                                 else {
                                     return transpose::fpga_execution::intel_pq::calculate(*executionSettings, data);
                                 } break;
-        case transpose::fpga_execution::CommunicationType::pcie_mpi :                                 
+        case hpcc_base::CommunicationType::pcie_mpi :                                 
                                 if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
                                     return transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler);
                                 }
@@ -82,9 +81,9 @@ transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
                                     return transpose::fpga_execution::pcie_pq::calculate(*executionSettings, data, *dataHandler);
                                 } break;
 #ifdef MKL_FOUND
-        case transpose::fpga_execution::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*executionSettings, data, *dataHandler); break;
+        case hpcc_base::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*executionSettings, data, *dataHandler); break;
 #endif
-        default: throw new std::runtime_error("No calculate method implemented for communication type " + transpose::fpga_execution::commToString(executionSettings->programSettings->communicationType));
+        default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(executionSettings->programSettings->communicationType));
     }
 }
 

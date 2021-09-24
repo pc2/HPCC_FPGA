@@ -28,7 +28,6 @@ SOFTWARE.
 
 /* Project's headers */
 #include "hpcc_benchmark.hpp"
-#include "fpga_execution/communication_types.h"
 #include "data_handlers/data_handler_types.h"
 
 
@@ -68,12 +67,6 @@ public:
      *          instead of a single one
      */
     bool distributeBuffers;
-
-    /**
-     * @brief Communication type that is used between FPGAs
-     * 
-     */
-    transpose::fpga_execution::CommunicationType communicationType;
 
     /**
      * @brief Construct a new Transpose Program Settings object

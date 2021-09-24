@@ -7,20 +7,7 @@
 transpose::TransposeProgramSettings::TransposeProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     matrixSize(results["m"].as<uint>() * results["b"].as<uint>()),
     blockSize(results["b"].as<uint>()), dataHandlerIdentifier(transpose::data_handler::stringToHandler(results["handler"].as<std::string>())),
-    distributeBuffers(results["distribute-buffers"].count() > 0), communicationType(transpose::fpga_execution::stringToComm(results["connectivity"].as<std::string>())) {
-
-        // auto detect data communication type if required
-        if (communicationType == transpose::fpga_execution::CommunicationType::automatic) {
-            if (kernelFileName.find("_" + transpose::fpga_execution::commToString(transpose::fpga_execution::CommunicationType::pcie_mpi)) != kernelFileName.npos) {
-                communicationType = transpose::fpga_execution::CommunicationType::pcie_mpi;
-            }
-            else if (kernelFileName.find("_" + transpose::fpga_execution::commToString(transpose::fpga_execution::CommunicationType::intel_external_channels)) != kernelFileName.npos) {
-                communicationType = transpose::fpga_execution::CommunicationType::intel_external_channels;
-            }
-            if (communicationType == transpose::fpga_execution::CommunicationType::automatic) {
-                throw std::runtime_error("Communication could not be detected from kernel file name!");
-            }
-        }
+    distributeBuffers(results["distribute-buffers"].count() > 0) {
 
         // auto detect data distribution type if required
         if (dataHandlerIdentifier == transpose::data_handler::DataHandlerType::automatic) {
@@ -47,7 +34,6 @@ transpose::TransposeProgramSettings::getSettingsMap() {
         map["Block Size"] = std::to_string(blockSize);
         map["Dist. Buffers"] = distributeBuffers ? "Yes" : "No";
         map["Data Handler"] = transpose::data_handler::handlerToString(dataHandlerIdentifier);
-        map["Communication Type"] = transpose::fpga_execution::commToString(communicationType);
         return map;
 }
 
