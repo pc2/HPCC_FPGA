@@ -26,6 +26,7 @@ SOFTWARE.
 
 /* Project's headers */
 #include "setup/fpga_setup.hpp"
+#include "communication_types.hpp"
 #include "cxxopts.hpp"
 #include "parameters.h"
 
@@ -116,6 +117,12 @@ public:
     bool testOnly;
 
     /**
+     * @brief Type of inter-FPGA communication used
+     * 
+     */
+    CommunicationType communicationType;
+
+    /**
      * @brief Construct a new Base Settings object
      * 
      * @param results The resulting map from parsing the program input parameters
@@ -135,6 +142,11 @@ public:
 #else
             kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : 1),
 #endif
+#ifdef COMMUNICATION_TYPE_SUPPORT_ENABLED
+            communicationType(retrieveCommunicationType(results["comm-type"].as<std::string>(), results["f"].as<std::string>())),
+#else
+            communicationType(retrieveCommunicationType("UNSUPPORTED", results["f"].as<std::string>())),
+#endif
             testOnly(static_cast<bool>(results.count("test"))) {}
 
     /**
@@ -153,7 +165,8 @@ public:
         str_mpi_ranks = std::to_string(mpi_size);
     }
         return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel Replications", std::to_string(kernelReplications)}, 
-                {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}, {"Test Mode", std::to_string(testOnly)}};
+                {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}, {"Test Mode", testOnly ? "Yes" : "No"},
+                {"Communication Type", commToString(communicationType)}};
     }
 
 };
@@ -373,6 +386,10 @@ public:
                 ("r", "Number of used kernel replications",
                 cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)))
 #endif
+#ifdef COMMUNICATION_TYPE_SUPPORT_ENABLED
+                ("comm-type", "Used communication type for inter-FPGA communication",
+                cxxopts::value<std::string>()->default_value("AUTO"))
+#endif
                 ("test", "Only test given configuration and skip execution and validation")
                 ("h,help", "Print this help");
 
@@ -462,16 +479,21 @@ public:
 
             std::unique_ptr<TSettings> programSettings = parseProgramParameters(tmp_argc, tmp_argv);
 
-            auto usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
-                                                                programSettings->defaultDevice);
+            std::unique_ptr<cl::Context> context;
+            std::unique_ptr<cl::Program> program;
+            std::unique_ptr<cl::Device> usedDevice;
 
-            auto context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
-            auto program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
-                                                                &programSettings->kernelFileName);
+            if (!programSettings->testOnly) {
+                usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
+                                                                    programSettings->defaultDevice);
+
+                context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
+                program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
+                                                                    &programSettings->kernelFileName);
+            }
 
             executionSettings = std::unique_ptr<ExecutionSettings<TSettings>>(new ExecutionSettings<TSettings>(std::move(programSettings), std::move(usedDevice), 
-                                                                std::move(context), std::move(program)));
-
+                                                                    std::move(context), std::move(program)));
             if (mpi_comm_rank == 0) {
                 if (!checkInputParameters()) {
                     std::cerr << "ERROR: Input parameter check failed!" << std::endl;
@@ -508,8 +530,15 @@ public:
     executeBenchmark() {
 
         if (!benchmark_setup_succeeded) {
-            std::cerr << "Benchmark execution started without running the benchmark setup!" << std::endl;
+            std::cerr << "Benchmark execution started without successfully running the benchmark setup!" << std::endl;
             return false;
+        }
+        if (executionSettings->programSettings->testOnly) {
+            if (mpi_comm_rank == 0) {
+                std::cout << "TEST MODE ENABLED: SKIP DATA GENERATION, EXECUTION, AND VALIDATION!" << std::endl;
+                std::cout << "SUCCESSFULLY parsed input parameters!" << std::endl;
+            }
+            return benchmark_setup_succeeded;
         }
         if (mpi_comm_rank == 0) {
             std::cout << HLINE << "Start benchmark using the given configuration. Generating data..." << std::endl
@@ -531,45 +560,39 @@ public:
             }
 
             bool validateSuccess = false;
-            if (!executionSettings->programSettings->testOnly) {
-                auto exe_start = std::chrono::high_resolution_clock::now();
-                std::unique_ptr<TOutput> output =  executeKernel(*data);
+            auto exe_start = std::chrono::high_resolution_clock::now();
+            std::unique_ptr<TOutput> output =  executeKernel(*data);
 
 #ifdef _USE_MPI_
-            MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-                std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
+            std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
 
-                if (mpi_comm_rank == 0) {
-                    std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
-                    std::cout << HLINE << "Validate output..." << std::endl
-                            << HLINE;
-                }
-
-                if (!executionSettings->programSettings->skipValidation) {
-                    auto eval_start = std::chrono::high_resolution_clock::now();
-                    validateSuccess = validateOutputAndPrintError(*data);
-                    std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
-
-                    if (mpi_comm_rank == 0) {
-                        std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
-                    }
-                }
-                collectAndPrintResults(*output);
-
-                if (mpi_comm_rank == 0) {
-                    if (!validateSuccess) {
-                        std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
-                    }
-                    else {
-                        std::cout << "Validation: SUCCESS!" << std::endl;
-                    }
-                }
-
+            if (mpi_comm_rank == 0) {
+                std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
+                std::cout << HLINE << "Validate output..." << std::endl
+                        << HLINE;
             }
-            else {
-                std::cout << "TEST MODE ENABLED: SKIP EXECUTION AND VALIDATION!" << std::endl;
+
+            if (!executionSettings->programSettings->skipValidation) {
+                auto eval_start = std::chrono::high_resolution_clock::now();
+                validateSuccess = validateOutputAndPrintError(*data);
+                std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
+
+                if (mpi_comm_rank == 0) {
+                    std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
+                }
+            }
+            collectAndPrintResults(*output);
+
+            if (mpi_comm_rank == 0) {
+                if (!validateSuccess) {
+                    std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
+                }
+                else {
+                    std::cout << "Validation: SUCCESS!" << std::endl;
+                }
             }
 
             return validateSuccess;
@@ -645,7 +668,12 @@ template <class TSettings>
 std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings){
         std::string device_name;
         os << std::left;
+        if (!printedExecutionSettings.programSettings->testOnly) {
         printedExecutionSettings.device->getInfo(CL_DEVICE_NAME, &device_name);
+        }
+        else {
+            device_name = "TEST RUN: Not selected!";
+        }
         for (auto k : printedExecutionSettings.programSettings->getSettingsMap()) {
             os   << std::setw(2 * ENTRY_SPACE) << k.first << k.second << std::endl;
         }
