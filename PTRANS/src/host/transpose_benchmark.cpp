@@ -46,8 +46,9 @@ SOFTWARE.
 
 
 transpose::TransposeBenchmark::TransposeBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
-    setupBenchmark(argc, argv);
-    setTransposeDataHandler(executionSettings->programSettings->dataHandlerIdentifier);
+    if (setupBenchmark(argc, argv)) {
+        setTransposeDataHandler(executionSettings->programSettings->dataHandlerIdentifier);
+    }
 }
 
 void
