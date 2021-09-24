@@ -18,5 +18,6 @@ mark_as_advanced(READ_KERNEL_NAME WRITE_KERNEL_NAME USE_BUFFER_WRITE_RECT_FOR_A 
 set(USE_MPI Yes)
 set(USE_OPENMP Yes)
 set(USE_DEPRECATED_HPP_HEADER No)
+set(COMMUNICATION_TYPE_SUPPORT_ENABLED Yes)
 
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
