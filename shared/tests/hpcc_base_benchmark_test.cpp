@@ -66,6 +66,7 @@ public:
     bool returnInputData = true;  
     bool returnExecuteKernel = true; 
     bool returnValidate = true;
+    bool forceSetupFail = false;
 
     uint executeKernelcalled = 0;
     uint generateInputDatacalled = 0;
@@ -95,6 +96,16 @@ public:
     void
     collectAndPrintResults(const int &output) override {}
 
+    bool
+    checkInputParameters() override {
+        if (forceSetupFail) {
+            return false;
+        }
+        else {
+            return hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int, int>::checkInputParameters();
+        }
+    }
+
     SuccessBenchmark() : HpccFpgaBenchmark(0, { nullptr}) {}
 
 };
@@ -106,11 +117,16 @@ public:
 
     BaseHpccBenchmarkTest() {
         bm = std::unique_ptr<SuccessBenchmark>(new SuccessBenchmark());
-        bool success = bm->setupBenchmark(global_argc, global_argv);
-        EXPECT_TRUE(success);
+        bm->setupBenchmark(global_argc, global_argv);
     }
 
 };
+
+
+TEST_F(BaseHpccBenchmarkTest, SetupSucceedsForBenchmarkTest) {
+        bool success = bm->setupBenchmark(global_argc, global_argv);
+        EXPECT_TRUE(success);
+}
 
 
 /**
@@ -122,15 +138,14 @@ TEST_F(BaseHpccBenchmarkTest, AllExecutedWhenNotTestOnly) {
     EXPECT_EQ(bm->validateOutputcalled, 1);
     EXPECT_EQ(bm->executeKernelcalled, 1);
     EXPECT_EQ(bm->generateInputDatacalled, 1);
-
 }
 
-TEST_F(BaseHpccBenchmarkTest, GenerateInputExecutedWhenTestOnly) {
+TEST_F(BaseHpccBenchmarkTest, NothingExecutedWhenTestOnly) {
     bm->getExecutionSettings().programSettings->testOnly = true;
     bm->executeBenchmark();
     EXPECT_EQ(bm->validateOutputcalled, 0);
     EXPECT_EQ(bm->executeKernelcalled, 0);
-    EXPECT_EQ(bm->generateInputDatacalled, 1);
+    EXPECT_EQ(bm->generateInputDatacalled, 0);
 }
 
 TEST_F(BaseHpccBenchmarkTest, ExecutionSuccessWhenNotTestOnly) {
@@ -139,11 +154,17 @@ TEST_F(BaseHpccBenchmarkTest, ExecutionSuccessWhenNotTestOnly) {
 
 }
 
-TEST_F(BaseHpccBenchmarkTest, ExecutionFailsWhenTestOnly) {
+TEST_F(BaseHpccBenchmarkTest, ExecutionFailsWhenTestOnlyAndSetupFails) {
     bm->getExecutionSettings().programSettings->testOnly = true;
+    bm->forceSetupFail = true;
+    bm->setupBenchmark(global_argc, global_argv);
     EXPECT_FALSE(bm->executeBenchmark());
 }
 
+TEST_F(BaseHpccBenchmarkTest, ExecutionSuccessWhenTestOnlyAndSetupSuccess) {
+    bm->getExecutionSettings().programSettings->testOnly = true;
+    EXPECT_TRUE(bm->executeBenchmark());
+}
 
 /**
  * Checks if using default platform and device is successful
