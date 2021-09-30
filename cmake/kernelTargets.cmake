@@ -164,7 +164,7 @@ function(generate_kernel_targets_intel)
                 DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_f}
         )
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_emulate_f}
-                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DEMULATE -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -legacy-emulator -march=emulator
+                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DEMULATE -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -march=emulator
                 -o ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_emulate_f}
                 MAIN_DEPENDENCY ${source_f}
                 DEPENDS ${CMAKE_BINARY_DIR}/src/common/parameters.h
