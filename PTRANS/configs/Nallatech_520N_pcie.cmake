@@ -9,7 +9,7 @@
 set(USE_MPI Yes CACHE BOOL "" FORCE)
 set(USE_SVM No CACHE BOOL "" FORCE)
 set(USE_HBM No CACHE BOOL "" FORCE)
-set(FPGA_BOARD_NAME "p520_max_sg280l" CACHE STRING "" FORCE)
+set(FPGA_BOARD_NAME "p520_hpc_sg280l" CACHE STRING "" FORCE)
 set(AOC_FLAGS "-fpc -fp-relaxed -no-interleaving=default" CACHE STRING "" FORCE)
 
 # STREAM specific options
