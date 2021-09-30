@@ -9,7 +9,7 @@ default:
   tags:
     - jacamar
   before_script:
-    - module load intelFPGA_pro/19.4.0 bittware_520n/19.4.0_max intel devel/CMake/3.15.3-GCCcore-8.3.0
+    - module load intelFPGA_pro/20.4.0 bittware_520n/20.4.0_max intel devel/CMake/3.15.3-GCCcore-8.3.0
 
 ###
 #
@@ -226,7 +226,7 @@ test:STREAM:
   script:
     - cd build
     - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:STREAM
   artifacts:
@@ -247,7 +247,7 @@ test:RandomAccess:
   script:
     - cd build
     - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:RandomAccess
   artifacts:
@@ -278,7 +278,7 @@ test:PTRANS:
     - ln -s kernel_output_ch1 kernel_input_ch0
     - ln -s kernel_output_ch3 kernel_input_ch2
     - cd ..
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:PTRANS
   artifacts:
@@ -299,7 +299,7 @@ test:LINPACK:
   script:
     - cd build
     - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0  -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:LINPACK
   artifacts:
@@ -320,7 +320,7 @@ test:GEMM:
   script:
     - cd build
     - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:GEMM
   artifacts:
@@ -341,7 +341,7 @@ test:GEMM_HP_REP2:
   script:
     - cd build
     - cmake ../GEMM -DNUM_REPLICATIONS=2 -DATA_TYPE=half -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:GEMM_HP_REP2
   artifacts:
@@ -362,7 +362,7 @@ test:FFT:
   script:
     - cd build
     - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:FFT
   artifacts:
@@ -383,7 +383,7 @@ test:FFT_small:
   script:
     - cd build
     - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:FFT_small
   artifacts:
@@ -414,7 +414,7 @@ test:b_eff:
     - ln -s kernel_output_ch1 kernel_input_ch0
     - ln -s kernel_output_ch3 kernel_input_ch2
     - cd ..
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:b_eff
   artifacts:
