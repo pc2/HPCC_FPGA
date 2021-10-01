@@ -2,13 +2,6 @@
 add_subdirectory(../../../shared ${CMAKE_BINARY_DIR}/lib/hpccbase)
 set(HOST_SOURCE linpack_benchmark.cpp gmres.c blas.c)
 
-# TODO Change this to be a runtime decision similar to b_eff implementation in SMI branch
-if (USE_PCIE_MPI_COMMUNICATION)
-    list(APPEND HOST_SOURCE execution_pcie.cpp)
-else()
-    list(APPEND HOST_SOURCE execution_iec.cpp)
-endif()
-
 set(HOST_EXE_NAME Linpack)
 set(LIB_NAME lp)
 
