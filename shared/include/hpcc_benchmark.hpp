@@ -408,10 +408,7 @@ public:
 
             // Check parsed options and handle special cases
             if (result.count("f") <= 0) {
-                // Path to the kernel file is mandatory - exit if not given!
-                std::cerr << "Kernel file must be given! Aborting" << std::endl;
-                std::cout << options.help() << std::endl;
-                throw fpga_setup::FpgaSetupException("Mandatory option is missing");
+                throw fpga_setup::FpgaSetupException("Mandatory option is missing! Use -h to show all available options. ERROR: Kernel file must be given with option -f!");
             }
 
             // Create program settings from program arguments
@@ -420,9 +417,7 @@ public:
             return sharedSettings;
         }
         catch (const cxxopts::OptionException& e) {
-            std::cerr << "Error while parsing input parameters: "<< e.what() << std::endl;
-            std::cout << options.help() << std::endl;
-            throw fpga_setup::FpgaSetupException("Input parameters could not be parsed");
+            throw fpga_setup::FpgaSetupException("Input parameters could not be parsed! Use -h to show all available options. ERROR: " + std::string(e.what()));
         }
 
     }
