@@ -29,7 +29,6 @@ SOFTWARE.
 #include <chrono>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #ifdef INTEL_FPGA
 #ifdef USE_HBM
 // CL_HETEROGENEOUS_INTELFPGA is defined here 
