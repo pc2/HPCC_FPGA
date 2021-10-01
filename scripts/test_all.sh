@@ -85,7 +85,7 @@ for bm in ${BENCHMARKS[@]}; do
         ln -s kernel_output_ch3 kernel_input_ch2
         cd ..
     fi
-    make XCL_EMULATION_MODE=sw_emu CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test &>> $TEST_LOG_FILE
+    make XCL_EMULATION_MODE=sw_emu CTEST_OUTPUT_ON_FAILURE=1 test &>> $TEST_LOG_FILE
     ret=$(($ret + $?))
     if [ $ret -ne 0 ]; then
         echo "Failed testing $bm"
