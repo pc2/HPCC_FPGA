@@ -2,11 +2,17 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.3
+#### Changed:
+- Refactored the code to support different execution kernels and data distributions
+#### Added:
+- FPGA kernel with communication via PCIe and MPI 
+
 ## 2.2
 
 #### Added:
 - LU facotrization kernel w/o pivoting in quadratic torus
-- Distributed calculation of GEL on CPU nodes and validation
+- Distributed calculation of GESL on CPU nodes and validation
 
 ## 2.1
 
