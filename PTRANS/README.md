@@ -106,8 +106,8 @@ For more information on available input parameters run
                                 (default: 8)
     -b, arg                   Block size in number of values in one dimension
                                 (default: 512)
-        --connectivity arg    Specify the connectivity for the used bitstream
-                                (default: CPU)
+        --comm-type arg       Used communication type for inter-FPGA communication
+                                (default: AUTO)
         --distribute-buffers  Distribute buffers over memory banks. This will
                                 use three memory banks instead of one for a single
                                 kernel replication, but kernel replications may
@@ -118,7 +118,7 @@ For more information on available input parameters run
                                 the data over devices and memory banks (default:
                                 DIAG)
     
-Available options for `--connectivity`:
+Available options for `--comm-type`:
 
 - `CPU`: CPU only execution. MKL required.
 - `IEC`: Intel external channels are used by the kernels for communication.

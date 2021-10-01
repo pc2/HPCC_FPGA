@@ -3,7 +3,7 @@ project(LINPACK VERSION 2.3)
 
 set(USE_DEPRECATED_HPP_HEADER No)
 
-set(DEFAULT_MATRIX_SIZE 1024 CACHE STRING "Default matrix size")
+set(DEFAULT_MATRIX_SIZE 2 CACHE STRING "Default matrix size")
 set(LOCAL_MEM_BLOCK_LOG 5 CACHE STRING "Used to define the width and height of the block stored in local memory")
 set(REGISTER_BLOCK_LOG 3 CACHE STRING "Size of the block that will be manipulated in registers")
 set(NUM_REPLICATIONS 1 CACHE STRING "Number of times the matrix multiplication kernel will be replicated")
