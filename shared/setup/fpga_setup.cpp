@@ -302,6 +302,8 @@ choose a device.
             } else {
                 chosenDeviceId = static_cast<long unsigned int>(world_rank % deviceList.size());
             }
+        } else if (deviceList.size() == 1) {
+            chosenDeviceId = 0;
         } else {
             throw std::runtime_error("No devices found for selected Platform!");
         }
