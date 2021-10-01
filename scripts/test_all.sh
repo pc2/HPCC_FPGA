@@ -12,7 +12,6 @@
 #     ./test_all.sh -DFPGA_BOARD_NAME=other_board
 #
 
-
 SCRIPT_PATH=$( cd "$(dirname $0)"; pwd -P)
 
 PROJECT_ROOT=${SCRIPT_PATH}/..
@@ -24,8 +23,12 @@ TEST_LOG_FILE=${TEST_DIR}/lasttests.log
 
 BENCHMARKS=("b_eff" "FFT" "GEMM" "LINPACK" "PTRANS" "RandomAccess" "STREAM")
 
-# Xilinx benchmarks:
-#BENCHMARKS=("RandomAccess" "STREAM")
+if [ "$1" != "inc" ]; then
+    echo "Clean build directory, use option 'inc' to prevent this!"
+    rm -rf ${TEST_DIR}
+else
+    echo "Do incremental build based on previous run!"
+fi
 
 mkdir -p $TEST_DIR
 rm -f $BUILD_LOG_FILE
@@ -37,6 +40,11 @@ echo "Start building hosts code, tests and emulation kernel for all benchmarks."
 
 for bm in ${BENCHMARKS[@]}; do
     echo "Building $bm..."
+    if [ -f  ${TEST_DIR}/$bm/BUILD_SUCCESS ]; then
+        continue
+    else
+        rm -rf ${TEST_DIR}/$bm
+    fi
     cd $TEST_DIR
     mkdir -p $bm
     ret=0
@@ -50,12 +58,16 @@ for bm in ${BENCHMARKS[@]}; do
         echo "For more information see $BUILD_LOG_FILE"
         exit $ret
     fi
+    touch ${TEST_DIR}/$bm/BUILD_SUCCESS
 done
 
 echo "Start testing all benchmarks"
 
 for bm in ${BENCHMARKS[@]}; do
     echo "Testing $bm..."
+    if [ -f  ${TEST_DIR}/$bm/TEST_SUCCESS ]; then
+        continue
+    fi
     cd $TEST_DIR
     ret=0
     cd $bm
@@ -92,6 +104,7 @@ for bm in ${BENCHMARKS[@]}; do
         echo "For more information see $TEST_LOG_FILE"
         exit $ret
     fi
+    touch ${TEST_DIR}/$bm/TEST_SUCCESS
 done
 
 echo "-----------"
