@@ -2,7 +2,7 @@
 
 #include "transpose_data.hpp"
 #include "data_handlers/data_handler_types.h"
-#include "fpga_execution/communication_types.h"
+#include "communication_types.hpp"
 
 transpose::TransposeProgramSettings::TransposeProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     matrixSize(results["m"].as<uint>() * results["b"].as<uint>()),

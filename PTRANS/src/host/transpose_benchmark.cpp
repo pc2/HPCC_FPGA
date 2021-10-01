@@ -31,11 +31,11 @@ SOFTWARE.
 #include <random>
 
 /* Project's headers */
-#include "fpga_execution/execution_intel.hpp"
-#include "fpga_execution/execution_intel_pq.hpp"
-#include "fpga_execution/execution_pcie.hpp"
-#include "fpga_execution/execution_pcie_pq.hpp"
-#include "fpga_execution/execution_cpu.hpp"
+#include "execution_types/execution_intel.hpp"
+#include "execution_types/execution_intel_pq.hpp"
+#include "execution_types/execution_pcie.hpp"
+#include "execution_types/execution_pcie_pq.hpp"
+#include "execution_types/execution_cpu.hpp"
 #include "communication_types.hpp"
 
 #include "data_handlers/data_handler_types.h"
