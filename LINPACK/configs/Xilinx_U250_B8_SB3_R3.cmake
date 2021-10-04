@@ -17,7 +17,7 @@ set(LOCAL_MEM_BLOCK_LOG 8 CACHE STRING "Used to define the width and height of t
 set(REGISTER_BLOCK_LOG 3 CACHE STRING "Size of the block that will be manipulated in registers" FORCE)
 set(NUM_REPLICATIONS 3 CACHE STRING "Number of times the matrix multiplication kernel will be replicated" FORCE)
 
-set(XILINX_COMPILE_SETTINGS_FILE "${CMAKE_SOURCE_DIR}/settings/settings.compile.xilinx.hpl_torus_pcie.u250.ini" CACHE STRING "Compile settings file" FORCE)
+set(XILINX_COMPILE_SETTINGS_FILE "${CMAKE_SOURCE_DIR}/settings/pre_synthesis.u250.tcl" CACHE STRING "Compile settings file" FORCE)
 set(XILINX_LINK_SETTINGS_FILE "${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.hpl_torus_pcie.u250.generator.ini" CACHE STRING "Link settings file" FORCE)
 
 set(USE_DEPRECATED_HPP_HEADER Yes CACHE BOOL "Use cl.hpp instead of cl2.hpp" FORCE)
