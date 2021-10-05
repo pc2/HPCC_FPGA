@@ -45,7 +45,7 @@ build:STREAM_HP:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../STREAM -DDATA_TYPE=half -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../STREAM -DDATA_TYPE=half -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=32 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
     - make -j 40 all
   artifacts:
     paths:
@@ -67,7 +67,7 @@ build:STREAM_DP:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../STREAM -DDATA_TYPE=double -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../STREAM -DDATA_TYPE=double -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=8 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
     - make -j 40 all
   artifacts:
     paths:
@@ -141,6 +141,7 @@ build:LINPACK:
   artifacts:
     paths:
       - build/bin/hpl_torus_PCIE_emulate.aocx
+      - build/bin/hpl_torus_IEC_emulate.aocx
       - build/bin/Linpack_intel
       - build/bin/Linpack_test_intel
   only:
@@ -310,7 +311,7 @@ test:STREAM_HP:
   stage: test
   script:
     - cd build
-    - cmake ../STREAM -DDATA_TYPE=half -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../STREAM -DDATA_TYPE=half -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=32 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
     - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:STREAM_HP
@@ -331,7 +332,7 @@ test:STREAM_DP:
   stage: test
   script:
     - cd build
-    - cmake ../STREAM -DDATA_TYPE=double -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../STREAM -DDATA_TYPE=double -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=8 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
     - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:STREAM_DP
