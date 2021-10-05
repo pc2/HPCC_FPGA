@@ -49,7 +49,7 @@ for bm in ${BENCHMARKS[@]}; do
     mkdir -p $bm
     ret=0
     cd $bm
-    cmake ${PROJECT_ROOT}/$bm -DDEFAULT_DEVICE=0 -DDEFAULT_PLATFORM=0 -DBLOCK_SIZE=32 $@ &>> $BUILD_LOG_FILE
+    cmake ${PROJECT_ROOT}/$bm -DDEFAULT_DEVICE=0 -DDEFAULT_PLATFORM=0 -DBLOCK_SIZE=32 &>> $BUILD_LOG_FILE
     ret=$(($ret + $?))
     make -j 40 VERBOSE=1 all &>> $BUILD_LOG_FILE
     ret=$(($ret + $?))
