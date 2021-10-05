@@ -1,5 +1,5 @@
 add_subdirectory(../../../shared ${CMAKE_BINARY_DIR}/lib/hpccbase)
-set(HOST_SOURCE execution_default.cpp network_benchmark.cpp)
+set(HOST_SOURCE network_benchmark.cpp)
 include_directories(${MPI_CXX_INCLUDE_PATH})
 
 set(HOST_EXE_NAME Network)
