@@ -22,6 +22,8 @@ SOFTWARE.
 #ifndef HPCC_BASE_COMMUNICATION_TYPES_H_
 #define HPCC_BASE_COMMUNICATION_TYPES_H_
 
+#define DEFAULT_COMM_TYPE "AUTO"
+
 #include <map>
 
 namespace hpcc_base {

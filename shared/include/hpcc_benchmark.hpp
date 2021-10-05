@@ -388,7 +388,7 @@ public:
 #endif
 #ifdef COMMUNICATION_TYPE_SUPPORT_ENABLED
                 ("comm-type", "Used communication type for inter-FPGA communication",
-                cxxopts::value<std::string>()->default_value("AUTO"))
+                cxxopts::value<std::string>()->default_value(DEFAULT_COMM_TYPE))
 #endif
                 ("test", "Only test given configuration and skip execution and validation")
                 ("h,help", "Print this help");
