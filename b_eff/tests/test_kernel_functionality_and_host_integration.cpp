@@ -10,7 +10,7 @@
 #include "test_program_settings.h"
 #include <fstream>
 
-struct NetworkKernelTest : testing::Test {
+struct NetworkKernelTest : testing::TestWithParam<hpcc_base::CommunicationType> {
     std::unique_ptr<network::NetworkBenchmark> bm;
     std::unique_ptr<network::NetworkData> data;
     unsigned numberOfChannels = 4;
@@ -22,6 +22,7 @@ struct NetworkKernelTest : testing::Test {
     void SetUp() override {
         bm = std::unique_ptr<network::NetworkBenchmark>(new network::NetworkBenchmark(global_argc, global_argv));
         bm->getExecutionSettings().programSettings->numRepetitions = 1;
+        bm->getExecutionSettings().programSettings->communicationType = GetParam();
         data = bm->generateInputData();
         createChannelFilesAndSymbolicLinks();
     }
@@ -47,7 +48,7 @@ struct NetworkKernelTest : testing::Test {
 /**
  * Tests if calculate returns the correct execution results
  */
-TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
+TEST_P(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(1,1));
     auto result = bm->executeKernel(*data);
@@ -59,7 +60,7 @@ TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
 /**
  * Tests if calculate returns the correct execution results for multiple repetitions
  */
-TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
+TEST_P(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
     bm->getExecutionSettings().programSettings->numRepetitions = 2;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(8,4));
@@ -72,7 +73,7 @@ TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
 /**
  * Tests if data is written to the channels for small message sizes
  */
-TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) {
+TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) {
     const unsigned messageSize = std::log2(CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
@@ -96,7 +97,7 @@ TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel)
 /**
  * Tests if data is written to the channels for small message sizes filling two channels
  */
-TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels) {
+TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
@@ -117,7 +118,7 @@ TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels
 /**
  * Tests if data is written to the channels for message sizes filling more than two channels
  */
-TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoChannels) {
+TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoChannels) {
     const unsigned messageSize = std::log2(8 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 1;
     data->items.clear();
@@ -138,7 +139,7 @@ TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwo
 /**
  * Tests if correct data is written to the channels
  */
-TEST_F(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
+TEST_P(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
@@ -158,7 +159,7 @@ TEST_F(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
     delete [] buffer;
 }
 
-TEST_F(NetworkKernelTest, ValidationDataIsStoredCorrectlyForTwoChannels) {
+TEST_P(NetworkKernelTest, ValidationDataIsStoredCorrectlyForTwoChannels) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
@@ -173,7 +174,7 @@ TEST_F(NetworkKernelTest, ValidationDataIsStoredCorrectlyForTwoChannels) {
     EXPECT_TRUE(all_same);
 }
 
-TEST_F(NetworkKernelTest, ValidationDataIsStoredCorrectlyForSmallMessageSize) {
+TEST_P(NetworkKernelTest, ValidationDataIsStoredCorrectlyForSmallMessageSize) {
     const unsigned messageSize = 0;
     const unsigned looplength = 4;
     data->items.clear();
@@ -188,7 +189,7 @@ TEST_F(NetworkKernelTest, ValidationDataIsStoredCorrectlyForSmallMessageSize) {
     EXPECT_TRUE(all_same);
 }
 
-TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength4) {
+TEST_P(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength4) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
@@ -197,7 +198,7 @@ TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength4) {
     EXPECT_EQ(CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
 }
 
-TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength1) {
+TEST_P(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength1) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 1;
     data->items.clear();
@@ -206,7 +207,7 @@ TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength1) {
     EXPECT_EQ(CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
 }
 
-TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForDifferentMessageSize) {
+TEST_P(NetworkKernelTest, ValidationDataHasCorrectSizeForDifferentMessageSize) {
     const unsigned messageSize = 0;
     const unsigned looplength = 1;
     data->items.clear();
@@ -215,7 +216,7 @@ TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForDifferentMessageSize) {
     EXPECT_EQ(looplength * CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
 }
 
-TEST_F(NetworkKernelTest, ValidationDataSingleItemWrongCheckFails) {
+TEST_P(NetworkKernelTest, ValidationDataSingleItemWrongCheckFails) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const HOST_DATA_TYPE expected_data = static_cast<HOST_DATA_TYPE>(messageSize & 255);
     const unsigned looplength = 4;
@@ -226,7 +227,7 @@ TEST_F(NetworkKernelTest, ValidationDataSingleItemWrongCheckFails) {
     EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
 }
 
-TEST_F(NetworkKernelTest, ValidationDataWrongCheckFails) {
+TEST_P(NetworkKernelTest, ValidationDataWrongCheckFails) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const HOST_DATA_TYPE expected_data = static_cast<HOST_DATA_TYPE>(messageSize & 255);
     const unsigned looplength = 4;
@@ -236,7 +237,7 @@ TEST_F(NetworkKernelTest, ValidationDataWrongCheckFails) {
     EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
 }
 
-TEST_F(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
+TEST_P(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const HOST_DATA_TYPE expected_data = static_cast<HOST_DATA_TYPE>(messageSize & 255);
     const unsigned looplength = 4;
@@ -246,7 +247,7 @@ TEST_F(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 }
 
-TEST_F(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
+TEST_P(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
@@ -258,7 +259,7 @@ TEST_F(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
 // This test is disabled because it does not work with the current implementation of the
 // external channels in software emulation. The different kernel executions will read 
 // the old data from the channel file, which will lead to a failing validation!
-TEST_F(NetworkKernelTest, DISABLED_ValidationDataCorrectTwoMessageSizesAfterExecution) {
+TEST_P(NetworkKernelTest, DISABLED_ValidationDataCorrectTwoMessageSizesAfterExecution) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
@@ -268,7 +269,7 @@ TEST_F(NetworkKernelTest, DISABLED_ValidationDataCorrectTwoMessageSizesAfterExec
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 }
 
-TEST_F(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
+TEST_P(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
@@ -279,3 +280,9 @@ TEST_F(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
     EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
 }
 
+
+
+INSTANTIATE_TEST_CASE_P(
+        NetworkKernelParametrizedTests,
+        NetworkKernelTest,
+        ::testing::Values(hpcc_base::CommunicationType::intel_external_channels,hpcc_base::CommunicationType::cpu_only, hpcc_base::CommunicationType::pcie_mpi));
