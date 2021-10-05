@@ -38,7 +38,50 @@ build:STREAM:
       - scripts/**/*
       - cmake/**/*
       - .gitlab-ci.yml
-      
+
+build:STREAM_HP:
+  stage: build
+  script:
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../STREAM -DDATA_TYPE=half -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make -j 40 all
+  artifacts:
+    paths:
+      - build/bin/stream_kernels_single_emulate.aocx
+      - build/bin/stream_kernels_emulate.aocx
+      - build/bin/STREAM_FPGA_intel
+      - build/bin/STREAM_FPGA_test_intel
+  only:
+    changes:
+      - STREAM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+
+build:STREAM_DP:
+  stage: build
+  script:
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../STREAM -DDATA_TYPE=double -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make -j 40 all
+  artifacts:
+    paths:
+      - build/bin/stream_kernels_single_emulate.aocx
+      - build/bin/stream_kernels_emulate.aocx
+      - build/bin/STREAM_FPGA_intel
+      - build/bin/STREAM_FPGA_test_intel
+  only:
+    changes:
+      - STREAM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
       
 build:RandomAccess:
   stage: build
@@ -150,6 +193,27 @@ build:GEMM_HP_REP2:
       - cmake/**/*
       - .gitlab-ci.yml
 
+build:GEMM_DP_REP2:
+  stage: build
+  script:
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../GEMM -DDATA_TYPE=double -DNUM_REPLICATIONS=2 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - make -j 40 all
+  artifacts:
+    paths:
+      - build/bin/gemm_base_emulate.aocx
+      - build/bin/GEMM_intel
+      - build/bin/GEMM_test_intel
+  only:
+    changes:
+      - GEMM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+
 build:FFT:
   stage: build
   script:
@@ -241,6 +305,48 @@ test:STREAM:
       - cmake/**/*
       - .gitlab-ci.yml
   needs: ["build:STREAM"]
+
+test:STREAM_HP:
+  stage: test
+  script:
+    - cd build
+    - cmake ../STREAM -DDATA_TYPE=half -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:STREAM_HP
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - STREAM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+  needs: ["build:STREAM_HP"]
+
+test:STREAM_DP:
+  stage: test
+  script:
+    - cd build
+    - cmake ../STREAM -DDATA_TYPE=double -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:STREAM_DP
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - STREAM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+  needs: ["build:STREAM_DP"]
     
 test:RandomAccess:
   stage: test
@@ -356,6 +462,27 @@ test:GEMM_HP_REP2:
       - cmake/**/*
       - .gitlab-ci.yml
   needs: ["build:GEMM_HP_REP2"]
+
+test:GEMM_DP_REP2:
+  stage: test
+  script:
+    - cd build
+    - cmake ../GEMM -DNUM_REPLICATIONS=2 -DATA_TYPE=double -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:GEMM_DP_REP2
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - GEMM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+  needs: ["build:GEMM_DP_REP2"]
 
 test:FFT:
   stage: test
