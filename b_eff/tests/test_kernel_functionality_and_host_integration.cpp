@@ -74,6 +74,10 @@ TEST_P(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
  * Tests if data is written to the channels for small message sizes
  */
 TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) {
+    if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
+        // Skip this test if no IEC are used, because they are specific to the IEC emulation based on files
+        GTEST_SKIP();
+    }
     const unsigned messageSize = std::log2(CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
@@ -98,6 +102,10 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel)
  * Tests if data is written to the channels for small message sizes filling two channels
  */
 TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels) {
+    if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
+        // Skip this test if no IEC are used, because they are specific to the IEC emulation based on files
+        GTEST_SKIP();
+    }
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
@@ -119,6 +127,10 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels
  * Tests if data is written to the channels for message sizes filling more than two channels
  */
 TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoChannels) {
+    if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
+        // Skip this test if no IEC are used, because they are specific to the IEC emulation based on files
+        GTEST_SKIP();
+    }
     const unsigned messageSize = std::log2(8 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 1;
     data->items.clear();
@@ -140,6 +152,10 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwo
  * Tests if correct data is written to the channels
  */
 TEST_P(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
+    if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
+        // Skip this test if no IEC are used, because they are specific to the IEC emulation based on files
+        GTEST_SKIP();
+    }
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
