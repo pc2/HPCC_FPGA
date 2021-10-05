@@ -24,6 +24,9 @@ public:
         bm = std::unique_ptr<linpack::LinpackBenchmark>(new linpack::LinpackBenchmark(global_argc, global_argv));
         bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
         bm->getExecutionSettings().programSettings->matrixSize = BLOCK_SIZE;
+        if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
+            GTEST_SKIP() << "This test is IEC Specific but other kernel is used";
+        }
         data = bm->generateInputData();
         setupExternalChannelFiles();
     }
@@ -76,6 +79,9 @@ class LinpackKernelCommunicationTestLU : public LinpackKernelCommunicationTest {
 
     void SetUp() override {
         LinpackKernelCommunicationTest::SetUp();
+        if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
+            GTEST_SKIP() << "This test is IEC Specific but other kernel is used";
+        }
         executeKernel();
     }
 
