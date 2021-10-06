@@ -109,29 +109,31 @@ void fetch/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["i
 
   // for iter iterations and one additional iteration to empty the last buffer
   for(unsigned k = 0; k < (iter + 1) * (N / POINTS); k++){ 
+    
+    if (k < iter * ( N / POINTS)) {
 
-    float2 read_chunk[POINTS];
+      float2 read_chunk[POINTS];
 
-    // Read the next 8 values from global memory
-    // in the last iteration just read garbage, but the data will not be forwarded over the pipes.
-    // This allows the use of memory bursts here.
-    // Also the data is shifted  every N/POINTS/POINTS iterations
-    __attribute__((opencl_unroll_hint(POINTS)))
-    for(int j = 0; j < POINTS; j++){
-      // Shift the data depending on the total FFT size
-      // Shifts every new chunk by one. If N/POINTS is a multiple of POINTS, the shifting is reduced to prevent mappings to the same bank.
-      unsigned shift = ((LOGN - LOGPOINTS - LOGPOINTS > 0) ? (k & (N/POINTS - 1)) >> (LOGN - LOGPOINTS - LOGPOINTS) : (k & (N/POINTS - 1)));
-      unsigned final_buffer_pos = (j + shift) & (POINTS - 1);
-      read_chunk[final_buffer_pos] = src[(k << LOGPOINTS) + j];
+      // Read the next 8 values from global memory
+      // in the last iteration just read garbage, but the data will not be forwarded over the pipes.
+      // This allows the use of memory bursts here.
+      // Also the data is shifted  every N/POINTS/POINTS iterations
+      __attribute__((opencl_unroll_hint(POINTS)))
+      for(int j = 0; j < POINTS; j++){
+        // Shift the data depending on the total FFT size
+        // Shifts every new chunk by one. If N/POINTS is a multiple of POINTS, the shifting is reduced to prevent mappings to the same bank.
+        unsigned shift = ((LOGN - LOGPOINTS - LOGPOINTS > 0) ? (k & (N/POINTS - 1)) >> (LOGN - LOGPOINTS - LOGPOINTS) : (k & (N/POINTS - 1)));
+        unsigned final_buffer_pos = (j + shift) & (POINTS - 1);
+        read_chunk[final_buffer_pos] = src[(k << LOGPOINTS) + j];
+      }
+
+      // Write the shifted data into the memory buffer
+      __attribute__((opencl_unroll_hint(POINTS)))
+      for(int j = 0; j < POINTS; j++){
+        unsigned local_i = k & (2 * N/POINTS - 1);
+        buf[local_i][j] = read_chunk[j];
+      }
     }
-
-    // Write the shifted data into the memory buffer
-    __attribute__((opencl_unroll_hint(POINTS)))
-    for(int j = 0; j < POINTS; j++){
-      unsigned local_i = k & (2 * N/POINTS - 1);
-      buf[local_i][j] = read_chunk[j];
-    }
-
     if (k >= ( N / POINTS)) {
       float2x8 buf2x8;
 

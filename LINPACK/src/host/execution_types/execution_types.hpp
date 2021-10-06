@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 Marius Meyer
+Copyright (c) 2021 Marius Meyer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,32 +19,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef SRC_HOST_EXECUTION_H_
-#define SRC_HOST_EXECUTION_H_
+#ifndef EXECUTION_TYPES_HPP
+#define EXECUTION_TYPES_HPP
 
-/* C++ standard library headers */
-#include <memory>
-#include <vector>
+#include "execution_types/execution_pcie.hpp"
+#include "execution_types/execution_iec.hpp"
 
-/* External library headers */
-#include "CL/cl.hpp"
-#include "parameters.h"
-#include "transpose_benchmark.hpp"
-
-
-namespace bm_execution {
-
-
-/**
- * @brief Transpose and add the matrices using the OpenCL kernel
- * 
- * @param config The progrma configuration
- * @param data data object that contains all required data for the execution on the FPGA
- * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
- */
-    std::unique_ptr<transpose::TransposeExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data);
-
-}  // namespace bm_execution
-
-#endif  // SRC_HOST_EXECUTION_H_
+#endif

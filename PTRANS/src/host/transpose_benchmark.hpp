@@ -30,7 +30,9 @@ SOFTWARE.
 /* Project's headers */
 #include "hpcc_benchmark.hpp"
 #include "transpose_data.hpp"
-#include "transpose_handlers.hpp"
+
+#include "data_handlers/data_handler_types.h"
+#include "data_handlers/handler.hpp"
 
 #include "parameters.h"
 
@@ -56,7 +58,7 @@ protected:
     void
     addAdditionalParseOptions(cxxopts::Options &options) override;
 
-    std::unique_ptr<transpose::TransposeDataHandler> dataHandler;
+    std::unique_ptr<transpose::data_handler::TransposeDataHandler> dataHandler;
 
 public:
 
@@ -73,7 +75,7 @@ public:
      * 
      */
     void
-    setTransposeDataHandler(std::string dataHandlerIdentifier);
+    setTransposeDataHandler(transpose::data_handler::DataHandlerType dataHandlerIdentifier);
 
     /**
      * @brief Transpose specific implementation of the kernel execution

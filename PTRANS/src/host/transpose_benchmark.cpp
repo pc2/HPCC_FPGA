@@ -31,12 +31,24 @@ SOFTWARE.
 #include <random>
 
 /* Project's headers */
-#include "execution.h"
+#include "execution_types/execution_intel.hpp"
+#include "execution_types/execution_intel_pq.hpp"
+#include "execution_types/execution_pcie.hpp"
+#include "execution_types/execution_pcie_pq.hpp"
+#include "execution_types/execution_cpu.hpp"
+#include "communication_types.hpp"
+
+#include "data_handlers/data_handler_types.h"
+#include "data_handlers/diagonal.hpp"
+#include "data_handlers/pq.hpp"
+
 #include "parameters.h"
 
+
 transpose::TransposeBenchmark::TransposeBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
-    setupBenchmark(argc, argv);
-    setTransposeDataHandler(executionSettings->programSettings->dataHandlerIdentifier);
+    if (setupBenchmark(argc, argv)) {
+        setTransposeDataHandler(executionSettings->programSettings->dataHandlerIdentifier);
+    }
 }
 
 void
@@ -48,12 +60,31 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
             cxxopts::value<uint>()->default_value(std::to_string(BLOCK_SIZE)))
         ("distribute-buffers", "Distribute buffers over memory banks. This will use three memory banks instead of one for a single kernel replication, but kernel replications may interfere. This is an Intel only attribute, since buffer placement is decided at compile time for Xilinx FPGAs.")
         ("handler", "Specify the used data handler that distributes the data over devices and memory banks",
-            cxxopts::value<std::string>()->default_value(TRANSPOSE_HANDLERS_DIST_DIAG));
+            cxxopts::value<std::string>()->default_value(DEFAULT_DIST_TYPE));
 }
 
 std::unique_ptr<transpose::TransposeExecutionTimings>
 transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
-    return bm_execution::calculate(*executionSettings, data);
+    switch (executionSettings->programSettings->communicationType) {
+        case hpcc_base::CommunicationType::intel_external_channels: 
+                                if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
+                                    return transpose::fpga_execution::intel::calculate(*executionSettings, data);
+                                }
+                                else {
+                                    return transpose::fpga_execution::intel_pq::calculate(*executionSettings, data);
+                                } break;
+        case hpcc_base::CommunicationType::pcie_mpi :                                 
+                                if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
+                                    return transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler);
+                                }
+                                else {
+                                    return transpose::fpga_execution::pcie_pq::calculate(*executionSettings, data, *dataHandler);
+                                } break;
+#ifdef MKL_FOUND
+        case hpcc_base::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*executionSettings, data, *dataHandler); break;
+#endif
+        default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(executionSettings->programSettings->communicationType));
+    }
 }
 
 void
@@ -63,39 +94,50 @@ transpose::TransposeBenchmark::collectAndPrintResults(const transpose::Transpose
     // Number of experiment repetitions
     uint number_measurements = output.calculationTimings.size();
     std::vector<double> max_measures(number_measurements);
+    std::vector<double> max_transfers(number_measurements);
 #ifdef _USE_MPI_
         // Copy the object variable to a local variable to make it accessible to the lambda function
         int mpi_size = mpi_comm_size;
         MPI_Reduce(output.calculationTimings.data(), max_measures.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(output.transferTimings.data(), max_transfers.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 #else
         std::copy(output.calculationTimings.begin(), output.calculationTimings.end(), max_measures.begin());
+        std::copy(output.transferTimings.begin(), output.transferTimings.end(), max_transfers.begin());
 #endif
 
     double avgCalculationTime = accumulate(max_measures.begin(), max_measures.end(), 0.0)
                                 / max_measures.size();
     double minCalculationTime = *min_element(max_measures.begin(), max_measures.end());
 
+    double avgTransferTime = accumulate(max_transfers.begin(), max_transfers.end(), 0.0)
+                                / max_transfers.size();
+    double minTransferTime = *min_element(max_transfers.begin(), max_transfers.end());
+
     double avgCalcFLOPS = flops / avgCalculationTime;
     double maxCalcFLOPS = flops / minCalculationTime;
     double avgMemBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / avgCalculationTime;
-    double avgNetworkBandwidth = flops * sizeof(HOST_DATA_TYPE) / avgCalculationTime;
     double maxMemBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / minCalculationTime;
-    double maxNetworkBandwidth = flops * sizeof(HOST_DATA_TYPE) / minCalculationTime;
+    double avgTransferBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime;
+    double maxTransferBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime;
 
 
 
 
     if (mpi_comm_rank == 0) {
-        std::cout << "              calc    calc FLOPS    Net [B/s]    Mem [B/s]" << std::endl;
-        std::cout << "avg:   " << avgCalculationTime
+        std::cout << "       total [s]     transfer [s]  calc [s]      calc FLOPS    Mem [B/s]     PCIe [B/s]" << std::endl;
+        std::cout << "avg:   " << (avgTransferTime + avgCalculationTime)
+                << "   " << avgTransferTime
+                << "   " << avgCalculationTime
                 << "   " << avgCalcFLOPS
-                << "   " << avgNetworkBandwidth
                 << "   " << avgMemBandwidth
+                << "   " << avgTransferBandwidth
                 << std::endl;
-        std::cout << "best:  " << minCalculationTime
+        std::cout << "best:  " << (minTransferTime + minCalculationTime)
+                << "   " << minTransferTime
+                << "   " << minCalculationTime
                 << "   " << maxCalcFLOPS
-                << "   " << maxNetworkBandwidth
                 << "   " << maxMemBandwidth
+                << "   " << maxTransferBandwidth
                 << std::endl;
     }
 }
@@ -111,15 +153,7 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
     // exchange the data using MPI depending on the chosen distribution scheme
     dataHandler->exchangeData(data);
 
-    size_t block_offset = executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize;
-    for (size_t b = 0; b < data.numBlocks; b++) {
-        for (size_t i = 0; i < executionSettings->programSettings->blockSize; i++) {
-            for (size_t j = 0; j < executionSettings->programSettings->blockSize; j++) {
-                data.A[b * block_offset + j * executionSettings->programSettings->blockSize + i] -= (data.result[b * block_offset + i * executionSettings->programSettings->blockSize + j] 
-                                                                            - data.B[b * block_offset + i * executionSettings->programSettings->blockSize + j]);
-            }
-        }
-    }
+    dataHandler->reference_transpose(data);
 
     double max_error = 0.0;
     for (size_t i = 0; i < executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize * data.numBlocks; i++) {
@@ -138,9 +172,12 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
 }
 
 void
-transpose::TransposeBenchmark::setTransposeDataHandler(std::string dataHandlerIdentifier) {
-    if (transpose::dataHandlerIdentifierMap.find(dataHandlerIdentifier) == transpose::dataHandlerIdentifierMap.end()) {
-        throw std::runtime_error("Could not match selected data handler: " + dataHandlerIdentifier);
+transpose::TransposeBenchmark::setTransposeDataHandler(transpose::data_handler::DataHandlerType dataHandlerIdentifier) {
+    switch (dataHandlerIdentifier) {
+        case transpose::data_handler::DataHandlerType::diagonal: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler>(new transpose::data_handler::DistributedDiagonalTransposeDataHandler(mpi_comm_rank, mpi_comm_size)); break;
+        case transpose::data_handler::DataHandlerType::pq: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler>(new transpose::data_handler::DistributedPQTransposeDataHandler(mpi_comm_rank, mpi_comm_size)); break;
+        default: throw std::runtime_error("Could not match selected data handler: " + transpose::data_handler::handlerToString(dataHandlerIdentifier));
     }
-    dataHandler = transpose::dataHandlerIdentifierMap[dataHandlerIdentifier](mpi_comm_rank, mpi_comm_size);
+        
+
 }

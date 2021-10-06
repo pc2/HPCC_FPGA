@@ -31,7 +31,8 @@ SOFTWARE.
 #include <random>
 
 /* Project's headers */
-#include "execution.h"
+#include "communication_types.hpp"
+#include "execution_types/execution_types.hpp"
 #include "parameters.h"
 
 linpack::LinpackProgramSettings::LinpackProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
@@ -106,7 +107,12 @@ linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
 
 std::unique_ptr<linpack::LinpackExecutionTimings>
 linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
-    auto timings = bm_execution::calculate(*executionSettings, data.A, data.b, data.ipvt);
+    std::unique_ptr<linpack::LinpackExecutionTimings> timings;
+    switch (executionSettings->programSettings->communicationType) {
+        case hpcc_base::CommunicationType::pcie_mpi : timings = execution::pcie::calculate(*executionSettings, data.A, data.b, data.ipvt); break;
+        case hpcc_base::CommunicationType::intel_external_channels: timings = execution::iec::calculate(*executionSettings, data.A, data.b, data.ipvt); break;
+        default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(executionSettings->programSettings->communicationType));
+    }
 #ifdef DISTRIBUTED_VALIDATION
     distributed_gesl_nopvt_ref(data);
 #endif
@@ -369,7 +375,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
             for (int j = 0; j < n; j++) {
                 // For each element below it
                 for (int i = 0; i < n; i++) {
-                    std::cout << ref_result->A[n * j + i] << ", ";
+                    std::cout << std::abs(ref_result->A[n * j + i] - data.A[n * j + i]) << ", ";
                 }
                 std::cout << std::endl;
             }

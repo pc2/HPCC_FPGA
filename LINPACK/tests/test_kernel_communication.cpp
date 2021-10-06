@@ -24,6 +24,9 @@ public:
         bm = std::unique_ptr<linpack::LinpackBenchmark>(new linpack::LinpackBenchmark(global_argc, global_argv));
         bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
         bm->getExecutionSettings().programSettings->matrixSize = BLOCK_SIZE;
+        if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
+            GTEST_SKIP() << "This test is IEC Specific but other kernel is used";
+        }
         data = bm->generateInputData();
         setupExternalChannelFiles();
     }
@@ -76,6 +79,9 @@ class LinpackKernelCommunicationTestLU : public LinpackKernelCommunicationTest {
 
     void SetUp() override {
         LinpackKernelCommunicationTest::SetUp();
+        if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
+            GTEST_SKIP() << "This test is IEC Specific but other kernel is used";
+        }
         executeKernel();
     }
 
@@ -609,29 +615,29 @@ TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockExternalResultisCorrect) {
     uint matrix_size = bm->getExecutionSettings().programSettings->matrixSize;
     auto gefa_data = bm->generateInputData();
 
-    // generate uniformly distributed block as top block
+    // generate uniformly distributed block as left block
     bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
     auto ref_data = bm->generateInputData();
     bm->getExecutionSettings().programSettings->isDiagonallyDominant = true;
     linpack::gefa_ref_nopvt(gefa_data->A, matrix_size,matrix_size);
 
-    // For each diagnonal element
+    // reference implementation to update left block    
     for (int k = 0; k < matrix_size; k++) {
-        // For each row below the current row
         for (int j = 0; j < matrix_size; j++) {
-            // multiply current column to current row and add it up
             for (int i = k + 1; i < matrix_size; i++) {
                 ref_data->A[j * matrix_size + i] += ref_data->A[j * matrix_size + k] * gefa_data->A[k * matrix_size + i];
             }
         }
     }
-    double total_error = 0.0;
+    double max_error = 0.0;
     for (int i = 0; i < bm->getExecutionSettings().programSettings->matrixSize; i++) {
         for (int j = 0; j < bm->getExecutionSettings().programSettings->matrixSize; j++) {
-            total_error += std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j]);
+            max_error = std::max(max_error, static_cast<double>(std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j])));
         }
     }
-    EXPECT_FLOAT_EQ(total_error, 0.0);
+    // tolerated delta between expected and real result is machine epsilon
+    double delta = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    EXPECT_NEAR(max_error, 0.0, delta);
 }
 
 TEST_F(LinpackKernelCommunicationTestLeft, LeftBlockGlobalMemLUBufferContentSameAsLUBlock) {
@@ -781,13 +787,15 @@ TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalResultisCorrect) {
             }
         }
     }
-    double total_error = 0.0;
+    double max_error = 0.0;
     for (int i = 0; i < bm->getExecutionSettings().programSettings->matrixSize; i++) {
         for (int j = 0; j < bm->getExecutionSettings().programSettings->matrixSize; j++) {
-            total_error += std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j]);
+            max_error = std::max(max_error, static_cast<double>(std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j])));
         }
     }
-    EXPECT_FLOAT_EQ(total_error, 0.0);
+    // tolerated delta between expected and real result is machine epsilon
+    double delta = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    EXPECT_NEAR(max_error, 0.0, delta);
 }
 
 TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToRightCorrectAmountOfData) {
@@ -898,13 +906,15 @@ TEST_F(LinpackKernelCommunicationTestTop, TopBlockExternalChannelOutputToTopCorr
 TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalResultisSameAsRef) {
     auto data2 = bm->generateInputData();
     linpack::gefa_ref_nopvt(data2->A, bm->getExecutionSettings().programSettings->matrixSize,bm->getExecutionSettings().programSettings->matrixSize);
-    double total_error = 0.0;
+    double max_error = 0.0;
     for (int i = 0; i < bm->getExecutionSettings().programSettings->matrixSize; i++) {
         for (int j = 0; j < bm->getExecutionSettings().programSettings->matrixSize; j++) {
-            total_error += std::abs(data2->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j]);
+            max_error = std::max(max_error, static_cast<double>(std::abs(data2->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j])));
         }
     }
-    EXPECT_FLOAT_EQ(total_error, 0.0);
+    // tolerated delta between expected and real result is machine epsilon
+    double delta = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    EXPECT_NEAR(max_error, 0.0, delta);
 }
 
 
@@ -1024,13 +1034,15 @@ TEST_F(LinpackKernelCommunicationTestLeftOut, LeftBlockExternalResultisCorrect) 
             }
         }
     }
-    double total_error = 0.0;
+    double max_error = 0.0;
     for (int i = 0; i < bm->getExecutionSettings().programSettings->matrixSize; i++) {
         for (int j = 0; j < bm->getExecutionSettings().programSettings->matrixSize; j++) {
-            total_error += std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j]);
+            max_error = std::max(max_error, static_cast<double>(std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j])));
         }
     }
-    EXPECT_FLOAT_EQ(total_error, 0.0);
+    // tolerated delta between expected and real result is machine epsilon
+    double delta = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    EXPECT_NEAR(max_error, 0.0, delta);
 }
 
 
@@ -1058,13 +1070,15 @@ TEST_F(LinpackKernelCommunicationTestTopOut, TopBlockExternalResultisCorrect) {
             }
         }
     }
-    double total_error = 0.0;
+    double max_error = 0.0;
     for (int i = 0; i < bm->getExecutionSettings().programSettings->matrixSize; i++) {
         for (int j = 0; j < bm->getExecutionSettings().programSettings->matrixSize; j++) {
-            total_error += std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j]);
+            max_error = std::max(max_error, static_cast<double>(std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j])));
         }
     }
-    EXPECT_FLOAT_EQ(total_error, 0.0);
+    // tolerated delta between expected and real result is machine epsilon
+    double delta = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    EXPECT_NEAR(max_error, 0.0, delta);
 }
 
 
@@ -1197,13 +1211,15 @@ TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalResultisCorrect) {
 
     linpack::gefa_ref_nopvt(ref_data->A, matrix_size, matrix_size);
 
-    double total_error = 0.0;
+    double max_error = 0.0;
     for (int i = 0; i < bm->getExecutionSettings().programSettings->matrixSize; i++) {
         for (int j = 0; j < bm->getExecutionSettings().programSettings->matrixSize; j++) {
-            total_error += std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j]);
+            max_error = std::max(max_error, static_cast<double>(std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j])));
         }
     }
-    EXPECT_FLOAT_EQ(total_error, 0.0);
+    // tolerated delta between expected and real result is machine epsilon times matrix width
+    double delta = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    EXPECT_NEAR(max_error, 0.0, delta);
 }
 
 TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalChannelOutputToRightCorrectAmountOfData) {

@@ -21,6 +21,8 @@ If available, the benchmark will use `sgemm_` to validate the calculation instea
 For matrix sizes above 1000x1000 we recommend using such a library to speed up the benchmark execution. 
 Using such a library will not change the performance result of the benchmark but might affect the reported error of the calculation.
 
+For half precision support, the IEEE 754-based half-precision floating-point library by Christian Rau is used and a copy is provided with this code. 
+
 ## Build
 
 CMake is used as the build system.
@@ -53,7 +55,7 @@ Next to the common configuration options given in the [README](../README.md) of 
 
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
- `DATA_TYPE`     | float (also supported: half, double)      | Data type used for calculation       |
+ `DATA_TYPE`     | float (also supported: half, double)      | Data type used for calculation. *Note: Currently, half-precision does not work on Intel FPGAs because they can not be passed as kernel argument per value.*  |
 `DEFAULT_MATRIX_SIZE` | 8      | The default size of the quadratic matrices in blocks |
 `BLOCK_SIZE`    | 512          | Block size used by the kernel for calculation |
 `GEMM_SIZE`    | 8             | Block size of the fully unrolled matrix multiplication in registers |

@@ -16,6 +16,12 @@ else()
     set(header_default Yes)
 endif()
 
+if(DEFINED COMMUNICATION_TYPE_SUPPORT_ENABLED)
+    set(comm_support_default ${COMMUNICATION_TYPE_SUPPORT_ENABLED})
+else()
+    set(comm_support_default No)
+endif()
+
 # Host code specific options
 set(DEFAULT_REPETITIONS 10 CACHE STRING "Default number of repetitions")
 set(DEFAULT_DEVICE -1 CACHE STRING "Index of the default device to use")
@@ -29,8 +35,9 @@ set(USE_DEPRECATED_HPP_HEADER ${header_default} CACHE BOOL "Flag that indicates 
 set(HPCC_FPGA_CONFIG ${HPCC_FPGA_CONFIG} CACHE FILEPATH "Configuration file that is used to overwrite the default configuration")
 set(NUM_REPLICATIONS 4 CACHE STRING "Number of times the kernels will be replicated")
 set(KERNEL_REPLICATION_ENABLED Yes CACHE INTERNAL "Enables kernel replication for the OpenCL kernel targets")
+set(COMMUNICATION_TYPE_SUPPORT_ENABLED ${comm_support_default} CACHE INTERNAL "Enables the support for the selection of the communication type which has to be implemented by the specific benchmark")
 
-mark_as_advanced(KERNEL_REPLICATION_ENABLED)
+mark_as_advanced(KERNEL_REPLICATION_ENABLED COMMUNICATION_TYPE_SUPPORT_ENABLED)
 if (NOT KERNEL_REPLICATION_ENABLED)
 # Only define NUM_REPLICATIONS if kernel replications is enabled
  unset(NUM_REPLICATIONS)
@@ -117,6 +124,11 @@ endif()
 # use deprecated cl.hpp header if requested
 if (USE_DEPRECATED_HPP_HEADER)
     add_definitions(-DUSE_DEPRECATED_HPP_HEADER)
+endif()
+
+# set the communication type flag if required
+if (COMMUNICATION_TYPE_SUPPORT_ENABLED)
+    add_definitions(-DCOMMUNICATION_TYPE_SUPPORT_ENABLED)
 endif()
 
 # Set OpenCL version that should be used

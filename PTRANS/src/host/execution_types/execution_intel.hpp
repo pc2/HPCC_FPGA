@@ -19,29 +19,36 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
-/* Related header files */
-#include "execution.h"
+#ifndef SRC_HOST_INTEL_EXECUTION_H_
+#define SRC_HOST_INTEL_EXECUTION_H_
 
 /* C++ standard library headers */
 #include <memory>
 #include <vector>
 #include <chrono>
 
-/* External library headers */
-#include "CL/cl.hpp"
-
 /* Project's headers */
+#include "transpose_benchmark.hpp"
+#include "data_handlers/data_handler_types.h"
 
-namespace bm_execution {
+namespace transpose {
+namespace fpga_execution {
+namespace intel {
 
-    /*
-    Implementation for the single kernel.
-     @copydoc bm_execution::calculate()
-    */
-    std::unique_ptr<transpose::TransposeExecutionTimings>
+    /**
+ * @brief Transpose and add the matrices using the OpenCL kernel using a diagonal distribution and Intel external channels for communication
+ * 
+ * @param config The progrma configuration
+ * @param data data object that contains all required data for the execution on the FPGA
+ * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
+ */
+static  std::unique_ptr<transpose::TransposeExecutionTimings>
     calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data) {
         int err;
+
+        if (config.programSettings->dataHandlerIdentifier != transpose::data_handler::DataHandlerType::diagonal) {
+                throw std::runtime_error("Used data handler not supported by execution handler!");
+        }
 
         std::vector<size_t> bufferSizeList;
         std::vector<cl::Buffer> bufferListA;
@@ -78,12 +85,12 @@ namespace bm_execution {
                         // Define the memory bank the buffers will be placed in
                         if (config.programSettings->distributeBuffers) {
                                 memory_bank_info_a = ((((r * 3) % 7) + 1) << 16);
-                                memory_bank_info_a = ((((r * 3 + 1) % 7) + 1) << 16);
+                                memory_bank_info_b = ((((r * 3 + 1) % 7) + 1) << 16);
                                 memory_bank_info_out = ((((r * 3 + 2) % 7) + 1) << 16);
                         }
                         else {
                                 memory_bank_info_a = ((r + 1) << 16);
-                                memory_bank_info_a = ((r + 1) << 16);
+                                memory_bank_info_b = ((r + 1) << 16);
                                 memory_bank_info_out = ((r + 1) << 16);
                         }
                 }
@@ -122,10 +129,18 @@ namespace bm_execution {
         #endif
                 // TODO If SVM, the start index might be different because all replcations 
                 // access the same buffer!
-                err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(0));
-                ASSERT_CL(err) 
-                err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(0));
-                ASSERT_CL(err) 
+                if (config.programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::pq) {
+                        err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(std::sqrt(data.numBlocks)));
+                        ASSERT_CL(err) 
+                        err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(std::sqrt(data.numBlocks)));
+                        ASSERT_CL(err) 
+                }
+                else {
+                        err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(0));
+                        ASSERT_CL(err) 
+                        err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(0));
+                        ASSERT_CL(err) 
+                }
                 err = transposeWriteKernel.setArg(3, static_cast<cl_ulong>(blocks_per_replication));
                 ASSERT_CL(err) 
                 err = transposeReadKernel.setArg(2, static_cast<cl_ulong>(blocks_per_replication));
@@ -190,8 +205,8 @@ namespace bm_execution {
 
             auto startCalculation = std::chrono::high_resolution_clock::now();
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                writeCommandQueueList[r].enqueueTask(transposeWriteKernelList[r]);
-                readCommandQueueList[r].enqueueTask(transposeReadKernelList[r]);
+                writeCommandQueueList[r].enqueueNDRangeKernel(transposeWriteKernelList[r], cl::NullRange, cl::NDRange(1));
+                readCommandQueueList[r].enqueueNDRangeKernel(transposeReadKernelList[r], cl::NullRange, cl::NDRange(1));
             }
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].finish();
@@ -241,4 +256,8 @@ namespace bm_execution {
         return result;
     }
 
-}  // namespace bm_execution
+}  // namespace transpose
+}  // namespace fpga_execution
+}  // namespace intel
+
+#endif

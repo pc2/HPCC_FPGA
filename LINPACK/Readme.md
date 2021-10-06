@@ -20,13 +20,13 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
  Only the LU facotrization without pivoting is implemented on FPGA and external channels are
  used to calculate the solution in a 2D torus of FPGAs.
 
- The kernel targets are:
+ The kernel targets are listed below. `COMM_TYPE` can be IEC for Intel external channel (only available for vendor Intel) and PCIE for communication via PCIe and MPI.
  
   |  Target                        | Description                                    |
   | ------------------------------ | ---------------------------------------------- |
-  | hpl_torus_`VENDOR`                | Synthesizes the kernel (takes several hours!)  |
-  | hpl_torus_report_`VENDOR`         | Just compile kernel and create reports         |
-  | hpl_torus_emulate_`VENDOR`          | Create a n emulation kernel                    |
+  | hpl_torus_`COMM_TYPE`_`VENDOR`                | Synthesizes the kernel (takes several hours!)  |
+  | hpl_torus_`COMM_TYPE`_report_`VENDOR`         | Just compile kernel and create reports         |
+  | hpl_torus_`COMM_TYPE`_emulate_`VENDOR`          | Create a n emulation kernel                    |
 
  You can build for example the host application by running
  
@@ -69,14 +69,12 @@ For more information on available input parameters run
     ./Linpack_intel -h
     
     Implementation of the LINPACK benchmark proposed in the HPCC benchmark suite for FPGA.
-    Version: 2.2
+    Version: 2.3
 
     MPI Version:  3.1
-    Config. Time: Wed Apr 14 09:31:37 UTC 2021
-    Git Commit:   60651eb-dirty
 
     Usage:
-    ./bin/Linpack_intel [OPTION...]
+    bin/Linpack_intel [OPTION...]
 
     -f, --file arg         Kernel file name
     -n, arg                Number of repetitions (default: 10)
@@ -86,29 +84,34 @@ For more information on available input parameters run
                             data types.
         --device arg       Index of the device that has to be used. If not
                             given you will be asked which device to use if there are
-                            multiple devices available. (default: -1)
+                            multiple devices available. (default: 0)
         --platform arg     Index of the platform that has to be used. If not
                             given you will be asked which platform to use if there
-                            are multiple platforms available. (default: -1)
-    -r, arg                Number of used kernel replications (default: 3)
+                            are multiple platforms available. (default: 0)
+    -r, arg                Number of used kernel replications (default: 1)
+        --comm-type arg    Used communication type for inter-FPGA communication
+                            (default: AUTO)
         --test             Only test given configuration and skip execution and
                             validation
     -h, --help             Print this help
     -m, arg                Matrix size in number of blocks in one dimension for
                             a singe MPI rank. Total matrix will have size m *
-                            sqrt(MPI_size) (default: 1024)
+                            sqrt(MPI_size) (default: 2)
     -b, arg                Log2 of the block size in number of values in one
-                            dimension (default: 3)
+                            dimension (default: 5)
         --uniform          Generate a uniform matrix instead of a diagonally
                             dominant. This has to be supported by the FPGA kernel!
         --emulation        Use kernel arguments for emulation. This may be
                             necessary to simulate persistent local memory on the FPGA
 
+Available options for `--comm-type`:
 
+- `IEC`: Intel external channels are used by the kernels for communication.
+- `PCIE`: PCIe and MPI are used to exchange data between FPGAs over the CPU.
     
 To execute the unit and integration tests for Intel devices run
 
-    CL_CONTEXT_EMULATOR_DEVICE=1 ./Linpack_test_intel -f KERNEL_FILE_NAME
+    ./Linpack_test_intel -f KERNEL_FILE_NAME
     
 in the `bin` folder within the build directory.
 It will run an emulation of the kernel and execute some functionality tests.

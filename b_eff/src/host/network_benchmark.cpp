@@ -31,7 +31,7 @@ SOFTWARE.
 #include <random>
 
 /* Project's headers */
-#include "execution.h"
+#include "execution_types/execution.hpp"
 #include "parameters.h"
 
 network::NetworkProgramSettings::NetworkProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
@@ -50,6 +50,7 @@ network::NetworkProgramSettings::getSettingsMap() {
 
 network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize, unsigned int _loopLength) : messageSize(_messageSize), loopLength(_loopLength), 
                                                                             validationBuffer(CHANNEL_WIDTH * 2 * 2, 0) {
+                                                                                // TODO: fix the validation buffer size to use the variable number of kernel replications and channels
                                                                                 // Validation data buffer should be big enough to fit the data of two channels
                                                                                 // for every repetition. The number of kernel replications is fixed to 2, which 
                                                                                 // also needs to be multiplied with the buffer size
@@ -104,7 +105,14 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
         if (world_rank == 0) {
             std::cout << "Measure for " << (1 << run.messageSize) << " Byte" << std::endl;
         }
-        timing_results.push_back(bm_execution::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer));
+        std::shared_ptr<network::ExecutionTimings> timing;
+        switch (executionSettings->programSettings->communicationType) {
+            case hpcc_base::CommunicationType::cpu_only: timing = execution_types::cpu::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
+            case hpcc_base::CommunicationType::pcie_mpi: timing = execution_types::pcie::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
+            case hpcc_base::CommunicationType::intel_external_channels: timing = execution_types::iec::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
+            default: throw std::runtime_error("Selected Communication type not supported: " + hpcc_base::commToString(executionSettings->programSettings->communicationType));
+        }
+        timing_results.push_back(timing);
     }
 
     std::unique_ptr<network::NetworkExecutionTimings> collected_results = std::unique_ptr<network::NetworkExecutionTimings> (new network::NetworkExecutionTimings());

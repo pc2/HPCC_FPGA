@@ -227,7 +227,7 @@ This allows higher memory bandwidths during kernel execution.
 - *High Bandwidth Memory (HBM)*: The FPGA fabric itself is equipped with memory banks that can be accessed by the host to copy data. Compared to DDR, this memory type consists of more, but smaller memory banks so that the host needs to split the data between all memory banks to achieve the best performance. Still, the total achievable memory bandwidth is much higher compared to DDR.
 
 The following three tables contain an overview of the compatibility of all benchmarks that use global memory with the three mentioned memory types.
-b_eff is not included since it does not use global memory.
+b_eff does use global memory only for validation. Still, the support for different memory types needs to be implemented on the host side.
 Full support of the benchmark is indicated with a **Yes**, functionally correct behavior but performance limitations are indicated with **(Yes)**, no support is indicated with **No**.
 For Xilinx, all benchmarks need a compatible compile- and link-settings-file to map the kernel memory ports to the available memory banks.
 LINPACK, PTRANS and b_eff are currently not working with Xilinx FPGAs because the implementations lack support for inter-FPGA communication on these devices.
@@ -239,10 +239,11 @@ Support will be added subsequently.
 |--------------|------------|--------------|
 | STREAM       | Yes        |  Yes         |            
 | RandomAccess | Yes        |  Yes         |      
-| PTRANS       | Yes        |  No          |      
-| LINPACK      | Yes        |  No          |           
+| PTRANS       | Yes        |  Yes         |      
+| LINPACK      | Yes        |  Yes         |           
 | GEMM         | Yes        |  Yes         |      
-| FFT          | Yes        |  Yes         |       
+| FFT          | Yes        |  Yes         | 
+| b_eff        | Yes        |  Yes         |       
 
 
 #### HBM
@@ -257,6 +258,7 @@ Support will be added subsequently.
 | LINPACK      | No         |   No         |           
 | GEMM         | Yes         |  Yes        |      
 | FFT          | Yes         |  Yes        | 
+| b_eff        | No         |  No          | 
 
 #### SVM
 
@@ -270,6 +272,7 @@ SVM could not be tested with Xilinx-based boards, yet. Thus, they are considered
 | LINPACK      | No         |  No          |           
 | GEMM         | Yes        |  No          |      
 | FFT          | Yes        |  No          | 
+| b_eff        | No         |  No          | 
 
 ## Publications
 

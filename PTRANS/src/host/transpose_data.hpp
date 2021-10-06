@@ -28,6 +28,8 @@ SOFTWARE.
 
 /* Project's headers */
 #include "hpcc_benchmark.hpp"
+#include "data_handlers/data_handler_types.h"
+
 
 /**
  * @brief Contains all classes and methods needed by the Transpose benchmark
@@ -58,7 +60,7 @@ public:
      * @brief Identifier of the used data handler
      * 
      */
-    std::string dataHandlerIdentifier;
+    transpose::data_handler::DataHandlerType dataHandlerIdentifier;
 
     /**
      * @brief If true, the three buffers for A,B and A_out will be placed on three different memory banks, if possible
@@ -106,6 +108,12 @@ public:
      * 
      */
     HOST_DATA_TYPE* result;
+
+    /**
+     * @brief Data buffer used during data exchange of matrices
+     * 
+     */
+    HOST_DATA_TYPE* exchange;
 
     /**
      * @brief Number of matrix blocks that are stored in every matrix A, B and result. Blocks are

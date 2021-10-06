@@ -1,9 +1,13 @@
 
 add_subdirectory(../../../shared ${CMAKE_BINARY_DIR}/lib/hpccbase)
-set(HOST_SOURCE execution_default.cpp transpose_benchmark.cpp transpose_handlers.cpp transpose_data.cpp)
+set(HOST_SOURCE transpose_benchmark.cpp transpose_data.cpp)
 
 set(HOST_EXE_NAME Transpose)
 set(LIB_NAME trans)
+
+set(BLA_VENDOR Intel10_64lp)
+set(BLA_STATIC ON)
+find_package(BLAS)
 
 if (INTELFPGAOPENCL_FOUND)
     add_library(${LIB_NAME}_intel STATIC ${HOST_SOURCE})
@@ -15,6 +19,12 @@ if (INTELFPGAOPENCL_FOUND)
     target_link_libraries(${HOST_EXE_NAME}_intel ${LIB_NAME}_intel)
     if (USE_SVM)
         target_compile_definitions(${LIB_NAME}_intel PRIVATE -DCL_VERSION_2_0)
+    endif()
+    if (BLAS_FOUND)
+        target_link_libraries(${LIB_NAME}_intel ${BLAS_LIBRARIES})
+        target_compile_definitions(${LIB_NAME}_intel PRIVATE -DMKL_FOUND)
+        target_compile_options(${LIB_NAME}_intel PRIVATE "${BLAS_LINKER_FLAGS}")
+        target_include_directories(${LIB_NAME}_intel PRIVATE "$ENV{MKL_ROOT}/include")
     endif()
     target_compile_definitions(${LIB_NAME}_intel PRIVATE -DINTEL_FPGA)
     target_compile_options(${LIB_NAME}_intel PRIVATE "${OpenMP_CXX_FLAGS}")

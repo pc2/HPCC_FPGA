@@ -1,6 +1,5 @@
 
 set(COMPILER_INCLUDES "-I${CMAKE_BINARY_DIR}/src/common/" "-I${CMAKE_CURRENT_SOURCE_DIR}")
-set(CLFLAGS --config ${XILINX_COMPILE_SETTINGS_FILE})
 
 set(Vitis_EMULATION_CONFIG_UTIL $ENV{XILINX_VITIS}/bin/emconfigutil)
 
@@ -44,6 +43,13 @@ function(generate_kernel_targets_xilinx)
         set(xilinx_report_folder "${EXECUTABLE_OUTPUT_PATH}/xilinx_reports")
         set(local_CLFLAGS ${CLFLAGS} -DXILINX_FPGA)
         list(APPEND local_CLFLAGS --report_dir=${xilinx_report_folder} --log_dir=${xilinx_report_folder}/logs)
+
+        string(REGEX MATCH "^.+\.tcl" is_tcl_script ${XILINX_COMPILE_SETTINGS_FILE})
+        if (is_tcl_script)
+                set(CLFLAGS --hls.pre_tcl ${XILINX_COMPILE_SETTINGS_FILE})
+        else()
+                set(CLFLAGS --config ${XILINX_COMPILE_SETTINGS_FILE})
+        endif()
 
         # build emulation config for device
         add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/emconfig.json
@@ -164,7 +170,7 @@ function(generate_kernel_targets_intel)
                 DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_f}
         )
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_emulate_f}
-                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DEMULATE -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -legacy-emulator -march=emulator
+                COMMAND ${IntelFPGAOpenCL_AOC} ${source_f} -DEMULATE -DINTEL_FPGA ${COMPILER_INCLUDES} ${AOC_FLAGS} -march=emulator
                 -o ${CMAKE_CURRENT_BINARY_DIR}/${bitstream_emulate_f}
                 MAIN_DEPENDENCY ${source_f}
                 DEPENDS ${CMAKE_BINARY_DIR}/src/common/parameters.h

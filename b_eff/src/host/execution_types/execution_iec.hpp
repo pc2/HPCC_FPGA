@@ -19,9 +19,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
-/* Related header files */
-#include "execution.h"
+#ifndef SRC_HOST_EXECUTION_TYPES_EXECUTION_IEC_HPP
+#define SRC_HOST_EXECUTION_TYPES_EXECUTION_IEC_HPP
 
 /* C++ standard library headers */
 #include <memory>
@@ -34,7 +33,7 @@ SOFTWARE.
 
 /* Project's headers */
 
-namespace bm_execution {
+namespace network::execution_types::iec {
 
     /*
     Implementation for the single kernel.
@@ -126,7 +125,7 @@ namespace bm_execution {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-            err = recvQueues[r].enqueueReadBuffer(validationBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * validationData.size() / 2, &validationData.data()[r * validationData.size() / 2]);
+            err = recvQueues[r].enqueueReadBuffer(validationBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * validationData.size() / config.programSettings->kernelReplications, &validationData.data()[r * validationData.size() / config.programSettings->kernelReplications]);
             ASSERT_CL(err);
         }
         std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
@@ -138,3 +137,5 @@ namespace bm_execution {
     }
 
 }  // namespace bm_execution
+
+#endif

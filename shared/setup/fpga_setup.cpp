@@ -166,6 +166,10 @@ Sets up the given FPGA with the kernel in the provided file.
         // Create the Program from the AOCX file.
         cl::Program program(*context, deviceList, mybinaries, NULL, &err);
         ASSERT_CL(err)
+
+        // Build the program (required for fast emulation on Intel)
+        ASSERT_CL(program.build());
+        
         if (world_rank == 0) {
             std::cout << "Prepared FPGA successfully for global Execution!" <<
                       std::endl;
@@ -298,6 +302,10 @@ choose a device.
             } else {
                 chosenDeviceId = static_cast<long unsigned int>(world_rank % deviceList.size());
             }
+        } else if (deviceList.size() == 1) {
+            chosenDeviceId = 0;
+        } else {
+            throw std::runtime_error("No devices found for selected Platform!");
         }
 
         if (world_rank == 0) {

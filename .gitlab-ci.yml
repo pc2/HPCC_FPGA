@@ -9,7 +9,7 @@ default:
   tags:
     - jacamar
   before_script:
-    - module load intelFPGA_pro/20.4.0_max bittware_520n/20.4.0_max intel devel/CMake/3.15.3-GCCcore-8.3.0
+    - module load intelFPGA_pro/20.4.0 bittware_520n/20.4.0_max intel devel/CMake/3.15.3-GCCcore-8.3.0
 
 ###
 #
@@ -38,7 +38,50 @@ build:STREAM:
       - scripts/**/*
       - cmake/**/*
       - .gitlab-ci.yml
-      
+
+build:STREAM_HP:
+  stage: build
+  script:
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../STREAM -DDATA_TYPE=half -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=32 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make -j 40 all
+  artifacts:
+    paths:
+      - build/bin/stream_kernels_single_emulate.aocx
+      - build/bin/stream_kernels_emulate.aocx
+      - build/bin/STREAM_FPGA_intel
+      - build/bin/STREAM_FPGA_test_intel
+  only:
+    changes:
+      - STREAM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+
+build:STREAM_DP:
+  stage: build
+  script:
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../STREAM -DDATA_TYPE=double -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=8 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make -j 40 all
+  artifacts:
+    paths:
+      - build/bin/stream_kernels_single_emulate.aocx
+      - build/bin/stream_kernels_emulate.aocx
+      - build/bin/STREAM_FPGA_intel
+      - build/bin/STREAM_FPGA_test_intel
+  only:
+    changes:
+      - STREAM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
       
 build:RandomAccess:
   stage: build
@@ -72,8 +115,11 @@ build:PTRANS:
     - make -j 40 all
   artifacts:
     paths:
-      - build/bin/transpose_diagonal_emulate.aocx
-      - build/bin/transpose_diagonal_c2_emulate.aocx
+      - build/bin/transpose_DIAG_IEC_emulate.aocx
+      - build/bin/transpose_PQ_IEC_emulate.aocx
+      - build/bin/transpose_PQ_PCIE_emulate.aocx
+      - build/bin/transpose_DIAG_PCIE_emulate.aocx
+      - build/bin/transpose_c2_DIAG_IEC_emulate.aocx
       - build/bin/Transpose_intel
       - build/bin/Transpose_test_intel
   only:
@@ -90,11 +136,12 @@ build:LINPACK:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3 -DUSE_PCIE_MPI_COMMUNICATION=Yes
     - make -j 40 all
   artifacts:
     paths:
-      - build/bin/hpl_torus_emulate.aocx
+      - build/bin/hpl_torus_PCIE_emulate.aocx
+      - build/bin/hpl_torus_IEC_emulate.aocx
       - build/bin/Linpack_intel
       - build/bin/Linpack_test_intel
   only:
@@ -133,6 +180,27 @@ build:GEMM_HP_REP2:
     - mkdir -p build
     - cd build
     - cmake ../GEMM -DDATA_TYPE=half -DNUM_REPLICATIONS=2 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - make -j 40 all
+  artifacts:
+    paths:
+      - build/bin/gemm_base_emulate.aocx
+      - build/bin/GEMM_intel
+      - build/bin/GEMM_test_intel
+  only:
+    changes:
+      - GEMM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+
+build:GEMM_DP_REP2:
+  stage: build
+  script:
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../GEMM -DDATA_TYPE=double -DNUM_REPLICATIONS=2 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
     - make -j 40 all
   artifacts:
     paths:
@@ -199,11 +267,7 @@ build:b_eff:
     - make -j 40 all
   artifacts:
     paths:
-      - build/bin/communication_bw520n_emulate.aocx
-      - build/bin/communication_bw520n_combined_loops_emulate.aocx
-      - build/bin/communication_bw520n_disable_pipelining_emulate.aocx
-      - build/bin/Network_intel
-      - build/bin/Network_test_intel
+      - build/bin/*
   only:
     changes:
       - b_eff/**/*
@@ -223,7 +287,7 @@ test:STREAM:
   script:
     - cd build
     - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:STREAM
   artifacts:
@@ -238,13 +302,57 @@ test:STREAM:
       - cmake/**/*
       - .gitlab-ci.yml
   needs: ["build:STREAM"]
+
+test:STREAM_HP:
+  stage: test
+  script:
+    - cd build
+    - cmake ../STREAM -DDATA_TYPE=half -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=32 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:STREAM_HP
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - STREAM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+  needs: ["build:STREAM_HP"]
+  # Allow failure because: The intel emulator does not seem to support half precision kernel arguments (CL_INVALID_ARG_SIZE)
+  allow_failure: true
+
+test:STREAM_DP:
+  stage: test
+  script:
+    - cd build
+    - cmake ../STREAM -DDATA_TYPE=double -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=8 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:STREAM_DP
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - STREAM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+  needs: ["build:STREAM_DP"]
     
 test:RandomAccess:
   stage: test
   script:
     - cd build
     - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:RandomAccess
   artifacts:
@@ -275,7 +383,7 @@ test:PTRANS:
     - ln -s kernel_output_ch1 kernel_input_ch0
     - ln -s kernel_output_ch3 kernel_input_ch2
     - cd ..
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:PTRANS
   artifacts:
@@ -296,7 +404,7 @@ test:LINPACK:
   script:
     - cd build
     - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0  -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:LINPACK
   artifacts:
@@ -317,7 +425,7 @@ test:GEMM:
   script:
     - cd build
     - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:GEMM
   artifacts:
@@ -338,7 +446,7 @@ test:GEMM_HP_REP2:
   script:
     - cd build
     - cmake ../GEMM -DNUM_REPLICATIONS=2 -DATA_TYPE=half -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:GEMM_HP_REP2
   artifacts:
@@ -353,13 +461,36 @@ test:GEMM_HP_REP2:
       - cmake/**/*
       - .gitlab-ci.yml
   needs: ["build:GEMM_HP_REP2"]
+  # Allow failure because: The intel emulator does not seem to support half precision kernel arguments (CL_INVALID_ARG_SIZE)
+  allow_failure: true
+
+test:GEMM_DP_REP2:
+  stage: test
+  script:
+    - cd build
+    - cmake ../GEMM -DNUM_REPLICATIONS=2 -DATA_TYPE=double -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:GEMM_DP_REP2
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - GEMM/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+  needs: ["build:GEMM_DP_REP2"]
 
 test:FFT:
   stage: test
   script:
     - cd build
     - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:FFT
   artifacts:
@@ -380,7 +511,7 @@ test:FFT_small:
   script:
     - cd build
     - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:FFT_small
   artifacts:
@@ -411,7 +542,7 @@ test:b_eff:
     - ln -s kernel_output_ch1 kernel_input_ch0
     - ln -s kernel_output_ch3 kernel_input_ch2
     - cd ..
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
   dependencies:
     - build:b_eff
   artifacts:

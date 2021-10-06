@@ -14,6 +14,8 @@ set(NUM_REPLICATIONS 2 CACHE STRING "")
 set(USE_MPI Yes)
 set(USE_DEPRECATED_HPP_HEADER No)
 
+set(COMMUNICATION_TYPE_SUPPORT_ENABLED Yes)
+
 set(DATA_TYPE char)
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
 unset(DATA_TYPE CACHE)
