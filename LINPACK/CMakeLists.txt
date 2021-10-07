@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(LINPACK VERSION 2.3)
+project(LINPACK VERSION 2.4)
 
 set(USE_DEPRECATED_HPP_HEADER No)
 
@@ -19,14 +19,6 @@ endif()
 
 if (TEST_EMULATION)
     set(TEST_HOST_FLAGS "--emulation")
-endif()
-
-set(DATA_TYPE float)
-if (DATA_TYPE STREQUAL "double")
-    set(_DP Yes)
-    message(STATUS "Set DP flag since data type seems to be double precision")
-else()
-    set(_DP No)
 endif()
 
 set(USE_OPENMP Yes)

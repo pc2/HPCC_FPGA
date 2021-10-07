@@ -51,6 +51,7 @@ Name             | Default     | Description                          |
 `DEFAULT_MATRIX_SIZE`| 1024 | Width and heigth of the input matrix |
 `REGISTER_BLOCK_LOG`| 3        | Size of the blocks that will be processed in registers (2^3=8 is the default) |
 `LOCAL_MEM_BLOCK_LOG`| 5        | Size of the blocks that will be processed in local memory (2^3=8 is the default) |
+`DATA_TYPE`     | float        | Used data type. Can be `float` or `double` |
 
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.

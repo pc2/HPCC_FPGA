@@ -152,6 +152,28 @@ build:LINPACK:
       - cmake/**/*
       - .gitlab-ci.yml
 
+
+build:LINPACK_DP:
+  stage: build
+  script:
+    - rm -rf build
+    - mkdir -p build
+    - cd build
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3 -DDATA_TYPE=double
+    - make -j 40 all
+  artifacts:
+    paths:
+      - build/bin/hpl_torus_PCIE_emulate.aocx
+      - build/bin/hpl_torus_IEC_emulate.aocx
+      - build/bin/Linpack_intel
+      - build/bin/Linpack_test_intel
+  only:
+    changes:
+      - LINPACK/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+
 build:GEMM:
   stage: build
   script:
@@ -419,6 +441,26 @@ test:LINPACK:
       - cmake/**/*
       - .gitlab-ci.yml
   needs: ["build:LINPACK"]
+
+test:LINPACK_DP:
+  stage: test
+  script:
+    - cd build
+    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0  -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3 -DDATA_TYPE=double
+    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  dependencies:
+    - build:LINPACK_DP
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - LINPACK/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+  needs: ["build:LINPACK_DP"]
 
 test:GEMM:
   stage: test

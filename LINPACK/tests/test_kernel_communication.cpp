@@ -1192,6 +1192,9 @@ class LinpackKernelCommunicationTestAll : public LinpackKernelCommunicationTest 
         top_queue.finish();
         compute_queue.finish();
         inner_queue.finish();
+        network_queue_l.finish();
+        network_queue_t.finish();
+        network_queue_br.finish();
         inner_queue.enqueueNDRangeKernel(innerkernel, cl::NullRange, cl::NDRange(1),cl::NullRange);
         inner_queue.finish();
         network_queue_br.enqueueNDRangeKernel(network_br2, cl::NullRange, cl::NDRange(1),cl::NullRange);
@@ -1217,6 +1220,7 @@ TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalResultisCorrect) {
             max_error = std::max(max_error, static_cast<double>(std::abs(ref_data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j] - data->A[i * bm->getExecutionSettings().programSettings->matrixSize + j])));
         }
     }
+
     // tolerated delta between expected and real result is machine epsilon times matrix width
     double delta = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
     EXPECT_NEAR(max_error, 0.0, delta);

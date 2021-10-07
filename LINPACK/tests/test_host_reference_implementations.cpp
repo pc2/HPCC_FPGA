@@ -52,6 +52,7 @@ TEST_F(LinpackHostTest, GenerateDiagonallyDominantMatrixWorksCorrectly) {
     }
 }
 
+#ifndef _DP
 TEST_F(LinpackHostTest, ReferenceSolveGMRES) {
     data = bm->generateInputData();
     auto A = std::unique_ptr<double[]>(new double[array_size * array_size]);
@@ -75,6 +76,7 @@ TEST_F(LinpackHostTest, ReferenceSolveGMRES) {
     }
     EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
 }
+#endif
 
 TEST_F(LinpackHostTest, ReferenceSolveWithPivoting) {
     bm->getExecutionSettings().programSettings->isDiagonallyDominant = false;
