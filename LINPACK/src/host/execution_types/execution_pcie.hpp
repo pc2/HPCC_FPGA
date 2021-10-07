@@ -225,9 +225,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             lu_queues.back().finish();
 
             // Broadcast LU block in column to update all left blocks
-            MPI_Bcast(lu_block, config.programSettings->blockSize*config.programSettings->blockSize, MPI_FLOAT, local_block_row_remainder, col_communicator);
+            MPI_Bcast(lu_block, config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, col_communicator);
             // Broadcast LU block in row to update all top blocks
-            MPI_Bcast(lu_trans_block, config.programSettings->blockSize*config.programSettings->blockSize, MPI_FLOAT, local_block_row_remainder, row_communicator);
+            MPI_Bcast(lu_trans_block, config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, row_communicator);
 
             if (num_top_blocks > 0) {
 
@@ -329,10 +329,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
             // Send the left and top blocks to all other ranks so they can be used to update all inner blocks
             for (int lbi=0; lbi < blocks_per_row - local_block_row; lbi++) {
-                MPI_Bcast(left_blocks[lbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_FLOAT, local_block_row_remainder, row_communicator);
+                MPI_Bcast(left_blocks[lbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, row_communicator);
             }
             for (int tbi=0; tbi < blocks_per_row  - local_block_row; tbi++) {
-                MPI_Bcast(top_blocks[tbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_FLOAT, local_block_row_remainder, col_communicator);
+                MPI_Bcast(top_blocks[tbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, col_communicator);
             }
 
             // update all remaining inner blocks using only global memory
