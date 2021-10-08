@@ -176,10 +176,10 @@ namespace bm_execution {
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             auto startCalculation = std::chrono::high_resolution_clock::now();
             for (int r=0; r < config.programSettings->kernelReplications; r++) {
-                fetchQueues[r].enqueueTask(fetchKernels[r]);
-                fftQueues[r].enqueueTask(fftKernels[r]);
+                fetchQueues[r].enqueueNDRangeKernel(fetchKernels[r], cl::NullRange, cl::NDRange(1));
+                fftQueues[r].enqueueNDRangeKernel(fftKernels[r], cl::NullRange, cl::NDRange(1));
         #ifdef XILINX_FPGA
-                storeQueues[r].enqueueTask(storeKernels[r]);
+                storeQueues[r].enqueueNDRangeKernel(storeKernels[r], cl::NullRange, cl::NDRange(1));
         #endif
             }
             for (int r=0; r < config.programSettings->kernelReplications; r++) {
