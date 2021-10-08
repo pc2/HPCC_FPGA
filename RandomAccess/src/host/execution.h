@@ -27,8 +27,6 @@ SOFTWARE.
 #include <vector>
 
 /* External library headers */
-#include "CL/cl.hpp"
-
 #include "parameters.h"
 #include "random_access_benchmark.hpp"
 
