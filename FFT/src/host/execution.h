@@ -28,7 +28,6 @@ SOFTWARE.
 #include <vector>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #include "parameters.h"
 #include "fft_benchmark.hpp"
 

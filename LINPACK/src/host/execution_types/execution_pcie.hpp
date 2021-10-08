@@ -209,7 +209,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 err =kernels.back().back().setArg(5, config.programSettings->matrixSize / config.programSettings->blockSize);
                 ASSERT_CL(err)
                 all_events.back().emplace_back();
-                err = lu_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))));
+                err = lu_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
                 ASSERT_CL(err)
                 // read back result of LU calculation so it can be distributed 
                 err = lu_queues.back().enqueueReadBuffer(Buffer_lu2, CL_TRUE, 0,
@@ -259,7 +259,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     err = kernels.back().back().setArg(6, config.programSettings->matrixSize / config.programSettings->blockSize);
                     ASSERT_CL(err)
 
-                    err = top_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))));
+                    err = top_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
                     ASSERT_CL(err) 
 
                     if (tops + 1 == (config.programSettings->matrixSize / config.programSettings->blockSize)) {
@@ -306,7 +306,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     err = kernels.back().back().setArg(6, config.programSettings->matrixSize / config.programSettings->blockSize);
                     ASSERT_CL(err)
 
-                    err = left_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange, &(*std::prev(std::prev(all_events.end()))));
+                    err = left_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1), &(*std::prev(std::prev(all_events.end()))));
                     ASSERT_CL(err) 
 
                     if (tops + 1 == (config.programSettings->matrixSize / config.programSettings->blockSize)) {
@@ -391,16 +391,16 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     // this is the last taks that will be enqueued in this queue, so create an event
                     all_events.back().emplace_back();
                     // Distribute the workload over all available matrix multiplication kernels
-                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));         
-                    //err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &communication_events, &(all_events.back().back()));         
+                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));         
+                    //err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &communication_events, &(all_events.back().back()));         
                 }
                 else {
 #ifndef NDEBUG
                     std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner L " << block_row << "," << block_col <<  std::endl;
 #endif 
                     // Distribute the workload over all available matrix multiplication kernels
-                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))));         
-                    //err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &communication_events);         
+                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));         
+                    //err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &communication_events);         
                 }
                 current_update++;
                 current_replication = (current_replication + 1) % config.programSettings->kernelReplications;
@@ -436,14 +436,14 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     // this is the last taks that will be enqueued in this queue, so create an event
                     all_events.back().emplace_back();
                     // Distribute the workload over all available matrix multiplication kernels
-                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));         
+                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));         
                 }
                 else {
 #ifndef NDEBUG
                     std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner T " << block_row << "," << block_col <<  std::endl;
 #endif 
                     // Distribute the workload over all available matrix multiplication kernels
-                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(all_events.end()))));         
+                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));         
                 }
                 ASSERT_CL(err) 
                 current_update++;
@@ -491,14 +491,14 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                         // this is the last taks that will be enqueued in this queue, so create an event
                         all_events.back().emplace_back();
                         // Distribute the workload over all available matrix multiplication kernels
-                        err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(std::prev(all_events.end())))), &(all_events.back().back()));         
+                        err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(std::prev(all_events.end())))), &(all_events.back().back()));         
                     }
                     else {
 #ifndef NDEBUG
                     std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner " << block_row << "," << block_col <<  std::endl;
 #endif 
                         // Distribute the workload over all available matrix multiplication kernels
-                        err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NullRange,  &(*std::prev(std::prev(std::prev(all_events.end())))));         
+                        err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(std::prev(all_events.end())))));         
                     }
 
                     ASSERT_CL(err)

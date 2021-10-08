@@ -9,7 +9,7 @@ default:
   tags:
     - jacamar
   before_script:
-    - module load intelFPGA_pro/20.4.0 bittware_520n/20.4.0_max intel devel/CMake/3.15.3-GCCcore-8.3.0
+    - module load intelFPGA_pro/21.1.0 bittware_520n/20.4.0_max intel devel/CMake/3.15.3-GCCcore-8.3.0
 
 ###
 #

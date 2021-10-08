@@ -29,7 +29,6 @@ SOFTWARE.
 #include <chrono>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #include "CL/opencl.h"
 
 #ifdef INTEL_FPGA
@@ -143,7 +142,7 @@ namespace bm_execution {
         }
         startExecution = std::chrono::high_resolution_clock::now();
         for (int i=0; i<config.programSettings->kernelReplications; i++) {
-            ASSERT_CL(command_queues[i].enqueueTask(test_kernels[i]));
+            ASSERT_CL(command_queues[i].enqueueNDRangeKernel(test_kernels[i], cl::NullRange, cl::NDRange(1)));
         }
         for (int i=0; i<config.programSettings->kernelReplications; i++) {
             ASSERT_CL(command_queues[i].finish());
@@ -229,7 +228,7 @@ namespace bm_execution {
             std::vector<cl::Event> copy_start_events({copy_user_event});
             std::vector<cl::Event> copy_events(config.programSettings->kernelReplications);
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                command_queues[i].enqueueTask(copy_kernels[i], &copy_start_events, &copy_events[i]);
+                command_queues[i].enqueueNDRangeKernel(copy_kernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1), &copy_start_events, &copy_events[i]);
             }
 
             cl::UserEvent scale_user_event(*config.context, &err);
@@ -237,7 +236,7 @@ namespace bm_execution {
             std::vector<cl::Event> scale_start_events({scale_user_event});
             std::vector<cl::Event> scale_events(config.programSettings->kernelReplications);
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                command_queues[i].enqueueTask(scale_kernels[i], &scale_start_events, &scale_events[i]);
+                command_queues[i].enqueueNDRangeKernel(scale_kernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1), &scale_start_events, &scale_events[i]);
             }
 
             cl::UserEvent add_user_event(*config.context, &err);
@@ -245,7 +244,7 @@ namespace bm_execution {
             std::vector<cl::Event> add_start_events({add_user_event});
             std::vector<cl::Event> add_events(config.programSettings->kernelReplications);
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                command_queues[i].enqueueTask(add_kernels[i], &add_start_events, &add_events[i]);
+                command_queues[i].enqueueNDRangeKernel(add_kernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1), &add_start_events, &add_events[i]);
             }
 
             cl::UserEvent triad_user_event(*config.context, &err);
@@ -253,7 +252,7 @@ namespace bm_execution {
             std::vector<cl::Event> triad_start_events({triad_user_event});
             std::vector<cl::Event> triad_events(config.programSettings->kernelReplications);
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                command_queues[i].enqueueTask(triad_kernels[i], &triad_start_events, &triad_events[i]);
+                command_queues[i].enqueueNDRangeKernel(triad_kernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1), &triad_start_events, &triad_events[i]);
             }
 
             startExecution = std::chrono::high_resolution_clock::now();

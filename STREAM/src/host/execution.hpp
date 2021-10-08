@@ -29,7 +29,6 @@ SOFTWARE.
 #include <map>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #include "parameters.h"
 #include "stream_benchmark.hpp"
 

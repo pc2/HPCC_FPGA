@@ -197,6 +197,7 @@ linpack::LinpackBenchmark::generateInputData() {
     std::mt19937 gen(this->mpi_comm_rank);
     std::uniform_real_distribution<> dis(0.0, 1.0);
     d->norma = 0.0;
+    d->normb = 0.0;
     /*
     Generate a matrix by using pseudo random number in the range (0,1)
     */
