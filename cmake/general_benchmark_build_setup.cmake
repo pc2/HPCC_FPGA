@@ -13,7 +13,7 @@ endif()
 if(DEFINED USE_DEPRECATED_HPP_HEADER)
     set(header_default ${USE_DEPRECATED_HPP_HEADER})
 else()
-    set(header_default Yes)
+    set(header_default No)
 endif()
 
 if(DEFINED COMMUNICATION_TYPE_SUPPORT_ENABLED)
