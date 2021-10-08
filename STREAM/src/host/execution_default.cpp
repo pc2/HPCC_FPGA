@@ -29,7 +29,6 @@ SOFTWARE.
 #include <chrono>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #include "CL/opencl.h"
 
 #ifdef INTEL_FPGA
