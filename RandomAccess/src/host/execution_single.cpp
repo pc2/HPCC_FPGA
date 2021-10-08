@@ -168,7 +168,7 @@ namespace bm_execution {
 #pragma omp barrier
 #pragma omp for nowait
                 for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-                    compute_queue[r].enqueueTask(accesskernel[r]);
+                    compute_queue[r].enqueueNDRangeKernel(accesskernel[r], cl::NullRange, cl::NDRange(1));
                 }
 #pragma omp for
                 for (int r = 0; r < config.programSettings->kernelReplications; r++) {
