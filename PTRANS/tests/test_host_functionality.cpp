@@ -3,7 +3,6 @@
 //
 #include "gtest/gtest.h"
 #include "parameters.h"
-#include "CL/cl.hpp"
 #include "test_program_settings.h"
 #include "gmock/gmock-matchers.h"
 #include "transpose_benchmark.hpp"
