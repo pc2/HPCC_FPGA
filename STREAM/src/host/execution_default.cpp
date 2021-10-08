@@ -142,7 +142,7 @@ namespace bm_execution {
         }
         startExecution = std::chrono::high_resolution_clock::now();
         for (int i=0; i<config.programSettings->kernelReplications; i++) {
-            ASSERT_CL(command_queues[i].enqueueNDRangeKernel(test_kernels[i]), cl::NullRange, cl::NDRange(1));
+            ASSERT_CL(command_queues[i].enqueueNDRangeKernel(test_kernels[i], cl::NullRange, cl::NDRange(1)));
         }
         for (int i=0; i<config.programSettings->kernelReplications; i++) {
             ASSERT_CL(command_queues[i].finish());
