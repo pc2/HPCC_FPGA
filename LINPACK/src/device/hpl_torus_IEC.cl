@@ -23,6 +23,7 @@ SOFTWARE.
 
 #define BLOCK_SIZE (1 << LOCAL_MEM_BLOCK_LOG)
 #define GEMM_BLOCK (1 << REGISTER_BLOCK_LOG)
+#define GEMM_BLOCK_MM (1 << REGISTER_BLOCK_MM_LOG)
 
 #pragma OPENCL EXTENSION cl_intel_channels : enable
 
@@ -860,81 +861,84 @@ void inner_update_mm/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE* restrict a,
 
 	// Load blocks to local memory
 	#pragma loop_coalesce
-	for (int i =0; i < BLOCK_SIZE/GEMM_BLOCK; i++) {
-		for (int ii =0; ii < GEMM_BLOCK; ii++) {
-			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
-				__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					a_buffer[i][j][ii][jj] = a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj];
+	for (int i =0; i < BLOCK_SIZE/GEMM_BLOCK_MM; i++) {
+		for (int ii =0; ii < GEMM_BLOCK_MM; ii++) {
+			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK_MM; j++) {
+				__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+				for (int jj =0; jj < GEMM_BLOCK_MM; jj++) {
+					a_buffer[i][j][ii][jj] = a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK_MM + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK_MM + jj];
 				}
-				__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					top_buffer[i][j][ii][jj] = top_global_buffer[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj];
+				__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+				for (int jj =0; jj < GEMM_BLOCK_MM; jj++) {
+					top_buffer[i][j][ii][jj] = top_global_buffer[(i * GEMM_BLOCK_MM + ii) * BLOCK_SIZE + j * GEMM_BLOCK_MM + jj];
 				}
-				__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					left_buffer[i][j][ii][jj] = left_global_buffer[(i * GEMM_BLOCK + ii) * BLOCK_SIZE + j * GEMM_BLOCK + jj];
+				__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+				for (int jj =0; jj < GEMM_BLOCK_MM; jj++) {
+					left_buffer[i][j][ii][jj] = left_global_buffer[(i * GEMM_BLOCK_MM + ii) * BLOCK_SIZE + j * GEMM_BLOCK_MM + jj];
 				}
 			}
 		}
 	}
 
 	// Update whole block
-	#pragma ivdep array(a_buffer) safelen((BLOCK_SIZE/GEMM_BLOCK)*(BLOCK_SIZE/GEMM_BLOCK))
-	for (int c = 0; c < (BLOCK_SIZE/GEMM_BLOCK) * (BLOCK_SIZE/GEMM_BLOCK) * (BLOCK_SIZE/GEMM_BLOCK); c++) {
+	#pragma ivdep array(a_buffer) safelen((BLOCK_SIZE/GEMM_BLOCK_MM)*(BLOCK_SIZE/GEMM_BLOCK_MM))
+	for (int c = 0; c < (BLOCK_SIZE/GEMM_BLOCK_MM) * (BLOCK_SIZE/GEMM_BLOCK_MM) * (BLOCK_SIZE/GEMM_BLOCK_MM); c++) {
 
-		int mcol = c / ((BLOCK_SIZE/GEMM_BLOCK)*(BLOCK_SIZE/GEMM_BLOCK));
-		int row = (c / (BLOCK_SIZE/GEMM_BLOCK)) & ((BLOCK_SIZE/GEMM_BLOCK) - 1);
-		int curr_col = c & ((BLOCK_SIZE/GEMM_BLOCK) - 1);
+		int mcol = c / ((BLOCK_SIZE/GEMM_BLOCK_MM)*(BLOCK_SIZE/GEMM_BLOCK_MM));
+		int row = (c / (BLOCK_SIZE/GEMM_BLOCK_MM)) & ((BLOCK_SIZE/GEMM_BLOCK_MM) - 1);
+		int curr_col = c & ((BLOCK_SIZE/GEMM_BLOCK_MM) - 1);
 
-		DEVICE_DATA_TYPE top_sub[GEMM_BLOCK][GEMM_BLOCK];
-		DEVICE_DATA_TYPE left_sub[GEMM_BLOCK][GEMM_BLOCK];
+		DEVICE_DATA_TYPE top_sub[GEMM_BLOCK_MM][GEMM_BLOCK_MM];
+		DEVICE_DATA_TYPE left_sub[GEMM_BLOCK_MM][GEMM_BLOCK_MM];
 
-		#pragma unroll
-		for (int i = 0; i < GEMM_BLOCK; i++) {
-			#pragma unroll
-			for (int j=0; j < GEMM_BLOCK; j++) {
+		__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+		for (int i = 0; i < GEMM_BLOCK_MM; i++) {
+			__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+			for (int j=0; j < GEMM_BLOCK_MM; j++) {
 				top_sub[i][j] = top_buffer[mcol][curr_col][i][j];
 			}
 		}
 
-		#pragma unroll
-		for (int i = 0; i < GEMM_BLOCK; i++) {
-			#pragma unroll
-			for (int j=0; j < GEMM_BLOCK; j++) {
+		__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+		for (int i = 0; i < GEMM_BLOCK_MM; i++) {
+			__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+			for (int j=0; j < GEMM_BLOCK_MM; j++) {
 				left_sub[i][j] = left_buffer[mcol][row][i][j];
 			}
 		}
 
-		DEVICE_DATA_TYPE result_sub[GEMM_BLOCK][GEMM_BLOCK];
-		#pragma unroll
-		for (int k=0; k < GEMM_BLOCK; k++) {
-			#pragma unroll
-			for (int i = 0; i < GEMM_BLOCK; i++) {
-				#pragma unroll
-				for (int j = 0; j < GEMM_BLOCK; j++) {
-					result_sub[i][j] = ((k > 0) ? __fpga_reg(result_sub[i][j]) : __fpga_reg(a_buffer[row][curr_col][i][j])) + left_sub[k][i] * top_sub[k][j];
+		DEVICE_DATA_TYPE result_sub[GEMM_BLOCK_MM][GEMM_BLOCK_MM];
+		__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+		for (int i = 0; i < GEMM_BLOCK_MM; i++) {
+			__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+			for (int j = 0; j < GEMM_BLOCK_MM; j++) {
+				// Calculate sum of whole column and only write it back once
+				DEVICE_DATA_TYPE sum = 0.0;
+				__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+				for (int k=0; k < GEMM_BLOCK_MM; k++) {
+					sum += left_sub[k][i] * top_sub[k][j];
 				}
+				result_sub[i][j] = sum;
 			}
 		}
 
-		#pragma unroll
-		for (int i = 0; i < GEMM_BLOCK; i++) {
-			#pragma unroll
-			for (int j=0; j < GEMM_BLOCK; j++) {
-				a_buffer[row][curr_col][i][j] = __fpga_reg(result_sub[i][j]);
+		__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+		for (int i = 0; i < GEMM_BLOCK_MM; i++) {
+			__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+			for (int j=0; j < GEMM_BLOCK_MM; j++) {
+				a_buffer[row][curr_col][i][j] += __fpga_reg(result_sub[i][j]);
 			}
 		}
 	}
 
 	// Store block to global memory
 	#pragma loop_coalesce
-	for (int i =0; i < BLOCK_SIZE/GEMM_BLOCK; i++) {
-		for (int ii =0; ii < GEMM_BLOCK; ii++) {
-			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK; j++) {
-				__attribute__((opencl_unroll_hint(GEMM_BLOCK)))
-				for (int jj =0; jj < GEMM_BLOCK; jj++) {
-					a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK + jj] = a_buffer[i][j][ii][jj];
+	for (int i =0; i < BLOCK_SIZE/GEMM_BLOCK_MM; i++) {
+		for (int ii =0; ii < GEMM_BLOCK_MM; ii++) {
+			for (int j =0; j < BLOCK_SIZE/GEMM_BLOCK_MM; j++) {
+				__attribute__((opencl_unroll_hint(GEMM_BLOCK_MM)))
+				for (int jj =0; jj < GEMM_BLOCK_MM; jj++) {
+					a[block_col * BLOCK_SIZE  + (block_row * BLOCK_SIZE + i * GEMM_BLOCK_MM + ii) * BLOCK_SIZE * blocks_per_row + j * GEMM_BLOCK_MM + jj] = a_buffer[i][j][ii][jj];
 				}
 			}
 		}
