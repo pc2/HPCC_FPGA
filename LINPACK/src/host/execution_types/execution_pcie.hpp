@@ -365,8 +365,14 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
             for (auto l = std::next(left_buffers.back().begin()); l < left_buffers.back().end(); l++) {
                 // select the matrix multiplication kernel that should be used for this block updated 
+#ifdef INTEL_FPGA
                 kernels.back().emplace_back(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                     &err);
+#endif
+#ifdef XILINX_FPGA
+                kernels.back().emplace_back(*config.program, ("inner_update_mm0:{inner_update_mm0_" + std::to_string(current_replication + 1) + "}").c_str(),
+                                    &err);
+#endif
 
                 int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols);
                 int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));  
@@ -409,9 +415,14 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             current_update = 0;
             for (auto t = top_buffers.back().begin(); t < top_buffers.back().end(); t++) {
                 // select the matrix multiplication kernel that should be used for this block updated 
+#ifdef INTEL_FPGA
                 kernels.back().emplace_back(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                     &err);
-
+#endif
+#ifdef XILINX_FPGA
+                kernels.back().emplace_back(*config.program, ("inner_update_mm0:{inner_update_mm0_" + std::to_string(current_replication + 1) + "}").c_str(),
+                                    &err);
+#endif
                 int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols + std::distance(top_buffers.back().begin(), t));
                 int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows);
 
@@ -463,8 +474,14 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             for (auto l = std::next(left_buffers.back().begin()); l < left_buffers.back().end(); l++) {
                 for (auto t = std::next(top_buffers.back().begin()); t < top_buffers.back().end(); t++) {
                     // select the matrix multiplication kernel that should be used for this block updated 
+#ifdef INTEL_FPGA
                     kernels.back().emplace_back(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                         &err);
+#endif
+#ifdef XILINX_FPGA
+                    kernels.back().emplace_back(*config.program, ("inner_update_mm0:{inner_update_mm0_" + std::to_string(current_replication + 1) + "}").c_str(),
+                                        &err);
+#endif
 
                     int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols + std::distance(top_buffers.back().begin(), t));
                     int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));
@@ -535,6 +552,18 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
             }
 #endif
+
+            if (block_row > 2) {
+                // clean up old queues and kernels
+                lu_queues.pop_front();
+                left_queues.pop_front();
+                top_queues.pop_front();
+                inner_queues.pop_front();
+                left_buffers.pop_front();
+                top_buffers.pop_front();
+                kernels.pop_front();
+                all_events.pop_front();
+            }
         }
 #ifdef NDEBUG
         int count = 0;
