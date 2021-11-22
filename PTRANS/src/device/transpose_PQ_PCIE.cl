@@ -39,9 +39,9 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
             const uint height_in_blocks) {
 
     // local memory double buffer for a matrix block
-    DEVICE_DATA_TYPE a_block[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH] __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,1))) __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,2)));
+    DEVICE_DATA_TYPE a_block[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH] __attribute__((xcl_array_partition(complete,2)));
     // local memory double buffer for a matrix block
-    DEVICE_DATA_TYPE a_plus_b_block[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH] __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,1))) __attribute__((xcl_array_partition(cyclic, CHANNEL_WIDTH,2)));
+    DEVICE_DATA_TYPE a_plus_b_block[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH] __attribute__((xcl_array_partition(complete,2)));
 
     // transpose the matrix block-wise from global memory
     for (uint block = 0; block < number_of_blocks; block++) {
