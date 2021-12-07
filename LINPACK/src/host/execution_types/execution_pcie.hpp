@@ -131,7 +131,6 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         std::list<std::vector<cl::Event>> all_events;
         all_events.emplace_back();
         all_events.back().emplace_back(start_event);
-        all_events.emplace_back();
 
         left_buffers.emplace_back();
         top_buffers.emplace_back();
@@ -361,6 +360,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             kernel_offset = kernels.back().size();
             kernels.back().resize(std::max(kernel_offset + num_inner_block_rows - 1 + num_inner_block_cols,0));
 
+            all_events.emplace_back();
+            all_events.back().reserve(omp_get_num_threads()*config.programSettings->kernelReplications*2);
+
             // Wait until data is copied to FPGA
             buffer_transfer_queue.finish();
             }
@@ -484,7 +486,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             {
             // count the inner MM already to next iteration by creating new buffers in the queue
             all_events.emplace_back();
-            all_events.back().reserve(omp_get_num_threads()*config.programSettings->kernelReplications*3);
+            all_events.back().reserve(omp_get_num_threads()*config.programSettings->kernelReplications);
             kernels.emplace_back(total_inner_updates);
             inner_queues.emplace_back();
             current_update = 0;
@@ -594,6 +596,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 left_buffers.pop_front();
                 top_buffers.pop_front();
                 kernels.pop_front();
+                all_events.pop_front();
                 all_events.pop_front();
             }
             }
