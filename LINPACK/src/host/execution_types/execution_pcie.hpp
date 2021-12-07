@@ -33,6 +33,7 @@ SOFTWARE.
 #if QUARTUS_MAJOR_VERSION > 18
 #include "CL/cl_ext_intelfpga.h"
 #endif
+#include "omp.h"
 
 #include "parameters.h"
 #include "linpack_benchmark.hpp"
@@ -67,38 +68,38 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     ASSERT_CL(err)
 
     // Create Buffers for input and output
-    cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
-    cl::Buffer Buffer_b(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize);
-    cl::Buffer Buffer_pivot(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(cl_int)*config.programSettings->matrixSize);
+    cl::Buffer Buffer_a(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
+    cl::Buffer Buffer_b(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
+    cl::Buffer Buffer_pivot(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE,
+                                        sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
+
+
+    /* --- Setup MPI communication and required additional buffers --- */
+    HOST_DATA_TYPE *lu_block, *lu_trans_block;
+    posix_memalign(reinterpret_cast<void**>(&lu_block), 4096, sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize)*(config.programSettings->blockSize));
+    posix_memalign(reinterpret_cast<void**>(&lu_trans_block), 4096, sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize)*(config.programSettings->blockSize));
 
     // Buffers only used to store data received over the network layer
     // The content will not be modified by the host
-    cl::Buffer Buffer_lu1(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize)*(config.programSettings->blockSize));
-    cl::Buffer Buffer_lu2(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize)*(config.programSettings->blockSize));
-    cl::Buffer Buffer_top(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize));
-    cl::Buffer Buffer_left(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize));
-    cl::Buffer Buffer_network_scaling(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize));
+    cl::Buffer Buffer_lu1(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize)*(config.programSettings->blockSize), lu_trans_block);
+    cl::Buffer Buffer_lu2(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize)*(config.programSettings->blockSize), lu_block);
 
-    /* --- Setup MPI communication and required additional buffers --- */
-
-    HOST_DATA_TYPE *lu_block, *lu_trans_block;
-    posix_memalign(reinterpret_cast<void**>(&lu_block), 1024, sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize)*(config.programSettings->blockSize));
-    posix_memalign(reinterpret_cast<void**>(&lu_trans_block), 1024, sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize)*(config.programSettings->blockSize));
-
+    std::vector<cl::Buffer> Buffer_left_list;
+    std::vector<cl::Buffer> Buffer_top_list;
     std::vector<HOST_DATA_TYPE*> left_blocks(blocks_per_row);
     std::vector<HOST_DATA_TYPE*> top_blocks(blocks_per_row);
 
     for (int i =0; i < blocks_per_row; i++) {
-        posix_memalign(reinterpret_cast<void**>(&left_blocks[i]), 1024, sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize)*(config.programSettings->blockSize));
-        posix_memalign(reinterpret_cast<void**>(&top_blocks[i]), 1024, sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize)*(config.programSettings->blockSize));
+        posix_memalign(reinterpret_cast<void**>(&(left_blocks[i])), 4096, sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize)*(config.programSettings->blockSize));
+        posix_memalign(reinterpret_cast<void**>(&(top_blocks[i])), 4096, sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize)*(config.programSettings->blockSize));
+        Buffer_top_list.emplace_back(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_WRITE_ONLY,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), top_blocks[i]);
+        Buffer_left_list.emplace_back(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_WRITE_ONLY,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), left_blocks[i]);
     }
 
     /* --- Execute actual benchmark kernels --- */
@@ -109,11 +110,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     std::vector<double> gefaWaitTimes;
     for (int i = 0; i < config.programSettings->numRepetitions; i++) {
 
-        err = buffer_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
-        ASSERT_CL(err)
-        err = buffer_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
+        err = buffer_queue.enqueueMigrateMemObjects({Buffer_a, Buffer_b}, 0);
         ASSERT_CL(err)
         buffer_queue.finish();
 
@@ -148,29 +145,23 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         std::chrono::time_point<std::chrono::high_resolution_clock> t1, t2, twait1, twait2;
         std::chrono::duration<double> currentwaittime = std::chrono::duration<double>::zero();
 
-        uint current_replication = 0;
-
         std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "Start! " << std::endl;
         MPI_Barrier(MPI_COMM_WORLD);
         t1 = std::chrono::high_resolution_clock::now();
         // Trigger the user event that will start the first tasks in the queue
         start_event.setStatus(CL_COMPLETE);
 
+
+        int kernel_offset = 0;
+        #pragma omp parallel
+        {
+
+        #pragma omp single
+        all_events.back().reserve(omp_get_num_threads()*config.programSettings->kernelReplications*3);
+        uint current_replication = 0;
+
         // For every row of blocks create kernels and enqueue them
         for (int block_row=0; block_row < config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width; block_row++) {
-
-            // Create Command queues
-            lu_queues.emplace_back(*config.context, *config.device, 0, &err);
-            ASSERT_CL(err)
-            top_queues.emplace_back(*config.context, *config.device, 0, &err);
-            ASSERT_CL(err)
-            left_queues.emplace_back(*config.context, *config.device, 0, &err);
-            ASSERT_CL(err)
-
-            // already emplace new buffer list for next iteration since left and top buffers need to be stored until all MMs are executed.
-            // this is only the case after the next iteration is finished, because the inner MMs are calculated overlapped with the next iteration!
-            left_buffers.emplace_back();
-            top_buffers.emplace_back();
 
             int local_block_row_remainder = (block_row % config.programSettings->torus_width);
             int local_block_row= (block_row / config.programSettings->torus_width);
@@ -185,38 +176,53 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             num_inner_block_rows = (num_inner_block_cols > 0) ?num_inner_block_rows : 0;
             int num_network_layer_executions = (config.programSettings->matrixSize / config.programSettings->blockSize) - std::min(start_col_index, start_row_index);
             num_network_layer_executions = std::max(num_network_layer_executions, 1);
-            std::vector<cl_uint> network_layer_op_flags(num_network_layer_executions);
-            std::fill(network_layer_op_flags.begin(), network_layer_op_flags.end(), 0);
             bool is_calulating_lu_block = (in_same_col_as_lu && in_same_row_as_lu);
+
+            uint total_inner_updates_first_row = num_inner_block_cols;
+            uint updates_per_replication = total_inner_updates_first_row / config.programSettings->kernelReplications;
+            uint total_inner_updates = (num_inner_block_cols - 1) * (num_inner_block_rows - 1);
+            uint total_updates_per_replication = total_inner_updates/ config.programSettings->kernelReplications;
+            uint current_update = 0;
+
+            std::vector<cl::Kernel> private_kernels;
+
+
+            #pragma omp single
+            {
+
+            // Create Command queues
+            lu_queues.emplace_back(*config.context, *config.device, 0, &err);
+            ASSERT_CL(err)
+            top_queues.emplace_back(*config.context, *config.device, 0, &err);
+            ASSERT_CL(err)
+            left_queues.emplace_back(*config.context, *config.device, 0, &err);
+            ASSERT_CL(err)
 
             if (is_calulating_lu_block) {
                 // create the LU kernel
-                kernels.back().emplace_back(*config.program, "lu",
+                private_kernels.emplace_back(*config.program, "lu",
                                             &err);
 #ifndef NDEBUG
                 std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " LU     " << local_block_row << "," << local_block_row <<  std::endl;
 #endif
-                err = kernels.back().back().setArg(0, Buffer_a);
+                err = private_kernels.back().setArg(0, Buffer_a);
                 ASSERT_CL(err);
-                err = kernels.back().back().setArg(1, Buffer_lu1);
+                err = private_kernels.back().setArg(1, Buffer_lu1);
                 ASSERT_CL(err);
-                err = kernels.back().back().setArg(2, Buffer_lu2);
+                err = private_kernels.back().setArg(2, Buffer_lu2);
                 ASSERT_CL(err);
-                err = kernels.back().back().setArg(3, local_block_row);
+                err = private_kernels.back().setArg(3, local_block_row);
                 ASSERT_CL(err)
-                err = kernels.back().back().setArg(4, local_block_row);
+                err = private_kernels.back().setArg(4, local_block_row);
                 ASSERT_CL(err)
-                err =kernels.back().back().setArg(5, config.programSettings->matrixSize / config.programSettings->blockSize);
+                err =private_kernels.back().setArg(5, config.programSettings->matrixSize / config.programSettings->blockSize);
                 ASSERT_CL(err)
-                all_events.back().emplace_back();
-                err = lu_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
+                err = lu_queues.back().enqueueNDRangeKernel(private_kernels.back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
                 ASSERT_CL(err)
                 // read back result of LU calculation so it can be distributed 
-                err = lu_queues.back().enqueueReadBuffer(Buffer_lu2, CL_TRUE, 0,
-                                     sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize, lu_block);
+                err = lu_queues.back().enqueueMigrateMemObjects({Buffer_lu2}, CL_MIGRATE_MEM_OBJECT_HOST);
                 ASSERT_CL(err)
-                err = lu_queues.back().enqueueReadBuffer(Buffer_lu1, CL_TRUE, 0,
-                                     sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize, lu_trans_block, NULL, &all_events.back().back());
+                err = lu_queues.back().enqueueMigrateMemObjects({Buffer_lu1}, CL_MIGRATE_MEM_OBJECT_HOST);
                 ASSERT_CL(err)
             }
 
@@ -228,101 +234,97 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             MPI_Bcast(lu_block, config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, col_communicator);
             // Broadcast LU block in row to update all top blocks
             MPI_Bcast(lu_trans_block, config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, row_communicator);
+           }
 
             if (num_top_blocks > 0) {
 
+                #pragma omp single
+                {
                 // Copy LU block to FPGA for calulation of top blocks only if required
-                err = top_queues.back().enqueueWriteBuffer(Buffer_lu1, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize, lu_trans_block);
+                err = top_queues.back().enqueueMigrateMemObjects({Buffer_lu1}, 0);
                 ASSERT_CL(err)
+                }
 
                 // Create top kernels
+                #pragma omp for
                 for (int tops=start_col_index; tops < (config.programSettings->matrixSize / config.programSettings->blockSize); tops++) {
-                    kernels.back().emplace_back(*config.program, "top_update",
+                    cl::Kernel k(*config.program, "top_update",
                                                     &err);
 #ifndef NDEBUG
                     std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Top    " << local_block_row << "," << tops <<  std::endl;
 #endif
                     ASSERT_CL(err);     
-                    err = kernels.back().back().setArg(0, Buffer_a);
+                    err = k.setArg(0, Buffer_a);
                     ASSERT_CL(err);    
-                    err = kernels.back().back().setArg(1, Buffer_top);
+                    err = k.setArg(1, Buffer_top_list[tops - start_col_index]);
                     ASSERT_CL(err);    
-                    err = kernels.back().back().setArg(2, Buffer_lu1);
+                    err = k.setArg(2, Buffer_lu1);
                     ASSERT_CL(err) 
-                    err = kernels.back().back().setArg(3, (tops == start_col_index) ? CL_TRUE : CL_FALSE);
+                    err = k.setArg(3, (tops == start_col_index) ? CL_TRUE : CL_FALSE);
                     ASSERT_CL(err) 
-                    err = kernels.back().back().setArg(4, tops);
+                    err = k.setArg(4, tops);
                     ASSERT_CL(err)
-                    err = kernels.back().back().setArg(5, local_block_row);
+                    err = k.setArg(5, local_block_row);
                     ASSERT_CL(err)
-                    err = kernels.back().back().setArg(6, config.programSettings->matrixSize / config.programSettings->blockSize);
+                    err = k.setArg(6, config.programSettings->matrixSize / config.programSettings->blockSize);
                     ASSERT_CL(err)
 
-                    err = top_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
+                    err = top_queues.back().enqueueNDRangeKernel(k, cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
                     ASSERT_CL(err) 
 
-                    if (tops + 1 == (config.programSettings->matrixSize / config.programSettings->blockSize)) {
-                        all_events.back().emplace_back();
-                        err = top_queues.back().enqueueReadBuffer(Buffer_top, CL_TRUE, 0,
-                                     sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize, top_blocks[tops - start_col_index],
-                                     &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));
-                        ASSERT_CL(err) 
-                    }
-                    else {
-                        err = top_queues.back().enqueueReadBuffer(Buffer_top, CL_TRUE, 0,
-                                     sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize, top_blocks[tops - start_col_index]);
-                        ASSERT_CL(err)
-                    }
+                    err = top_queues.back().enqueueMigrateMemObjects({Buffer_top_list[tops - start_col_index]}, CL_MIGRATE_MEM_OBJECT_HOST);
+                    ASSERT_CL(err)
+
+                    private_kernels.push_back(k);
 
                 }
             }
             if (num_left_blocks > 0) {
 
+                #pragma omp single
+                {
                 // Copy LU block to FPGA for calulation of left blocks only if required
-                err = left_queues.back().enqueueWriteBuffer(Buffer_lu2, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize, lu_block);
+                err = left_queues.back().enqueueMigrateMemObjects({Buffer_lu2}, 0);
                 ASSERT_CL(err)
+                }
+
                 // Create left kernels
+                #pragma omp for
                 for (int tops=start_row_index; tops < (config.programSettings->matrixSize / config.programSettings->blockSize); tops++) {
-                    kernels.back().emplace_back(*config.program, "left_update",
+                    cl::Kernel k(*config.program, "left_update",
                                                     &err);
 #ifndef NDEBUG
                     std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  " Left   " <<tops  << "," << local_block_row <<  std::endl;
 #endif
                     ASSERT_CL(err);     
-                    err = kernels.back().back().setArg(0, Buffer_a);
+                    err = k.setArg(0, Buffer_a);
                     ASSERT_CL(err);    
-                    err = kernels.back().back().setArg(1, Buffer_left);
+                    err = k.setArg(1, Buffer_left_list[tops - start_row_index]);
                     ASSERT_CL(err) 
-                    err = kernels.back().back().setArg(2, Buffer_lu2);
+                    err = k.setArg(2, Buffer_lu2);
                     ASSERT_CL(err) 
-                    err = kernels.back().back().setArg(3, (tops == start_row_index) ? CL_TRUE : CL_FALSE);
+                    err = k.setArg(3, (tops == start_row_index) ? CL_TRUE : CL_FALSE);
                     ASSERT_CL(err) 
-                    err = kernels.back().back().setArg(4, local_block_row);
+                    err = k.setArg(4, local_block_row);
                     ASSERT_CL(err)
-                    err = kernels.back().back().setArg(5, tops);
+                    err = k.setArg(5, tops);
                     ASSERT_CL(err)
-                    err = kernels.back().back().setArg(6, config.programSettings->matrixSize / config.programSettings->blockSize);
+                    err = k.setArg(6, config.programSettings->matrixSize / config.programSettings->blockSize);
                     ASSERT_CL(err)
 
-                    err = left_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1), &(*std::prev(std::prev(all_events.end()))));
+                    err = left_queues.back().enqueueNDRangeKernel(k, cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
                     ASSERT_CL(err) 
 
-                    if (tops + 1 == (config.programSettings->matrixSize / config.programSettings->blockSize)) {
-                        all_events.back().emplace_back();
-                        err = left_queues.back().enqueueReadBuffer(Buffer_left, CL_TRUE, 0,
-                                     sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize, left_blocks[tops - start_row_index],
-                                     &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));
-                        ASSERT_CL(err) 
-                    }
-                    else {
-                        err = left_queues.back().enqueueReadBuffer(Buffer_left, CL_TRUE, 0,
-                                     sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize, left_blocks[tops - start_row_index]);
-                        ASSERT_CL(err) 
-                    }
+                    err = left_queues.back().enqueueMigrateMemObjects({Buffer_left_list[tops - start_row_index]}, CL_MIGRATE_MEM_OBJECT_HOST);
+
+                    ASSERT_CL(err) 
+
+                    private_kernels.push_back(k);
                 }
             }
+
+            #pragma omp single
+            {
             // Wait until all top and left blocks are calculated
             top_queues.back().finish();
             left_queues.back().finish();
@@ -337,133 +339,153 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
             // update all remaining inner blocks using only global memory
 
-            all_events.emplace_back();
+            // all_events.emplace_back();
             //auto communication_events = all_events.back();
+            left_buffers.emplace_back();
+            top_buffers.emplace_back();
+            
+            cl::CommandQueue buffer_transfer_queue(*config.context, *config.device, 0, &err);
 
             // Write all left and top blocks to FPGA memory
             for (int lbi=0; lbi < num_inner_block_rows; lbi++) {
-                left_buffers.back().emplace_back(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize));
-                err = inner_queues.back()[0].enqueueWriteBuffer(left_buffers.back().back(), CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize, left_blocks[lbi]);
+                left_buffers.back().emplace_back(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), left_blocks[lbi]);
+                err = buffer_transfer_queue.enqueueMigrateMemObjects({left_buffers.back().back()}, 0);
             }
             for (int tbi=0; tbi < num_inner_block_cols; tbi++) {
-                top_buffers.back().emplace_back(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize));
-                err = inner_queues.back()[0].enqueueWriteBuffer(top_buffers.back().back(), CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize*config.programSettings->blockSize, top_blocks[tbi]);
+                top_buffers.back().emplace_back(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
+                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * config.programSettings->blockSize, top_blocks[tbi]);
+                err = buffer_transfer_queue.enqueueMigrateMemObjects({top_buffers.back().back()}, 0);
             }
 
-            uint current_update = 0;
-            uint total_inner_updates_first_row = top_buffers.back().size();
-            uint updates_per_replication = total_inner_updates_first_row / config.programSettings->kernelReplications;
-            uint total_inner_updates = (top_buffers.back().size() - 1) * (left_buffers.back().size() - 1);
-            uint total_updates_per_replication = total_inner_updates/ config.programSettings->kernelReplications;
+            kernel_offset = kernels.back().size();
+            kernels.back().resize(std::max(kernel_offset + num_inner_block_rows - 1 + num_inner_block_cols,0));
 
             // Wait until data is copied to FPGA
-            inner_queues.back()[0].finish();
+            buffer_transfer_queue.finish();
+            }
+            current_update = 0;    
 
-            for (auto l = std::next(left_buffers.back().begin()); l < left_buffers.back().end(); l++) {
+            #pragma omp for
+            for (int lbi=1; lbi < num_inner_block_rows; lbi++) {
+
+                current_replication = (lbi)  % config.programSettings->kernelReplications;
+
                 // select the matrix multiplication kernel that should be used for this block updated 
 #ifdef INTEL_FPGA
-                kernels.back().emplace_back(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
+                cl::Kernel k(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                     &err);
 #endif
 #ifdef XILINX_FPGA
-                kernels.back().emplace_back(*config.program, ("inner_update_mm0:{inner_update_mm0_" + std::to_string(current_replication + 1) + "}").c_str(),
+                cl::Kernel k(*config.program, ("inner_update_mm0:{inner_update_mm0_" + std::to_string(current_replication + 1) + "}").c_str(),
                                     &err);
 #endif
 
                 int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols);
-                int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));  
+                int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + lbi);  
                 ASSERT_CL(err);
-                err = kernels.back().back().setArg(0, Buffer_a);
+                err = k.setArg(0, Buffer_a);
                 ASSERT_CL(err);
-                err = kernels.back().back().setArg(1, *l);
+                err = k.setArg(1, left_buffers.back()[lbi]);
                 ASSERT_CL(err)
-                err = kernels.back().back().setArg(2, *top_buffers.back().begin());
+                err = k.setArg(2, top_buffers.back()[0]);
                 ASSERT_CL(err)
-                err = kernels.back().back().setArg(3, block_col);
+                err = k.setArg(3, block_col);
                 ASSERT_CL(err)
-                err = kernels.back().back().setArg(4, block_row);
+                err = k.setArg(4, block_row);
                 ASSERT_CL(err)
-                err = kernels.back().back().setArg(5, blocks_per_row);
+                err = k.setArg(5, blocks_per_row);
                 ASSERT_CL(err)
 
-                if ((left_buffers.back().size() - 1) - current_update <= config.programSettings->kernelReplications) {
+                // If number of blocks is not dividable by the number of replications, the first replications will do one update more
+                if ((num_inner_block_rows - 1)/omp_get_num_threads() - current_update <= config.programSettings->kernelReplications) {
 #ifndef NDEBUG
-                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner L Ev " << block_row << "," << block_col <<  std::endl;
+                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner L Ev " << block_row << "," << block_col <<  std::endl;
 #endif 
                     // this is the last taks that will be enqueued in this queue, so create an event
-                    all_events.back().emplace_back();
+                    cl::Event ev;
                     // Distribute the workload over all available matrix multiplication kernels
-                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));         
-                    //err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &communication_events, &(all_events.back().back()));         
+                    err = inner_queues.back()[current_replication].enqueueNDRangeKernel(k, cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))), &ev);  
+
+                    #pragma omp critical
+                    all_events.back().push_back(ev);           
                 }
                 else {
 #ifndef NDEBUG
-                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner L " << block_row << "," << block_col <<  std::endl;
+                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner L " << block_row << "," << block_col <<  std::endl;
 #endif 
                     // Distribute the workload over all available matrix multiplication kernels
-                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));         
-                    //err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &communication_events);         
+                    err = inner_queues.back()[current_replication].enqueueNDRangeKernel(k, cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));         
                 }
+
+                kernels.back()[kernel_offset + lbi - 1] = k;
+
                 current_update++;
-                current_replication = (current_replication + 1) % config.programSettings->kernelReplications;
             }
 
             current_update = 0;
-            for (auto t = top_buffers.back().begin(); t < top_buffers.back().end(); t++) {
+            #pragma omp for
+            for (int tbi=0; tbi < num_inner_block_cols; tbi++) {
+
+                current_replication = (tbi)  % config.programSettings->kernelReplications;
+
                 // select the matrix multiplication kernel that should be used for this block updated 
 #ifdef INTEL_FPGA
-                kernels.back().emplace_back(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
+                cl::Kernel k(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                     &err);
 #endif
 #ifdef XILINX_FPGA
-                kernels.back().emplace_back(*config.program, ("inner_update_mm0:{inner_update_mm0_" + std::to_string(current_replication + 1) + "}").c_str(),
+                cl::Kernel k(*config.program, ("inner_update_mm0:{inner_update_mm0_" + std::to_string(current_replication + 1) + "}").c_str(),
                                     &err);
 #endif
-                int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols + std::distance(top_buffers.back().begin(), t));
+                int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols + tbi);
                 int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows);
 
                 ASSERT_CL(err);
-                err = kernels.back().back().setArg(0, Buffer_a);
+                err = k.setArg(0, Buffer_a);
                 ASSERT_CL(err);
-                err = kernels.back().back().setArg(1, *left_buffers.back().begin());
+                err = k.setArg(1, left_buffers.back()[0]);
                 ASSERT_CL(err)
-                err = kernels.back().back().setArg(2, *t);
+                err = k.setArg(2, top_buffers.back()[tbi]);
                 ASSERT_CL(err)
-                err = kernels.back().back().setArg(3, block_col);
+                err = k.setArg(3, block_col);
                 ASSERT_CL(err)
-                err = kernels.back().back().setArg(4, block_row);
+                err = k.setArg(4, block_row);
                 ASSERT_CL(err)
-                err = kernels.back().back().setArg(5, blocks_per_row);
+                err = k.setArg(5, blocks_per_row);
                 ASSERT_CL(err)
                 // If number of blocks is not dividable by the number of replications, the first replications will do one update more
-                if (top_buffers.back().size() - current_update <= config.programSettings->kernelReplications) {
+                if ((num_inner_block_cols)/omp_get_num_threads() - current_update <= config.programSettings->kernelReplications) {
 #ifndef NDEBUG
-                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner T Ev " << block_row << "," << block_col <<  std::endl;
+                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner Ev " << block_row << "," << block_col <<  std::endl;
 #endif 
                     // this is the last taks that will be enqueued in this queue, so create an event
-                    all_events.back().emplace_back();
+                    cl::Event ev;
                     // Distribute the workload over all available matrix multiplication kernels
-                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));         
+                    err = inner_queues.back()[current_replication].enqueueNDRangeKernel(k, cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))), &ev);  
+
+                    #pragma omp critical
+                    all_events.back().push_back(ev);           
                 }
                 else {
 #ifndef NDEBUG
-                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner T " << block_row << "," << block_col <<  std::endl;
+                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner " << block_row << "," << block_col <<  std::endl;
 #endif 
                     // Distribute the workload over all available matrix multiplication kernels
-                    err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));         
+                    err = inner_queues.back()[current_replication].enqueueNDRangeKernel(k, cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));         
                 }
                 ASSERT_CL(err) 
+                kernels.back()[kernel_offset + tbi + num_inner_block_rows - 1] = k;
+
                 current_update++;
-                current_replication = (current_replication + 1) % config.programSettings->kernelReplications;
             }
             
+            #pragma omp single
+            {
             // count the inner MM already to next iteration by creating new buffers in the queue
             all_events.emplace_back();
-            kernels.emplace_back();
+            all_events.back().reserve(omp_get_num_threads()*config.programSettings->kernelReplications*3);
+            kernels.emplace_back(total_inner_updates);
             inner_queues.emplace_back();
             current_update = 0;
             for (uint rep = 0; rep < config.programSettings->kernelReplications; rep++) {
@@ -471,58 +493,70 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
             }
 
-            for (auto l = std::next(left_buffers.back().begin()); l < left_buffers.back().end(); l++) {
-                for (auto t = std::next(top_buffers.back().begin()); t < top_buffers.back().end(); t++) {
+            }
+
+            #pragma omp for collapse(2) schedule(static)
+            for (int lbi=1; lbi < num_inner_block_rows; lbi++) {
+                for (int tbi=1; tbi < num_inner_block_cols; tbi++) {
                     // select the matrix multiplication kernel that should be used for this block updated 
+
+                    current_replication = (lbi * num_inner_block_cols + tbi)  % config.programSettings->kernelReplications;
+
 #ifdef INTEL_FPGA
-                    kernels.back().emplace_back(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
+                    cl::Kernel k(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                         &err);
 #endif
 #ifdef XILINX_FPGA
-                    kernels.back().emplace_back(*config.program, ("inner_update_mm0:{inner_update_mm0_" + std::to_string(current_replication + 1) + "}").c_str(),
+                    cl::Kernel k(*config.program, ("inner_update_mm0:{inner_update_mm0_" + std::to_string(current_replication + 1) + "}").c_str(),
                                         &err);
 #endif
 
-                    int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols + std::distance(top_buffers.back().begin(), t));
-                    int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));
+                    int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols + tbi);
+                    int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + lbi);
   
                     ASSERT_CL(err);
-                    err = kernels.back().back().setArg(0, Buffer_a);
+                    err = k.setArg(0, Buffer_a);
                     ASSERT_CL(err);
-                    err = kernels.back().back().setArg(1, *l);
+                    err = k.setArg(1, left_buffers.back()[lbi]);
                     ASSERT_CL(err)
-                    err = kernels.back().back().setArg(2, *t);
+                    err = k.setArg(2, top_buffers.back()[tbi]);
                     ASSERT_CL(err)
-                    err = kernels.back().back().setArg(3, block_col);
+                    err = k.setArg(3, block_col);
                     ASSERT_CL(err)
-                    err = kernels.back().back().setArg(4, block_row);
+                    err = k.setArg(4, block_row);
                     ASSERT_CL(err)
-                    err = kernels.back().back().setArg(5, blocks_per_row);
+                    err = k.setArg(5, blocks_per_row);
                     ASSERT_CL(err)
 
                     // If number of blocks is not dividable by the number of replications, the first replications will do one update more
-                    if (((top_buffers.back().size() - 1) * (left_buffers.back().size() - 1)) - current_update <= config.programSettings->kernelReplications) {
+                    if ((total_inner_updates)/omp_get_num_threads() - current_update <= config.programSettings->kernelReplications) {
 #ifndef NDEBUG
                     std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner Ev " << block_row << "," << block_col <<  std::endl;
 #endif 
                         // this is the last taks that will be enqueued in this queue, so create an event
-                        all_events.back().emplace_back();
+                        cl::Event ev;
                         // Distribute the workload over all available matrix multiplication kernels
-                        err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(std::prev(all_events.end())))), &(all_events.back().back()));         
+                        err = inner_queues.back()[current_replication].enqueueNDRangeKernel(k, cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(std::prev(all_events.end())))), &(ev));   
+
+                        #pragma omp critical
+                        all_events.back().push_back(ev);      
                     }
                     else {
 #ifndef NDEBUG
                     std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner " << block_row << "," << block_col <<  std::endl;
 #endif 
                         // Distribute the workload over all available matrix multiplication kernels
-                        err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(std::prev(all_events.end())))));         
+                        err = inner_queues.back()[current_replication].enqueueNDRangeKernel(k, cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(std::prev(all_events.end())))));         
                     }
 
                     ASSERT_CL(err)
+
+                    kernels.back()[(lbi-1)*(num_inner_block_cols - 1)+(tbi-1)] = k;
+
                     current_update++;
-                    current_replication = (current_replication + 1) % config.programSettings->kernelReplications;
                 }
             }
+
 #ifndef NDEBUG
             MPI_Barrier(MPI_COMM_WORLD);
             if (is_calulating_lu_block) std::cout << "---------------" << std::endl;
@@ -542,17 +576,15 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
             if (block_row == blocks_per_row * config.programSettings->torus_width - 1) {
                 // wait until the last LU queue is done since it will be the last required operation
-                lu_queues.back().finish();
                 t2 = std::chrono::high_resolution_clock::now();
-
-                // Finish all other queues
-                top_queues.back().finish();
-                left_queues.back().finish();
                 cl::Event::waitForEvents(all_events.back());
 
             }
 #endif
 
+#ifdef XILINX_FPGA
+            #pragma omp single nowait
+            {
             if (block_row > 2) {
                 // clean up old queues and kernels
                 lu_queues.pop_front();
@@ -564,15 +596,12 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 kernels.pop_front();
                 all_events.pop_front();
             }
+            }
+#endif
+
         }
+    }
 #ifdef NDEBUG
-        int count = 0;
-        for (auto evs : all_events) {
-            count++;
-            cl::Event::waitForEvents(evs);
-            // std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "Step " << count << " of " << all_events.size() << std::endl;
-        }
-        lu_queues.back().finish();
         t2 = std::chrono::high_resolution_clock::now();
         std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "End! " << std::endl;
 #endif
