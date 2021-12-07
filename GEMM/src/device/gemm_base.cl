@@ -49,6 +49,7 @@ do_acc false: c = a * b
 where a,b,c are matrices of size GEMM_BLOCK.
 Calculation itself is fully unrolled.
  */
+ __attribute__((always_inline))
 void register_gemm(const DEVICE_DATA_TYPE a[GEMM_BLOCK][GEMM_BLOCK],
                     const DEVICE_DATA_TYPE b[GEMM_BLOCK][GEMM_BLOCK],
 #ifdef INTEL_FPGA
