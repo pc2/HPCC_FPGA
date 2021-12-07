@@ -109,8 +109,12 @@ void fetch/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["i
 
   // for iter iterations and one additional iteration to empty the last buffer
   for(unsigned k = 0; k < (iter + 1) * (N / POINTS); k++){ 
-    
+  
+#ifdef INTEL_FPGA
+    // Only use this condition for Intel FPGAs because it will destroy the memory bursts for Xilinx
+    // For Intel, the emulation will fail without this statement because of 
     if (k < iter * ( N / POINTS)) {
+#endif
 
       float2 read_chunk[POINTS];
 
@@ -133,7 +137,9 @@ void fetch/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["i
         unsigned local_i = k & (2 * N/POINTS - 1);
         buf[local_i][j] = read_chunk[j];
       }
+#ifdef INTEL_FPGA
     }
+#endif
     if (k >= ( N / POINTS)) {
       float2x8 buf2x8;
 
