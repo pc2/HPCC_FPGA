@@ -131,6 +131,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         std::list<std::vector<cl::Event>> all_events;
         all_events.emplace_back();
         all_events.back().emplace_back(start_event);
+        all_events.emplace_back();
 
         left_buffers.emplace_back();
         top_buffers.emplace_back();
