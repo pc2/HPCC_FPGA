@@ -28,6 +28,7 @@ SOFTWARE.
 #include <memory>
 #include <vector>
 #include <list>
+#include <thread>
 
 /* External library headers */
 #if QUARTUS_MAJOR_VERSION > 18
@@ -124,6 +125,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         std::list<std::vector<cl::Buffer>> top_buffers;
         std::list<std::vector<cl::CommandQueue>> inner_queues;
         std::list<std::vector<cl::Kernel>> kernels;
+        std::thread flush_thread;
 
         // User event that is used to start actual execution of benchmark kernels
         cl::UserEvent start_event(*config.context, &err);
@@ -560,6 +562,17 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 }
             }
 
+            #pragma omp single
+            {
+                if (flush_thread.joinable()) {
+                    flush_thread.join();
+                }
+                // Start new thread that cuntinuously puts new tasks on the FPGA while the main thread
+                // may be blocked by MPI calls
+                std::thread new_thread([all_events](){ cl::Event::waitForEvents(all_events.back());});
+                flush_thread.swap(new_thread);
+            }
+
 #ifndef NDEBUG
             MPI_Barrier(MPI_COMM_WORLD);
             if (is_calulating_lu_block) std::cout << "---------------" << std::endl;
@@ -605,6 +618,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
         }
     }
+
+    flush_thread.join();
+
 #ifdef NDEBUG
         t2 = std::chrono::high_resolution_clock::now();
         std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "End! " << std::endl;
