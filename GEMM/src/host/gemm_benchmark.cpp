@@ -242,18 +242,32 @@ gemm::gemm_ref(HOST_DATA_TYPE* a,HOST_DATA_TYPE* b, HOST_DATA_TYPE* c,
 #endif
 #if (!defined(_USE_BLAS_) || (DATA_TYPE_SIZE != 2 && DATA_TYPE_SIZE != 4 && DATA_TYPE_SIZE != 8)) 
         // Caclulate manually. Thisi s the default, if BLAS is not found
+        #pragma omp parallel
+        {
+        #pragma omp for
         for (int i=0; i < n; i++) {
             for (int j=0; j < n; j++) {
                 c[i * n + j] = beta * c[i*n + j];
             }
         }
 
-        for (int i=0; i < n; i++) {
-            for (int j=0; j < n; j++) {
-                for (int k=0; k < n; k++) {
-                    c[i*n + j] += alpha * a[i*n + k] * b[k*n + j];
+#define HOST_MM_BLOCK_SIZE 256
+
+        #pragma omp for collapse(2)
+        for (int i=0; i < n; i+=HOST_MM_BLOCK_SIZE) {
+            for (int j=0; j < n; j+=HOST_MM_BLOCK_SIZE) {
+                for (int k=0; k < n; k+=HOST_MM_BLOCK_SIZE) {
+                     for (int ii=i; ii < std::min(i + HOST_MM_BLOCK_SIZE, n); ii++) {
+                        for (int kk=k; kk < std::min(k + HOST_MM_BLOCK_SIZE, n); kk++) {  
+                            HOST_DATA_TYPE scaled_a =  alpha * a[ii*n + kk];
+                            for (int jj=j; jj < std::min(j + HOST_MM_BLOCK_SIZE, n); jj++) {   
+                                c[ii*n + jj] += scaled_a * b[kk*n + jj];
+                            }
+                        }
+                     }
                 }
             }
+        }
         }
 #endif
 }
