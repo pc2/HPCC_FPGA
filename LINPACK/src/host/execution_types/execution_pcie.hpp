@@ -111,7 +111,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     std::vector<double> gefaWaitTimes;
     for (int i = 0; i < config.programSettings->numRepetitions; i++) {
 
-        err = buffer_queue.enqueueMigrateMemObjects({Buffer_a, Buffer_b}, 0);
+        err = buffer_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
+        ASSERT_CL(err)
+        err = buffer_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
         ASSERT_CL(err)
         buffer_queue.finish();
 
