@@ -111,9 +111,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     std::vector<double> gefaWaitTimes;
     for (int i = 0; i < config.programSettings->numRepetitions; i++) {
 
-        err = buffer_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
+        err = buffer_queue.enqueueWriteBuffer(Buffer_a, CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
         ASSERT_CL(err)
-        err = buffer_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
+        err = buffer_queue.enqueueWriteBuffer(Buffer_b, CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
         ASSERT_CL(err)
         buffer_queue.finish();
 
@@ -224,9 +224,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 err = lu_queues.back().enqueueNDRangeKernel(private_kernels.back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
                 ASSERT_CL(err)
                 // read back result of LU calculation so it can be distributed 
-                err = lu_queues.back().enqueueMigrateMemObjects({Buffer_lu2}, CL_MIGRATE_MEM_OBJECT_HOST);
+                err = lu_queues.back().enqueueReadBuffer(Buffer_lu2, CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), lu_block);
                 ASSERT_CL(err)
-                err = lu_queues.back().enqueueMigrateMemObjects({Buffer_lu1}, CL_MIGRATE_MEM_OBJECT_HOST);
+                err = lu_queues.back().enqueueReadBuffer(Buffer_lu1, CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), lu_trans_block);
                 ASSERT_CL(err)
             }
 
@@ -244,9 +244,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
                 #pragma omp single
                 {
+                cl::Event write_lu_trans_done;
                 // Copy LU block to FPGA for calulation of top blocks only if required
-                err = top_queues.back().enqueueMigrateMemObjects({Buffer_lu1}, 0);
+                err = top_queues.back().enqueueWriteBuffer(Buffer_lu1, CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), lu_trans_block, NULL, &write_lu_trans_done);
                 ASSERT_CL(err)
+                (*std::prev(std::prev(all_events.end()))).push_back(write_lu_trans_done);
                 }
 
                 // Create top kernels
@@ -276,7 +278,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     err = top_queues.back().enqueueNDRangeKernel(k, cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
                     ASSERT_CL(err) 
 
-                    err = top_queues.back().enqueueMigrateMemObjects({Buffer_top_list[tops - start_col_index]}, CL_MIGRATE_MEM_OBJECT_HOST);
+                    err = top_queues.back().enqueueReadBuffer(Buffer_top_list[tops - start_col_index], CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), top_blocks[tops - start_col_index]);
                     ASSERT_CL(err)
 
                     private_kernels.push_back(k);
@@ -287,9 +289,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
                 #pragma omp single
                 {
+                cl::Event write_lu_done;
                 // Copy LU block to FPGA for calulation of left blocks only if required
-                err = left_queues.back().enqueueMigrateMemObjects({Buffer_lu2}, 0);
+                err = left_queues.back().enqueueWriteBuffer(Buffer_lu2, CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), lu_block, NULL, &write_lu_done);
                 ASSERT_CL(err)
+                (*std::prev(std::prev(all_events.end()))).push_back(write_lu_done);
                 }
 
                 // Create left kernels
@@ -319,7 +323,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     err = left_queues.back().enqueueNDRangeKernel(k, cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
                     ASSERT_CL(err) 
 
-                    err = left_queues.back().enqueueMigrateMemObjects({Buffer_left_list[tops - start_row_index]}, CL_MIGRATE_MEM_OBJECT_HOST);
+                    err = left_queues.back().enqueueReadBuffer(Buffer_left_list[tops - start_row_index], CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), left_blocks[tops - start_row_index]);
 
                     ASSERT_CL(err) 
 
@@ -354,12 +358,12 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             for (int lbi=0; lbi < num_inner_block_rows; lbi++) {
                 left_buffers.back().emplace_back(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
                                         sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), left_blocks[lbi]);
-                err = buffer_transfer_queue.enqueueMigrateMemObjects({left_buffers.back().back()}, 0);
+                err = buffer_transfer_queue.enqueueWriteBuffer(left_buffers.back().back(), CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), left_blocks[lbi]);
             }
             for (int tbi=0; tbi < num_inner_block_cols; tbi++) {
                 top_buffers.back().emplace_back(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
                         sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * config.programSettings->blockSize, top_blocks[tbi]);
-                err = buffer_transfer_queue.enqueueMigrateMemObjects({top_buffers.back().back()}, 0);
+                err = buffer_transfer_queue.enqueueWriteBuffer(top_buffers.back().back(), CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), top_blocks[tbi]);
             }
 
             kernel_offset = kernels.back().size();
