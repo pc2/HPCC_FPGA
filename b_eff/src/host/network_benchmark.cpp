@@ -214,6 +214,15 @@ network::NetworkBenchmark::collectAndPrintResults(const network::NetworkExecutio
 
 std::unique_ptr<network::NetworkData>
 network::NetworkBenchmark::generateInputData() {
+    // sanity check of input variables
+    if (executionSettings->programSettings->minLoopLength > executionSettings->programSettings->maxLoopLength) {
+        std::cerr << "WARNING: Loop Length: Minimum is bigger than maximum. Setting minimum to value of maximum." << std::endl;
+        executionSettings->programSettings->minLoopLength = executionSettings->programSettings->maxLoopLength;
+    }
+    if (executionSettings->programSettings->minMessageSize > executionSettings->programSettings->maxMessageSize) {
+        std::cerr << "WARNING: Message Sizes: Minimum is bigger than maximum. Setting minimum to value of maximum." << std::endl;
+        executionSettings->programSettings->minMessageSize = executionSettings->programSettings->maxMessageSize;
+    }
     auto d = std::unique_ptr<network::NetworkData>(new network::NetworkData(executionSettings->programSettings->maxLoopLength,
                                                                             executionSettings->programSettings->minLoopLength,
                                                                             executionSettings->programSettings->minMessageSize,
