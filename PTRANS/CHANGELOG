@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 1.6
+
+#### Added:
+- MPI + PCIe base implementations for Inte and Xilinx FPGAs
+
 ## 1.5
 
 #### Changed:
