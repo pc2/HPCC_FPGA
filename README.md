@@ -245,9 +245,10 @@ Support will be added subsequently.
 | PTRANS       | Yes        |  Yes         |      
 | LINPACK      | Yes        |  Yes         |           
 | GEMM         | Yes        |  Yes         |      
-| FFT          | Yes        |  Yes         | 
+| FFT          | Yes        |  Yes*         | 
 | b_eff        | Yes        |  Yes         |       
 
+*only with XRT <=2.8 because of OpenCL pipe support
 
 #### HBM
 
