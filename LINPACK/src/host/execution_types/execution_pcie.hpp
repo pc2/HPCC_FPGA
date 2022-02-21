@@ -69,12 +69,12 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     ASSERT_CL(err)
 
     // Create Buffers for input and output
-    cl::Buffer Buffer_a(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
-    cl::Buffer Buffer_b(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
-    cl::Buffer Buffer_pivot(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE,
-                                        sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
+    cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+    cl::Buffer Buffer_b(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize);
+    cl::Buffer Buffer_pivot(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(cl_int)*config.programSettings->matrixSize);
 
 
     /* --- Setup MPI communication and required additional buffers --- */
@@ -84,10 +84,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
     // Buffers only used to store data received over the network layer
     // The content will not be modified by the host
-    cl::Buffer Buffer_lu1(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize)*(config.programSettings->blockSize), lu_trans_block);
-    cl::Buffer Buffer_lu2(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize)*(config.programSettings->blockSize), lu_block);
+    cl::Buffer Buffer_lu1(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize)*(config.programSettings->blockSize));
+    cl::Buffer Buffer_lu2(*config.context, CL_MEM_READ_WRITE,
+                                        sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize)*(config.programSettings->blockSize));
 
     std::vector<cl::Buffer> Buffer_left_list;
     std::vector<cl::Buffer> Buffer_top_list;
@@ -682,6 +682,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         buffer_queue.enqueueReadBuffer(Buffer_pivot, CL_TRUE, 0,
                                         sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
     }
+    buffer_queue.finish();
 #endif
 
     /* --- Clean up MPI communication buffers --- */
