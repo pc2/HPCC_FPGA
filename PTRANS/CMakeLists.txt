@@ -13,7 +13,7 @@ set(NUM_REPLICATIONS 2 CACHE STRING "Number of times the kernels will be replica
 set(USE_BUFFER_WRITE_RECT_FOR_A No CACHE BOOL "Only valid for PQ with IEC. Use the enqueueWriteBufferRect call to copy only the relevant part of A to memory bank of each replication. Whole matrix A will be copied otherwise.")
 set(XILINX_UNROLL_INNER_LOOPS No CACHE BOOL "When building for Xilinx devices, unroll the inner loops to create a single pipeline per block and keep memory bursts. This is a tradeoff between resource usage and performance.")
 
-set(PTRANS_HOST_EMULATION_REORDER No CACHE BOOL "Reorder the scheduling of FPGA kernels for Intel fast emulator since channels are only read once!")
+set(HOST_EMULATION_REORDER No CACHE BOOL "Reorder the scheduling of FPGA kernels for Intel fast emulator since channels are only read once!")
 
 mark_as_advanced(READ_KERNEL_NAME WRITE_KERNEL_NAME USE_BUFFER_WRITE_RECT_FOR_A XILINX_UNROLL_INNER_LOOPS)
 
