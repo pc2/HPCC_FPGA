@@ -88,9 +88,11 @@ void send/*PY_CODE_GEN  r*/(const unsigned data_size,
             write_channel_intel(ch_out_/*PY_CODE_GEN  2*r+1*/, send_part1);
             write_channel_intel(ch_out_/*PY_CODE_GEN  2*r+2*/, send_part2);
         }
+#ifndef EMULATE
         // Introduce data dependency between loop iterations to prevent coalescing of loop
         send_part1 = read_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+1*/);
         send_part2 = read_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+2*/);
+#endif
     }
 }
 
@@ -118,11 +120,12 @@ void recv/*PY_CODE_GEN  r*/(__global DEVICE_DATA_TYPE* validation_buffer,
             recv_part1 = read_channel_intel(ch_in_/*PY_CODE_GEN  2*r+1*/);
             recv_part2 = read_channel_intel(ch_in_/*PY_CODE_GEN  2*r+2*/);
         }
-
+#ifndef EMULATE
         // Introduce data dependency between loop iterations to prevent coalescing of loop
         // by sending the data to the send kernel
         write_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+1*/, recv_part1);
         write_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+2*/, recv_part2);
+#endif
     }
 
     // Store the last received data chunks in global memory for later validation

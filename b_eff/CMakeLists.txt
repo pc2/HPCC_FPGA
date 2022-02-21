@@ -11,6 +11,9 @@ set(DEFAULT_LOOP_LENGTH_OFFSET 11 CACHE STRING "Offset that is used for the mess
 set(DEFAULT_LOOP_LENGTH_DECREASE 7 CACHE STRING "Number of steps that are used to decrease the number of repetitions to its minimum")
 set(NUM_REPLICATIONS 2 CACHE STRING "")
 
+set(HOST_EMULATION_REORDER No CACHE BOOL "Reorder the scheduling of FPGA kernels for Intel fast emulator since channels are only read once!")
+
+
 set(USE_MPI Yes)
 set(USE_DEPRECATED_HPP_HEADER No)
 

@@ -89,6 +89,41 @@ namespace network::execution_types::iec {
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             MPI_Barrier(MPI_COMM_WORLD);
             auto startCalculation = std::chrono::high_resolution_clock::now();
+#ifdef HOST_EMULATION_REORDER
+            std::cout << "Reordering kernel execution for Intel emulation!" << std::endl;
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                sendQueues[i].enqueueNDRangeKernel(sendKernels[i], cl::NullRange, cl::NDRange(1));
+                #ifndef NDEBUG
+                        int current_rank;
+                        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+                        std::cout << "Rank " << current_rank << ": Send Enqueued " << r << "," << i << std::endl;
+                #endif
+            }
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                sendQueues[i].finish();
+                #ifndef NDEBUG
+                        int current_rank;
+                        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+                        std::cout << "Rank " << current_rank << ": Send done " << r << "," << i << std::endl;
+                #endif
+            } 
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                recvQueues[i].enqueueNDRangeKernel(recvKernels[i], cl::NullRange, cl::NDRange(1));
+                #ifndef NDEBUG
+                        int current_rank;
+                        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+                        std::cout << "Rank " << current_rank << ": Recv Enqueued " << r << "," << i << std::endl;
+                #endif
+            }
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                recvQueues[i].finish();
+                #ifndef NDEBUG
+                        int current_rank;
+                        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+                        std::cout << "Rank " << current_rank << ": Recv done " << r << "," << i << std::endl;
+                #endif
+            }      
+#else
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 sendQueues[i].enqueueNDRangeKernel(sendKernels[i], cl::NullRange, cl::NDRange(1));
                 recvQueues[i].enqueueNDRangeKernel(recvKernels[i], cl::NullRange, cl::NDRange(1));
@@ -111,6 +146,7 @@ namespace network::execution_types::iec {
                         std::cout << "Rank " << current_rank << ": Recv done " << r << "," << i << std::endl;
                 #endif
             }
+#endif
             auto endCalculation = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> calculationTime =
                     std::chrono::duration_cast<std::chrono::duration<double>>
