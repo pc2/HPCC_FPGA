@@ -71,11 +71,11 @@ transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
                                     return transpose::fpga_execution::intel::calculate(*executionSettings, data);
                                 }
                                 else {
-                                    return transpose::fpga_execution::intel_pq::calculate(*executionSettings, data);
+                                    return transpose::fpga_execution::intel_pq::calculate(*executionSettings, data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*dataHandler));
                                 } break;
         case hpcc_base::CommunicationType::pcie_mpi :                                 
                                 if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
-                                    return transpose::fpga_execution::pcie::calculate(*executionSettings, data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*dataHandler));
+                                    return transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler);
                                 }
                                 else {
                                     return transpose::fpga_execution::pcie_pq::calculate(*executionSettings, data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*dataHandler));
@@ -150,13 +150,10 @@ transpose::TransposeBenchmark::generateInputData() {
 bool  
 transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeData &data) {
 
-    std::cout << "Exchange data again!" << std::endl;
     // exchange the data using MPI depending on the chosen distribution scheme
     dataHandler->exchangeData(data);
 
-std::cout << "Reference transpose!" << std::endl;
     dataHandler->reference_transpose(data);
-    std::cout << "Reference transpose done!" << std::endl;
 
     double max_error = 0.0;
     for (size_t i = 0; i < executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize * data.numBlocks; i++) {

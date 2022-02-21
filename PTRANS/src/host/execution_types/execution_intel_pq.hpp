@@ -30,6 +30,7 @@ SOFTWARE.
 /* Project's headers */
 #include "transpose_benchmark.hpp"
 #include "data_handlers/data_handler_types.h"
+#include "data_handlers/pq.hpp"
 
 namespace transpose {
 namespace fpga_execution {
@@ -43,7 +44,7 @@ namespace intel_pq {
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
 static  std::unique_ptr<transpose::TransposeExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data) {
+    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data, transpose::data_handler::DistributedPQTransposeDataHandler &handler) {
         int err;
 
         if (config.programSettings->dataHandlerIdentifier != transpose::data_handler::DataHandlerType::pq) {
@@ -65,7 +66,8 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         std::vector<cl::CommandQueue> readCommandQueueList;
         std::vector<cl::CommandQueue> writeCommandQueueList;
 
-        size_t local_matrix_width = std::sqrt(data.numBlocks);
+        size_t local_matrix_width = handler.getWidthforRank();
+        size_t local_matrix_height = handler.getHeightforRank();
         size_t local_matrix_width_bytes = local_matrix_width * data.blockSize * sizeof(HOST_DATA_TYPE);
 
         size_t total_offset = 0;
@@ -74,8 +76,8 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
 
                 // Calculate how many blocks the current kernel replication will need to process.
-                size_t blocks_per_replication = (local_matrix_width / config.programSettings->kernelReplications * local_matrix_width);
-                size_t blocks_remainder = local_matrix_width % config.programSettings->kernelReplications;
+                size_t blocks_per_replication = (local_matrix_height / config.programSettings->kernelReplications * local_matrix_width);
+                size_t blocks_remainder = local_matrix_height % config.programSettings->kernelReplications;
                 if (blocks_remainder > r) {
                         // Catch the case, that the number of blocks is not divisible by the number of kernel replications
                         blocks_per_replication += local_matrix_width;
@@ -155,7 +157,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 #endif
 
                 // Height of the whole local matrix in blocks
-                err = transposeReadKernel.setArg(3, static_cast<cl_ulong>(local_matrix_width ));
+                err = transposeReadKernel.setArg(3, static_cast<cl_ulong>(local_matrix_height ));
                 ASSERT_CL(err) 
 
                 // total number of blocks that are processed in this replication
