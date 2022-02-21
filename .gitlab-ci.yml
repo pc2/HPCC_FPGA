@@ -111,7 +111,7 @@ build:PTRANS:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DPTRANS_HOST_EMULATION_REORDER=Yes
     - make -j 40 all
   artifacts:
     paths:
@@ -394,7 +394,7 @@ test:PTRANS:
   stage: test
   script:
     - cd build
-    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DPTRANS_HOST_EMULATION_REORDER=Yes
     - cd bin
     - touch kernel_output_ch0
     - touch kernel_output_ch1
