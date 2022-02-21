@@ -1221,8 +1221,9 @@ TEST_F(LinpackKernelCommunicationTestAll, AllBlockExternalResultisCorrect) {
         }
     }
 
-    // tolerated delta between expected and real result is machine epsilon times matrix width
-    double delta = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+    // tolerated delta between expected and real result is machine epsilon times constant 5
+    // This delta was chosen to be sufficiently large but to tolerate small variation of the results
+    double delta = 5 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
     EXPECT_NEAR(max_error, 0.0, delta);
 }
 

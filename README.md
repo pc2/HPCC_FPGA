@@ -50,6 +50,7 @@ Moreover, additional libraries are fetched by the build system during configurat
 - [Googletest](https://github.com/google/googletest) for unit testing
 
 These dependencies will be downloaded automatically when configuring a benchmark for the first time.
+The exact version that are used can be found in the `CMakeLists.txt`located in the `extern` directory where all extern dependencies are defined.
 Besides that, some benchmarks might need additional dependencies.
 More information on that can be found in the README located in the subfolder for each benchmark.
 One key feature of all benchmarks of this suite is that they come with individual **configuration options**.
@@ -226,6 +227,8 @@ The most common memory types that this overview is focusing on are:
 This allows higher memory bandwidths during kernel execution.
 - *High Bandwidth Memory (HBM)*: The FPGA fabric itself is equipped with memory banks that can be accessed by the host to copy data. Compared to DDR, this memory type consists of more, but smaller memory banks so that the host needs to split the data between all memory banks to achieve the best performance. Still, the total achievable memory bandwidth is much higher compared to DDR.
 
+The benchmarks LINPACK, PTRANS, and b_eff that stress inter-FPGA communication use MPI and PCIe for communication over the host to ensure compatibility to multi-FPGA systems without special requirements on the used communication interfaces.
+
 The following three tables contain an overview of the compatibility of all benchmarks that use global memory with the three mentioned memory types.
 b_eff does use global memory only for validation. Still, the support for different memory types needs to be implemented on the host side.
 Full support of the benchmark is indicated with a **Yes**, functionally correct behavior but performance limitations are indicated with **(Yes)**, no support is indicated with **No**.
@@ -242,9 +245,10 @@ Support will be added subsequently.
 | PTRANS       | Yes        |  Yes         |      
 | LINPACK      | Yes        |  Yes         |           
 | GEMM         | Yes        |  Yes         |      
-| FFT          | Yes        |  Yes         | 
+| FFT          | Yes        |  Yes*         | 
 | b_eff        | Yes        |  Yes         |       
 
+*only with XRT <=2.8 because of OpenCL pipe support
 
 #### HBM
 

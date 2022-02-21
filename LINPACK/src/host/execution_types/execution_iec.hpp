@@ -97,21 +97,21 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         // Command queues 
         // A new command queue is created for every iteration of the algorithm to reduce the overhead
         // of too large queues
-        std::list<cl::CommandQueue> lu_queues;
-        std::list<cl::CommandQueue> top_queues;
-        std::list<cl::CommandQueue> left_queues;
-        std::list<cl::CommandQueue> network_queues_top;
-        std::list<cl::CommandQueue> network_queues_left;
-        std::list<cl::CommandQueue> network_queues_bottomright;
-        std::list<std::vector<cl::Buffer>> left_buffers;
-        std::list<std::vector<cl::Buffer>> top_buffers;
-        std::list<std::vector<cl::CommandQueue>> inner_queues;
-        std::list<std::vector<cl::Kernel>> kernels;
+        std::vector<cl::CommandQueue> lu_queues;
+        std::vector<cl::CommandQueue> top_queues;
+        std::vector<cl::CommandQueue> left_queues;
+        std::vector<cl::CommandQueue> network_queues_top;
+        std::vector<cl::CommandQueue> network_queues_left;
+        std::vector<cl::CommandQueue> network_queues_bottomright;
+        std::vector<std::vector<cl::Buffer>> left_buffers;
+        std::vector<std::vector<cl::Buffer>> top_buffers;
+        std::vector<std::vector<cl::CommandQueue>> inner_queues;
+        std::vector<std::vector<cl::Kernel>> kernels;
 
         // User event that is used to start actual execution of benchmark kernels
         cl::UserEvent start_event(*config.context, &err);
         ASSERT_CL(err);
-        std::list<std::vector<cl::Event>> all_events;
+        std::vector<std::vector<cl::Event>> all_events;
         all_events.emplace_back();
         all_events.back().emplace_back(start_event);
         all_events.emplace_back();
@@ -129,6 +129,12 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         std::chrono::duration<double> currentwaittime = std::chrono::duration<double>::zero();
 
         uint current_replication = 0;
+
+        std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "Start! " << std::endl;
+        MPI_Barrier(MPI_COMM_WORLD);
+        t1 = std::chrono::high_resolution_clock::now();
+        // Trigger the user event that will start the first tasks in the queue
+        start_event.setStatus(CL_COMPLETE);
 
         // For every row of blocks create kernels and enqueue them
         for (int block_row=0; block_row < config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width; block_row++) {
@@ -518,14 +524,14 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                         // this is the last taks that will be enqueued in this queue, so create an event
                         all_events.back().emplace_back();
                         // Distribute the workload over all available matrix multiplication kernels
-                        err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(std::prev(all_events.end())))), &(all_events.back().back()));         
+                        err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));
                     }
                     else {
 #ifndef NDEBUG
                     std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner " << block_row << "," << block_col <<  std::endl;
 #endif 
                         // Distribute the workload over all available matrix multiplication kernels
-                        err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(std::prev(all_events.end())))));         
+                        err = inner_queues.back()[(current_replication)].enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))));
                     }
 
                     ASSERT_CL(err)
@@ -649,15 +655,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
         }
 #ifdef NDEBUG
-        std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "Start! " << std::endl;
-        MPI_Barrier(MPI_COMM_WORLD);
-        t1 = std::chrono::high_resolution_clock::now();
-        // Trigger the user event that will start the first tasks in the queue
-        start_event.setStatus(CL_COMPLETE);
+
         int count = 0;
-        for (auto evs : all_events) {
-            count++;
-            cl::Event::waitForEvents(evs);
+        for (auto evs = all_events.end() - config.programSettings->torus_width; evs != all_events.end(); evs++) {
+            cl::Event::waitForEvents(*evs);
             // std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  "Step " << count << " of " << all_events.size() << std::endl;
         }
         lu_queues.back().finish();

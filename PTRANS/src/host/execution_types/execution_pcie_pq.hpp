@@ -255,8 +255,11 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         // Exchange A data via PCIe and MPI
         handler.exchangeData(data);
 
+        std::vector<std::vector<cl::Event>> copy_events(transposeKernelList.size());
+
         for (int r = 0; r < transposeKernelList.size(); r++)
         {
+                copy_events[r].emplace_back();
 #ifdef USE_BUFFER_WRITE_RECT_FOR_A
 #ifndef USE_DEPRECATED_HPP_HEADER
                 cl::array<size_t,3> deviceOffset;
@@ -284,16 +287,20 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                                                 local_matrix_width* data.blockSize*sizeof(HOST_DATA_TYPE), 0,
                                                 data.A);
 #else
-                transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_TRUE, 0,
-                                        data.numBlocks * data.blockSize * data.blockSize * sizeof(HOST_DATA_TYPE), data.A);
+                transCommandQueueList[r].enqueueWriteBuffer(bufferListA[r], CL_FALSE, 0,
+                                        data.numBlocks * data.blockSize * data.blockSize * sizeof(HOST_DATA_TYPE), data.A, NULL, &copy_events[r][0]);
 #endif
         }
 #ifndef NDEBUG
+        for (int r = 0; r < transposeKernelList.size(); r++)
+        {
+                transCommandQueueList[r].finish();
+        }
         auto startKernelCalculation = std::chrono::high_resolution_clock::now();
 #endif
         for (int r = 0; r < transposeKernelList.size(); r++)
         {
-        transCommandQueueList[r].enqueueNDRangeKernel(transposeKernelList[r], cl::NullRange, cl::NDRange(1));
+        transCommandQueueList[r].enqueueNDRangeKernel(transposeKernelList[r], cl::NullRange, cl::NDRange(1), cl::NDRange(1), &copy_events[r]);
         }
         for (int r = 0; r < transposeKernelList.size(); r++)
         {

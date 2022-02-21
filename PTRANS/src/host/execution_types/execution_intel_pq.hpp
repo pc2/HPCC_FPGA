@@ -232,6 +232,31 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
             MPI_Barrier(MPI_COMM_WORLD);
 
             auto startCalculation = std::chrono::high_resolution_clock::now();
+#ifdef HOST_EMULATION_REORDER
+            std::cout << "Reorder kernel execution on host for Intel fast emulation!" << std::endl;
+            for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                readCommandQueueList[r].enqueueNDRangeKernel(transposeReadKernelList[r], cl::NullRange, cl::NDRange(1));
+            }
+            for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                readCommandQueueList[r].finish();
+#ifndef NDEBUG
+                int mpi_rank;
+                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+                std::cout << "Rank " << mpi_rank << ": " << "Read done r=" << r << ", i=" << repetition << std::endl;
+#endif
+            }
+            for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                writeCommandQueueList[r].enqueueNDRangeKernel(transposeWriteKernelList[r], cl::NullRange, cl::NDRange(1));
+            }
+            for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                writeCommandQueueList[r].finish();
+#ifndef NDEBUG
+                int mpi_rank;
+                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+                std::cout << "Rank " << mpi_rank << ": " << "Write done r=" << r << ", i=" << repetition << std::endl;
+#endif
+            }
+#else
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].enqueueNDRangeKernel(transposeWriteKernelList[r], cl::NullRange, cl::NDRange(1));
                 readCommandQueueList[r].enqueueNDRangeKernel(transposeReadKernelList[r], cl::NullRange, cl::NDRange(1));
@@ -250,6 +275,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 std::cout << "Rank " << mpi_rank << ": " << "Read done r=" << r << ", i=" << repetition << std::endl;
 #endif
             }
+#endif
             auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
                 int mpi_rank;

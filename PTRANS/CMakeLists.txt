@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(PTRANS VERSION 1.5)
+project(PTRANS VERSION 1.6)
 
 set(READ_KERNEL_NAME transpose_read CACHE STRING "Name of the OpenCL kernel that reads A and sends it over external channel")
 set(WRITE_KERNEL_NAME transpose_write CACHE STRING "Name of the OpenCL kernel that receives A, adds C to it and stores result")
@@ -12,6 +12,8 @@ set(CHANNEL_WIDTH 8 CACHE STRING "Width of a single channel in number of values.
 set(NUM_REPLICATIONS 2 CACHE STRING "Number of times the kernels will be replicated")
 set(USE_BUFFER_WRITE_RECT_FOR_A No CACHE BOOL "Only valid for PQ with IEC. Use the enqueueWriteBufferRect call to copy only the relevant part of A to memory bank of each replication. Whole matrix A will be copied otherwise.")
 set(XILINX_UNROLL_INNER_LOOPS No CACHE BOOL "When building for Xilinx devices, unroll the inner loops to create a single pipeline per block and keep memory bursts. This is a tradeoff between resource usage and performance.")
+
+set(HOST_EMULATION_REORDER No CACHE BOOL "Reorder the scheduling of FPGA kernels for Intel fast emulator since channels are only read once!")
 
 mark_as_advanced(READ_KERNEL_NAME WRITE_KERNEL_NAME USE_BUFFER_WRITE_RECT_FOR_A XILINX_UNROLL_INNER_LOOPS)
 

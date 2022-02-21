@@ -22,6 +22,8 @@
 #define HOST_DATA_TYPE @HOST_DATA_TYPE@
 #define DEVICE_DATA_TYPE @DEVICE_DATA_TYPE@
 
+#cmakedefine HOST_EMULATION_REORDER
+
 /*
 Short description of the program.
 Moreover the version and build time is also compiled into the description.

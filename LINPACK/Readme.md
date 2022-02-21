@@ -142,7 +142,7 @@ executing the benchmark:
 
 The table below contains the performance measurements for the bechmark for the both routines GEFA and GESL.
 Only GEFA is implemented on FPGA, so only this result is significant for now. 
-GESL measurement is currently disabled and does not show any valid results!
+*GESL measurement is currently disabled and does not show any valid results since execution is done on the host during validation!*
 The columns of the table contain the following information:
 - `best`: The best measured time for executing the benchmark in seconds.
 - `mean`: The arithmetic mean of all measured execution times in seconds.
