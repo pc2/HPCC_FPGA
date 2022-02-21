@@ -30,6 +30,7 @@ SOFTWARE.
 /* Project's headers */
 #include "transpose_benchmark.hpp"
 #include "data_handlers/data_handler_types.h"
+#include "data_handlers/pq.hpp"
 
 namespace transpose {
 namespace fpga_execution {
@@ -44,7 +45,7 @@ namespace pcie_pq {
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
 static  std::unique_ptr<transpose::TransposeExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data, transpose::data_handler::TransposeDataHandler &handler) {
+    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data, transpose::data_handler::DistributedPQTransposeDataHandler &handler) {
         int err;
 
         if (config.programSettings->dataHandlerIdentifier != transpose::data_handler::DataHandlerType::pq) {
@@ -63,7 +64,8 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         std::vector<cl::Kernel> transposeKernelList;
         std::vector<cl::CommandQueue> transCommandQueueList;
 
-        size_t local_matrix_width = std::sqrt(data.numBlocks);
+        size_t local_matrix_width = handler.getWidthforRank();
+        size_t local_matrix_height = handler.getHeightforRank();
         size_t local_matrix_width_bytes = local_matrix_width * data.blockSize * sizeof(HOST_DATA_TYPE);
 
         size_t total_offset = 0;
@@ -72,8 +74,8 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
 
                 // Calculate how many blocks the current kernel replication will need to process.
-                size_t blocks_per_replication = (local_matrix_width / config.programSettings->kernelReplications * local_matrix_width);
-                size_t blocks_remainder = local_matrix_width % config.programSettings->kernelReplications;
+                size_t blocks_per_replication = (local_matrix_height / config.programSettings->kernelReplications * local_matrix_width);
+                size_t blocks_remainder = local_matrix_height % config.programSettings->kernelReplications;
                 if (blocks_remainder > r) {
                         // Catch the case, that the number of blocks is not divisible by the number of kernel replications
                         blocks_per_replication += local_matrix_width;
@@ -137,10 +139,10 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 ASSERT_CL(err)
                 err = transposeKernel.setArg(4, static_cast<cl_uint>(blocks_per_replication));
                 ASSERT_CL(err)
-                err = transposeKernel.setArg(5, static_cast<cl_uint>(local_matrix_width));
+                err = transposeKernel.setArg(5, static_cast<cl_uint>(handler.getWidthforRank()));
                 ASSERT_CL(err)
 #ifndef USE_BUFFER_WRITE_RECT_FOR_A
-                err = transposeKernel.setArg(6, static_cast<cl_uint>(local_matrix_width));
+                err = transposeKernel.setArg(6, static_cast<cl_uint>(handler.getHeightforRank()));
                 ASSERT_CL(err) 
                 err = transposeKernel.setArg(3, static_cast<cl_uint>(bufferStartList[r]));
                 ASSERT_CL(err)
@@ -329,6 +331,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 for (int r = 0; r < transposeKernelList.size(); r++) {
                         transCommandQueueList[r].enqueueReadBuffer(bufferListA_out[r], CL_TRUE, 0,
                                                 bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.result[bufferStartList[r] * data.blockSize * data.blockSize]);
+                        transCommandQueueList[r].finish();
                 }
             endTransfer = std::chrono::high_resolution_clock::now();
             transferTime +=
@@ -341,6 +344,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 transferTimings,
                 calculationTimings
         });
+
         return result;
     }
 

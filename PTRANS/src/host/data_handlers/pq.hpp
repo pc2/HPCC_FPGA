@@ -41,20 +41,50 @@ class DistributedPQTransposeDataHandler : public TransposeDataHandler {
 private:
 
     /**
-     * @brief Number of diagonal ranks that will sent the blcoks to themselves
+     * @brief Width of the local matrix of the current rank in blocks
      * 
      */
     int width_per_rank;
 
+    /**
+     * @brief Height of the local matrix of the current rank in blocks
+     * 
+     */
+    int height_per_rank;
+
+    /**
+     * @brief Row of the current rank in the PQ grid
+     * 
+     */
     int pq_row;
 
+    /**
+     * @brief Column of the current rank in the PQ grid
+     * 
+     */
     int pq_col;
 
+    /**
+     * @brief Width of the PQ grid (number of columns in PQ grid)
+     * 
+     */
     int pq_width;
 
+    /**
+     * @brief MPI derived data type for block-wise matrix transfer
+     * 
+     */
     MPI_Datatype data_block;
 
 public:
+
+    int getWidthforRank() {
+        return width_per_rank;
+    }
+
+    int getHeightforRank() {
+        return height_per_rank;
+    }
 
     /**
      * @brief Generate data for transposition based on the implemented distribution scheme
@@ -74,7 +104,13 @@ public:
         pq_row = mpi_comm_rank / pq_width;
         pq_col = mpi_comm_rank % pq_width;
 
-        int blocks_per_rank = width_per_rank * width_per_rank;
+        // If the torus width is not a divisor of the matrix size,
+        // distribute remaining blocks to the ranks
+        int remainder_per_rank = width_in_blocks % pq_width;
+        height_per_rank = (pq_row < remainder_per_rank) ? width_per_rank + 1 : width_per_rank;
+        width_per_rank += (pq_col < remainder_per_rank) ? 1 : 0;
+
+        int blocks_per_rank = height_per_rank * width_per_rank;
         
         // Allocate memory for a single device and all its memory banks
         auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
@@ -137,9 +173,9 @@ public:
 
     void 
     reference_transpose(TransposeData& data) {
-        for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
-            for (size_t j = 0; j < width_per_rank * data.blockSize; j++) {
-                data.A[j * width_per_rank * data.blockSize + i] -= (data.result[i * width_per_rank * data.blockSize + j] - data.B[i * width_per_rank * data.blockSize + j]);
+        for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
+            for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+                data.A[i * height_per_rank * data.blockSize + j] -= (data.result[j * width_per_rank * data.blockSize + i] - data.B[j * width_per_rank * data.blockSize + i]);
             }
         }
     }
