@@ -72,6 +72,10 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 
         size_t total_offset = 0;
 
+        int mpi_rank, mpi_size;
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
         // Setup the kernels depending on the number of kernel replications
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
 
@@ -235,29 +239,44 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 
             auto startCalculation = std::chrono::high_resolution_clock::now();
 #ifdef HOST_EMULATION_REORDER
-            std::cout << "Reorder kernel execution on host for Intel fast emulation!" << std::endl;
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                readCommandQueueList[r].enqueueNDRangeKernel(transposeReadKernelList[r], cl::NullRange, cl::NDRange(1));
-            }
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                readCommandQueueList[r].finish();
+        std::cout << "Reorder kernel execution on host for Intel fast emulation!" << std::endl;
+        // We have to use the same kernel_output_ch files for the different MPI ranks, that means we have to
+        // sequentialize the execution such that only a single rank sends something to the channels.
+        for (int k = 0; k < mpi_size; k++) {
+                int receiver_rank = 2 * (k%2) + (k/2);
+                // If current rank, start sending to the channels
+                if (k == mpi_rank) {
+                        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                                readCommandQueueList[r].enqueueNDRangeKernel(transposeReadKernelList[r], cl::NullRange, cl::NDRange(1));
+                        }
+                        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                                readCommandQueueList[r].finish();
 #ifndef NDEBUG
-                int mpi_rank;
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-                std::cout << "Rank " << mpi_rank << ": " << "Read done r=" << r << ", i=" << repetition << std::endl;
+                                std::cout << "Rank " << mpi_rank << ": " << "Read done r=" << r << ", i=" << repetition << std::endl;
 #endif
-            }
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                writeCommandQueueList[r].enqueueNDRangeKernel(transposeWriteKernelList[r], cl::NullRange, cl::NDRange(1));
-            }
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                writeCommandQueueList[r].finish();
+                        }
+                }
+                // Wait for all ranks to start receiving
+                MPI_Barrier(MPI_COMM_WORLD);
+                // Only rank that has to receive the data starts receive kernel
+                if (receiver_rank == mpi_rank) {
+                        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                                writeCommandQueueList[r].enqueueNDRangeKernel(transposeWriteKernelList[r], cl::NullRange, cl::NDRange(1));
+                        }
+                        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                                writeCommandQueueList[r].finish();
 #ifndef NDEBUG
-                int mpi_rank;
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-                std::cout << "Rank " << mpi_rank << ": " << "Write done r=" << r << ", i=" << repetition << std::endl;
+                                std::cout << "Rank " << mpi_rank << ": " << "Write done r=" << r << ", i=" << repetition << std::endl;
 #endif
-            }
+                        }
+                        // Delete the channels files so next iteration starts with clean channels!
+                        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                                std::remove(("kernel_output_ch" + std::to_string(r)).c_str());
+                        }
+                }
+                // Wait until receiving kernel is done
+                MPI_Barrier(MPI_COMM_WORLD);
+        }
 #else
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].enqueueNDRangeKernel(transposeWriteKernelList[r], cl::NullRange, cl::NDRange(1));
@@ -266,22 +285,16 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].finish();
 #ifndef NDEBUG
-                int mpi_rank;
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
                 std::cout << "Rank " << mpi_rank << ": " << "Write done r=" << r << ", i=" << repetition << std::endl;
 #endif
                 readCommandQueueList[r].finish();
 #ifndef NDEBUG
-                mpi_rank;
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
                 std::cout << "Rank " << mpi_rank << ": " << "Read done r=" << r << ", i=" << repetition << std::endl;
 #endif
             }
 #endif
             auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
-                int mpi_rank;
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
                 std::cout << "Rank " << mpi_rank << ": " << "Done i=" << repetition << std::endl;
 #endif
             std::chrono::duration<double> calculationTime =
@@ -294,6 +307,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 for (int r = 0; r < transposeReadKernelList.size(); r++) {
                         writeCommandQueueList[r].enqueueReadBuffer(bufferListA_out[r], CL_TRUE, 0,
                                                 bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.result[bufferStartList[r] * data.blockSize * data.blockSize]);
+                        writeCommandQueueList[r].finish();
                 }
             endTransfer = std::chrono::high_resolution_clock::now();
             transferTime +=
