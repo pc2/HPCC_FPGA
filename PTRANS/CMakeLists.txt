@@ -6,6 +6,7 @@ set(WRITE_KERNEL_NAME transpose_write CACHE STRING "Name of the OpenCL kernel th
 set(DEFAULT_MATRIX_SIZE 8 CACHE STRING "Default size of the used matrices")
 set(DEFAULT_COMM_TYPE "AUTO" CACHE STRING "Default communication type if nothing else is given over the --connectivity parameter")
 set(DEFAULT_DIST_TYPE "AUTO" CACHE STRING "Default distribution type if nothing is specified over the --handler parameter")
+set(DEFAULT_P_VALUE 1 CACHE STRING "Default value of P that sets the width of the PQ grid")
 set(BLOCK_SIZE 512 CACHE STRING "Block size used in the FPGA kernel")
 set(CHANNEL_WIDTH 8 CACHE STRING "Width of a single channel in number of values. Also specifies the width of memory ")
 # NUM_REPLICATIONS set to 2 by default to allow build and execution of both versions of the transpose kernel

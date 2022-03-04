@@ -57,6 +57,12 @@ public:
     uint blockSize;
 
     /**
+     * @brief Value of P defining the PQ grid used to order FPGAs
+     * 
+     */
+    uint p;
+
+    /**
      * @brief Identifier of the used data handler
      * 
      */
