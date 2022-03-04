@@ -37,10 +37,19 @@ SOFTWARE.
 namespace transpose {
 namespace data_handler {
 
+/**
+ * @brief Modulo operation that always produces positive values in range [0,op-1]. This is required for the PQ transpose algorithm and is different from the usual remainder calculation done with %!
+ * 
+ * @tparam T Data type used for the modulo operation.
+ * @param number Number the modulo is calculated from
+ * @param op Modulo operator
+ * @return T number mod op
+ */
 template<typename T> 
 static T mod(T number, T op) {
     T result = number % op;
-    return (result < 0) ? op + result : result;
+    // result >= op required for unsinged data types
+    return (result < 0 || result >= op) ? op + result : result;
 }
 
 class DistributedPQTransposeDataHandler : public TransposeDataHandler {
@@ -95,6 +104,20 @@ private:
      */
     MPI_Datatype data_block;
 
+    /**
+     * @brief Vector of buffers that is used to send data to multiple ranks in parallel.
+     *          We will need GCD(pq_width,pq_height) buffers
+     * 
+     */
+    std::vector<std::vector<HOST_DATA_TYPE>> send_buffers;
+
+    /**
+     * @brief Vector of buffers that is used to receive data from multiple ranks in parallel.
+     *          We will need GCD(pq_width,pq_height) buffers
+     * 
+     */
+    std::vector<std::vector<HOST_DATA_TYPE>> recv_buffers;
+
 public:
 
     int getWidthforRank() {
@@ -131,6 +154,13 @@ public:
         MPI_Type_commit(&data_block);
 
         int blocks_per_rank = height_per_rank * width_per_rank;
+
+        // Create send and receive buffers for concurrent MPI communication
+        int gcd = std::__gcd(pq_height, pq_width);
+        for (int i = 0; i < gcd; i++) {
+            send_buffers.emplace_back(settings.programSettings->blockSize * settings.programSettings->blockSize * blocks_per_rank);
+            recv_buffers.emplace_back(settings.programSettings->blockSize * settings.programSettings->blockSize * blocks_per_rank);
+        }
         
         // Allocate memory for a single device and all its memory banks
         auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
@@ -202,19 +232,9 @@ public:
             int gcd = std::__gcd(pq_height, pq_width);
             int least_common_multiple = pq_height * pq_width / gcd;
 
-            // Memory allocations to reorder blocks that need to be send and received between ranks
-            std::vector<std::vector<HOST_DATA_TYPE>> send_buffers;
-            std::vector<std::vector<HOST_DATA_TYPE>> recv_buffers;
-
             // MPI requests for non-blocking communication
             // First half of vector is for Isend, second half for Irecv!
             std::vector<MPI_Request> mpi_requests(2 * gcd);
-
-            // Create send and receive buffers for concurrent MPI communication
-            for (int i = 0; i < gcd; i++) {
-                send_buffers.emplace_back(data.blockSize * data.blockSize * data.numBlocks);
-                recv_buffers.emplace_back(data.blockSize * data.blockSize * data.numBlocks);
-            }
 
             // Begin algorithm from Figure 14 for general case
             int g = mod(pq_row - pq_col, gcd);
