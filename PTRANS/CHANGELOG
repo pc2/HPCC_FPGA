@@ -2,10 +2,17 @@
 
 This file contains all changes made to the source code for each release.
 
+# 1.7
+
+#### Changed:
+- Fix output of matrix size in benchmark
+#### Added:
+- Support for arbitrary FPGA grids with P!=Q for the PCIe base implementation
+- Support for arbitrary global matrix sizes (no need to be dividable by P and Q)
 ## 1.6
 
 #### Added:
-- MPI + PCIe base implementations for Inte and Xilinx FPGAs
+- MPI + PCIe base implementations for Intel and Xilinx FPGAs
 
 ## 1.5
 
