@@ -231,6 +231,8 @@ public:
 
                     // Collect all blocks that need to be send to other rank
                     auto send_buffer_location = send_buffers[current_parallel_execution].begin();
+                    // Also count receiving buffer size because sending and receiving buffer size may differ in certain scenarios!
+                    int receiving_size = 0;
                     for (int row = 0; row  < height_per_rank; row++) {
                         for (int col = 0; col  < width_per_rank; col++) {
                             // check for each local block, if its destinatio is the current send_rank
@@ -245,16 +247,18 @@ public:
                                     send_buffer_location += data.blockSize;
                                 }
                             }
+                            // count blocks for receiving rank to correctly set receiving buffer size
+                            if (destination_rank == recv_rank) {
+                                receiving_size += data.blockSize * data.blockSize;
+                            }
                         }
                     }
 
                     // Do actual MPI communication
                     int sending_size = send_buffer_location - send_buffers[current_parallel_execution].begin();
-                    std::cout << "Rank " << mpi_comm_rank << ": blocks " << sending_size / (data.blockSize * data.blockSize) << " send " << send_rank << ", recv " << recv_rank << std::endl << std::flush;
-                    // MPI_Isendrecv(send_buffers[current_parallel_execution].data(), sending_size, MPI_FLOAT, send_rank, 0, recv_buffers[current_parallel_execution].data(), sending_size, MPI_FLOAT, recv_rank, 0, MPI_COMM_WORLD, mpi_requests[current_parallel_execution]);
+                    std::cout << "Rank " << mpi_comm_rank << ": blocks (" << sending_size / (data.blockSize * data.blockSize) << "," << receiving_size / (data.blockSize * data.blockSize) << ") send " << send_rank << ", recv " << recv_rank << std::endl << std::flush;
                     MPI_Isend(send_buffers[current_parallel_execution].data(), sending_size, MPI_FLOAT, send_rank, 0, MPI_COMM_WORLD, &mpi_requests[current_parallel_execution]);
-                    MPI_Irecv(recv_buffers[current_parallel_execution].data(), sending_size, MPI_FLOAT, recv_rank, 0, MPI_COMM_WORLD, &mpi_requests[gcd + current_parallel_execution]);
-                    
+                    MPI_Irecv(recv_buffers[current_parallel_execution].data(), receiving_size, MPI_FLOAT, recv_rank, 0, MPI_COMM_WORLD, &mpi_requests[gcd + current_parallel_execution]);
                     // Increase the counter for parallel executions
                     current_parallel_execution = (current_parallel_execution + 1) % gcd;
 
