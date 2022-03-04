@@ -77,6 +77,11 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
         MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
+
+        if (config.programSettings->p * config.programSettings->p != mpi_size) {
+                throw std::runtime_error("P=Q must hold for IEC implementation, but P=" + std::to_string(config.programSettings->p) + " and Q=" + std::to_string(mpi_size / config.programSettings->p));
+        }
+
         // Setup the kernels depending on the number of kernel replications
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
 
