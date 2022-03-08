@@ -232,6 +232,12 @@ public:
             int gcd = std::__gcd(pq_height, pq_width);
             int least_common_multiple = pq_height * pq_width / gcd;
 
+            // If the global matrix size is not a multiple of the LCM block size, the numbers of send and received blocks
+            // may be wrongly calculated. Throw exception to prevent this and make aware of this issue!
+            if (global_width % least_common_multiple > 0) {
+                throw std::runtime_error("Implementation does not support matrix sizes that are not multiple of LCM blocks! Results may be wrong!");
+            }
+
             // MPI requests for non-blocking communication
             // First half of vector is for Isend, second half for Irecv!
             std::vector<MPI_Request> mpi_requests(2 * gcd);
