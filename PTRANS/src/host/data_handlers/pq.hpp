@@ -241,6 +241,19 @@ public:
             int p = mod(pq_col + g, pq_width);
             int q = mod(pq_row - g, pq_height);
 
+            // Pre-calculate target ranks in LCM block
+            // The vector list variable can be interpreted as 2D matrix. Every entry represents the target rank of the sub-block
+            // Since the LCM block will repeat, we only need to store this small amount of data!
+            std::vector<int> target_list(least_common_multiple/pq_height * least_common_multiple/pq_width);
+            for (int row = 0; row  < least_common_multiple/pq_height; row++) {
+                for (int col = 0; col  < least_common_multiple/pq_width; col++) {
+                    int global_block_col = pq_col + col * pq_width;
+                    int global_block_row = pq_row + row * pq_height;
+                    int destination_rank = (global_block_col % pq_height) * pq_width + (global_block_row % pq_width);
+                    target_list[row * least_common_multiple/pq_width + col] = destination_rank;
+                }
+            }
+
             int current_parallel_execution = 0;
 
             for (int j = 0; j < least_common_multiple/pq_width; j++) {
@@ -253,30 +266,43 @@ public:
                     auto send_buffer_location = send_buffers[current_parallel_execution].begin();
                     // Also count receiving buffer size because sending and receiving buffer size may differ in certain scenarios!
                     int receiving_size = 0;
-                    for (int row = 0; row  < height_per_rank; row++) {
-                        for (int col = 0; col  < width_per_rank; col++) {
-                            // check for each local block, if its destinatio is the current send_rank
-                            int global_block_col = pq_col + col * pq_width;
-                            int global_block_row = pq_row + row * pq_height;
-                            int destination_rank = (global_block_col % pq_height) * pq_width + (global_block_row % pq_width);
-                            if (destination_rank == send_rank) {
-                                // add block to send buffer, if its destination matches send_rank
-                                size_t matrix_buffer_offset = col * data.blockSize  + row * width_per_rank * data.blockSize * data.blockSize;
-                                for (int block_row = 0; block_row < data.blockSize; block_row++) {
-                                    std::copy(data.A + matrix_buffer_offset + block_row * width_per_rank * data.blockSize, data.A + matrix_buffer_offset + block_row * width_per_rank * data.blockSize + data.blockSize, send_buffer_location);
-                                    send_buffer_location += data.blockSize;
-                                }
+                    int sending_size = 0;
+
+                    std::vector<int> send_rows;
+                    std::vector<int> send_cols;
+                    // Look up which blocks are affected by the current rank
+                    for (int row = 0; row  < least_common_multiple/pq_height; row++) {
+                        for (int col = 0; col  < least_common_multiple/pq_width; col++) {
+                            if (target_list[row * least_common_multiple/pq_width + col] == send_rank) {
+                                send_rows.push_back(row);
+                                send_cols.push_back(col);
+                                sending_size += data.blockSize * data.blockSize;
                             }
-                            // count blocks for receiving rank to correctly set receiving buffer size
-                            if (destination_rank == recv_rank) {
+                            if (target_list[row * least_common_multiple/pq_width + col] == recv_rank) {
                                 receiving_size += data.blockSize * data.blockSize;
+                            }
+                        }
+                    }
+                    receiving_size *= (height_per_rank)/(least_common_multiple/pq_height) * ((width_per_rank)/(least_common_multiple/pq_width));
+                    sending_size *= (height_per_rank)/(least_common_multiple/pq_height) * ((width_per_rank)/(least_common_multiple/pq_width));
+
+                    #pragma omp parallel for collapse(3)
+                    for (int t=0; t < send_rows.size(); t++) {
+                        for (int lcm_row = 0; lcm_row < (height_per_rank)/(least_common_multiple/pq_height); lcm_row++) {
+                            for (int lcm_col = 0; lcm_col < (width_per_rank)/(least_common_multiple/pq_width); lcm_col++) {
+                                auto sending_buffer_offset = send_buffer_location + lcm_row * data.blockSize * data.blockSize * ((width_per_rank)/(least_common_multiple/pq_width)) + lcm_col * data.blockSize * data.blockSize;
+                                size_t matrix_buffer_offset = (send_cols[t] + lcm_col * least_common_multiple/pq_width)  * data.blockSize + (send_rows[t] + lcm_row * least_common_multiple/pq_height) * width_per_rank * data.blockSize * data.blockSize;
+                                for (int block_row = 0; block_row < data.blockSize; block_row++) {
+                                    std::copy(data.A + matrix_buffer_offset + block_row * width_per_rank * data.blockSize, data.A + matrix_buffer_offset + block_row * width_per_rank * data.blockSize + data.blockSize, sending_buffer_offset);
+                                }
                             }
                         }
                     }
 
                     // Do actual MPI communication
-                    int sending_size = send_buffer_location - send_buffers[current_parallel_execution].begin();
+#ifndef NDEBUG
                     std::cout << "Rank " << mpi_comm_rank << ": blocks (" << sending_size / (data.blockSize * data.blockSize) << "," << receiving_size / (data.blockSize * data.blockSize) << ") send " << send_rank << ", recv " << recv_rank << std::endl << std::flush;
+#endif
                     MPI_Isend(send_buffers[current_parallel_execution].data(), sending_size, MPI_FLOAT, send_rank, 0, MPI_COMM_WORLD, &mpi_requests[current_parallel_execution]);
                     MPI_Irecv(recv_buffers[current_parallel_execution].data(), receiving_size, MPI_FLOAT, recv_rank, 0, MPI_COMM_WORLD, &mpi_requests[gcd + current_parallel_execution]);
                     // Increase the counter for parallel executions
@@ -284,27 +310,40 @@ public:
 
                     // Wait for MPI requests if GCD MPI calls are scheduled in parallel
                     if ((current_parallel_execution) % gcd == 0) {
+
+
+                        for (auto& req : mpi_requests) {
                         
-                        std::vector<MPI_Status> statuses(mpi_requests.size());
+                            MPI_Status status;
+                            int index;
 
-                        MPI_Waitall(mpi_requests.size(), mpi_requests.data(), statuses.data());
+                            MPI_Waitany(mpi_requests.size(), mpi_requests.data(),&index, &status);
 
-                        // For each message that was received in parallel
-                        for (int received_message = 0; received_message < gcd; received_message++) {
-                            // Insert received data into result matrix
-                            auto recv_buffer_location = recv_buffers[received_message].begin();
-                            for (int row = 0; row  < height_per_rank; row++) {
-                                for (int col = 0; col  < width_per_rank; col++) {
-                                    // check for each local block, if its souce is the current recv_rank
-                                    int global_block_col = pq_col + col * pq_width;
-                                    int global_block_row = pq_row + row * pq_height;
-                                    int destination_rank = (global_block_col % pq_height) * pq_width + (global_block_row % pq_width);
-                                    if (destination_rank == statuses[gcd + received_message].MPI_SOURCE) {
-                                        // add block from receive buffer to exchange buffer
-                                        size_t matrix_buffer_offset = col * data.blockSize  + row * width_per_rank * data.blockSize * data.blockSize;
-                                        for (int block_row = 0; block_row < data.blockSize; block_row++) {
-                                            std::copy(recv_buffer_location, recv_buffer_location + data.blockSize,data.exchange + matrix_buffer_offset + block_row * width_per_rank * data.blockSize);
-                                            recv_buffer_location += data.blockSize;
+                            // For each message that was received in parallel
+                            if (index >= gcd) {
+                                // Insert received data into result matrix
+                                auto recv_buffer_location = recv_buffers[index - gcd].begin();
+
+                                std::vector<int> recv_rows;
+                                std::vector<int> recv_cols;
+                                // Look up which blocks are affected by the current rank
+                                for (int row = 0; row  < least_common_multiple/pq_height; row++) {
+                                    for (int col = 0; col  < least_common_multiple/pq_width; col++) {
+                                        if (target_list[row * least_common_multiple/pq_width + col] == status.MPI_SOURCE) {
+                                            recv_rows.push_back(row);
+                                            recv_cols.push_back(col);
+                                        }
+                                    }
+                                }
+                                #pragma omp parallel for collapse(3)
+                                for (int t=0; t < recv_rows.size(); t++) {
+                                    for (int lcm_row = 0; lcm_row < (height_per_rank)/(least_common_multiple/pq_height); lcm_row++) {
+                                        for (int lcm_col = 0; lcm_col < (width_per_rank)/(least_common_multiple/pq_width); lcm_col++) {
+                                            auto receiving_buffer_offset = recv_buffer_location + lcm_row * data.blockSize * data.blockSize * ((width_per_rank)/(least_common_multiple/pq_width)) + lcm_col * data.blockSize * data.blockSize;
+                                            size_t matrix_buffer_offset = (recv_cols[t] + lcm_col * least_common_multiple/pq_width)  * data.blockSize + (recv_rows[t] + lcm_row * least_common_multiple/pq_height) * width_per_rank * data.blockSize * data.blockSize;
+                                            for (int block_row = 0; block_row < data.blockSize; block_row++) {
+                                                std::copy(receiving_buffer_offset, receiving_buffer_offset + data.blockSize,data.exchange + matrix_buffer_offset + block_row * width_per_rank * data.blockSize);
+                                            }
                                         }
                                     }
                                 }
