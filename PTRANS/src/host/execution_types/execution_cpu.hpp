@@ -62,13 +62,10 @@ namespace transpose
                     throw std::runtime_error("Block size for CPU hardcoded to " + std::to_string(BLOCK_SIZE) + ". Recompile to use different block sizes!");
                 }
 
-                ulong local_matrix_width = std::sqrt(data.numBlocks);
-
                 for (int repetition = 0; repetition < config.programSettings->numRepetitions; repetition++)
                 {
-
-                    std::chrono::duration<double> transferTime(0);
-
+                    transpose::data_handler::DistributedPQTransposeDataHandler pq_handler = *reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler*>(&handler);
+                    
                     MPI_Barrier(MPI_COMM_WORLD);
 
                     auto startCalculation = std::chrono::high_resolution_clock::now();
@@ -76,6 +73,7 @@ namespace transpose
                     // Exchange A data via PCIe and MPI
                     handler.exchangeData(data);
 
+                    auto endTransfer = std::chrono::high_resolution_clock::now();
 
                     switch (config.programSettings->dataHandlerIdentifier) {
                         case transpose::data_handler::DataHandlerType::diagonal: 
@@ -85,12 +83,12 @@ namespace transpose
                                 }
                                 break;
                         case transpose::data_handler::DataHandlerType::pq: 
-                                #pragma omp parallel for 
-                                for (ulong yoffset=0; yoffset < BLOCK_SIZE * local_matrix_width; yoffset += BLOCK_SIZE) {
-                                    for (ulong xoffset=0; xoffset < BLOCK_SIZE * local_matrix_width; xoffset += BLOCK_SIZE) {
-                                        ulong toffset = xoffset * BLOCK_SIZE * local_matrix_width + yoffset;
-                                        ulong offset = yoffset * BLOCK_SIZE * local_matrix_width + xoffset;
-                                        mkl_somatadd('R', 'T', 'N', BLOCK_SIZE, BLOCK_SIZE, 1.0, &data.A[toffset], BLOCK_SIZE * local_matrix_width, 1.0, &data.B[offset], BLOCK_SIZE * local_matrix_width, &data.result[offset], BLOCK_SIZE * local_matrix_width);
+                                #pragma omp parallel for
+                                for (ulong yoffset=0; yoffset < BLOCK_SIZE * pq_handler.getHeightforRank(); yoffset += BLOCK_SIZE) {
+                                    for (ulong xoffset=0; xoffset < BLOCK_SIZE * pq_handler.getWidthforRank(); xoffset += BLOCK_SIZE) {
+                                        ulong toffset = xoffset * BLOCK_SIZE * pq_handler.getHeightforRank() + yoffset;
+                                        ulong offset = yoffset * BLOCK_SIZE * pq_handler.getWidthforRank() + xoffset;
+                                        mkl_somatadd('R', 'T', 'N', BLOCK_SIZE, BLOCK_SIZE, 1.0, &data.A[toffset], BLOCK_SIZE * pq_handler.getHeightforRank(), 1.0, &data.B[offset], BLOCK_SIZE * pq_handler.getWidthforRank(), &data.result[offset], BLOCK_SIZE * pq_handler.getWidthforRank());
                                     }
                                 }
                                 break;
@@ -106,12 +104,14 @@ namespace transpose
                           << "Done i=" << repetition << std::endl;
 #endif
                     std::chrono::duration<double> calculationTime =
-                        std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation);
+                        std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - endTransfer);
                     calculationTimings.push_back(calculationTime.count());
 
                     // Transfer back data for next repetition!
                     handler.exchangeData(data);
 
+                    std::chrono::duration<double> transferTime =
+                        std::chrono::duration_cast<std::chrono::duration<double>>(endTransfer - startCalculation);
                     transferTimings.push_back(transferTime.count());
                 }
 
