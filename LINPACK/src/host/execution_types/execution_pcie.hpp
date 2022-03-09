@@ -56,6 +56,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
     int err;
 
+    // TODO blocks_per_col may be required for non-quadratic local matrices!
     uint blocks_per_row = config.programSettings->matrixSize / config.programSettings->blockSize;
 
     // Communicate with all ranks in the same row of the torus
@@ -167,12 +168,14 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         // For every row of blocks create kernels and enqueue them
         for (int block_row=0; block_row < config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width; block_row++) {
 
-            int local_block_row_remainder = (block_row % config.programSettings->torus_width);
-            int local_block_row= (block_row / config.programSettings->torus_width);
+            int local_block_row_remainder = (block_row % config.programSettings->torus_height);
+            int local_block_row = (block_row / config.programSettings->torus_height);
+            int local_block_col_remainder = (block_row % config.programSettings->torus_width);
+            int local_block_col = (block_row / config.programSettings->torus_width);
             bool in_same_row_as_lu = local_block_row_remainder == config.programSettings->torus_row;
-            bool in_same_col_as_lu = local_block_row_remainder == config.programSettings->torus_col;
+            bool in_same_col_as_lu = local_block_col_remainder == config.programSettings->torus_col;
             int start_row_index = local_block_row + ((local_block_row_remainder >= config.programSettings->torus_row) ? 1: 0); 
-            int start_col_index = local_block_row + ((local_block_row_remainder >= config.programSettings->torus_col) ? 1: 0);
+            int start_col_index = local_block_col + ((local_block_col_remainder >= config.programSettings->torus_col) ? 1: 0);
             int num_left_blocks = (in_same_col_as_lu) ? blocks_per_row - start_row_index : 0;
             int num_top_blocks = (in_same_row_as_lu) ? blocks_per_row - start_col_index : 0;
             int num_inner_block_rows = (blocks_per_row - start_row_index);
@@ -207,7 +210,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 private_kernels.emplace_back(*config.program, "lu",
                                             &err);
 #ifndef NDEBUG
-                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " LU     " << local_block_row << "," << local_block_row <<  std::endl;
+                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " LU     " << local_block_col << "," << local_block_row <<  std::endl;
 #endif
                 err = private_kernels.back().setArg(0, Buffer_a);
                 ASSERT_CL(err);
@@ -215,7 +218,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err);
                 err = private_kernels.back().setArg(2, Buffer_lu2);
                 ASSERT_CL(err);
-                err = private_kernels.back().setArg(3, local_block_row);
+                err = private_kernels.back().setArg(3, local_block_col);
                 ASSERT_CL(err)
                 err = private_kernels.back().setArg(4, local_block_row);
                 ASSERT_CL(err)
@@ -235,7 +238,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             lu_queues.back().finish();
 
             // Broadcast LU block in column to update all left blocks
-            MPI_Bcast(lu_block, config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, col_communicator);
+            MPI_Bcast(lu_block, config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_col_remainder, col_communicator);
             // Broadcast LU block in row to update all top blocks
             MPI_Bcast(lu_trans_block, config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, row_communicator);
            }
@@ -302,18 +305,18 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     cl::Kernel k(*config.program, "left_update",
                                                     &err);
 #ifndef NDEBUG
-                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  " Left   " <<tops  << "," << local_block_row <<  std::endl;
+                    std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col <<  " Left   " <<tops  << "," << local_block_col <<  std::endl;
 #endif
                     ASSERT_CL(err);     
                     err = k.setArg(0, Buffer_a);
                     ASSERT_CL(err);    
-                    err = k.setArg(1, Buffer_left_list[tops - start_row_index]);
+                    err = k.setArg(1, Buffer_left_list[tops - start_col_index]);
                     ASSERT_CL(err) 
                     err = k.setArg(2, Buffer_lu2);
                     ASSERT_CL(err) 
-                    err = k.setArg(3, (tops == start_row_index) ? CL_TRUE : CL_FALSE);
+                    err = k.setArg(3, (tops == start_col_index) ? CL_TRUE : CL_FALSE);
                     ASSERT_CL(err) 
-                    err = k.setArg(4, local_block_row);
+                    err = k.setArg(4, local_block_col);
                     ASSERT_CL(err)
                     err = k.setArg(5, tops);
                     ASSERT_CL(err)
@@ -341,8 +344,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             for (int lbi=0; lbi < blocks_per_row - local_block_row; lbi++) {
                 MPI_Bcast(left_blocks[lbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, row_communicator);
             }
-            for (int tbi=0; tbi < blocks_per_row  - local_block_row; tbi++) {
-                MPI_Bcast(top_blocks[tbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, col_communicator);
+            for (int tbi=0; tbi < blocks_per_row  - local_block_col; tbi++) {
+                MPI_Bcast(top_blocks[tbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_col_remainder, col_communicator);
             }
 
             // update all remaining inner blocks using only global memory
