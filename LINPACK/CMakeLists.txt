@@ -11,6 +11,7 @@ set(NUM_REPLICATIONS 1 CACHE STRING "Number of times the matrix multiplication k
 set(TEST_UNIFORM No CACHE BOOL "All tests executed by CTest will be executed with uniformly generated matrices")
 set(TEST_EMULATION Yes CACHE BOOL "All tests executed by CTest will be executed with emulation kernels")
 set(DISTRIBUTED_VALIDATION Yes CACHE BOOL "Use the distributed validation scheme instead of validation on rank 0")
+set(DEFAULT_P_VALUE 1 CACHE STRING "Default value of P that sets the width of the PQ grid")
 
 set(COMMUNICATION_TYPE_SUPPORT_ENABLED Yes)
 

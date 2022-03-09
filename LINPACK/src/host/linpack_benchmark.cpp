@@ -37,15 +37,15 @@ SOFTWARE.
 
 linpack::LinpackProgramSettings::LinpackProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     matrixSize(results["m"].as<uint>() * (1 << (results["b"].as<uint>()))), blockSize(1 << (results["b"].as<uint>())), 
-    isEmulationKernel(results.count("emulation") > 0), isDiagonallyDominant(results.count("uniform") == 0) {
+    isEmulationKernel(results.count("emulation") > 0), isDiagonallyDominant(results.count("uniform") == 0)
+    torus_width(results["p"].as<uint>()) {
     int mpi_comm_rank;
     int mpi_comm_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
     // calculate the row and column of the MPI rank in the torus 
-    torus_row = (mpi_comm_rank / std::sqrt(mpi_comm_size));
-    torus_col = (mpi_comm_rank % static_cast<int>(std::sqrt(mpi_comm_size)));
-    torus_width = static_cast<int>(std::sqrt(mpi_comm_size));
+    torus_row = (mpi_comm_rank / torus_width);
+    torus_col = (mpi_comm_rank % torus_width);
 }
 
 std::map<std::string, std::string>
@@ -102,6 +102,8 @@ linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
         ("b", "Log2 of the block size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(LOCAL_MEM_BLOCK_LOG)))
+        ("p", "Width of the FPGA grid. The heigth (Q) will be calculated from mpi_size / P.",
+            cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_P_VALUE)))
         ("uniform", "Generate a uniform matrix instead of a diagonally dominant. This has to be supported by the FPGA kernel!")
         ("emulation", "Use kernel arguments for emulation. This may be necessary to simulate persistent local memory on the FPGA");
 }
