@@ -58,7 +58,8 @@ linpack::LinpackProgramSettings::getSettingsMap() {
         return map;
 }
 
-linpack::LinpackData::LinpackData(cl::Context context, size_t size) : norma(0.0), context(context) {
+linpack::LinpackData::LinpackData(cl::Context context, size_t width, size_t height) : norma(0.0), context(context)
+    matrix_width(width), matrix_height(height) {
 #ifdef USE_SVM
     A = reinterpret_cast<HOST_DATA_TYPE*>(
                         clSVMAlloc(context(), 0 ,
@@ -70,9 +71,9 @@ linpack::LinpackData::LinpackData(cl::Context context, size_t size) : norma(0.0)
                         clSVMAlloc(context(), 0 ,
                         size * sizeof(cl_int), 1024));
 #else
-    posix_memalign(reinterpret_cast<void**>(&A), 4096, size * size * sizeof(HOST_DATA_TYPE));
-    posix_memalign(reinterpret_cast<void**>(&b), 4096, size * sizeof(HOST_DATA_TYPE));
-    posix_memalign(reinterpret_cast<void**>(&ipvt), 4096, size * sizeof(cl_int));
+    posix_memalign(reinterpret_cast<void**>(&A), 4096, width * height * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&b), 4096, width * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&ipvt), 4096, height * sizeof(cl_int));
 #endif
     }
 
@@ -98,7 +99,7 @@ linpack::LinpackBenchmark::LinpackBenchmark(int argc, char* argv[]) : HpccFpgaBe
 void
 linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
-        ("m", "Matrix size in number of blocks in one dimension for a singe MPI rank. Total matrix will have size m * sqrt(MPI_size)",
+        ("m", "Global matrix size in number of blocks in one dimension. Local matrix sizes will be determined by PQ grid.",
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
         ("b", "Log2 of the block size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(LOCAL_MEM_BLOCK_LOG)))
@@ -195,19 +196,24 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
 
 std::unique_ptr<linpack::LinpackData>
 linpack::LinpackBenchmark::generateInputData() {
-    auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(*executionSettings->context ,executionSettings->programSettings->matrixSize));
+    int local_matrix_width = executionSettings->programSettings->matrixSize / executionSettings->programSettings->torus_width;
+    int local_matrix_height = executionSettings->programSettings->matrixSize / executionSettings->programSettings->torus_height;
+
+    auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(*executionSettings->context ,local_matrix_width, local_matrix_height));
     std::mt19937 gen(this->mpi_comm_rank);
     std::uniform_real_distribution<> dis(0.0, 1.0);
     d->norma = 0.0;
     d->normb = 0.0;
+
+
     /*
     Generate a matrix by using pseudo random number in the range (0,1)
     */
-    for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+    for (int j = 0; j < local_matrix_height; j++) {
         // fill a single column of the matrix
-        for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
+        for (int i = 0; i < local_matrix_width; i++) {
                 HOST_DATA_TYPE temp = dis(gen);
-                d->A[executionSettings->programSettings->matrixSize*j+i] = temp;
+                d->A[local_matrix_width*j+i] = temp;
                 d->norma = (temp > d->norma) ? temp : d->norma;
         }
     }
@@ -219,8 +225,10 @@ linpack::LinpackBenchmark::generateInputData() {
         // create a communicator to exchange the rows
         MPI_Comm row_communicator;
         MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_row, 0,&row_communicator);
+
+        // TODO since torus must not be quadratic anymore, we need to rething this
         // Caclulate the sum for every row and insert in into the matrix
-        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+        for (int j = 0; j < local_matrix_width; j++) {
             // set the diagonal elements of the matrix to 0
             if (executionSettings->programSettings->torus_row == executionSettings->programSettings->torus_col) {
                 d->A[executionSettings->programSettings->matrixSize*j + j] = 0.0;

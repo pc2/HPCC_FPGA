@@ -91,6 +91,12 @@ public:
     int torus_width;
 
     /**
+     * @brief Height of the FPGA torus in number of ranks
+     * 
+     */
+    int torus_height;
+
+    /**
      * @brief Construct a new Linpack Program Settings object
      * 
      * @param results the result map from parsing the program input parameters
@@ -133,6 +139,18 @@ public:
     cl_int* ipvt;
 
     /**
+     * @brief Width of the local matrix in values
+     * 
+     */
+    size_t matrix_width;
+
+    /**
+     * @brief Height of the local matrix in values
+     * 
+     */
+    size_t matrix_height;
+
+    /**
      * @brief The context that is used to allocate memory in SVM mode
      * 
      */
@@ -154,9 +172,10 @@ public:
      * @brief Construct a new Linpack Data object
      * 
      * @param context The OpenCL context used to allocate memory in SVM mode
-     * @param size Size of the allocated square matrix and vectors
+     * @param width width of the local matrix in values
+     * @param height height of the local matrix in values
      */
-    LinpackData(cl::Context context, size_t size);
+    LinpackData(cl::Context context, size_t width, size_t height);
 
     /**
      * @brief Destroy the Linpack Data object. Free the allocated memory
