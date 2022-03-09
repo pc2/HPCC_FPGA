@@ -2,6 +2,11 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.6
+
+#### Added:
+- Support for FPGA grid sizes with P != Q
+
 ## 2.5
 
 #### Added:
