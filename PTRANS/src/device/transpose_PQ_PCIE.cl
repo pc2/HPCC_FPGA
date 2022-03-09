@@ -8,6 +8,13 @@
 
 #include "parameters.h"
 
+/* PY_CODE_GEN 
+try:
+    kernel_param_attributes = generate_attributes(num_replications)
+except:
+    kernel_param_attributes = ["" for i in range(num_replications)]
+*/
+
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
 
 /**
@@ -30,9 +37,9 @@
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
-                                __global DEVICE_DATA_TYPE *restrict B,
-                                __global DEVICE_DATA_TYPE *restrict A_out,
+void transpose/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_DATA_TYPE *restrict A,
+                                __global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_DATA_TYPE *restrict B,
+                                __global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_DATA_TYPE *restrict A_out,
             const uint offset_a,
             const uint offset_b,
             const uint number_of_blocks,
