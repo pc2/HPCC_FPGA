@@ -96,9 +96,6 @@ linpack::LinpackData::~LinpackData() {
 
 linpack::LinpackBenchmark::LinpackBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
-    if (static_cast<int>(std::sqrt(mpi_comm_size) * std::sqrt(mpi_comm_size)) != mpi_comm_size) {
-        throw std::runtime_error("ERROR: MPI communication size must be a square number!");
-    }
 }
 
 void
@@ -280,7 +277,7 @@ linpack::LinpackBenchmark::generateInputData() {
     for (int j = 0; j < local_matrix_width; j++) {
         HOST_DATA_TYPE local_col_sum = 0.0;
         for (int i = 0; i < local_matrix_height; i++) {
-            local_col_sum += d->A[executionSettings->programSettings->matrixSize*i+j];
+            local_col_sum += d->A[local_matrix_width*i+j];
         }
         MPI_Allreduce(&local_col_sum, &(d->b[j]), 1, MPI_DATA_TYPE, MPI_SUM, col_communicator);   
         d->normb = (d->b[j] > d->normb) ? d->b[j] : d->normb;   
@@ -290,19 +287,21 @@ linpack::LinpackBenchmark::generateInputData() {
 
 bool  
 linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &data) {
-    uint n= executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width;
+    uint n= executionSettings->programSettings->matrixSize;
+    uint matrix_width = data.matrix_width;
+    uint matrix_height = data.matrix_height;
     double residn;
     double resid = 0.0;
     double normx = 0.0;
 #ifndef DISTRIBUTED_VALIDATION
     if (mpi_comm_rank > 0) {
-        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
-            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
-                MPI_Send(&data.A[executionSettings->programSettings->matrixSize * j + i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
+        for (int j = 0; j < matrix_height; j++) {
+            for (int i = 0; i < matrix_width; i+= executionSettings->programSettings->blockSize) {
+                MPI_Send(&data.A[matrix_width * j + i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
             }
         }
         if (executionSettings->programSettings->torus_row == 0) {
-            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
+            for (int i = 0; i < matrix_width; i+= executionSettings->programSettings->blockSize) {
                 MPI_Send(&data.b[i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
             }
         }
@@ -311,27 +310,27 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     else {
         MPI_Status status;
         size_t current_offset = 0;
-        std::vector<HOST_DATA_TYPE> total_b_original(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
-        std::vector<HOST_DATA_TYPE> total_b(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
-        std::vector<HOST_DATA_TYPE> total_a(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width*executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
-        for (int j = 0; j < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; j++) {
-            for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
+        std::vector<HOST_DATA_TYPE> total_b_original(n);
+        std::vector<HOST_DATA_TYPE> total_b(n);
+        std::vector<HOST_DATA_TYPE> total_a(n*n);
+        for (int j = 0; j < n; j++) {
+            for (int i = 0; i < n; i+= executionSettings->programSettings->blockSize) {
                 int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
-                int recvrow= (j / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+                int recvrow= (j / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_height;
                 int recvrank = executionSettings->programSettings->torus_width * recvrow + recvcol;
                 if (recvrank > 0) {
-                    MPI_Recv(&total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i],executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvrank, 0, MPI_COMM_WORLD,  &status);
+                    MPI_Recv(&total_a[j * n + i],executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvrank, 0, MPI_COMM_WORLD,  &status);
                 }
                 else {
                     for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
-                        total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i + k] = data.A[current_offset + k];
+                        total_a[j * n + i + k] = data.A[current_offset + k];
                     }
                     current_offset += executionSettings->programSettings->blockSize;
                 }
             }
         }
         current_offset = 0;
-        for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
+        for (int i = 0; i < n; i+= executionSettings->programSettings->blockSize) {
             int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
             if (recvcol > 0) {
                 MPI_Recv(&total_b[i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvcol, 0, MPI_COMM_WORLD, &status);
@@ -343,6 +342,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
                 current_offset += executionSettings->programSettings->blockSize;
             }
         }
+
         std::copy(total_b.begin(), total_b.end(), total_b_original.begin());
         gesl_ref_nopvt(total_a.data(), total_b.data(), n, n);
 
@@ -355,7 +355,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     double local_resid = 0;
     double local_normx = data.normb;
     #pragma omp parallel for reduction(max:local_resid)
-    for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
+    for (int i = 0; i < data.matrix_width; i++) {
         local_resid = (local_resid > std::abs(data.b[i] - 1)) ? local_resid : std::abs(data.b[i] - 1);
     }
 #ifndef NDEBUG
