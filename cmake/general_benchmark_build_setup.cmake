@@ -214,7 +214,7 @@ if (INTELFPGAOPENCL_FOUND)
     separate_arguments(AOC_FLAGS)
 endif()
 
-set(CODE_GENERATOR "${CMAKE_SOURCE_DIR}/../scripts/code_generator/generator.py" CACHE FILEPATH "Path to the code generator executable")
+set(CODE_GENERATOR "${CMAKE_SOURCE_DIR}/../scripts/code_generator/generator2.py" CACHE FILEPATH "Path to the code generator executable")
 set(CUSTOM_KERNEL_FOLDER ${CMAKE_SOURCE_DIR}/src/device/custom/)
 
 
