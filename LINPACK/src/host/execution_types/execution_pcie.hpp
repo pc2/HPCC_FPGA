@@ -54,6 +54,11 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
     int err;
 
+    int num_omp_threads = 1;
+#ifdef _OPENMP
+    num_omp_threads = omp_get_num_threads();
+#endif
+
     uint blocks_per_row = data.matrix_width / config.programSettings->blockSize;
     uint blocks_per_col = data.matrix_height / config.programSettings->blockSize;
 
@@ -163,7 +168,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         {
 
         #pragma omp single
-        all_events.back().reserve(omp_get_num_threads()*config.programSettings->kernelReplications*3);
+        all_events.back().reserve(num_omp_threads*config.programSettings->kernelReplications*3);
         uint current_replication = 0;
 
         // For every row of blocks create kernels and enqueue them
@@ -376,7 +381,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             kernels.back().resize(std::max(kernel_offset + num_inner_block_rows - 1 + num_inner_block_cols,0));
 
             all_events.emplace_back();
-            all_events.back().reserve(omp_get_num_threads()*config.programSettings->kernelReplications*2);
+            all_events.back().reserve(num_omp_threads*config.programSettings->kernelReplications*2);
 
             // Wait until data is copied to FPGA
             buffer_transfer_queue.finish();
@@ -415,7 +420,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
 
                 // If number of blocks is not dividable by the number of replications, the first replications will do one update more
-                if ((num_inner_block_rows - 1)/omp_get_num_threads() - current_update <= config.programSettings->kernelReplications) {
+                if ((num_inner_block_rows - 1)/num_omp_threads - current_update <= config.programSettings->kernelReplications) {
 #ifndef NDEBUG
                 std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner L Ev " << block_row << "," << block_col <<  std::endl;
 #endif 
@@ -472,7 +477,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 err = k.setArg(5, blocks_per_row);
                 ASSERT_CL(err)
                 // If number of blocks is not dividable by the number of replications, the first replications will do one update more
-                if ((num_inner_block_cols)/omp_get_num_threads() - current_update <= config.programSettings->kernelReplications) {
+                if ((num_inner_block_cols)/num_omp_threads - current_update <= config.programSettings->kernelReplications) {
 #ifndef NDEBUG
                 std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner Ev " << block_row << "," << block_col <<  std::endl;
 #endif 
@@ -501,7 +506,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             {
             // count the inner MM already to next iteration by creating new buffers in the queue
             all_events.emplace_back();
-            all_events.back().reserve(omp_get_num_threads()*config.programSettings->kernelReplications);
+            all_events.back().reserve(num_omp_threads*config.programSettings->kernelReplications);
             kernels.emplace_back(total_inner_updates);
             inner_queues.emplace_back();
             current_update = 0;
@@ -546,7 +551,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     ASSERT_CL(err)
 
                     // If number of blocks is not dividable by the number of replications, the first replications will do one update more
-                    if ((total_inner_updates)/omp_get_num_threads() - current_update <= config.programSettings->kernelReplications) {
+                    if ((total_inner_updates)/num_omp_threads - current_update <= config.programSettings->kernelReplications) {
 #ifndef NDEBUG
                     std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " Inner Ev " << block_row << "," << block_col <<  std::endl;
 #endif 
