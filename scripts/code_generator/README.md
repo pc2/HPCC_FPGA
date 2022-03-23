@@ -81,7 +81,7 @@ As an example the dynamic construction of a switch statement:
 
     switch(i) {
         // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(replicate)]
-        case /*PY_CODE_GEN i*/: return /*PY_CODE_GEN i+1*/; break;
+        case {{ i }}: return /*PY_CODE_GEN i+1*/; break;
         // PY_CODE_GEN block_end 
     }
 
@@ -94,7 +94,7 @@ would result in:
         case 3: return 4; break;
     }
 
-Note, that the variables that have to be replaced are written in inline comments `/*PY_CODE_GEN i*/`.
+Note, that the variables that have to be replaced are written in inline comments `{{ i }}`.
 The given statement will be evaluated and the comment will be replaced by the result.
 Thus, it is also possible to call functions or do arithmetic.
 

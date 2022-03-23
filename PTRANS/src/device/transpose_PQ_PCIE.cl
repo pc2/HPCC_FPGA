@@ -8,14 +8,9 @@
 
 #include "parameters.h"
 
-/* PY_CODE_GEN 
-try:
-    kernel_param_attributes = generate_attributes(num_replications)
-except:
-    kernel_param_attributes = ["" for i in range(num_replications)]
-*/
+{% set kernel_param_attributes = generate_attributes(num_replications) %}
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+{% for i in range(num_replications) %}
 
 /**
  * Read blocks of matrix A and transpose them in memory.
@@ -37,11 +32,10 @@ except:
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_DATA_TYPE *restrict A,
-                                __global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_DATA_TYPE *restrict B,
-                                __global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_DATA_TYPE *restrict A_out,
-            const uint offset_a,
-            const uint offset_b,
+void transpose{{ i }}(__global {{ kernel_param_attributes[i] }} DEVICE_DATA_TYPE *restrict A,
+                                __global {{ kernel_param_attributes[i] }} DEVICE_DATA_TYPE *restrict B,
+                                __global {{ kernel_param_attributes[i] }} DEVICE_DATA_TYPE *restrict A_out,
+            const uint offset,
             const uint number_of_blocks,
             const uint width_in_blocks,
             const uint height_in_blocks) {
@@ -190,4 +184,4 @@ void transpose/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i
     }
 }
 
-// PY_CODE_GEN block_end
+{% endfor %}

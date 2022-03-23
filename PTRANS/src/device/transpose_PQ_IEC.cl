@@ -16,11 +16,11 @@ typedef struct {
     DEVICE_DATA_TYPE data[CHANNEL_WIDTH];
 } ch_data;
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
+{% for i in range(num_total_replications) %}
 // Channel used to send the transposed blocks of A
-channel ch_data chan_a_out/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(i) + "\""*/), depth(1)));
-channel ch_data chan_a_in/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(2 * (i // 2) + ((i + 1) % 2)) + "\""*/), depth(1)));
-// PY_CODE_GEN block_end
+channel ch_data chan_a_out{{ i }} __attribute((io({{ "\"kernel_output_ch{}\"".format(i) }}), depth(1)));
+channel ch_data chan_a_in{{ i }} __attribute((io({{ "\"kernel_input_ch{}\"".format(2 * (i // 2) + ((i + 1) % 2)) }}), depth(1)));
+{% endfor %}
 #endif
 
 /**
@@ -69,7 +69,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
         }
 }
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
+{% for i in range(num_total_replications) %}
 
 /**
 * send a chunk of A into local memory in a reordered fashion
@@ -82,7 +82,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
 *
 */
 void
-send_chunk_of_a/*PY_CODE_GEN i*/(const DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
+send_chunk_of_a{{ i }}(const DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
         const ulong row,
         const ulong col) {
 
@@ -109,7 +109,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
             data.data[unroll_count] = rotate_out[(unroll_count + rot_out) & (CHANNEL_WIDTH - 1)];
         }
 
-        write_channel_intel(chan_a_out/*PY_CODE_GEN i*/, data); 
+        write_channel_intel(chan_a_out{{ i }}, data); 
 }
 
 /**
@@ -126,7 +126,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
+void transpose_read{{ i }}(__global DEVICE_DATA_TYPE *restrict A,
             const ulong offset,
             const ulong width_in_blocks,
             const ulong height_in_blocks,
@@ -148,7 +148,7 @@ void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
                     load_chunk_of_a(A, a_block[block & 1], block_row, block_col, width_in_blocks, row, col);
                 }
                 if (block > offset) {
-                    send_chunk_of_a/*PY_CODE_GEN i*/(a_block[(block - 1) & 1], row, col);
+                    send_chunk_of_a{{ i }}(a_block[(block - 1) & 1], row, col);
                 }
             }
         }
@@ -171,7 +171,7 @@ void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose_write/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict B,
+void transpose_write{{ i }}(__global DEVICE_DATA_TYPE *restrict B,
             __global DEVICE_DATA_TYPE *restrict A_out,
             const ulong offset,
             const ulong width_in_blocks,
@@ -183,7 +183,7 @@ void transpose_write/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict B,
         for (ulong row = 0; row < BLOCK_SIZE; row++) {
             for (ulong col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
 
-                ch_data data = read_channel_intel(chan_a_in/*PY_CODE_GEN i*/); 
+                ch_data data = read_channel_intel(chan_a_in{{ i }}); 
 
                 ulong block_col = block % width_in_blocks;
                 ulong block_row = block / width_in_blocks;
@@ -202,4 +202,4 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
     }
 }
 
-// PY_CODE_GEN block_end
+{% endfor %}

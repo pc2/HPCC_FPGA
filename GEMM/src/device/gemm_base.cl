@@ -33,12 +33,7 @@ SOFTWARE.
 // code generation expects an array of maps of size num_replications with the keys a,b,c,out.
 // The value of the keys have to be strings containing the attributes that
 // have to be assigned to input and output buffers in global memory
-/* PY_CODE_GEN 
-try:
-    kernel_param_attributes = generate_attributes(num_replications)
-except:
-    kernel_param_attributes = [{"a": "", "b": "", "c": "", "out": ""} for i in range(num_replications)]
-*/
+{% set kernel_param_attributes = generate_map_attributes(num_replications) %}
 
 /**
 Calculate for the Level 2 block:
@@ -260,7 +255,7 @@ to BRAM.
 
 // Here we use the total replications. This will also create three kernels for the Xilinx compiler because they all
 // use different hard-coded ranges in the outer loop
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+{% for i in range(num_replications) %}
 
 /**
 Two level blocked GEMM kernel
@@ -277,21 +272,21 @@ calculates C_OUT = alpha * A.dot(B) + beta * C
 */
 __attribute__((uses_global_work_offset(0)))
 __kernel
-void gemm/*PY_CODE_GEN i*/(
+void gemm{{ i }}(
 #ifdef ENABLE_MIXED_PRECISION
         // In mixed precision convert the values accordingly 
         // from single precision to the target precision on the FPGA
-            __global /*PY_CODE_GEN kernel_param_attributes[i]["a"]*/ const float* restrict a,
-          __global /*PY_CODE_GEN kernel_param_attributes[i]["b"]*/ const float* restrict b,
-          __global /*PY_CODE_GEN kernel_param_attributes[i]["c"]*/ const float* restrict c,
-          __global /*PY_CODE_GEN kernel_param_attributes[i]["out"]*/ float* restrict c_out,
+            __global {{ kernel_param_attributes[i]["a"] }} const float* restrict a,
+          __global {{ kernel_param_attributes[i]["b"] }} const float* restrict b,
+          __global {{ kernel_param_attributes[i]["c"] }} const float* restrict c,
+          __global {{ kernel_param_attributes[i]["out"] }} float* restrict c_out,
           const float alpha,
           const float beta,
 #else
-            __global /*PY_CODE_GEN kernel_param_attributes[i]["a"]*/ const DEVICE_DATA_TYPE* restrict a,
-          __global /*PY_CODE_GEN kernel_param_attributes[i]["b"]*/ const DEVICE_DATA_TYPE* restrict b,
-          __global /*PY_CODE_GEN kernel_param_attributes[i]["c"]*/ const DEVICE_DATA_TYPE* restrict c,
-          __global /*PY_CODE_GEN kernel_param_attributes[i]["out"]*/ DEVICE_DATA_TYPE* restrict c_out,
+            __global {{ kernel_param_attributes[i]["a"] }} const DEVICE_DATA_TYPE* restrict a,
+          __global {{ kernel_param_attributes[i]["b"] }} const DEVICE_DATA_TYPE* restrict b,
+          __global {{ kernel_param_attributes[i]["c"] }} const DEVICE_DATA_TYPE* restrict c,
+          __global {{ kernel_param_attributes[i]["out"] }} DEVICE_DATA_TYPE* restrict c_out,
           const DEVICE_DATA_TYPE alpha,
           const DEVICE_DATA_TYPE beta,
 #endif
@@ -445,4 +440,4 @@ __attribute__((opencl_unroll_hint(GLOBAL_MEM_UNROLL)))
     }
 }
 
-// PY_CODE_GEN block_end
+{% endfor %}

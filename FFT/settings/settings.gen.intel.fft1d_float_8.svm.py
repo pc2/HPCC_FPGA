@@ -1,5 +1,5 @@
 
-def generate_attributes(num_replications, num_global_memory_banks=32):
+def generate_bi_map_attributes(num_replications, num_global_memory_banks=32):
     """
     Generates the kernel attributes for the global memory. They specify in which 
     global memory the buffer is located. The buffers will be placed using a 

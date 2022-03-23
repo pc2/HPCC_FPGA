@@ -16,13 +16,13 @@ typedef struct {
     DEVICE_DATA_TYPE data[CHANNEL_WIDTH/2];
 } ch_data;
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
+{% for i in range(num_replications) %}
 // Channel used to send the transposed blocks of A
-channel ch_data chan_a_out1/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(2*i) + "\""*/), depth(1)));
-channel ch_data chan_a_out2/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(2*i + 1) + "\""*/), depth(1)));
-channel ch_data chan_a_in1/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(2*i + 1) + "\""*/), depth(1)));
-channel ch_data chan_a_in2/*PY_CODE_GEN i*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(2*i) + "\""*/), depth(1)));
-// PY_CODE_GEN block_end
+channel ch_data chan_a_out1{{ i }} __attribute((io({{ "\"kernel_output_ch{}\"".format(2*i) }}), depth(1)));
+channel ch_data chan_a_out2{{ i }} __attribute((io({{ "\"kernel_output_ch{}\"".format(2*i + 1) }}), depth(1)));
+channel ch_data chan_a_in1{{ i }} __attribute((io({{ "\"kernel_input_ch{}\"".format(2*i + 1) }}), depth(1)));
+channel ch_data chan_a_in2{{ i }} __attribute((io({{ "\"kernel_input_ch{}\"".format(2*i) }}), depth(1)));
+{% endfor %}
 #endif
 
 /**
@@ -65,7 +65,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
         }
 }
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
+{% for i in range(num_total_replications) %}
 
 /**
 * send a chunk of A into local memory in a reordered fashion
@@ -78,7 +78,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
 *
 */
 void
-send_chunk_of_a/*PY_CODE_GEN i*/(const DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
+send_chunk_of_a{{ i }}(const DEVICE_DATA_TYPE local_buffer[BLOCK_SIZE * BLOCK_SIZE / CHANNEL_WIDTH][CHANNEL_WIDTH],
         const ulong row,
         const ulong col) {
 
@@ -111,7 +111,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH/2)))
         for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH/2; unroll_count++) {
             data1.data[unroll_count] = channel_data[unroll_count];
         }
-        write_channel_intel(chan_a_out1/*PY_CODE_GEN i*/, data1); 
+        write_channel_intel(chan_a_out1{{ i }}, data1); 
 
         ch_data data2;
         // rotate temporary buffer to store data into local buffer
@@ -119,7 +119,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH/2)))
         for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH/2; unroll_count++) {
             data2.data[unroll_count] = channel_data[CHANNEL_WIDTH/2 + unroll_count];
         }
-        write_channel_intel(chan_a_out2/*PY_CODE_GEN i*/, data2); 
+        write_channel_intel(chan_a_out2{{ i }}, data2); 
 }
 
 /**
@@ -136,7 +136,7 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH/2)))
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
+void transpose_read{{ i }}(__global DEVICE_DATA_TYPE *restrict A,
             const ulong block_offset,
             const ulong number_of_blocks) {
 
@@ -154,7 +154,7 @@ void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
                     load_chunk_of_a(A, a_block[block & 1], block, row, col);
                 }
                 if (block > 0) {
-                    send_chunk_of_a/*PY_CODE_GEN i*/(a_block[(block - 1) & 1], row, col);
+                    send_chunk_of_a{{ i }}(a_block[(block - 1) & 1], row, col);
                 }
             }
         }
@@ -177,7 +177,7 @@ void transpose_read/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose_write/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict B,
+void transpose_write{{ i }}(__global DEVICE_DATA_TYPE *restrict B,
             __global DEVICE_DATA_TYPE *restrict A_out,
             const ulong block_offset,
             const ulong number_of_blocks) {
@@ -190,13 +190,13 @@ void transpose_write/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict B,
 
                 DEVICE_DATA_TYPE channel_data[CHANNEL_WIDTH];
 
-                ch_data data1 = read_channel_intel(chan_a_in1/*PY_CODE_GEN i*/); 
+                ch_data data1 = read_channel_intel(chan_a_in1{{ i }}); 
                 __attribute__((opencl_unroll_hint(CHANNEL_WIDTH/2)))
                 for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH/2; unroll_count++) {
                     channel_data[unroll_count] = data1.data[unroll_count];
                 }
 
-                ch_data data2 = read_channel_intel(chan_a_in2/*PY_CODE_GEN i*/); 
+                ch_data data2 = read_channel_intel(chan_a_in2{{ i }}); 
                 __attribute__((opencl_unroll_hint(CHANNEL_WIDTH/2)))
                 for (unsigned unroll_count = 0; unroll_count < CHANNEL_WIDTH/2; unroll_count++) {
                     channel_data[CHANNEL_WIDTH/2 + unroll_count] = data2.data[unroll_count];
@@ -217,4 +217,4 @@ __attribute__((opencl_unroll_hint(CHANNEL_WIDTH)))
     }
 }
 
-// PY_CODE_GEN block_end
+{% endfor %}
