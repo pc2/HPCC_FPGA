@@ -34,7 +34,9 @@ SOFTWARE.
 #if QUARTUS_MAJOR_VERSION > 18
 #include "CL/cl_ext_intelfpga.h"
 #endif
+#ifdef _OPENMP
 #include "omp.h"
+#endif
 
 #include "parameters.h"
 #include "linpack_benchmark.hpp"
@@ -52,7 +54,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings>
 calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&config,
           linpack::LinpackData& data) {
 
-    int err;
+    cl_int err;
 
     int num_omp_threads = 1;
 #ifdef _OPENMP
@@ -95,19 +97,19 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
     std::vector<cl::Buffer> Buffer_left_list;
     std::vector<cl::Buffer> Buffer_top_list;
-    std::vector<HOST_DATA_TYPE*> left_blocks(blocks_per_row);
-    std::vector<HOST_DATA_TYPE*> top_blocks(blocks_per_col);
+    std::vector<HOST_DATA_TYPE*> left_blocks(blocks_per_col);
+    std::vector<HOST_DATA_TYPE*> top_blocks(blocks_per_row);
 
     for (int i =0; i < blocks_per_row; i++) {
         posix_memalign(reinterpret_cast<void**>(&(top_blocks[i])), 4096, sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize)*(config.programSettings->blockSize));
-        Buffer_top_list.emplace_back(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_WRITE_ONLY,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), top_blocks[i]);
+        Buffer_top_list.emplace_back(*config.context, CL_MEM_WRITE_ONLY,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize));
     }
 
     for (int i =0; i < blocks_per_col; i++) {
         posix_memalign(reinterpret_cast<void**>(&(left_blocks[i])), 4096, sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize)*(config.programSettings->blockSize));
-        Buffer_left_list.emplace_back(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_WRITE_ONLY,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), left_blocks[i]);
+        Buffer_left_list.emplace_back(*config.context, CL_MEM_WRITE_ONLY,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize));
     }
 
     /* --- Execute actual benchmark kernels --- */
@@ -127,19 +129,19 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         // Command queues 
         // A new command queue is created for every iteration of the algorithm to reduce the overhead
         // of too large queues
-        std::list<cl::CommandQueue> lu_queues;
-        std::list<cl::CommandQueue> top_queues;
-        std::list<cl::CommandQueue> left_queues;
-        std::list<std::vector<cl::Buffer>> left_buffers;
-        std::list<std::vector<cl::Buffer>> top_buffers;
-        std::list<std::vector<cl::CommandQueue>> inner_queues;
-        std::list<std::vector<cl::Kernel>> kernels;
+        std::deque<cl::CommandQueue> lu_queues;
+        std::deque<cl::CommandQueue> top_queues;
+        std::deque<cl::CommandQueue> left_queues;
+        std::deque<std::vector<cl::Buffer>> left_buffers;
+        std::deque<std::vector<cl::Buffer>> top_buffers;
+        std::deque<std::vector<cl::CommandQueue>> inner_queues;
+        std::deque<std::vector<cl::Kernel>> kernels;
         std::thread flush_thread;
 
         // User event that is used to start actual execution of benchmark kernels
         cl::UserEvent start_event(*config.context, &err);
         ASSERT_CL(err);
-        std::list<std::vector<cl::Event>> all_events;
+        std::deque<std::vector<cl::Event>> all_events;
         all_events.emplace_back();
         all_events.back().emplace_back(start_event);
         all_events.emplace_back();
@@ -217,8 +219,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 // create the LU kernel
                 private_kernels.emplace_back(*config.program, "lu",
                                             &err);
+                ASSERT_CL(err);
 #ifndef NDEBUG
-                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " LU     " << local_block_col << "," << local_block_row <<  std::endl;
+                std::cout << "Torus " << config.programSettings->torus_row << "," << config.programSettings->torus_col << " LU     " << local_block_row << "," << local_block_col <<  std::endl;
 #endif
                 err = private_kernels.back().setArg(0, Buffer_a);
                 ASSERT_CL(err);
@@ -349,10 +352,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             left_queues.back().finish();
 
             // Send the left and top blocks to all other ranks so they can be used to update all inner blocks
-            for (int lbi=0; lbi < blocks_per_col - local_block_row; lbi++) {
+            for (int lbi=0; lbi < blocks_per_col - local_block_col; lbi++) {
                 MPI_Bcast(left_blocks[lbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_col_remainder, row_communicator);
             }
-            for (int tbi=0; tbi < blocks_per_row  - local_block_col; tbi++) {
+            for (int tbi=0; tbi < blocks_per_row  - local_block_row; tbi++) {
                 MPI_Bcast(top_blocks[tbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, col_communicator);
             }
 
@@ -367,13 +370,13 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
             // Write all left and top blocks to FPGA memory
             for (int lbi=0; lbi < num_inner_block_rows; lbi++) {
-                left_buffers.back().emplace_back(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), left_blocks[lbi]);
+                left_buffers.back().emplace_back(*config.context, CL_MEM_READ_ONLY,
+                                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize));
                 err = buffer_transfer_queue.enqueueWriteBuffer(left_buffers.back().back(), CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), left_blocks[lbi]);
             }
             for (int tbi=0; tbi < num_inner_block_cols; tbi++) {
-                top_buffers.back().emplace_back(*config.context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
-                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * config.programSettings->blockSize, top_blocks[tbi]);
+                top_buffers.back().emplace_back(*config.context, CL_MEM_READ_ONLY,
+                        sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * config.programSettings->blockSize);
                 err = buffer_transfer_queue.enqueueWriteBuffer(top_buffers.back().back(), CL_FALSE, 0, sizeof(HOST_DATA_TYPE)*config.programSettings->blockSize * (config.programSettings->blockSize), top_blocks[tbi]);
             }
 
@@ -579,6 +582,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 }
             }
 
+#ifdef NDEBUG
             #pragma omp single
             {
                 if (flush_thread.joinable()) {
@@ -589,6 +593,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 std::thread new_thread([all_events](){ cl::Event::waitForEvents(all_events.back());});
                 flush_thread.swap(new_thread);
             }
+#endif
 
 #ifndef NDEBUG
             MPI_Barrier(MPI_COMM_WORLD);
@@ -636,7 +641,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         }
     }
 
-    flush_thread.join();
+    if (flush_thread.joinable()) {
+        flush_thread.join();
+    }
 
 #ifdef NDEBUG
         t2 = std::chrono::high_resolution_clock::now();
