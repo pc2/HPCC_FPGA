@@ -76,11 +76,11 @@ For more information on available input parameters run
     The clock precision seems to be 1.00000e+01ns
     -------------------------------------------------------------
     Implementation of the matrix transposition benchmark proposed in the HPCC benchmark suite for FPGA.
-    Version: 1.5
+    Version: 1.7
 
     MPI Version:  3.1
-    Config. Time: Fri Jul 16 11:51:37 UTC 2021
-    Git Commit:   2a12191-dirty
+    Config. Time: Fri Mar 04 10:31:13 UTC 2022
+    Git Commit:   caebda4-dirty
 
     Usage:
     bin/Transpose_intel [OPTION...]
@@ -98,16 +98,19 @@ For more information on available input parameters run
                                 given you will be asked which platform to use if
                                 there are multiple platforms available. (default:
                                 -1)
-    -r, arg                   Number of used kernel replications (default: 4)
+    -r, arg                   Number of used kernel replications (default: 2)
+        --comm-type arg       Used communication type for inter-FPGA
+                                communication (default: AUTO)
         --test                Only test given configuration and skip execution
                                 and validation
     -h, --help                Print this help
     -m, arg                   Matrix size in number of blocks in one dimension
                                 (default: 8)
     -b, arg                   Block size in number of values in one dimension
-                                (default: 512)
-        --comm-type arg       Used communication type for inter-FPGA communication
-                                (default: AUTO)
+                                (default: 8)
+    -p, arg                   Value of P that equals the width of the PQ grid
+                                of FPGAs. Q is determined by the world size.
+                                (default: 1)
         --distribute-buffers  Distribute buffers over memory banks. This will
                                 use three memory banks instead of one for a single
                                 kernel replication, but kernel replications may
@@ -116,7 +119,7 @@ For more information on available input parameters run
                                 Xilinx FPGAs.
         --handler arg         Specify the used data handler that distributes
                                 the data over devices and memory banks (default:
-                                DIAG)
+                                AUTO)
     
 Available options for `--comm-type`:
 

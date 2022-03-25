@@ -7,7 +7,7 @@
 transpose::TransposeProgramSettings::TransposeProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     matrixSize(results["m"].as<uint>() * results["b"].as<uint>()),
     blockSize(results["b"].as<uint>()), dataHandlerIdentifier(transpose::data_handler::stringToHandler(results["handler"].as<std::string>())),
-    distributeBuffers(results["distribute-buffers"].count() > 0) {
+    distributeBuffers(results["distribute-buffers"].count() > 0), p(results["p"].as<uint>()) {
 
         // auto detect data distribution type if required
         if (dataHandlerIdentifier == transpose::data_handler::DataHandlerType::automatic) {
@@ -30,7 +30,7 @@ transpose::TransposeProgramSettings::getSettingsMap() {
 #ifdef _USE_MPI_
         MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 #endif
-        map["Matrix Size"] = std::to_string(matrixSize * static_cast<int>(std::sqrt(mpi_size)));
+        map["Matrix Size"] = std::to_string(matrixSize);
         map["Block Size"] = std::to_string(blockSize);
         map["Dist. Buffers"] = distributeBuffers ? "Yes" : "No";
         map["Data Handler"] = transpose::data_handler::handlerToString(dataHandlerIdentifier);

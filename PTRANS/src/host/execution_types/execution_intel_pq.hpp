@@ -30,6 +30,7 @@ SOFTWARE.
 /* Project's headers */
 #include "transpose_benchmark.hpp"
 #include "data_handlers/data_handler_types.h"
+#include "data_handlers/pq.hpp"
 
 namespace transpose {
 namespace fpga_execution {
@@ -43,7 +44,7 @@ namespace intel_pq {
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
 static  std::unique_ptr<transpose::TransposeExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data) {
+    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data, transpose::data_handler::DistributedPQTransposeDataHandler &handler) {
         int err;
 
         if (config.programSettings->dataHandlerIdentifier != transpose::data_handler::DataHandlerType::pq) {
@@ -65,30 +66,44 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         std::vector<cl::CommandQueue> readCommandQueueList;
         std::vector<cl::CommandQueue> writeCommandQueueList;
 
-        size_t local_matrix_width = std::sqrt(data.numBlocks);
+        size_t local_matrix_width = handler.getWidthforRank();
+        size_t local_matrix_height = handler.getHeightforRank();
         size_t local_matrix_width_bytes = local_matrix_width * data.blockSize * sizeof(HOST_DATA_TYPE);
 
         size_t total_offset = 0;
+        size_t row_offset = 0;
+
+        int mpi_rank, mpi_size;
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
+
+        if (config.programSettings->p * config.programSettings->p != mpi_size) {
+                throw std::runtime_error("P=Q must hold for IEC implementation, but P=" + std::to_string(config.programSettings->p) + " and Q=" + std::to_string(mpi_size / config.programSettings->p));
+        }
 
         // Setup the kernels depending on the number of kernel replications
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
 
                 // Calculate how many blocks the current kernel replication will need to process.
-                size_t blocks_per_replication = (local_matrix_width / config.programSettings->kernelReplications * local_matrix_width);
-                size_t blocks_remainder = local_matrix_width % config.programSettings->kernelReplications;
+                size_t blocks_per_replication = (local_matrix_height * local_matrix_width / config.programSettings->kernelReplications);
+                size_t blocks_remainder = (local_matrix_height * local_matrix_width) % config.programSettings->kernelReplications;
                 if (blocks_remainder > r) {
                         // Catch the case, that the number of blocks is not divisible by the number of kernel replications
-                        blocks_per_replication += local_matrix_width;
+                        blocks_per_replication += 1;
                 }
                 if (blocks_per_replication < 1) {
                         continue;
                 }
 
-                size_t buffer_size = blocks_per_replication * data.blockSize * data.blockSize;
+                size_t buffer_size = (blocks_per_replication + local_matrix_width - 1) / local_matrix_width * local_matrix_width * data.blockSize * data.blockSize;
                 bufferSizeList.push_back(buffer_size);
                 bufferStartList.push_back(total_offset);
+                bufferOffsetList.push_back(row_offset);
 
-                total_offset += blocks_per_replication;
+                row_offset = (row_offset + blocks_per_replication) % local_matrix_width;
+
+                total_offset += (bufferOffsetList.back() + blocks_per_replication) / local_matrix_width * local_matrix_width;
 
                 int memory_bank_info_a = 0;
                 int memory_bank_info_b = 0;
@@ -134,7 +149,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 ASSERT_CL(err)
 
                 // Row offset in blocks 
-                err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(0));
+                err = transposeWriteKernel.setArg(2, static_cast<cl_ulong>(bufferOffsetList[r]));
                 ASSERT_CL(err)
         
                 // Width of the whole local matrix in blocks
@@ -142,7 +157,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 ASSERT_CL(err) 
 #ifndef USE_BUFFER_WRITE_RECT_FOR_A
                 // Row offset in blocks
-                err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(bufferStartList[r]));
+                err = transposeReadKernel.setArg(1, static_cast<cl_ulong>(bufferStartList[r] + bufferOffsetList[r]));
                 ASSERT_CL(err)   
                 err = transposeReadKernel.setArg(2, static_cast<cl_ulong>(local_matrix_width));
                 ASSERT_CL(err) 
@@ -155,7 +170,7 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 #endif
 
                 // Height of the whole local matrix in blocks
-                err = transposeReadKernel.setArg(3, static_cast<cl_ulong>(local_matrix_width ));
+                err = transposeReadKernel.setArg(3, static_cast<cl_ulong>(local_matrix_height ));
                 ASSERT_CL(err) 
 
                 // total number of blocks that are processed in this replication
@@ -233,29 +248,44 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 
             auto startCalculation = std::chrono::high_resolution_clock::now();
 #ifdef HOST_EMULATION_REORDER
-            std::cout << "Reorder kernel execution on host for Intel fast emulation!" << std::endl;
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                readCommandQueueList[r].enqueueNDRangeKernel(transposeReadKernelList[r], cl::NullRange, cl::NDRange(1));
-            }
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                readCommandQueueList[r].finish();
+        std::cout << "Reorder kernel execution on host for Intel fast emulation!" << std::endl;
+        // We have to use the same kernel_output_ch files for the different MPI ranks, that means we have to
+        // sequentialize the execution such that only a single rank sends something to the channels.
+        for (int k = 0; k < mpi_size; k++) {
+                int receiver_rank = 2 * (k%2) + (k/2);
+                // If current rank, start sending to the channels
+                if (k == mpi_rank) {
+                        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                                readCommandQueueList[r].enqueueNDRangeKernel(transposeReadKernelList[r], cl::NullRange, cl::NDRange(1));
+                        }
+                        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                                readCommandQueueList[r].finish();
 #ifndef NDEBUG
-                int mpi_rank;
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-                std::cout << "Rank " << mpi_rank << ": " << "Read done r=" << r << ", i=" << repetition << std::endl;
+                                std::cout << "Rank " << mpi_rank << ": " << "Read done r=" << r << ", i=" << repetition << std::endl;
 #endif
-            }
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                writeCommandQueueList[r].enqueueNDRangeKernel(transposeWriteKernelList[r], cl::NullRange, cl::NDRange(1));
-            }
-            for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                writeCommandQueueList[r].finish();
+                        }
+                }
+                // Wait for all ranks to start receiving
+                MPI_Barrier(MPI_COMM_WORLD);
+                // Only rank that has to receive the data starts receive kernel
+                if (receiver_rank == mpi_rank) {
+                        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                                writeCommandQueueList[r].enqueueNDRangeKernel(transposeWriteKernelList[r], cl::NullRange, cl::NDRange(1));
+                        }
+                        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                                writeCommandQueueList[r].finish();
 #ifndef NDEBUG
-                int mpi_rank;
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-                std::cout << "Rank " << mpi_rank << ": " << "Write done r=" << r << ", i=" << repetition << std::endl;
+                                std::cout << "Rank " << mpi_rank << ": " << "Write done r=" << r << ", i=" << repetition << std::endl;
 #endif
-            }
+                        }
+                        // Delete the channels files so next iteration starts with clean channels!
+                        for (int r = 0; r < transposeReadKernelList.size(); r++) {
+                                std::remove(("kernel_output_ch" + std::to_string(r)).c_str());
+                        }
+                }
+                // Wait until receiving kernel is done
+                MPI_Barrier(MPI_COMM_WORLD);
+        }
 #else
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].enqueueNDRangeKernel(transposeWriteKernelList[r], cl::NullRange, cl::NDRange(1));
@@ -264,22 +294,16 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
             for (int r = 0; r < transposeReadKernelList.size(); r++) {
                 writeCommandQueueList[r].finish();
 #ifndef NDEBUG
-                int mpi_rank;
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
                 std::cout << "Rank " << mpi_rank << ": " << "Write done r=" << r << ", i=" << repetition << std::endl;
 #endif
                 readCommandQueueList[r].finish();
 #ifndef NDEBUG
-                mpi_rank;
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
                 std::cout << "Rank " << mpi_rank << ": " << "Read done r=" << r << ", i=" << repetition << std::endl;
 #endif
             }
 #endif
             auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
-                int mpi_rank;
-                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
                 std::cout << "Rank " << mpi_rank << ": " << "Done i=" << repetition << std::endl;
 #endif
             std::chrono::duration<double> calculationTime =
@@ -287,11 +311,30 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                             (endCalculation - startCalculation);
             calculationTimings.push_back(calculationTime.count());
 
+            std::vector<HOST_DATA_TYPE> tmp_write_buffer(local_matrix_height * local_matrix_width * data.blockSize * data.blockSize); 
+
             startTransfer = std::chrono::high_resolution_clock::now();
 
                 for (int r = 0; r < transposeReadKernelList.size(); r++) {
-                        writeCommandQueueList[r].enqueueReadBuffer(bufferListA_out[r], CL_TRUE, 0,
-                                                bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.result[bufferStartList[r] * data.blockSize * data.blockSize]);
+                        // Copy possibly incomplete first block row
+                        if (bufferOffsetList[r] != 0) {
+                                writeCommandQueueList[r].enqueueReadBuffer(bufferListA_out[r], CL_TRUE, 0,
+                                                bufferSizeList[r]* sizeof(HOST_DATA_TYPE), tmp_write_buffer.data());
+                                writeCommandQueueList[r].finish();
+                                for (int row = 0; row < data.blockSize; row++) {
+                                        for (int col = bufferOffsetList[r] * data.blockSize; col < local_matrix_width * data.blockSize; col++) {
+                                                data.result[bufferStartList[r] * data.blockSize * data.blockSize + row * local_matrix_width * data.blockSize + col] =
+                                                        tmp_write_buffer[row * local_matrix_width * data.blockSize + col];
+                                        }
+                                }
+                                // Copy remaining buffer
+                                std::copy(tmp_write_buffer.begin() + local_matrix_width * data.blockSize * data.blockSize, tmp_write_buffer.begin() + bufferSizeList[r],&data.result[(bufferStartList[r] + local_matrix_width) * data.blockSize * data.blockSize]);
+                        }
+                        else {
+                                writeCommandQueueList[r].enqueueReadBuffer(bufferListA_out[r], CL_TRUE, 0,
+                                                         bufferSizeList[r]* sizeof(HOST_DATA_TYPE), &data.result[bufferStartList[r] * data.blockSize * data.blockSize]);
+                                writeCommandQueueList[r].finish();
+                        }
                 }
             endTransfer = std::chrono::high_resolution_clock::now();
             transferTime +=

@@ -8,6 +8,13 @@
 
 #include "parameters.h"
 
+/* PY_CODE_GEN 
+try:
+    kernel_param_attributes = generate_attributes(num_replications)
+except:
+    kernel_param_attributes = ["" for i in range(num_replications)]
+*/
+
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
 
 /**
@@ -30,10 +37,11 @@
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
-                                __global DEVICE_DATA_TYPE *restrict B,
-                                __global DEVICE_DATA_TYPE *restrict A_out,
-            const uint offset,
+void transpose/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_DATA_TYPE *restrict A,
+                                __global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_DATA_TYPE *restrict B,
+                                __global /*PY_CODE_GEN kernel_param_attributes[i]*/ DEVICE_DATA_TYPE *restrict A_out,
+            const uint offset_a,
+            const uint offset_b,
             const uint number_of_blocks,
             const uint width_in_blocks,
             const uint height_in_blocks) {
@@ -61,8 +69,8 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
 #endif
 #endif
             for (uint col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
-                ulong block_row_a = (block + offset) / width_in_blocks;
-                ulong block_col_a = (block + offset) % width_in_blocks;
+                ulong block_row_a = (block + offset_a) / width_in_blocks;
+                ulong block_col_a = (block + offset_a) % width_in_blocks;
                 ulong ls_address_trans = block_col_a * BLOCK_SIZE * BLOCK_SIZE * height_in_blocks +
                             block_row_a * BLOCK_SIZE + 
                             row * BLOCK_SIZE * height_in_blocks;
@@ -108,8 +116,8 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
 #endif
 #endif
             for (uint col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
-                ulong block_row = block / width_in_blocks;
-                ulong block_col = block % width_in_blocks;
+                ulong block_row = (block + offset_b) / width_in_blocks;
+                ulong block_col = (block + offset_b) % width_in_blocks;
                 ulong ls_address_row = block_row * BLOCK_SIZE * BLOCK_SIZE * width_in_blocks +
                         block_col * BLOCK_SIZE + 
                         row * BLOCK_SIZE * width_in_blocks;
@@ -166,8 +174,8 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
 #endif
 #endif
             for (uint col = 0; col < BLOCK_SIZE / CHANNEL_WIDTH; col++) {
-                ulong block_row = block / width_in_blocks;
-                ulong block_col = block % width_in_blocks;
+                ulong block_row = (block + offset_b) / width_in_blocks;
+                ulong block_col = (block + offset_b) % width_in_blocks;
                 ulong ls_address_row = block_row * BLOCK_SIZE * BLOCK_SIZE * width_in_blocks +
                         block_col * BLOCK_SIZE + 
                         row * BLOCK_SIZE * width_in_blocks;
