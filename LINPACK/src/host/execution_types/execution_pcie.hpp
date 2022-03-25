@@ -352,10 +352,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             left_queues.back().finish();
 
             // Send the left and top blocks to all other ranks so they can be used to update all inner blocks
-            for (int lbi=0; lbi < blocks_per_col - local_block_col; lbi++) {
+            for (int lbi=0; lbi < std::max(static_cast<int>(blocks_per_col - local_block_col), 0); lbi++) {
                 MPI_Bcast(left_blocks[lbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_col_remainder, row_communicator);
             }
-            for (int tbi=0; tbi < blocks_per_row  - local_block_row; tbi++) {
+            for (int tbi=0; tbi < std::max(static_cast<int>(blocks_per_row  - local_block_row), 0); tbi++) {
                 MPI_Bcast(top_blocks[tbi], config.programSettings->blockSize*config.programSettings->blockSize, MPI_DATA_TYPE, local_block_row_remainder, col_communicator);
             }
 
