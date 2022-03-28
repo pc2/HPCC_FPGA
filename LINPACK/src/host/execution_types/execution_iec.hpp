@@ -46,24 +46,23 @@ namespace iec {
 */
 std::unique_ptr<linpack::LinpackExecutionTimings>
 calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&config,
-          HOST_DATA_TYPE* A,
-          HOST_DATA_TYPE* b,
-          cl_int* ipvt) {
+          linpack::LinpackData& data) {
 
     int err;
 
-    uint blocks_per_row = config.programSettings->matrixSize / config.programSettings->blockSize;
+    uint blocks_per_row = data.matrix_width / config.programSettings->blockSize;
+    uint blocks_per_col = data.matrix_height / config.programSettings->blockSize;
 
     cl::CommandQueue buffer_queue(*config.context, *config.device, 0, &err);
     ASSERT_CL(err)
 
     // Create Buffers for input and output
     cl::Buffer Buffer_a(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize);
+                                        sizeof(HOST_DATA_TYPE)*data.matrix_width*data.matrix_height);
     cl::Buffer Buffer_b(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize);
+                                        sizeof(HOST_DATA_TYPE)*data.matrix_width);
     cl::Buffer Buffer_pivot(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(cl_int)*config.programSettings->matrixSize);
+                                        sizeof(cl_int)*data.matrix_height);
 
     // Buffers only used to store data received over the network layer
     // The content will not be modified by the host
@@ -72,9 +71,9 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     cl::Buffer Buffer_lu2(*config.context, CL_MEM_READ_WRITE,
                                         sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize)*(config.programSettings->blockSize));
     cl::Buffer Buffer_top(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize * (config.programSettings->blockSize));
+                                        sizeof(HOST_DATA_TYPE)*data.matrix_width * (config.programSettings->blockSize));
     cl::Buffer Buffer_left(*config.context, CL_MEM_READ_WRITE,
-                                        sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize * (config.programSettings->blockSize));
+                                        sizeof(HOST_DATA_TYPE)*data.matrix_height * (config.programSettings->blockSize));
     cl::Buffer Buffer_network_scaling(*config.context, CL_MEM_READ_WRITE,
                                         sizeof(HOST_DATA_TYPE)*(config.programSettings->blockSize));
 
@@ -87,10 +86,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
     for (int i = 0; i < config.programSettings->numRepetitions; i++) {
 
         err = buffer_queue.enqueueWriteBuffer(Buffer_a, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
+                                    sizeof(HOST_DATA_TYPE)*data.matrix_width*data.matrix_height, data.A);
         ASSERT_CL(err)
         err = buffer_queue.enqueueWriteBuffer(Buffer_b, CL_TRUE, 0,
-                                    sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
+                                    sizeof(HOST_DATA_TYPE)*data.matrix_width, data.b);
         ASSERT_CL(err)
         buffer_queue.finish();
 
@@ -137,7 +136,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
         start_event.setStatus(CL_COMPLETE);
 
         // For every row of blocks create kernels and enqueue them
-        for (int block_row=0; block_row < config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width; block_row++) {
+        for (int block_row=0; block_row < config.programSettings->matrixSize / config.programSettings->blockSize; block_row++) {
 
             // Create Command queues
             lu_queues.emplace_back(*config.context, *config.device, 0, &err);
@@ -158,18 +157,20 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             left_buffers.emplace_back();
             top_buffers.emplace_back();
 
-            int local_block_row_remainder = (block_row % config.programSettings->torus_width);
-            int local_block_row= (block_row / config.programSettings->torus_width);
+            int local_block_row_remainder = (block_row % config.programSettings->torus_height);
+            int local_block_row = (block_row / config.programSettings->torus_height);
+            int local_block_col_remainder = (block_row % config.programSettings->torus_width);
+            int local_block_col = (block_row / config.programSettings->torus_width);
             bool in_same_row_as_lu = local_block_row_remainder == config.programSettings->torus_row;
-            bool in_same_col_as_lu = local_block_row_remainder == config.programSettings->torus_col;
+            bool in_same_col_as_lu = local_block_col_remainder == config.programSettings->torus_col;
             int start_row_index = local_block_row + ((local_block_row_remainder >= config.programSettings->torus_row) ? 1: 0); 
-            int start_col_index = local_block_row + ((local_block_row_remainder >= config.programSettings->torus_col) ? 1: 0);
-            int num_left_blocks = (in_same_col_as_lu) ? blocks_per_row - start_row_index : 0;
+            int start_col_index = local_block_col + ((local_block_col_remainder >= config.programSettings->torus_col) ? 1: 0);
+            int num_left_blocks = (in_same_col_as_lu) ? blocks_per_col - start_row_index : 0;
             int num_top_blocks = (in_same_row_as_lu) ? blocks_per_row - start_col_index : 0;
-            int num_inner_block_rows = (blocks_per_row - start_row_index);
+            int num_inner_block_rows = (blocks_per_col - start_row_index);
             int num_inner_block_cols = (num_inner_block_rows > 0) ? (blocks_per_row - start_col_index) : 0;
             num_inner_block_rows = (num_inner_block_cols > 0) ?num_inner_block_rows : 0;
-            int num_network_layer_executions = (config.programSettings->matrixSize / config.programSettings->blockSize) - std::min(start_col_index, start_row_index);
+            int num_network_layer_executions = std::max(blocks_per_row - start_col_index, blocks_per_col - start_row_index);
             num_network_layer_executions = std::max(num_network_layer_executions, 1);
             std::vector<cl_uint> network_layer_op_flags(num_network_layer_executions);
             std::fill(network_layer_op_flags.begin(), network_layer_op_flags.end(), 0);
@@ -188,7 +189,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 ASSERT_CL(err)
                 err = kernels.back().back().setArg(2, local_block_row);
                 ASSERT_CL(err)
-                err =kernels.back().back().setArg(3, config.programSettings->matrixSize / config.programSettings->blockSize);
+                err =kernels.back().back().setArg(3, blocks_per_row);
                 ASSERT_CL(err)
                 all_events.back().emplace_back();
                 err = lu_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))), &all_events.back().back());
@@ -200,7 +201,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
             if (num_top_blocks > 0) {
                 // Create top kernels
-                for (int tops=start_col_index; tops < (config.programSettings->matrixSize / config.programSettings->blockSize); tops++) {
+                for (int tops=start_col_index; tops < blocks_per_row; tops++) {
                     kernels.back().emplace_back(*config.program, "top_update",
                                                     &err);
 #ifndef NDEBUG
@@ -217,10 +218,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     ASSERT_CL(err)
                     err = kernels.back().back().setArg(4, local_block_row);
                     ASSERT_CL(err)
-                    err = kernels.back().back().setArg(5, config.programSettings->matrixSize / config.programSettings->blockSize);
+                    err = kernels.back().back().setArg(5, blocks_per_row);
                     ASSERT_CL(err)
 
-                    if (tops + 1 == (config.programSettings->matrixSize / config.programSettings->blockSize)) {
+                    if (tops + 1 == blocks_per_row) {
                         all_events.back().emplace_back();
                         err = top_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1),  &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));
                         ASSERT_CL(err) 
@@ -237,7 +238,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             }
             if (num_left_blocks > 0) {
                 // Create left kernels
-                for (int tops=start_row_index; tops < (config.programSettings->matrixSize / config.programSettings->blockSize); tops++) {
+                for (int tops=start_row_index; tops < blocks_per_col; tops++) {
                     kernels.back().emplace_back(*config.program, "left_update",
                                                     &err);
 #ifndef NDEBUG
@@ -254,10 +255,10 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     ASSERT_CL(err)
                     err = kernels.back().back().setArg(4, tops);
                     ASSERT_CL(err)
-                    err = kernels.back().back().setArg(5, config.programSettings->matrixSize / config.programSettings->blockSize);
+                    err = kernels.back().back().setArg(5, blocks_per_row);
                     ASSERT_CL(err)
 
-                    if (tops + 1 == (config.programSettings->matrixSize / config.programSettings->blockSize)) {
+                    if (tops + 1 == blocks_per_col) {
                         all_events.back().emplace_back();
                         err = left_queues.back().enqueueNDRangeKernel(kernels.back().back(), cl::NullRange, cl::NDRange(1), cl::NDRange(1), &(*std::prev(std::prev(all_events.end()))), &(all_events.back().back()));
                         ASSERT_CL(err) 
@@ -281,26 +282,26 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
             for (auto it = network_layer_op_flags.begin(); it < network_layer_op_flags.end(); it++) {
 
                 uint network_forward_flags = 0;
-                if (!((local_block_row + 1 == blocks_per_row) && (config.programSettings->torus_row + 1 == config.programSettings->torus_width)) && 
-                !((config.programSettings->torus_width + local_block_row_remainder - 1) % config.programSettings->torus_width == config.programSettings->torus_row) && 
-                (network_layer_op_flags[0] & (LEFT_BLOCK_OUT | LU_BLOCK_OUT)) && block_row + 1 !=config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width) {
+                if (!((local_block_row + 1 == blocks_per_col) && (config.programSettings->torus_row + 1 == config.programSettings->torus_height)) && 
+                !((config.programSettings->torus_height + local_block_row_remainder - 1) % config.programSettings->torus_height == config.programSettings->torus_row) && 
+                (network_layer_op_flags[0] & (LEFT_BLOCK_OUT | LU_BLOCK_OUT)) && block_row + 1 !=config.programSettings->matrixSize / config.programSettings->blockSize ) {
                     network_forward_flags |= NETWORK_FWD_BOTTOM;
                 }
-                if (!((local_block_row_remainder + 1) % config.programSettings->torus_width == config.programSettings->torus_row) && 
-                ((num_top_blocks + num_inner_block_rows > 0) || (local_block_row_remainder < config.programSettings->torus_col)) &&
+                if (!((local_block_row_remainder + 1) % config.programSettings->torus_height == config.programSettings->torus_row) && 
+                ((num_top_blocks + num_inner_block_rows > 0) || (local_block_col_remainder < config.programSettings->torus_col)) &&
                 // Do only forward if there are inner block cols to be calculated
-                (nw_exe_count < num_inner_block_cols || (local_block_row + 1 == config.programSettings->matrixSize / config.programSettings->blockSize && local_block_row_remainder < config.programSettings->torus_col))) {
+                (nw_exe_count < num_inner_block_cols || (local_block_row + 1 == blocks_per_col && local_block_col_remainder < config.programSettings->torus_col))) {
                     network_forward_flags |= NETWORK_FWD_TOP;
                 }
                 if (!((local_block_row + 1 == blocks_per_row) && (config.programSettings->torus_col + 1 == config.programSettings->torus_width)) && 
                 !((config.programSettings->torus_width + local_block_row_remainder - 1) % config.programSettings->torus_width == config.programSettings->torus_col) && 
-                (network_layer_op_flags[0] & (TOP_BLOCK_OUT | LU_BLOCK_OUT)) && block_row + 1 != config.programSettings->matrixSize / config.programSettings->blockSize * config.programSettings->torus_width) {
+                (network_layer_op_flags[0] & (TOP_BLOCK_OUT | LU_BLOCK_OUT)) && block_row + 1 != config.programSettings->matrixSize / config.programSettings->blockSize) {
                     network_forward_flags |= NETWORK_FWD_RIGHT;
                 }
                 if (!((local_block_row_remainder + 1) % config.programSettings->torus_width == config.programSettings->torus_col) && 
                 ((num_left_blocks + num_inner_block_cols > 0) || (local_block_row_remainder < config.programSettings->torus_row)) &&
                 // Do only forwward if there are inner block rows to be calculated
-                (nw_exe_count < num_inner_block_rows || (local_block_row + 1 == config.programSettings->matrixSize / config.programSettings->blockSize && local_block_row_remainder < config.programSettings->torus_row))) {
+                (nw_exe_count < num_inner_block_rows || (local_block_row + 1 == blocks_per_row && local_block_row_remainder < config.programSettings->torus_row))) {
                     network_forward_flags |= NETWORK_FWD_LEFT;
                 }
 
@@ -401,8 +402,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 kernels.back().emplace_back(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                     &err);
 
-                int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols);
-                int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));  
+                int block_col = static_cast<cl_uint>((blocks_per_row) - num_inner_block_cols);
+                int block_row = static_cast<cl_uint>((blocks_per_col) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));  
                 ASSERT_CL(err);
                 err = kernels.back().back().setArg(0, Buffer_a);
                 ASSERT_CL(err);
@@ -445,8 +446,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 kernels.back().emplace_back(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                     &err);
 
-                int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols + std::distance(top_buffers.back().begin(), t));
-                int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows);
+                int block_col = static_cast<cl_uint>((blocks_per_row) - num_inner_block_cols + std::distance(top_buffers.back().begin(), t));
+                int block_row = static_cast<cl_uint>((blocks_per_col) - num_inner_block_rows);
 
                 ASSERT_CL(err);
                 err = kernels.back().back().setArg(0, Buffer_a);
@@ -499,8 +500,8 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                     kernels.back().emplace_back(*config.program, ("inner_update_mm" + std::to_string(current_replication)).c_str(),
                                         &err);
 
-                    int block_col = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_cols + std::distance(top_buffers.back().begin(), t));
-                    int block_row = static_cast<cl_uint>((config.programSettings->matrixSize / config.programSettings->blockSize) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));
+                    int block_col = static_cast<cl_uint>((blocks_per_row) - num_inner_block_cols + std::distance(top_buffers.back().begin(), t));
+                    int block_row = static_cast<cl_uint>((blocks_per_col) - num_inner_block_rows + std::distance(left_buffers.back().begin(), l));
   
                     ASSERT_CL(err);
                     err = kernels.back().back().setArg(0, Buffer_a);
@@ -709,12 +710,12 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
 
 #else
     buffer_queue.enqueueReadBuffer(Buffer_a, CL_TRUE, 0,
-                                     sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize*config.programSettings->matrixSize, A);
+                                     sizeof(HOST_DATA_TYPE)*data.matrix_width*data.matrix_height, data.A);
     // buffer_queue.enqueueReadBuffer(Buffer_b, CL_TRUE, 0,
     //                                  sizeof(HOST_DATA_TYPE)*config.programSettings->matrixSize, b);
     if (!config.programSettings->isDiagonallyDominant) {
         buffer_queue.enqueueReadBuffer(Buffer_pivot, CL_TRUE, 0,
-                                        sizeof(cl_int)*config.programSettings->matrixSize, ipvt);
+                                        sizeof(cl_int)*data.matrix_height, data.ipvt);
     }
 #endif
 

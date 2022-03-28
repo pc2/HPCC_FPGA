@@ -116,7 +116,7 @@ linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
     std::unique_ptr<linpack::LinpackExecutionTimings> timings;
     switch (executionSettings->programSettings->communicationType) {
         case hpcc_base::CommunicationType::pcie_mpi : timings = execution::pcie::calculate(*executionSettings, data); break;
-        case hpcc_base::CommunicationType::intel_external_channels: timings = execution::iec::calculate(*executionSettings, data.A, data.b, data.ipvt); break;
+        case hpcc_base::CommunicationType::intel_external_channels: timings = execution::iec::calculate(*executionSettings, data); break;
         default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(executionSettings->programSettings->communicationType));
     }
 #ifdef DISTRIBUTED_VALIDATION
@@ -203,7 +203,7 @@ linpack::LinpackBenchmark::generateInputData() {
 
     if ((executionSettings->programSettings->matrixSize / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width > 0 || 
         (executionSettings->programSettings->matrixSize / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_height > 0) {
-            throw std::runtime_error("Global matrix size must be multiple of LCM pf PQ grid!");
+            throw std::runtime_error("Global matrix size must be multiple of LCM of PQ grid!");
     }
 
     auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(*executionSettings->context ,local_matrix_width, local_matrix_height));
