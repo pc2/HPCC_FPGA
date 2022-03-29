@@ -153,7 +153,7 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
         return;
     }
 
-    double total_matrix_size = static_cast<double>(executionSettings->programSettings->matrixSize) * executionSettings->programSettings->torus_width;
+    double total_matrix_size = static_cast<double>(executionSettings->programSettings->matrixSize);
     double gflops_lu = ((2.0e0*total_matrix_size * total_matrix_size * total_matrix_size)/ 3.0) / 1.0e9; 
     double gflops_sl = (2.0*(total_matrix_size * total_matrix_size))/1.0e9;
     for (int i =0; i < global_lu_times.size(); i++) {
