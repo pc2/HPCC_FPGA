@@ -18,8 +18,8 @@ typedef struct {
 
 {% for i in range(num_total_replications) %}
 // Channel used to send the transposed blocks of A
-channel ch_data chan_a_out{{ i }} __attribute((io({{ "\"kernel_output_ch{}\"".format(i) }}), depth(1)));
-channel ch_data chan_a_in{{ i }} __attribute((io({{ "\"kernel_input_ch{}\"".format(2 * (i // 2) + ((i + 1) % 2)) }}), depth(1)));
+channel ch_data chan_a_out{{ i }} __attribute((io("kernel_output_ch{{ i }}"), depth(1)));
+channel ch_data chan_a_in{{ i }} __attribute((io("kernel_input_ch{{ 2 * (i // 2) + ((i + 1) % 2) }}"), depth(1)));
 {% endfor %}
 #endif
 
