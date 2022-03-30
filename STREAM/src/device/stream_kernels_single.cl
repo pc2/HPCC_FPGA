@@ -15,14 +15,10 @@ KERNEL_NUMBER will be replaced by the build script with the ID of the current re
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
-{% macro list(content, count) -%}
-    [{% for i in range(count) %} content {% if not loop.last %}, {% endif %} {% endfor %}
-{%- endmacro %}
-
 {% if generate_attributes is defined %}
     {% set kernel_param_attributes = generate_attributes(num_replications) %}
 {% else %}
-    {% set kernel_param_attributes = list("", num_replications) %}
+    {% set kernel_param_attributes = create_list("", num_replications) %}
 {% endif %}
 
 {% for i in range(num_replications) %}

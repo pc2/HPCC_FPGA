@@ -51,6 +51,9 @@ def use_file(file_name):
         print("Error while parsing external file. See logs for more information.",file=sys.stderr)
         exit(1)
 
+def create_list(content, count):
+    return [content for i in range(count)]
+
 if __name__ == '__main__':
     args = parser.parse_args()
 
@@ -71,6 +74,8 @@ if __name__ == '__main__':
         exec(p, globals())
 
     template = env.get_template(args.file)
+
+    template.globals.update({'create_list': create_list})
 
     try:
         template.globals.update({"generate_attributes": generate_attributes})
