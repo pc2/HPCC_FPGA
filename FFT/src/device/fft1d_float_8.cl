@@ -51,8 +51,15 @@
 // code generation expects an array of maps of size num_replications with the keys "in" and "out".
 // The value of the keys have to be strings containing the attributes that
 // have to be assigned to input and output buffers in global memory
-{% set kernel_param_attributes = generate_bi_map_attributes(num_replications) %}
+{% macro list(content, count) -%}
+    [{% for i in range(count) %} content {% if not loop.last %}, {% endif %} {% endfor %}
+{%- endmacro %}
 
+{% if generate_attributes is defined %}
+    {% set kernel_param_attributes = generate_attributes(num_replications) %}
+{% else %}
+    {% set kernel_param_attributes = list({"in": "", "out": ""}, num_replications) %}
+{% endif %}
 
 #define min(a,b) (a<b?a:b)
 

@@ -75,20 +75,7 @@ if __name__ == '__main__':
     try:
         template.globals.update({"generate_attributes": generate_attributes})
     except:
-        generate_attributes = lambda r : ["" for i in range(r)]
-        template.globals.update({"generate_attributes": generate_attributes})
-
-    try:
-        template.globals.update({"generate_map_attributes": generate_map_attributes})
-    except:
-        generate_map_attributes = lambda r : [{"a": "", "b": "", "c": "", "out": ""} for i in range(r)]
-        template.globals.update({"generate_map_attributes": generate_map_attributes})
-
-    try:
-        template.globals.update({"generate_bi_map_attributes": generate_bi_map_attributes})
-    except:
-        generate_bi_map_attributes = lambda r : [{"in": "", "out": ""} for i in range(r)]
-        template.globals.update({"generate_bi_map_attributes": generate_bi_map_attributes})
+        pass
 
     if num_replications is None:
         num_replications = 1 
