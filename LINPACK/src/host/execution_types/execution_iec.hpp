@@ -290,8 +290,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 if (!((local_block_row_remainder + 1) % config.programSettings->torus_height == config.programSettings->torus_row) && 
                 ((num_top_blocks + num_inner_block_rows > 0) || (local_block_col_remainder < config.programSettings->torus_col)) &&
                 // Do only forward if there are inner block cols to be calculated
-                // (nw_exe_count < num_inner_block_cols || (local_block_row + 1 == blocks_per_col && local_block_col_remainder < config.programSettings->torus_col))) {
-                (block_row + 1 < config.programSettings->matrixSize / config.programSettings->blockSize) && std::max(num_top_blocks, num_inner_block_cols) > nw_exe_count) {
+                (((local_block_col + 1 == blocks_per_row) && local_block_col_remainder < config.programSettings->torus_col) || std::max(num_top_blocks,num_inner_block_cols) > nw_exe_count)) {
                     network_forward_flags |= NETWORK_FWD_TOP;
                 }
                 if (!((local_block_col + 1 == blocks_per_row) && (config.programSettings->torus_col + 1 == config.programSettings->torus_width)) && 
@@ -302,8 +301,7 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&co
                 if (!((local_block_col_remainder + 1) % config.programSettings->torus_width == config.programSettings->torus_col) && 
                 ((num_left_blocks + num_inner_block_cols > 0) || (local_block_row_remainder < config.programSettings->torus_row)) &&
                 // Do only forwward if there are inner block rows to be calculated
-                // (nw_exe_count < num_inner_block_rows || (local_block_row + 1 == blocks_per_row && local_block_row_remainder < config.programSettings->torus_row))
-                (block_row + 1 < config.programSettings->matrixSize / config.programSettings->blockSize)  && std::max(num_left_blocks,num_inner_block_rows) > nw_exe_count) {
+                ((local_block_row + 1 == blocks_per_col  && local_block_row_remainder < config.programSettings->torus_row) || std::max(num_left_blocks,num_inner_block_rows) > nw_exe_count)) {
                     network_forward_flags |= NETWORK_FWD_LEFT;
                 }
 
