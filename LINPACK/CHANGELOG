@@ -5,7 +5,7 @@ This file contains all changes made to the source code for each release.
 ## 2.6
 
 #### Added:
-- Support for FPGA grid sizes with P != Q
+- Support for FPGA grid sizes with P != Q for baseline and IEC implementation
 
 ## 2.5
 
