@@ -70,9 +70,11 @@ For more information on available input parameters run
     ./Linpack_intel -h
     
     Implementation of the LINPACK benchmark proposed in the HPCC benchmark suite for FPGA.
-    Version: 2.3
+    Version: 2.6
 
     MPI Version:  3.1
+    Config. Time: Thu Mar 31 11:19:26 UTC 2022
+    Git Commit:   2c3b1c6
 
     Usage:
     bin/Linpack_intel [OPTION...]
@@ -85,21 +87,23 @@ For more information on available input parameters run
                             data types.
         --device arg       Index of the device that has to be used. If not
                             given you will be asked which device to use if there are
-                            multiple devices available. (default: 0)
+                            multiple devices available. (default: -1)
         --platform arg     Index of the platform that has to be used. If not
                             given you will be asked which platform to use if there
-                            are multiple platforms available. (default: 0)
-    -r, arg                Number of used kernel replications (default: 1)
+                            are multiple platforms available. (default: -1)
+    -r, arg                Number of used kernel replications (default: 5)
         --comm-type arg    Used communication type for inter-FPGA communication
                             (default: AUTO)
         --test             Only test given configuration and skip execution and
                             validation
     -h, --help             Print this help
-    -m, arg                Matrix size in number of blocks in one dimension for
-                            a singe MPI rank. Total matrix will have size m *
-                            sqrt(MPI_size) (default: 2)
+    -m, arg                Global matrix size in number of blocks in one
+                            dimension. Local matrix sizes will be determined by PQ
+                            grid. (default: 1024)
     -b, arg                Log2 of the block size in number of values in one
-                            dimension (default: 5)
+                            dimension (default: 9)
+    -p, arg                Width of the FPGA grid. The heigth (Q) will be
+                            calculated from mpi_size / P. (default: 1)
         --uniform          Generate a uniform matrix instead of a diagonally
                             dominant. This has to be supported by the FPGA kernel!
         --emulation        Use kernel arguments for emulation. This may be

@@ -37,15 +37,19 @@ SOFTWARE.
 
 linpack::LinpackProgramSettings::LinpackProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     matrixSize(results["m"].as<uint>() * (1 << (results["b"].as<uint>()))), blockSize(1 << (results["b"].as<uint>())), 
-    isEmulationKernel(results.count("emulation") > 0), isDiagonallyDominant(results.count("uniform") == 0) {
+    isEmulationKernel(results.count("emulation") > 0), isDiagonallyDominant(results.count("uniform") == 0),
+    torus_width(results["p"].as<uint>()) {
     int mpi_comm_rank;
     int mpi_comm_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
     // calculate the row and column of the MPI rank in the torus 
-    torus_row = (mpi_comm_rank / std::sqrt(mpi_comm_size));
-    torus_col = (mpi_comm_rank % static_cast<int>(std::sqrt(mpi_comm_size)));
-    torus_width = static_cast<int>(std::sqrt(mpi_comm_size));
+    if (mpi_comm_size % torus_width != 0) {
+        throw std::runtime_error("MPI size not dividable by P=" + std::to_string(torus_width) + "!");
+    } 
+    torus_height = mpi_comm_size / torus_width;
+    torus_row = (mpi_comm_rank / torus_width);
+    torus_col = (mpi_comm_rank % torus_width);
 }
 
 std::map<std::string, std::string>
@@ -55,10 +59,12 @@ linpack::LinpackProgramSettings::getSettingsMap() {
         map["Block Size"] = std::to_string(blockSize);
         map["Emulate"] = (isEmulationKernel) ? "Yes" : "No";
         map["Data Type"] = STR(HOST_DATA_TYPE);
+        map["FPGA Torus"] = "P=" + std::to_string(torus_width) + ", Q=" + std::to_string(torus_height);
         return map;
 }
 
-linpack::LinpackData::LinpackData(cl::Context context, size_t size) : norma(0.0), context(context) {
+linpack::LinpackData::LinpackData(cl::Context context, size_t width, size_t height) : norma(0.0), context(context),
+    matrix_width(width), matrix_height(height) {
 #ifdef USE_SVM
     A = reinterpret_cast<HOST_DATA_TYPE*>(
                         clSVMAlloc(context(), 0 ,
@@ -70,9 +76,9 @@ linpack::LinpackData::LinpackData(cl::Context context, size_t size) : norma(0.0)
                         clSVMAlloc(context(), 0 ,
                         size * sizeof(cl_int), 1024));
 #else
-    posix_memalign(reinterpret_cast<void**>(&A), 4096, size * size * sizeof(HOST_DATA_TYPE));
-    posix_memalign(reinterpret_cast<void**>(&b), 4096, size * sizeof(HOST_DATA_TYPE));
-    posix_memalign(reinterpret_cast<void**>(&ipvt), 4096, size * sizeof(cl_int));
+    posix_memalign(reinterpret_cast<void**>(&A), 4096, width * height * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&b), 4096, width * sizeof(HOST_DATA_TYPE));
+    posix_memalign(reinterpret_cast<void**>(&ipvt), 4096, height * sizeof(cl_int));
 #endif
     }
 
@@ -90,18 +96,17 @@ linpack::LinpackData::~LinpackData() {
 
 linpack::LinpackBenchmark::LinpackBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
     setupBenchmark(argc, argv);
-    if (static_cast<int>(std::sqrt(mpi_comm_size) * std::sqrt(mpi_comm_size)) != mpi_comm_size) {
-        throw std::runtime_error("ERROR: MPI communication size must be a square number!");
-    }
 }
 
 void
 linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
     options.add_options()
-        ("m", "Matrix size in number of blocks in one dimension for a singe MPI rank. Total matrix will have size m * sqrt(MPI_size)",
+        ("m", "Global matrix size in number of blocks in one dimension. Local matrix sizes will be determined by PQ grid.",
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MATRIX_SIZE)))
         ("b", "Log2 of the block size in number of values in one dimension",
             cxxopts::value<uint>()->default_value(std::to_string(LOCAL_MEM_BLOCK_LOG)))
+        ("p", "Width of the FPGA grid. The heigth (Q) will be calculated from mpi_size / P.",
+            cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_P_VALUE)))
         ("uniform", "Generate a uniform matrix instead of a diagonally dominant. This has to be supported by the FPGA kernel!")
         ("emulation", "Use kernel arguments for emulation. This may be necessary to simulate persistent local memory on the FPGA");
 }
@@ -110,8 +115,8 @@ std::unique_ptr<linpack::LinpackExecutionTimings>
 linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
     std::unique_ptr<linpack::LinpackExecutionTimings> timings;
     switch (executionSettings->programSettings->communicationType) {
-        case hpcc_base::CommunicationType::pcie_mpi : timings = execution::pcie::calculate(*executionSettings, data.A, data.b, data.ipvt); break;
-        case hpcc_base::CommunicationType::intel_external_channels: timings = execution::iec::calculate(*executionSettings, data.A, data.b, data.ipvt); break;
+        case hpcc_base::CommunicationType::pcie_mpi : timings = execution::pcie::calculate(*executionSettings, data); break;
+        case hpcc_base::CommunicationType::intel_external_channels: timings = execution::iec::calculate(*executionSettings, data); break;
         default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(executionSettings->programSettings->communicationType));
     }
 #ifdef DISTRIBUTED_VALIDATION
@@ -148,7 +153,7 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
         return;
     }
 
-    double total_matrix_size = static_cast<double>(executionSettings->programSettings->matrixSize) * executionSettings->programSettings->torus_width;
+    double total_matrix_size = static_cast<double>(executionSettings->programSettings->matrixSize);
     double gflops_lu = ((2.0e0*total_matrix_size * total_matrix_size * total_matrix_size)/ 3.0) / 1.0e9; 
     double gflops_sl = (2.0*(total_matrix_size * total_matrix_size))/1.0e9;
     for (int i =0; i < global_lu_times.size(); i++) {
@@ -193,19 +198,29 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
 
 std::unique_ptr<linpack::LinpackData>
 linpack::LinpackBenchmark::generateInputData() {
-    auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(*executionSettings->context ,executionSettings->programSettings->matrixSize));
+    int local_matrix_width = executionSettings->programSettings->matrixSize / executionSettings->programSettings->torus_width;
+    int local_matrix_height = executionSettings->programSettings->matrixSize / executionSettings->programSettings->torus_height;
+
+    if ((executionSettings->programSettings->matrixSize / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width > 0 || 
+        (executionSettings->programSettings->matrixSize / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_height > 0) {
+            throw std::runtime_error("Global matrix size must be multiple of LCM of PQ grid!");
+    }
+
+    auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(*executionSettings->context ,local_matrix_width, local_matrix_height));
     std::mt19937 gen(this->mpi_comm_rank);
     std::uniform_real_distribution<> dis(0.0, 1.0);
     d->norma = 0.0;
     d->normb = 0.0;
+
+
     /*
     Generate a matrix by using pseudo random number in the range (0,1)
     */
-    for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+    for (int j = 0; j < local_matrix_height; j++) {
         // fill a single column of the matrix
-        for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
+        for (int i = 0; i < local_matrix_width; i++) {
                 HOST_DATA_TYPE temp = dis(gen);
-                d->A[executionSettings->programSettings->matrixSize*j+i] = temp;
+                d->A[local_matrix_width*j+i] = temp;
                 d->norma = (temp > d->norma) ? temp : d->norma;
         }
     }
@@ -217,30 +232,38 @@ linpack::LinpackBenchmark::generateInputData() {
         // create a communicator to exchange the rows
         MPI_Comm row_communicator;
         MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_row, 0,&row_communicator);
+
         // Caclulate the sum for every row and insert in into the matrix
-        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+        for (int local_matrix_row = 0; local_matrix_row < local_matrix_height; local_matrix_row++) {
+            int blockSize = executionSettings->programSettings->blockSize;
+            int global_matrix_row = executionSettings->programSettings->torus_row * blockSize + (local_matrix_row / blockSize) * blockSize * executionSettings->programSettings->torus_height + (local_matrix_row % blockSize);
+            int local_matrix_col = (global_matrix_row - executionSettings->programSettings->torus_col * blockSize) / (blockSize * executionSettings->programSettings->torus_width) * blockSize + (global_matrix_row % blockSize);
+            int diagonal_rank = (global_matrix_row / blockSize) % executionSettings->programSettings->torus_width;
+            bool diagonal_on_this_rank = diagonal_rank == executionSettings->programSettings->torus_col;
             // set the diagonal elements of the matrix to 0
-            if (executionSettings->programSettings->torus_row == executionSettings->programSettings->torus_col) {
-                d->A[executionSettings->programSettings->matrixSize*j + j] = 0.0;
+            if (diagonal_on_this_rank) {
+                d->A[local_matrix_width*local_matrix_row + local_matrix_col] = 0.0;
             }
             HOST_DATA_TYPE local_row_sum = 0.0;
-            for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
-                local_row_sum += d->A[executionSettings->programSettings->matrixSize*j + i];
+            for (int i = 0; i < local_matrix_width; i++) {
+                local_row_sum += d->A[local_matrix_width*local_matrix_row + i];
             } 
             HOST_DATA_TYPE row_sum = 0.0;
-            MPI_Reduce(&local_row_sum, &row_sum, 1, MPI_DATA_TYPE, MPI_SUM, executionSettings->programSettings->torus_row, row_communicator);
+            MPI_Reduce(&local_row_sum, &row_sum, 1, MPI_DATA_TYPE, MPI_SUM, diagonal_rank, row_communicator);
             // insert row sum into matrix if it contains the diagonal block
-            if (executionSettings->programSettings->torus_row == executionSettings->programSettings->torus_col) {
+            if (diagonal_on_this_rank) {
                 // update norm of local matrix
                 d->norma = (row_sum > d->norma) ? row_sum : d->norma;
-                d->A[executionSettings->programSettings->matrixSize*j + j] = row_sum;
+                d->A[local_matrix_width*local_matrix_row + local_matrix_col] = row_sum;
             }
         }
     }
         
     // initialize other vectors
-    for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
+    for (int i = 0; i < local_matrix_width; i++) {
         d->b[i] = 0.0;
+    }
+    for (int i = 0; i < local_matrix_height; i++) {
         d->ipvt[i] = i;
     }
 
@@ -250,12 +273,11 @@ linpack::LinpackBenchmark::generateInputData() {
     // Generate vector b by accumulating the columns of the matrix.
     // This will lead to a result vector x with ones on every position
     // Every rank will have a valid part of the final b vector stored
-    for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
+    for (int j = 0; j < local_matrix_width; j++) {
         HOST_DATA_TYPE local_col_sum = 0.0;
-        for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
-            local_col_sum += d->A[executionSettings->programSettings->matrixSize*i+j];
+        for (int i = 0; i < local_matrix_height; i++) {
+            local_col_sum += d->A[local_matrix_width*i+j];
         }
-        HOST_DATA_TYPE row_sum = 0.0;
         MPI_Allreduce(&local_col_sum, &(d->b[j]), 1, MPI_DATA_TYPE, MPI_SUM, col_communicator);   
         d->normb = (d->b[j] > d->normb) ? d->b[j] : d->normb;   
     }
@@ -264,19 +286,21 @@ linpack::LinpackBenchmark::generateInputData() {
 
 bool  
 linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &data) {
-    uint n= executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width;
+    uint n= executionSettings->programSettings->matrixSize;
+    uint matrix_width = data.matrix_width;
+    uint matrix_height = data.matrix_height;
     double residn;
     double resid = 0.0;
     double normx = 0.0;
 #ifndef DISTRIBUTED_VALIDATION
     if (mpi_comm_rank > 0) {
-        for (int j = 0; j < executionSettings->programSettings->matrixSize; j++) {
-            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
-                MPI_Send(&data.A[executionSettings->programSettings->matrixSize * j + i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
+        for (int j = 0; j < matrix_height; j++) {
+            for (int i = 0; i < matrix_width; i+= executionSettings->programSettings->blockSize) {
+                MPI_Send(&data.A[matrix_width * j + i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
             }
         }
         if (executionSettings->programSettings->torus_row == 0) {
-            for (int i = 0; i < executionSettings->programSettings->matrixSize; i+= executionSettings->programSettings->blockSize) {
+            for (int i = 0; i < matrix_width; i+= executionSettings->programSettings->blockSize) {
                 MPI_Send(&data.b[i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
             }
         }
@@ -285,27 +309,27 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     else {
         MPI_Status status;
         size_t current_offset = 0;
-        std::vector<HOST_DATA_TYPE> total_b_original(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
-        std::vector<HOST_DATA_TYPE> total_b(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
-        std::vector<HOST_DATA_TYPE> total_a(executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width*executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width);
-        for (int j = 0; j < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; j++) {
-            for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
+        std::vector<HOST_DATA_TYPE> total_b_original(n);
+        std::vector<HOST_DATA_TYPE> total_b(n);
+        std::vector<HOST_DATA_TYPE> total_a(n*n);
+        for (int j = 0; j < n; j++) {
+            for (int i = 0; i < n; i+= executionSettings->programSettings->blockSize) {
                 int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
-                int recvrow= (j / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
+                int recvrow= (j / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_height;
                 int recvrank = executionSettings->programSettings->torus_width * recvrow + recvcol;
                 if (recvrank > 0) {
-                    MPI_Recv(&total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i],executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvrank, 0, MPI_COMM_WORLD,  &status);
+                    MPI_Recv(&total_a[j * n + i],executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvrank, 0, MPI_COMM_WORLD,  &status);
                 }
                 else {
                     for (int k=0; k < executionSettings->programSettings->blockSize; k++) {
-                        total_a[j * executionSettings->programSettings->matrixSize * executionSettings->programSettings->torus_width + i + k] = data.A[current_offset + k];
+                        total_a[j * n + i + k] = data.A[current_offset + k];
                     }
                     current_offset += executionSettings->programSettings->blockSize;
                 }
             }
         }
         current_offset = 0;
-        for (int i = 0; i < executionSettings->programSettings->matrixSize* executionSettings->programSettings->torus_width; i+= executionSettings->programSettings->blockSize) {
+        for (int i = 0; i < n; i+= executionSettings->programSettings->blockSize) {
             int recvcol= (i / executionSettings->programSettings->blockSize) % executionSettings->programSettings->torus_width;
             if (recvcol > 0) {
                 MPI_Recv(&total_b[i], executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvcol, 0, MPI_COMM_WORLD, &status);
@@ -317,6 +341,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
                 current_offset += executionSettings->programSettings->blockSize;
             }
         }
+
         std::copy(total_b.begin(), total_b.end(), total_b_original.begin());
         gesl_ref_nopvt(total_a.data(), total_b.data(), n, n);
 
@@ -329,7 +354,7 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
     double local_resid = 0;
     double local_normx = data.normb;
     #pragma omp parallel for reduction(max:local_resid)
-    for (int i = 0; i < executionSettings->programSettings->matrixSize; i++) {
+    for (int i = 0; i < data.matrix_width; i++) {
         local_resid = (local_resid > std::abs(data.b[i] - 1)) ? local_resid : std::abs(data.b[i] - 1);
     }
 #ifndef NDEBUG
@@ -400,118 +425,126 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
 
 void 
 linpack::LinpackBenchmark::distributed_gesl_nopvt_ref(linpack::LinpackData& data) {
-    uint matrix_size = executionSettings->programSettings->matrixSize;
+    uint global_matrix_size = executionSettings->programSettings->matrixSize;
+    uint matrix_width = data.matrix_width;
+    uint matrix_height = data.matrix_height;
     uint block_size = executionSettings->programSettings->blockSize;
-    uint total_matrix_size = matrix_size * block_size;
     // create a communicator to exchange the rows
     MPI_Comm row_communicator;
     MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_row, 0,&row_communicator);
     MPI_Comm col_communicator;
     MPI_Comm_split(MPI_COMM_WORLD, executionSettings->programSettings->torus_col, 0,&col_communicator);
-    std::vector<HOST_DATA_TYPE> b_tmp(matrix_size);
-    // if 0= diagonal rank, if negative= lower rank, if positive = upper rank
-    int op_mode = executionSettings->programSettings->torus_col - executionSettings->programSettings->torus_row;
+    std::vector<HOST_DATA_TYPE> b_tmp(matrix_width);
 
-
-    for (int k = 0; k < matrix_size; k++) {
+    for (int k = 0; k < b_tmp.size(); k++) {
         b_tmp[k] = data.b[k];
     }
 
     // solve l*y = b
     // For each row in matrix
-    for (int k = 0; k < matrix_size * executionSettings->programSettings->torus_width - 1; k++) {
+    for (int k = 0; k < global_matrix_size - 1; k++) {
         size_t local_k_index_col =  k / (block_size * executionSettings->programSettings->torus_width) * block_size;
-        size_t local_k_index_row =  k / (block_size * executionSettings->programSettings->torus_width) * block_size;
-        size_t remaining_k = k % (block_size * executionSettings->programSettings->torus_width);
+        size_t local_k_index_row =  k / (block_size * executionSettings->programSettings->torus_height) * block_size;
+        size_t remaining_k_col = k % (block_size * executionSettings->programSettings->torus_width);
+        size_t remaining_k_row = k % (block_size * executionSettings->programSettings->torus_height);
         size_t start_offset = local_k_index_col;
-        if (remaining_k / block_size > executionSettings->programSettings->torus_col){
+        if (remaining_k_col / block_size > executionSettings->programSettings->torus_col){
             local_k_index_col += block_size;
             start_offset = local_k_index_col;
         }
-        else if (remaining_k / block_size == executionSettings->programSettings->torus_col) {
-            local_k_index_col += (remaining_k % block_size);
+        else if (remaining_k_col / block_size == executionSettings->programSettings->torus_col) {
+            local_k_index_col += (remaining_k_col % block_size);
             start_offset = local_k_index_col + 1;
         }
-        if (remaining_k / block_size > executionSettings->programSettings->torus_row){
+        if (remaining_k_row / block_size > executionSettings->programSettings->torus_row){
             local_k_index_row += block_size;
         }
-        else if (remaining_k / block_size == executionSettings->programSettings->torus_row) {
-            local_k_index_row += (remaining_k % block_size);
+        else if (remaining_k_row / block_size == executionSettings->programSettings->torus_row) {
+            local_k_index_row += (remaining_k_row % block_size);
         }
 
-        int current_bcast = (k / block_size) % executionSettings->programSettings->torus_width;
-        std::vector<HOST_DATA_TYPE> tmp_scaled_b(matrix_size, 0.0);
-        if ((k / block_size) % executionSettings->programSettings->torus_width == executionSettings->programSettings->torus_row) {
+        int row_diagonal_rank = (k / block_size) % executionSettings->programSettings->torus_height;
+        int col_diagonal_rank = (k / block_size) % executionSettings->programSettings->torus_width;
+        std::vector<HOST_DATA_TYPE> tmp_scaled_b(matrix_width, 0.0);
+        if (row_diagonal_rank == executionSettings->programSettings->torus_row) {
             HOST_DATA_TYPE current_k;
-            current_k = (local_k_index_col < matrix_size) ? b_tmp[local_k_index_col] : 0.0;
-            MPI_Bcast(&current_k, 1, MPI_DATA_TYPE,  current_bcast, row_communicator);
+            current_k = (local_k_index_col < matrix_width) ? b_tmp[local_k_index_col] : 0.0;
+            MPI_Bcast(&current_k, 1, MPI_DATA_TYPE,  col_diagonal_rank, row_communicator);
             // For each row below add
-            for (int i = start_offset; i < matrix_size; i++) {
+            for (int i = start_offset; i < matrix_width; i++) {
                 // add solved upper row to current row
-                tmp_scaled_b[i] = current_k * data.A[matrix_size * local_k_index_row + i];
+                tmp_scaled_b[i] = current_k * data.A[matrix_width * local_k_index_row + i];
             }
         }
-        MPI_Bcast(&tmp_scaled_b.data()[start_offset], matrix_size - start_offset, MPI_DATA_TYPE, current_bcast, col_communicator);
-        for (int i = start_offset; i < matrix_size; i++) {
+        MPI_Bcast(&tmp_scaled_b.data()[start_offset], matrix_width - start_offset, MPI_DATA_TYPE, row_diagonal_rank, col_communicator);
+        for (int i = start_offset; i < matrix_width; i++) {
             // add solved upper row to current row
             b_tmp[i] += tmp_scaled_b[i];
         }
     }
 
     // now solve  u*x = y
-    for (int k = matrix_size * executionSettings->programSettings->torus_width - 1; k >= 0; k--) {
+    for (int k = global_matrix_size - 1; k >= 0; k--) {
         size_t local_k_index_col =  k / (block_size * executionSettings->programSettings->torus_width) * block_size;
-        size_t local_k_index_row =  k / (block_size * executionSettings->programSettings->torus_width) * block_size;
-        size_t remaining_k = k % (block_size * executionSettings->programSettings->torus_width);
-        if (remaining_k / block_size > executionSettings->programSettings->torus_col){
+        size_t local_k_index_row =  k / (block_size * executionSettings->programSettings->torus_height) * block_size;
+        size_t remaining_k_col = k % (block_size * executionSettings->programSettings->torus_width);
+        size_t remaining_k_row = k % (block_size * executionSettings->programSettings->torus_height);
+        if (remaining_k_col / block_size > executionSettings->programSettings->torus_col){
             local_k_index_col += block_size;
         }
-        else if (remaining_k / block_size == executionSettings->programSettings->torus_col) {
-            local_k_index_col += remaining_k % block_size;
+        else if (remaining_k_col / block_size == executionSettings->programSettings->torus_col) {
+            local_k_index_col += remaining_k_col % block_size;
         }
-        if (remaining_k / block_size > executionSettings->programSettings->torus_row){
+        if (remaining_k_row / block_size > executionSettings->programSettings->torus_row){
             local_k_index_row += block_size;
         }
-        else if (remaining_k / block_size == executionSettings->programSettings->torus_row) {
-            local_k_index_row += remaining_k % block_size;
+        else if (remaining_k_row / block_size == executionSettings->programSettings->torus_row) {
+            local_k_index_row += remaining_k_row % block_size;
         }
 
-        HOST_DATA_TYPE scale_element = (local_k_index_col < matrix_size && local_k_index_row < matrix_size) ? b_tmp[local_k_index_col] * data.A[matrix_size * local_k_index_row + local_k_index_col] : 0.0;
-        MPI_Bcast(&scale_element, 1, MPI_DATA_TYPE, executionSettings->programSettings->torus_col, col_communicator);
-        if ((k / block_size) % executionSettings->programSettings->torus_width == executionSettings->programSettings->torus_col) {
+        HOST_DATA_TYPE scale_element = (local_k_index_col < matrix_width && local_k_index_row < matrix_height) ? b_tmp[local_k_index_col] * data.A[matrix_width * local_k_index_row + local_k_index_col] : 0.0;
+        int row_diagonal_rank = (k / block_size) % executionSettings->programSettings->torus_height;
+        int col_diagonal_rank = (k / block_size) % executionSettings->programSettings->torus_width;
+        MPI_Bcast(&scale_element, 1, MPI_DATA_TYPE, row_diagonal_rank, col_communicator);
+        if (col_diagonal_rank == executionSettings->programSettings->torus_col) {
             b_tmp[local_k_index_col] = -scale_element;
         }
-        MPI_Bcast(&scale_element, 1, MPI_DATA_TYPE, executionSettings->programSettings->torus_row, row_communicator);
+        MPI_Bcast(&scale_element, 1, MPI_DATA_TYPE, col_diagonal_rank, row_communicator);
         size_t end_offset = local_k_index_col;
 
-        std::vector<HOST_DATA_TYPE> tmp_scaled_b(matrix_size, 0.0);
-        if ((k / block_size) % executionSettings->programSettings->torus_width == executionSettings->programSettings->torus_row) {
+        std::vector<HOST_DATA_TYPE> tmp_scaled_b(matrix_width, 0.0);
+        if (row_diagonal_rank == executionSettings->programSettings->torus_row) {
             // For each row below add
             for (int i = 0; i < end_offset; i++) {
-                tmp_scaled_b[i] = scale_element * data.A[matrix_size * local_k_index_row + i];
+                tmp_scaled_b[i] = scale_element * data.A[matrix_width * local_k_index_row + i];
             }
         }
-        int current_bcast = (k / block_size) % executionSettings->programSettings->torus_width;
-        MPI_Bcast(tmp_scaled_b.data(), end_offset, MPI_DATA_TYPE, current_bcast, col_communicator);
+        MPI_Bcast(tmp_scaled_b.data(), end_offset, MPI_DATA_TYPE, row_diagonal_rank, col_communicator);
         for (int i = 0; i < end_offset; i++) {
             // add solved upper row to current row
             b_tmp[i] += tmp_scaled_b[i];
         }
     }
-    for (int k = 0; k < matrix_size; k++) {
+    for (int k = 0; k < b_tmp.size(); k++) {
         data.b[k] = b_tmp[k];
     }
-#ifndef NDEBUG
-    double sum = 0;
-    double max = 0;
-    for (int k = 0; k < matrix_size; k++) {
-        sum += std::abs(data.b[k]);
-        if (std::abs(data.b[k] - 1) > 0.1) {
-            std::cout << "Rank " << mpi_comm_rank << " Pos: " << k << " Value: " << std::abs(data.b[k]) << std::endl;
-        }
-    }
 
-    std::cout << "Rank " << mpi_comm_rank << " Dist.Sum: " << sum << " Max: " << max << std::endl;
+#ifndef NDEBUG
+    MPI_Barrier(MPI_COMM_WORLD);
+    for (int rank = 0; rank < mpi_comm_size; rank++) {
+        if (rank == mpi_comm_rank) {
+            double sum = 0;
+            double max = 0;
+            for (int k = 0; k < matrix_width; k++) {
+                sum += std::abs(data.b[k]);
+                if (std::abs(data.b[k] - 1) > 0.1 || data.b[k] == NAN) {
+                    std::cout << "Rank " << mpi_comm_rank << " Pos: " << k << " Value: " << std::abs(data.b[k]) << std::endl;
+                }
+            }
+            std::cout << "Rank " << mpi_comm_rank << " Dist.Sum: " << sum << " Max: " << max << std::endl;
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
 #endif
 }
 

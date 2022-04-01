@@ -295,3 +295,14 @@ If you are using one of the benchmarks contained in the HPCC FPGA benchmark suit
         doi={10.1109/H2RC51942.2020.00007}
     }
 
+If the focus is on multi-FPGA execution and inter-FPGA communication, you may rather want to cite 
+
+    @misc{hpcc_multi_fpga,
+        doi = {10.48550/ARXIV.2202.13995},
+        url = {https://arxiv.org/abs/2202.13995},
+        author = {Meyer, Marius and Kenter, Tobias and Plessl, Christian},
+        title = {Multi-FPGA Designs and Scaling of HPC Challenge Benchmarks via MPI and Circuit-Switched Inter-FPGA Networks},
+        publisher = {arXiv},
+        year = {2022}
+    }
+
