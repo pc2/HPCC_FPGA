@@ -28,7 +28,7 @@ FetchContent_Declare(
 
   # unfortunately they do not use releases, so the latest commit was used
   GIT_REPOSITORY      https://github.com/definelicht/hlslib.git
-  GIT_TAG             v1.2.1)
+  GIT_TAG             v1.4.3)
 
 FetchContent_GetProperties(extern_hlslib)
 if(NOT extern_hlslib_POPULATED)
@@ -53,4 +53,19 @@ if(NOT extern_cxxopts_POPULATED)
     ${extern_cxxopts_SOURCE_DIR}
     ${extern_cxxopts_BINARY_DIR}
     EXCLUDE_FROM_ALL)
+endif()
+
+# -------------------------------------------------------------------------------
+# ACCL Library
+FetchContent_Declare(
+	extern_accl
+
+	GIT_REPOSITORY	https://github.com/Mellich/ACCL.git
+	GIT_TAG		dev)
+
+FetchContent_GetProperties(extern_accl)
+if(NOT extern_accl_POPULATED)
+	message(STATUS "Fetching mandatory build dependency ACCL")
+	FetchContent_Populate(extern_accl)
+	set(extern_accl_SOURCE_DIR ${extern_accl_SOURCE_DIR} PARENT_SCOPE)
 endif()
