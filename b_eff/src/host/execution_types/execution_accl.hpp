@@ -57,19 +57,6 @@ namespace network::execution_types::accl {
         int current_size;
         MPI_Comm_size(MPI_COMM_WORLD, & current_size);
 
-	std::cout << "Setup ACCL..." << std::endl;
-
-	std::vector<ACCL::rank_t> ranks = {};
-        for (int i = 0; i < current_size; ++i) {
-		ACCL::rank_t new_rank = {"127.0.0.1", 5500 + i, i,
-                       1024};
-            ranks.emplace_back(new_rank);
-        }
-	// TODO: Add start port here. Currenty hardcoded!
-	ACCL::ACCL accl(ranks, current_rank,
-                          "tcp://localhost:" +
-                              std::to_string(5500 + current_rank));
-	std::cout << "Start seidnign..." << std::endl; 
         std::vector<double> calculationTimings;
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             dummyBufferContents.clear();
@@ -80,22 +67,19 @@ namespace network::execution_types::accl {
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
                 recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
-		acclSendBuffers.push_back(accl.create_buffer<HOST_DATA_TYPE>(dummyBufferContents.back().data(), size_in_bytes + 1 / 2, ACCL::dataType::float16));
-		acclRecvBuffers.push_back(accl.create_buffer<HOST_DATA_TYPE>(recvBufferContents.back().data(), size_in_bytes + 1 / 2, ACCL::dataType::float16));
+		acclSendBuffers.push_back(config.program->create_buffer<HOST_DATA_TYPE>(dummyBufferContents.back().data(), size_in_bytes + 1 / 2, ACCL::dataType::float16));
+		acclRecvBuffers.push_back(config.program->create_buffer<HOST_DATA_TYPE>(recvBufferContents.back().data(), size_in_bytes + 1 / 2, ACCL::dataType::float16));
 		acclSendBuffers.back()->sync_to_device();
 		acclRecvBuffers.back()->sync_to_device();
             }
-	    std::cout << "Buffers prepared" << std::endl;
+
             double calculationTime = 0.0;
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 for (int l = 0; l < looplength; l++) {
-			std::cout << "Send from " << current_rank << " to " << (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size << std::endl;
-			accl.send(0, *acclSendBuffers[i], size_in_bytes, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
-			accl.recv(0, *acclRecvBuffers[i], size_in_bytes, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
-//                        MPI_Sendrecv(dummyBufferContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0, 
-//                                        dummyBufferContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2)  + current_size) % current_size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			config.program->send(0, *acclSendBuffers[i], size_in_bytes, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+			config.program->recv(0, *acclRecvBuffers[i], size_in_bytes, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
