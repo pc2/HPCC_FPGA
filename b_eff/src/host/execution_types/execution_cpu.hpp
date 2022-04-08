@@ -38,13 +38,12 @@ namespace network::execution_types::cpu {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
+	template<class TDevice, class TContext, class TProgram>
     std::shared_ptr<network::ExecutionTimings>
-    calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength,
+    calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings, TDevice, TContext, TProgram> const& config, cl_uint messageSize, cl_uint looplength,
                 cl::vector<HOST_DATA_TYPE> &validationData) {
 
         int err;
-        std::vector<cl::CommandQueue> sendQueues;
-        std::vector<cl::Buffer> dummyBuffers;
         std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferContents;
 
         cl_uint size_in_bytes = std::max(static_cast<int>(validationData.size()), (1 << messageSize));
@@ -57,24 +56,10 @@ namespace network::execution_types::cpu {
 
         std::vector<double> calculationTimings;
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
-            sendQueues.clear();
-            dummyBuffers.clear();
             dummyBufferContents.clear();
             // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-
-                dummyBuffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE) * size_in_bytes,0,&err));
-                ASSERT_CL(err)
-
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
-
-                cl::CommandQueue sendQueue(*config.context, *config.device, 0, &err);
-                ASSERT_CL(err)
-
-                sendQueue.enqueueWriteBuffer(dummyBuffers.back(), CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents.back().data());
-
-                sendQueues.push_back(sendQueue);
-
             }
             double calculationTime = 0.0;
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
@@ -102,8 +87,7 @@ namespace network::execution_types::cpu {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-            err = sendQueues[r].enqueueReadBuffer(dummyBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * validationData.size() / config.programSettings->kernelReplications, &validationData.data()[r * validationData.size() / config.programSettings->kernelReplications]);
-            ASSERT_CL(err);
+		std::copy(dummyBufferContents[r].begin(), dummyBufferContents[r].end(),validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
         }
         std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
                 looplength,
