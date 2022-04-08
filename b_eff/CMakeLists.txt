@@ -24,3 +24,5 @@ include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
 unset(DATA_TYPE CACHE)
 find_package(MPI REQUIRED)
 
+include(${extern_accl_SOURCE_DIR}/driver/xrt/CMakeLists.txt)
+
