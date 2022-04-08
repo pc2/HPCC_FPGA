@@ -244,10 +244,10 @@ public:
  * 
  */
 class NetworkBenchmark : 
-#ifndef USE_XRT_BINDINGS
+#ifndef USE_ACCL
 public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, cl::Device, cl::Context, cl::Program, NetworkData, NetworkExecutionTimings> {
 #else
-
+public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, xrt::device, nullptr, ACCL::ACCL, NetworkData, NetworkExecutionTimings> {
 #endif
 protected:
 

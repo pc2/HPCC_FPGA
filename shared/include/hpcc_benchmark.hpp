@@ -35,8 +35,8 @@ SOFTWARE.
 #endif
 
 /* Project's headers */
-#ifdef USE_XRT_BINDINGS
-#include "setup/fpga_setup_xrt.hpp"
+#ifdef USE_ACCL
+#include "setup/fpga_setup_accl.hpp"
 #endif
 #include "setup/fpga_setup.hpp"
 #include "cxxopts.hpp"
@@ -480,9 +480,7 @@ public:
             std::unique_ptr<TDevice> usedDevice;
 
             if (!programSettings->testOnly) {
-// TODO: This is temporarily excluded to only usethe ACCL emulator!
-#if 0
-#ifndef USE_XRT_BINDINGS
+#ifndef USE_ACCL
                 usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
                                                                     programSettings->defaultDevice);
 
@@ -490,9 +488,9 @@ public:
                 program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
                                                                     &programSettings->kernelFileName);
  #else
-                // TODO: Select XRT device and program here!
+                program = fpga_setup::fpgaSetupACCL(usedDevice,
+                                                    &programSettings->kernelFileName);
  #endif
-#endif
             }
 
             executionSettings = std::unique_ptr<ExecutionSettings<TSettings, TDevice, TContext, TProgram>>(new ExecutionSettings<TSettings, TDevice, TContext, TProgram>(std::move(programSettings), std::move(usedDevice), 
@@ -667,12 +665,12 @@ public:
  * @param printedExecutionSettings The execution settings that have to be printed to the stream
  * @return std::ostream& The output stream after the execution settings are piped in
  */
-template <class TSettings, class TDevice, class TContext, class TProgram>
-std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings, TDevice, TContext, TProgram> const& printedExecutionSettings){
+template <class TSettings>
+std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings){
         std::string device_name;
         os << std::left;
         if (!printedExecutionSettings.programSettings->testOnly) {
-//        printedExecutionSettings.device->getInfo(CL_DEVICE_NAME, &device_name);
+        printedExecutionSettings.device->getInfo(CL_DEVICE_NAME, &device_name);
         }
         else {
             device_name = "TEST RUN: Not selected!";

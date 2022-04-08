@@ -32,6 +32,7 @@ SOFTWARE.
 
 /* External libraries */
 #include "xrt/xrt_device.h"
+#include "accl.hpp"
 
 
 namespace fpga_setup {
@@ -41,10 +42,10 @@ Sets up the given FPGA with the kernel in the provided file.
 
 @param device The device used for the program
 @param usedKernelFile The path to the kernel file
-@return The program that is used to create the benchmark kernels
+@return The ACCL instance used for communication
 */
-    std::unique_ptr<uuid>
-    fpgaSetupXRT(xrt::device &device,
+    std::unique_ptr<ACCL::ACCL>
+    fpgaSetupACCL(xrt::device &device,
               const std::string *usedKernelFile);
 
 

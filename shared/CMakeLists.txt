@@ -2,6 +2,10 @@ project(HPCCBaseLibrary VERSION 1.0.1)
 
 add_library(hpcc_fpga_base STATIC ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup.cpp)
 
+if (defined USE_ACCL)
+add_library(hpcc_fpga_base STATIC ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup_accl.cpp)
+endif()
+
 find_package(OpenCL QUIET)
 
 if (INTELFPGAOPENCL_FOUND)
