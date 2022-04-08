@@ -1,9 +1,12 @@
 project(HPCCBaseLibrary VERSION 1.0.1)
 
-add_library(hpcc_fpga_base STATIC ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup.cpp)
 
-if (defined USE_ACCL)
-add_library(hpcc_fpga_base STATIC ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup_accl.cpp)
+if (USE_ACCL)
+add_library(hpcc_fpga_base STATIC ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup.cpp ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup_accl.cpp)
+target_include_directories(hpcc_fpga_base PRIVATE ${ACCL_INCLUDE_PATH})
+target_link_libraries(hpcc_fpga_base accl)
+else()
+add_library(hpcc_fpga_base STATIC ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup.cpp)
 endif()
 
 find_package(OpenCL QUIET)

@@ -215,8 +215,8 @@ public:
      * @param context_ Used OpenCL context
      * @param program_ Used OpenCL program
      */
-    ExecutionSettings(std::unique_ptr<TSettings> programSettings_, std::unique_ptr<cl::Device> device_, 
-                        std::unique_ptr<cl::Context> context_, std::unique_ptr<cl::Program> program_): 
+    ExecutionSettings(std::unique_ptr<TSettings> programSettings_, std::unique_ptr<TDevice> device_, 
+                        std::unique_ptr<TContext> context_, std::unique_ptr<TProgram> program_): 
                                     programSettings(std::move(programSettings_)), device(std::move(device_)), 
                                     context(std::move(context_)), program(std::move(program_)) {}
 
@@ -488,7 +488,7 @@ public:
                 program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
                                                                     &programSettings->kernelFileName);
  #else
-                program = fpga_setup::fpgaSetupACCL(usedDevice,
+                program = fpga_setup::fpgaSetupACCL(*usedDevice,
                                                     &programSettings->kernelFileName);
  #endif
             }
@@ -665,13 +665,15 @@ public:
  * @param printedExecutionSettings The execution settings that have to be printed to the stream
  * @return std::ostream& The output stream after the execution settings are piped in
  */
-template <class TSettings>
-std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings){
+template <class TSettings, class TDevice, class TContext, class TProgram>
+std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings, TDevice, TContext, TProgram> const& printedExecutionSettings){
         std::string device_name;
         os << std::left;
         if (!printedExecutionSettings.programSettings->testOnly) {
-        printedExecutionSettings.device->getInfo(CL_DEVICE_NAME, &device_name);
-        }
+#ifndef USE_ACCL
+		printedExecutionSettings.device->getInfo(CL_DEVICE_NAME, &device_name);
+#endif
+	}
         else {
             device_name = "TEST RUN: Not selected!";
         }

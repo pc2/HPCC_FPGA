@@ -21,7 +21,7 @@
 namespace fpga_setup {
 
     std::unique_ptr<ACCL::ACCL>
-    fpgaSetup(xrt::device &context,
+    fpgaSetupACCL(xrt::device &context,
               const std::string *usedKernelFile) {
         int current_rank;
         MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
