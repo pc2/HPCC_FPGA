@@ -45,6 +45,9 @@ namespace network::execution_types::pcie {
         int err;
         std::vector<cl::CommandQueue> sendQueues;
         std::vector<cl::Buffer> dummyBuffers;
+#ifdef XILINX_FPGA
+        std::vector<cl::Kernel> accesskernel;
+#endif
         std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferContents;
 
         cl_uint size_in_bytes = std::max(static_cast<int>(validationData.size()), (1 << messageSize));
@@ -59,6 +62,9 @@ namespace network::execution_types::pcie {
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             sendQueues.clear();
             dummyBuffers.clear();
+#ifdef XILINX_FPGA
+            accesskernel.clear();
+#endif
             dummyBufferContents.clear();
             // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
@@ -66,6 +72,23 @@ namespace network::execution_types::pcie {
                 dummyBuffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE) * size_in_bytes,0,&err));
                 ASSERT_CL(err)
 
+#ifdef XILINX_FPGA
+                accesskernel.push_back(cl::Kernel(*config.program,
+                    ("accessMemory_0:{accessMemory_0_" + std::to_string(r + 1) + "}").c_str(), &err));
+
+                err = accesskernel[r].setArg(0, dummyBuffers[r]);
+                        ASSERT_CL(err);
+                err = accesskernel[r].setArg(1, dummyBuffers[r]);
+                ASSERT_CL(err);
+                err = accesskernel[r].setArg(2, static_cast<cl_long>(0));
+                ASSERT_CL(err);
+                err = accesskernel[r].setArg(3, static_cast<cl_long>(0));
+                ASSERT_CL(err);
+                err = accesskernel[r].setArg(4,(1));
+                ASSERT_CL(err);
+                err = accesskernel[r].setArg(5, cl_uint(0));
+                ASSERT_CL(err);
+#endif
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
 
                 cl::CommandQueue sendQueue(*config.context, *config.device, 0, &err);

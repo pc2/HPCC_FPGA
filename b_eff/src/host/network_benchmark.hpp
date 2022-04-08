@@ -31,6 +31,33 @@ SOFTWARE.
 #include "hpcc_benchmark.hpp"
 #include "parameters.h"
 
+#ifdef XILINX_FPGA
+template <typename T>
+struct aligned_allocator {
+
+   //    typedefs
+          typedef T value_type;
+          typedef value_type* pointer;
+          typedef const value_type* const_pointer;
+
+	   pointer allocate(size_t pCount, const_pointer = 0){ 
+	    	T* mem = 0;
+	    	if (posix_memalign(reinterpret_cast<void**>(&mem), 1024 , sizeof(T) * pCount) != 0) {
+	    		throw std::bad_alloc();
+	        }
+		return mem; 
+	   }
+
+	   void deallocate(pointer pPtr, size_t pCount) { 
+	       free(pPtr);
+	   }
+};
+	   
+namespace cl {
+    template <class T> using vector = std::vector<T,aligned_allocator<T>>; 
+}
+#endif
+
 /**
  * @brief Contains all classes and methods needed by the Network benchmark
  * 
