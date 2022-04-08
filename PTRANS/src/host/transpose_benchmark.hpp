@@ -46,8 +46,12 @@ namespace transpose {
  * @brief Implementation of the transpose benchmark
  * 
  */
-class TransposeBenchmark : public hpcc_base::HpccFpgaBenchmark<TransposeProgramSettings, TransposeData, TransposeExecutionTimings> {
-
+class TransposeBenchmark : 
+#ifndef USE_XRT_BINDINGS
+public hpcc_base::HpccFpgaBenchmark<TransposeProgramSettings,cl::Device, cl::Context, cl::Program, TransposeData, TransposeExecutionTimings> {
+#else
+// TODO initialize benchmark wth XRT bindings
+#endif
 protected:
 
     /**

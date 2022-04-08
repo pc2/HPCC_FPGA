@@ -35,6 +35,9 @@ SOFTWARE.
 #endif
 
 /* Project's headers */
+#ifdef USE_XRT_BINDINGS
+#include "setup/fpga_setup_xrt.hpp"
+#endif
 #include "setup/fpga_setup.hpp"
 #include "cxxopts.hpp"
 #include "parameters.h"
@@ -176,7 +179,7 @@ public:
  * 
  * @tparam TSettings The program settings class that should be used (Must derive from BaseSettings)
  */
-template <class TSettings>
+template <class TSettings, class TDevice, class TContext, class TProgram>
 class ExecutionSettings {
 public:
 
@@ -190,19 +193,19 @@ public:
      * @brief The OpenCL device that should be used for execution
      * 
      */
-    std::unique_ptr<cl::Device> device;
+    std::unique_ptr<TDevice> device;
 
     /**
      * @brief The OpenCL context that should be used for execution
      * 
      */
-    std::unique_ptr<cl::Context> context;
+    std::unique_ptr<TContext> context;
 
     /**
      * @brief The OpenCL program that contains the benchmark kernel
      * 
      */
-    std::unique_ptr<cl::Program> program;
+    std::unique_ptr<TProgram> program;
 
     /**
      * @brief Construct a new Execution Settings object
@@ -238,7 +241,7 @@ public:
  * @tparam TData Class used to represent the benchmark input and output data
  * @tparam TOutput Class representing the measurements like timings etc
  */
-template <class TSettings, class TData, class TOutput>
+template <class TSettings, class TDevice, class TContext, class TProgram, class TData, class TOutput>
 class HpccFpgaBenchmark {
 
 private:
@@ -258,7 +261,7 @@ protected:
      *        It should be laos used by all other methods to read the current benchmark settings.
      * 
      */
-    std::unique_ptr<ExecutionSettings<TSettings>> executionSettings;
+    std::unique_ptr<ExecutionSettings<TSettings, TDevice, TContext, TProgram>> executionSettings;
 
     /**
      * @brief Add additional options to the program parameter parser
@@ -472,20 +475,24 @@ public:
 
             std::unique_ptr<TSettings> programSettings = parseProgramParameters(tmp_argc, tmp_argv);
 
-            std::unique_ptr<cl::Context> context;
-            std::unique_ptr<cl::Program> program;
-            std::unique_ptr<cl::Device> usedDevice;
+            std::unique_ptr<TContext> context;
+            std::unique_ptr<TProgram> program;
+            std::unique_ptr<TDevice> usedDevice;
 
             if (!programSettings->testOnly) {
+#ifndef USE_XRT_BINDINGS
                 usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
                                                                     programSettings->defaultDevice);
 
                 context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
                 program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
                                                                     &programSettings->kernelFileName);
+ #else
+                // TODO: Select XRT device and program here!
+ #endif
             }
 
-            executionSettings = std::unique_ptr<ExecutionSettings<TSettings>>(new ExecutionSettings<TSettings>(std::move(programSettings), std::move(usedDevice), 
+            executionSettings = std::unique_ptr<ExecutionSettings<TSettings, TDevice, TContext, TProgram>>(new ExecutionSettings<TSettings, TDevice, TContext, TProgram>(std::move(programSettings), std::move(usedDevice), 
                                                                     std::move(context), std::move(program)));
             if (mpi_comm_rank == 0) {
                 if (!checkInputParameters()) {

@@ -213,8 +213,12 @@ public:
  * @brief Implementation of the Network benchmark
  * 
  */
-class NetworkBenchmark : public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, NetworkData, NetworkExecutionTimings> {
+class NetworkBenchmark : 
+#ifndef USE_XRT_BINDINGS
+public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, cl::Device, cl::Context, cl::Program, NetworkData, NetworkExecutionTimings> {
+#else
 
+#endif
 protected:
 
     /**
