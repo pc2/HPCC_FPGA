@@ -112,6 +112,7 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
 #ifdef INTEL_FPGA
 	    case hpcc_base::CommunicationType::intel_external_channels: timing = execution_types::iec::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
 #endif
+	    case hpcc_base::CommunicationType::accl: timing = execution_types::accl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
 	    default: throw std::runtime_error("Selected Communication type not supported: " + hpcc_base::commToString(executionSettings->programSettings->communicationType));
         }
         timing_results.push_back(timing);

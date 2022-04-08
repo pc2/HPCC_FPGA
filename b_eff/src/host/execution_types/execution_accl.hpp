@@ -1,0 +1,130 @@
+/*
+Copyright (c) 2022 Marius Meyer
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+#ifndef SRC_HOST_EXECUTION_TYPES_EXECUTION_ACCL_HPP
+#define SRC_HOST_EXECUTION_TYPES_EXECUTION_ACCL_HPP
+
+/* C++ standard library headers */
+#include <memory>
+#include <vector>
+#include <chrono>
+
+/* External library headers */
+#include "mpi.h"
+#include "accl.hpp"
+
+/* Project's headers */
+
+namespace network::execution_types::accl {
+
+    /*
+    Implementation for the single kernel.
+     @copydoc bm_execution::calculate()
+    */
+	template<class TDevice, class TContext, class TProgram>
+    std::shared_ptr<network::ExecutionTimings>
+    calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings, TDevice, TContext, TProgram> const& config, cl_uint messageSize, cl_uint looplength,
+                cl::vector<HOST_DATA_TYPE> &validationData) {
+
+        int err;
+        std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferContents;
+        std::vector<cl::vector<HOST_DATA_TYPE>> recvBufferContents;
+	std::vector<std::unique_ptr<ACCL::Buffer<HOST_DATA_TYPE>>> acclSendBuffers;
+	std::vector<std::unique_ptr<ACCL::Buffer<HOST_DATA_TYPE>>> acclRecvBuffers;
+        cl_uint size_in_bytes = std::max(static_cast<int>(validationData.size()), (1 << messageSize));
+
+        int current_rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+
+        int current_size;
+        MPI_Comm_size(MPI_COMM_WORLD, & current_size);
+
+	std::cout << "Setup ACCL..." << std::endl;
+
+	std::vector<ACCL::rank_t> ranks = {};
+        for (int i = 0; i < current_size; ++i) {
+		ACCL::rank_t new_rank = {"127.0.0.1", 5500 + i, i,
+                       1024};
+            ranks.emplace_back(new_rank);
+        }
+	// TODO: Add start port here. Currenty hardcoded!
+	ACCL::ACCL accl(ranks, current_rank,
+                          "tcp://localhost:" +
+                              std::to_string(5500 + current_rank));
+	std::cout << "Start seidnign..." << std::endl; 
+        std::vector<double> calculationTimings;
+        for (uint r =0; r < config.programSettings->numRepetitions; r++) {
+            dummyBufferContents.clear();
+	    recvBufferContents.clear();
+	    acclSendBuffers.clear();
+	    acclRecvBuffers.clear();
+            // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
+            for (int r = 0; r < config.programSettings->kernelReplications; r++) {
+                dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
+                recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
+		acclSendBuffers.push_back(accl.create_buffer<HOST_DATA_TYPE>(dummyBufferContents.back().data(), size_in_bytes + 1 / 2, ACCL::dataType::float16));
+		acclRecvBuffers.push_back(accl.create_buffer<HOST_DATA_TYPE>(recvBufferContents.back().data(), size_in_bytes + 1 / 2, ACCL::dataType::float16));
+		acclSendBuffers.back()->sync_to_device();
+		acclRecvBuffers.back()->sync_to_device();
+            }
+	    std::cout << "Buffers prepared" << std::endl;
+            double calculationTime = 0.0;
+            for (int i = 0; i < config.programSettings->kernelReplications; i++) {
+                MPI_Barrier(MPI_COMM_WORLD);
+                auto startCalculation = std::chrono::high_resolution_clock::now();
+                for (int l = 0; l < looplength; l++) {
+			std::cout << "Send from " << current_rank << " to " << (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size << std::endl;
+			accl.send(0, *acclSendBuffers[i], size_in_bytes, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+			accl.recv(0, *acclRecvBuffers[i], size_in_bytes, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+//                        MPI_Sendrecv(dummyBufferContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0, 
+//                                        dummyBufferContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2)  + current_size) % current_size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                }
+                auto endCalculation = std::chrono::high_resolution_clock::now();
+                calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
+                #ifndef NDEBUG
+                        int current_rank;
+                        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+                        std::cout << "Rank " << current_rank << ": Enqueued " << r << "," << i << std::endl;
+                #endif
+            }
+            calculationTimings.push_back(calculationTime);
+#ifndef NDEBUG
+        int current_rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+        std::cout << "Rank " << current_rank << ": Done " << r << std::endl;
+#endif
+        }
+        // Read validation data from FPGA will be placed sequentially in buffer for all replications
+        // The data order should not matter, because every byte should have the same value!
+        for (int r = 0; r < config.programSettings->kernelReplications; r++) {
+		std::copy(recvBufferContents[r].begin(), recvBufferContents[r].end(),validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
+        }
+        std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
+                looplength,
+                messageSize,
+                calculationTimings
+        });
+        return result;
+    }
+
+}  // namespace bm_execution
+
+#endif

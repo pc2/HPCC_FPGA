@@ -53,6 +53,11 @@ typedef enum _CommunicationType {
     smi,
 
     /**
+     * @brief Communication using ACCL 
+     */ 
+    accl,
+
+    /**
      * @brief Calculate the benchmark on CPU instead of FPGA
      * 
      */
@@ -75,7 +80,8 @@ typedef enum _CommunicationType {
 static const std::map<const std::string, CommunicationType> comm_to_str_map{ 
     {"IEC", CommunicationType::intel_external_channels}, 
     {"PCIE", CommunicationType::pcie_mpi},
-	{"SMI", CommunicationType::smi},
+    {"SMI", CommunicationType::smi},
+    {"ACCL", CommunicationType::accl},
     {"CPU", CommunicationType::cpu_only},
     {"UNSUPPORTED", CommunicationType::unsupported},
     {"AUTO", CommunicationType::automatic}
