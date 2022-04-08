@@ -135,7 +135,8 @@ Sets up the given FPGA with the kernel in the provided file.
 #ifdef _USE_MPI_
         MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 #endif
-
+// TODO: Thisis temporarily excluded to work with ACCL emulator without emulation bitstream!
+#if 0
         if (world_rank == 0) {
             std::cout << HLINE;
             std::cout << "FPGA Setup:" << usedKernelFile->c_str() << std::endl;
@@ -176,6 +177,9 @@ Sets up the given FPGA with the kernel in the provided file.
             std::cout << HLINE;
         }
         return std::unique_ptr<cl::Program>(new cl::Program(program));
+#else
+	return std::unique_ptr<cl::Program>(nullptr);
+#endif
     }
 
 /**

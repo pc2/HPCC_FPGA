@@ -31,6 +31,8 @@ SOFTWARE.
 #include "hpcc_benchmark.hpp"
 #include "parameters.h"
 
+//TODO: remove this custom allocator since cl2.hpp is available here?
+#if 0
 #ifdef XILINX_FPGA
 template <typename T>
 struct aligned_allocator {
@@ -56,6 +58,7 @@ struct aligned_allocator {
 namespace cl {
     template <class T> using vector = std::vector<T,aligned_allocator<T>>; 
 }
+#endif
 #endif
 
 /**
