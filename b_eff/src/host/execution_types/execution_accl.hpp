@@ -63,12 +63,13 @@ namespace network::execution_types::accl {
 	    recvBufferContents.clear();
 	    acclSendBuffers.clear();
 	    acclRecvBuffers.clear();
+	    int size_in_values = (size_in_bytes + 3) / 4;
             // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
                 recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
-		acclSendBuffers.push_back(config.program->create_buffer(dummyBufferContents.back().data(), size_in_bytes + 1 / 2, ACCL::dataType::float16));
-		acclRecvBuffers.push_back(config.program->create_buffer(recvBufferContents.back().data(), size_in_bytes + 1 / 2, ACCL::dataType::float16));
+		acclSendBuffers.push_back(config.program->create_buffer(dummyBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
+		acclRecvBuffers.push_back(config.program->create_buffer(recvBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
 		acclSendBuffers.back()->sync_to_device();
 		acclRecvBuffers.back()->sync_to_device();
             }
@@ -78,8 +79,8 @@ namespace network::execution_types::accl {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 for (int l = 0; l < looplength; l++) {
-			config.program->send(0, *acclSendBuffers[i], size_in_bytes, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
-			config.program->recv(0, *acclRecvBuffers[i], size_in_bytes, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+			config.program->send(0, *acclSendBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+			config.program->recv(0, *acclRecvBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
@@ -99,7 +100,7 @@ namespace network::execution_types::accl {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-		std::copy(recvBufferContents[r].begin(), recvBufferContents[r].end(),validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
+		std::copy(recvBufferContents[r].begin(), recvBufferContents[r].begin() + validationData.size() / config.programSettings->kernelReplications, validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
         }
         std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
                 looplength,
