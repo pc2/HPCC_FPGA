@@ -28,6 +28,7 @@ SOFTWARE.
 #include <memory>
 
 /* Project's headers */
+#include "parameters.h"
 #include "hpcc_benchmark.hpp"
 #include "transpose_data.hpp"
 
@@ -41,8 +42,6 @@ SOFTWARE.
 #include "data_handlers/data_handler_types.h"
 #include "data_handlers/diagonal.hpp"
 #include "data_handlers/pq.hpp"
-
-#include "parameters.h"
 
 /**
  * @brief Contains all classes and methods needed by the Transpose benchmark
@@ -99,8 +98,8 @@ public:
     void
     setTransposeDataHandler(transpose::data_handler::DataHandlerType dataHandlerIdentifier) {
         switch (dataHandlerIdentifier) {
-            case transpose::data_handler::DataHandlerType::diagonal: this->dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler, TDevice, TContext, TProgram>(new transpose::data_handler::DistributedDiagonalTransposeDataHandler<TDevice, TContext, TProgram>(mpi_comm_rank, mpi_comm_size)); break;
-            case transpose::data_handler::DataHandlerType::pq: this->dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler, TDevice, TContext, TProgram>(new transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>(mpi_comm_rank, mpi_comm_size, executionSettings->programSettings->p)); break;
+            case transpose::data_handler::DataHandlerType::diagonal: this->dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler<TDevice, TContext, TProgram>>(new transpose::data_handler::DistributedDiagonalTransposeDataHandler<TDevice, TContext, TProgram>(this->mpi_comm_rank, this->mpi_comm_size)); break;
+            case transpose::data_handler::DataHandlerType::pq: this->dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler<TDevice, TContext, TProgram>>(new transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>(this->mpi_comm_rank, this->mpi_comm_size, this->executionSettings->programSettings->p)); break;
             default: throw std::runtime_error("Could not match selected data handler: " + transpose::data_handler::handlerToString(dataHandlerIdentifier));
         }
     }
@@ -119,14 +118,14 @@ public:
                                         return transpose::fpga_execution::intel::calculate(*(this->executionSettings), data);
                                     }
                                     else {
-                                        return transpose::fpga_execution::intel_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*this->dataHandler));
+                                        return transpose::fpga_execution::intel_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
                                     } break;
             case hpcc_base::CommunicationType::pcie_mpi :                                 
-                                    if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
+                                    if (this->executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
                                         return transpose::fpga_execution::pcie::calculate(*(this->executionSettings), data, *dataHandler);
                                     }
                                     else {
-                                        return transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*this->dataHandler));
+                                        return transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
                                     } break;
 #ifdef MKL_FOUND
             case hpcc_base::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*(this->executionSettings), data, *dataHandler); break;
@@ -151,14 +150,14 @@ public:
         this->dataHandler->reference_transpose(data);
 
         double max_error = 0.0;
-        for (size_t i = 0; i < executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize * data.numBlocks; i++) {
+        for (size_t i = 0; i < this->executionSettings->programSettings->blockSize * this->executionSettings->programSettings->blockSize * data.numBlocks; i++) {
             max_error = std::max(fabs(data.A[i]), max_error);
         }
 
         double global_max_error = 0;
         MPI_Reduce(&max_error, &global_max_error, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
-        if (mpi_comm_rank == 0) {
+        if (this->mpi_comm_rank == 0) {
             std::cout << "Maximum error: " << global_max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
             std::cout << "Mach. Epsilon: " << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl;
         }
@@ -173,7 +172,7 @@ public:
      */
     void
     collectAndPrintResults(const TransposeExecutionTimings &output) override {
-        double flops = static_cast<double>(executionSettings->programSettings->matrixSize) * executionSettings->programSettings->matrixSize;
+        double flops = static_cast<double>(this->executionSettings->programSettings->matrixSize) * this->executionSettings->programSettings->matrixSize;
 
         // Number of experiment repetitions
         uint number_measurements = output.calculationTimings.size();
@@ -181,7 +180,7 @@ public:
         std::vector<double> max_transfers(number_measurements);
 #ifdef _USE_MPI_
             // Copy the object variable to a local variable to make it accessible to the lambda function
-            int mpi_size = mpi_comm_size;
+            int mpi_size = this->mpi_comm_size;
             MPI_Reduce(output.calculationTimings.data(), max_measures.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
             MPI_Reduce(output.transferTimings.data(), max_transfers.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 #else
@@ -204,7 +203,7 @@ public:
         double avgTransferBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime;
         double maxTransferBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime;
 
-        if (mpi_comm_rank == 0) {
+        if (this->mpi_comm_rank == 0) {
             std::cout << "       total [s]     transfer [s]  calc [s]      calc FLOPS    Mem [B/s]     PCIe [B/s]" << std::endl;
             std::cout << "avg:   " << (avgTransferTime + avgCalculationTime)
                     << "   " << avgTransferTime
@@ -229,7 +228,7 @@ public:
      * @param argc the number of program input parameters
      * @param argv the program input parameters as array of strings
      */
-    TransposeBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
+    TransposeBenchmark(int argc, char* argv[]) : hpcc_base::HpccFpgaBenchmark<transpose::TransposeProgramSettings,TDevice, TContext, TProgram, transpose::TransposeData, transpose::TransposeExecutionTimings>(argc, argv) {
         if (this->setupBenchmark(argc, argv)) {
             this->setTransposeDataHandler(this->executionSettings->programSettings->dataHandlerIdentifier);
         }
@@ -238,7 +237,7 @@ public:
     /**
      * @brief Construct a new Transpose Benchmark object
      */
-    TransposeBenchmark() : HpccFpgaBenchmark() {}
+    TransposeBenchmark() : hpcc_base::HpccFpgaBenchmark<transpose::TransposeProgramSettings,TDevice, TContext, TProgram, transpose::TransposeData, transpose::TransposeExecutionTimings>() {}
 
 };
 

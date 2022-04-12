@@ -26,6 +26,7 @@ SOFTWARE.
 /* C++ standard library headers */
 #include <memory>
 #include <algorithm>
+#include <random>
 
 /* Project's headers */
 #include "handler.hpp"
@@ -142,8 +143,8 @@ public:
 
         width_per_rank = width_in_blocks / pq_width;
         height_per_rank = width_in_blocks / pq_height;
-        pq_row = mpi_comm_rank / pq_width;
-        pq_col = mpi_comm_rank % pq_width;
+        pq_row = this->mpi_comm_rank / pq_width;
+        pq_col = this->mpi_comm_rank % pq_width;
 
         // If the torus width is not a divisor of the matrix size,
         // distribute remaining blocks to the ranks
@@ -167,7 +168,7 @@ public:
         auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
 
         // Fill the allocated memory with pseudo random values
-        std::mt19937 gen(mpi_comm_rank);
+        std::mt19937 gen(this->mpi_comm_rank);
         std::uniform_real_distribution<> dis(-100.0, 100.0);
         for (size_t i = 0; i < blocks_per_rank * settings.programSettings->blockSize; i++) {
             for (size_t j = 0; j < settings.programSettings->blockSize; j++) {
@@ -308,7 +309,7 @@ public:
 
                     // Do actual MPI communication
 #ifndef NDEBUG
-                    std::cout << "Rank " << mpi_comm_rank << ": blocks (" << sending_size / (data.blockSize * data.blockSize) << "," << receiving_size / (data.blockSize * data.blockSize) << ") send " << send_rank << ", recv " << recv_rank << std::endl << std::flush;
+                    std::cout << "Rank " << this->mpi_comm_rank << ": blocks (" << sending_size / (data.blockSize * data.blockSize) << "," << receiving_size / (data.blockSize * data.blockSize) << ") send " << send_rank << ", recv " << recv_rank << std::endl << std::flush;
 #endif
                     MPI_Isend(send_buffers[current_parallel_execution].data(), sending_size, MPI_FLOAT, send_rank, 0, MPI_COMM_WORLD, &mpi_requests[current_parallel_execution]);
                     MPI_Irecv(recv_buffers[current_parallel_execution].data(), receiving_size, MPI_FLOAT, recv_rank, 0, MPI_COMM_WORLD, &mpi_requests[gcd + current_parallel_execution]);
