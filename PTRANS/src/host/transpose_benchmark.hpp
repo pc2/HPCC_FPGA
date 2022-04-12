@@ -31,8 +31,16 @@ SOFTWARE.
 #include "hpcc_benchmark.hpp"
 #include "transpose_data.hpp"
 
+#include "execution_types/execution_intel.hpp"
+#include "execution_types/execution_intel_pq.hpp"
+#include "execution_types/execution_pcie.hpp"
+#include "execution_types/execution_pcie_pq.hpp"
+#include "execution_types/execution_cpu.hpp"
+#include "communication_types.hpp"
+
 #include "data_handlers/data_handler_types.h"
-#include "data_handlers/handler.hpp"
+#include "data_handlers/diagonal.hpp"
+#include "data_handlers/pq.hpp"
 
 #include "parameters.h"
 
@@ -91,8 +99,8 @@ public:
     void
     setTransposeDataHandler(transpose::data_handler::DataHandlerType dataHandlerIdentifier) {
         switch (dataHandlerIdentifier) {
-            case transpose::data_handler::DataHandlerType::diagonal: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler>(new transpose::data_handler::DistributedDiagonalTransposeDataHandler(mpi_comm_rank, mpi_comm_size)); break;
-            case transpose::data_handler::DataHandlerType::pq: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler>(new transpose::data_handler::DistributedPQTransposeDataHandler(mpi_comm_rank, mpi_comm_size, executionSettings->programSettings->p)); break;
+            case transpose::data_handler::DataHandlerType::diagonal: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler, TDevice, TContext, TProgram>(new transpose::data_handler::DistributedDiagonalTransposeDataHandler<TDevice, TContext, TProgram>(mpi_comm_rank, mpi_comm_size)); break;
+            case transpose::data_handler::DataHandlerType::pq: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler, TDevice, TContext, TProgram>(new transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>(mpi_comm_rank, mpi_comm_size, executionSettings->programSettings->p)); break;
             default: throw std::runtime_error("Could not match selected data handler: " + transpose::data_handler::handlerToString(dataHandlerIdentifier));
         }
     }
