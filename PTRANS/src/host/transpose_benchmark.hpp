@@ -89,7 +89,7 @@ public:
      */
     std::unique_ptr<TransposeData>
     generateInputData() override {
-        return dataHandler->generateData(*executionSettings);
+        return this->dataHandler->generateData(*(this->executionSettings));
     }
 
     /**
@@ -99,8 +99,8 @@ public:
     void
     setTransposeDataHandler(transpose::data_handler::DataHandlerType dataHandlerIdentifier) {
         switch (dataHandlerIdentifier) {
-            case transpose::data_handler::DataHandlerType::diagonal: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler, TDevice, TContext, TProgram>(new transpose::data_handler::DistributedDiagonalTransposeDataHandler<TDevice, TContext, TProgram>(mpi_comm_rank, mpi_comm_size)); break;
-            case transpose::data_handler::DataHandlerType::pq: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler, TDevice, TContext, TProgram>(new transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>(mpi_comm_rank, mpi_comm_size, executionSettings->programSettings->p)); break;
+            case transpose::data_handler::DataHandlerType::diagonal: this->dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler, TDevice, TContext, TProgram>(new transpose::data_handler::DistributedDiagonalTransposeDataHandler<TDevice, TContext, TProgram>(mpi_comm_rank, mpi_comm_size)); break;
+            case transpose::data_handler::DataHandlerType::pq: this->dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler, TDevice, TContext, TProgram>(new transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>(mpi_comm_rank, mpi_comm_size, executionSettings->programSettings->p)); break;
             default: throw std::runtime_error("Could not match selected data handler: " + transpose::data_handler::handlerToString(dataHandlerIdentifier));
         }
     }
@@ -113,25 +113,25 @@ public:
      */
     std::unique_ptr<TransposeExecutionTimings>
     executeKernel(TransposeData &data) override {
-        switch (executionSettings->programSettings->communicationType) {
+        switch (this->executionSettings->programSettings->communicationType) {
             case hpcc_base::CommunicationType::intel_external_channels: 
-                                    if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
-                                        return transpose::fpga_execution::intel::calculate(*executionSettings, data);
+                                    if (this->executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
+                                        return transpose::fpga_execution::intel::calculate(*(this->executionSettings), data);
                                     }
                                     else {
-                                        return transpose::fpga_execution::intel_pq::calculate(*executionSettings, data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*dataHandler));
+                                        return transpose::fpga_execution::intel_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*this->dataHandler));
                                     } break;
             case hpcc_base::CommunicationType::pcie_mpi :                                 
                                     if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
-                                        return transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler);
+                                        return transpose::fpga_execution::pcie::calculate(*(this->executionSettings), data, *dataHandler);
                                     }
                                     else {
-                                        return transpose::fpga_execution::pcie_pq::calculate(*executionSettings, data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*dataHandler));
+                                        return transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*this->dataHandler));
                                     } break;
 #ifdef MKL_FOUND
-            case hpcc_base::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*executionSettings, data, *dataHandler); break;
+            case hpcc_base::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*(this->executionSettings), data, *dataHandler); break;
 #endif
-            default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(executionSettings->programSettings->communicationType));
+            default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(this->executionSettings->programSettings->communicationType));
         }
     }
 
@@ -146,9 +146,9 @@ public:
     validateOutputAndPrintError(TransposeData &data) override {
 
         // exchange the data using MPI depending on the chosen distribution scheme
-        dataHandler->exchangeData(data);
+        this->dataHandler->exchangeData(data);
 
-        dataHandler->reference_transpose(data);
+        this->dataHandler->reference_transpose(data);
 
         double max_error = 0.0;
         for (size_t i = 0; i < executionSettings->programSettings->blockSize * executionSettings->programSettings->blockSize * data.numBlocks; i++) {
@@ -230,15 +230,15 @@ public:
      * @param argv the program input parameters as array of strings
      */
     TransposeBenchmark(int argc, char* argv[]) : HpccFpgaBenchmark(argc, argv) {
-        if (setupBenchmark(argc, argv)) {
-            setTransposeDataHandler(executionSettings->programSettings->dataHandlerIdentifier);
+        if (this->setupBenchmark(argc, argv)) {
+            this->setTransposeDataHandler(this->executionSettings->programSettings->dataHandlerIdentifier);
         }
     }
 
     /**
      * @brief Construct a new Transpose Benchmark object
      */
-    TransposeBenchmark() : HpccFpgaBenchmark(argc, argv) {}
+    TransposeBenchmark() : HpccFpgaBenchmark() {}
 
 };
 
