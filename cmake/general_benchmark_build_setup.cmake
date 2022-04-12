@@ -1,7 +1,7 @@
 cmake_policy(VERSION 3.13)
 INCLUDE (CheckTypeSize)
 
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 14)
 
 # Download build dependencies
 add_subdirectory(${CMAKE_SOURCE_DIR}/../extern ${CMAKE_BINARY_DIR}/extern)
@@ -31,6 +31,7 @@ set(USE_MPI ${USE_MPI} CACHE BOOL "Compile the host code with MPI support. This 
 set(USE_SVM No CACHE BOOL "Use SVM pointers instead of creating buffers on the board and transferring the data there before execution.")
 set(USE_HBM No CACHE BOOL "Use host code specific to HBM FPGAs")
 set(USE_ACCL No CACHE BOOL "Use ACCL for communication")
+set(USE_OCL_HOST Yes CACHE BOOL "Use OpenCL host code implementation")
 set(USE_CUSTOM_KERNEL_TARGETS No CACHE BOOL "Enable build targets for custom kernels")
 set(USE_DEPRECATED_HPP_HEADER ${header_default} CACHE BOOL "Flag that indicates if the old C++ wrapper header should be used (cl.hpp) or the newer version (cl2.hpp or opencl.hpp)")
 set(HPCC_FPGA_CONFIG ${HPCC_FPGA_CONFIG} CACHE FILEPATH "Configuration file that is used to overwrite the default configuration")
@@ -89,6 +90,10 @@ if (USE_MPI)
 endif()
 if (USE_ACCL)
     add_definitions(-DUSE_ACCL)
+endif()
+
+if (USE_OCL_HOST)
+    add_definitions(-DUSE_OCL_HOST)
 endif()
 
 # Add configuration time to build

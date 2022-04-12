@@ -49,7 +49,7 @@ namespace transpose
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
             static std::unique_ptr<transpose::TransposeExecutionTimings>
-            calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings> &config, transpose::TransposeData &data, transpose::data_handler::TransposeDataHandler &handler)
+            calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, cl::Device, cl::Context, cl::Program> &config, transpose::TransposeData &data, transpose::data_handler::TransposeDataHandler &handler)
             {
                 int err;
 

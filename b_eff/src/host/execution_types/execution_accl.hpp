@@ -68,8 +68,8 @@ namespace network::execution_types::accl {
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
                 recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
-		acclSendBuffers.push_back(config.program->create_buffer(dummyBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
-		acclRecvBuffers.push_back(config.program->create_buffer(recvBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
+		acclSendBuffers.push_back(config.accl->create_buffer(dummyBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
+		acclRecvBuffers.push_back(config.accl->create_buffer(recvBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
 		acclSendBuffers.back()->sync_to_device();
 		acclRecvBuffers.back()->sync_to_device();
             }
@@ -79,8 +79,8 @@ namespace network::execution_types::accl {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 for (int l = 0; l < looplength; l++) {
-			config.program->send(0, *acclSendBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
-			config.program->recv(0, *acclRecvBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+			config.accl->send(0, *acclSendBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+			config.accl->recv(0, *acclRecvBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();

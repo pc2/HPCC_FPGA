@@ -244,12 +244,15 @@ public:
  * 
  */
 class NetworkBenchmark : 
-#ifndef USE_ACCL
-public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, cl::Device, cl::Context, cl::Program, NetworkData, NetworkExecutionTimings> {
-#else
-public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, xrt::device, bool, ACCL::ACCL, NetworkData, NetworkExecutionTimings> {
+#ifdef USE_OCL_HOST
+    public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, cl::Device, cl::Context, cl::Program, NetworkData, NetworkExecutionTimings> 
 #endif
-protected:
+#ifdef USE_XRT_HOST
+    public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, xrt::device, bool, xrt::uuid, NetworkData, NetworkExecutionTimings> 
+
+#endif
+   {
+    protected:
 
     /**
      * @brief Additional input parameters of the Network benchmark

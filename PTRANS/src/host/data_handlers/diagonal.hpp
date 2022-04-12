@@ -44,7 +44,8 @@ namespace transpose {
  *         the missing data. e.g. for N ranks, the pairs will be (0, N/2), (1, N/2 + 1), ...
  * 
  */
-class DistributedDiagonalTransposeDataHandler : public TransposeDataHandler {
+template<class TDevice, class TContext, class TProgram>
+class DistributedDiagonalTransposeDataHandler : public TransposeDataHandler<TDevice, TContext, TProgram> {
 
 private:
 
@@ -69,7 +70,7 @@ public:
      * @return std::unique_ptr<TransposeData> The generated data
      */
     std::unique_ptr<TransposeData>
-    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) override {
+    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, TDevice, TContext, TProgram>& settings) override {
         MPI_Type_contiguous(settings.programSettings->blockSize * settings.programSettings->blockSize, MPI_FLOAT, &data_block);
         MPI_Type_commit(&data_block);
         

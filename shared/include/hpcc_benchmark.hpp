@@ -172,7 +172,6 @@ public:
 
 };
 
-
 /**
  * @brief Settings class that is containing the program settings together with
  *          additional information about the OpenCL runtime
@@ -207,6 +206,14 @@ public:
      */
     std::unique_ptr<TProgram> program;
 
+#ifdef USE_ACCL
+    /**
+     * @brief Pointer to ACCL instance
+     *
+     */
+    std::unique_ptr<ACCL::ACCL> accl;
+#endif
+
     /**
      * @brief Construct a new Execution Settings object
      * 
@@ -216,9 +223,18 @@ public:
      * @param program_ Used OpenCL program
      */
     ExecutionSettings(std::unique_ptr<TSettings> programSettings_, std::unique_ptr<TDevice> device_, 
-                        std::unique_ptr<TContext> context_, std::unique_ptr<TProgram> program_): 
+                        std::unique_ptr<TContext> context_, std::unique_ptr<TProgram> program_
+#ifdef USE_ACCL
+                        , std::unique_ptr<ACCL::ACCL> accl_
+#endif
+                        
+                        ): 
                                     programSettings(std::move(programSettings_)), device(std::move(device_)), 
-                                    context(std::move(context_)), program(std::move(program_)) {}
+                                    context(std::move(context_)), program(std::move(program_))
+#ifdef USE_ACCL
+                                            , accl(std::move(accl_))
+#endif                                      
+                                             {}
 
     /**
      * @brief Destroy the Execution Settings object. Used to specify the order the contained objects are destroyed 
@@ -478,23 +494,26 @@ public:
             std::unique_ptr<TContext> context;
             std::unique_ptr<TProgram> program;
             std::unique_ptr<TDevice> usedDevice;
-
+#ifdef USE_ACCL
+            std::unique_ptr<ACCL::ACCL> accl;
+#endif
             if (!programSettings->testOnly) {
-#ifndef USE_ACCL
-                usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
-                                                                    programSettings->defaultDevice);
-
-                context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
-                program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
-                                                                    &programSettings->kernelFileName);
- #else
-                program = fpga_setup::fpgaSetupACCL(*usedDevice,
-                                                    &programSettings->kernelFileName);
- #endif
+//                usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
+//                                                                    programSettings->defaultDevice);
+#ifdef USE_OCL_HOST
+//                context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
+//                program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
+//                                                                    &programSettings->kernelFileName);
+#endif
+#ifdef USE_ACCL
+                xrt::device dev;
+                xrt::uuid *program;
+                accl = fpga_setup::fpgaSetupACCL(dev, *program);
+#endif
             }
 
             executionSettings = std::unique_ptr<ExecutionSettings<TSettings, TDevice, TContext, TProgram>>(new ExecutionSettings<TSettings, TDevice, TContext, TProgram>(std::move(programSettings), std::move(usedDevice), 
-                                                                    std::move(context), std::move(program)));
+                                                                    std::move(context), std::move(program), std::move(accl)));
             if (mpi_comm_rank == 0) {
                 if (!checkInputParameters()) {
                     std::cerr << "ERROR: Input parameter check failed!" << std::endl;

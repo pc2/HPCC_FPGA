@@ -173,13 +173,4 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
     return static_cast<double>(global_max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
 }
 
-void
-transpose::TransposeBenchmark::setTransposeDataHandler(transpose::data_handler::DataHandlerType dataHandlerIdentifier) {
-    switch (dataHandlerIdentifier) {
-        case transpose::data_handler::DataHandlerType::diagonal: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler>(new transpose::data_handler::DistributedDiagonalTransposeDataHandler(mpi_comm_rank, mpi_comm_size)); break;
-        case transpose::data_handler::DataHandlerType::pq: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler>(new transpose::data_handler::DistributedPQTransposeDataHandler(mpi_comm_rank, mpi_comm_size, executionSettings->programSettings->p)); break;
-        default: throw std::runtime_error("Could not match selected data handler: " + transpose::data_handler::handlerToString(dataHandlerIdentifier));
-    }
-        
-
 }

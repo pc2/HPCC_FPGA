@@ -19,8 +19,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef SRC_HOST_FPGA_SETUP_ACCL_H_
-#define SRC_HOST_FPGA_SETUP_ACCL_H_
+#ifndef SRC_HOST_FPGA_SETUP_XRT_H_
+#define SRC_HOST_FPGA_SETUP_XRT_H_
 
 #include <string>
 #include <vector>
@@ -32,8 +32,7 @@ SOFTWARE.
 
 /* External libraries */
 #include "xrt/xrt_device.h"
-#include "accl.hpp"
-
+#include "xrt/xrt_kernel.h"
 
 namespace fpga_setup {
 
@@ -44,9 +43,24 @@ Sets up the given FPGA with the kernel in the provided file.
 @param usedKernelFile The path to the kernel file
 @return The ACCL instance used for communication
 */
-    std::unique_ptr<ACCL::ACCL>
-    fpgaSetupACCL(xrt::device &device,
-              xrt::uuid &program);
+    std::unique_ptr<xrt::uuid>
+    fpgaSetup(xrt::device &device,
+              const std::string &usedKernelFile);
+
+
+/**
+Searches an selects an FPGA device using the CL library functions.
+If multiple platforms or devices are given, the user will be prompted to
+choose a device.
+
+@param defaultDevice The index of the device that has to be used. If a
+                        value < 0 is given, the device can be chosen
+                        interactively
+
+@return the selected device
+*/
+    std::unique_ptr<xrt::device>
+    selectFPGADevice(int defaultDevice);
 
 }  // namespace fpga_setup
 #endif  // SRC_HOST_FPGA_SETUP_H_

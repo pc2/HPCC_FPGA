@@ -8,7 +8,7 @@ The program entry point
 int
 main(int argc, char *argv[]) {
     // Setup benchmark
-    TransposeBenchmark bm(argc, argv);
+    TransposeBenchmark<cl::Device, cl::Context, cl::Program> bm(argc, argv);
     bool success = bm.executeBenchmark();
     if (success) {
         return 0;

@@ -43,6 +43,7 @@ namespace data_handler {
  *          calculate the overall validation error.
  * 
  */
+template<class TDevice, class TContext, class TProgram>
 class TransposeDataHandler {
 
 protected:
@@ -68,7 +69,7 @@ public:
      * @return std::unique_ptr<TransposeData> The generated data
      */
     virtual std::unique_ptr<TransposeData>
-    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) = 0;
+    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, TDevice, TContext, TProgram>& settings) = 0;
 
     /**
      * @brief Exchange the data blocks for verification

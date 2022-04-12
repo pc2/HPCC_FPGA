@@ -26,5 +26,6 @@ SOFTWARE.
 #ifdef INTEL_FPGA
 #include "execution_types/execution_iec.hpp"
 #endif
-#endif
+#else
 #include "execution_types/execution_accl.hpp"
+#endif

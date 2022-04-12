@@ -46,12 +46,9 @@ namespace transpose {
  * @brief Implementation of the transpose benchmark
  * 
  */
+template<class TDevice, class TContext, class TProgram> 
 class TransposeBenchmark : 
-#ifndef USE_XRT_BINDINGS
-public hpcc_base::HpccFpgaBenchmark<TransposeProgramSettings,cl::Device, cl::Context, cl::Program, TransposeData, TransposeExecutionTimings> {
-#else
-// TODO initialize benchmark wth XRT bindings
-#endif
+public hpcc_base::HpccFpgaBenchmark<TransposeProgramSettings,TDevice, TContext, TProgram, TransposeData, TransposeExecutionTimings> {
 protected:
 
     /**
@@ -62,7 +59,7 @@ protected:
     void
     addAdditionalParseOptions(cxxopts::Options &options) override;
 
-    std::unique_ptr<transpose::data_handler::TransposeDataHandler> dataHandler;
+    std::unique_ptr<transpose::data_handler::TransposeDataHandler<TDevice, TContext, TProgram>> dataHandler;
 
 public:
 

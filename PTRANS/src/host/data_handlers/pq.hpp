@@ -52,7 +52,8 @@ static T mod(T number, T op) {
     return (result < 0 || result >= op) ? op + result : result;
 }
 
-class DistributedPQTransposeDataHandler : public TransposeDataHandler {
+template<class TDevice, class TContext, class TProgram>
+class DistributedPQTransposeDataHandler : public TransposeDataHandler<TDevice, TContext, TProgram> {
 
 private:
 
@@ -135,7 +136,7 @@ public:
      * @return std::unique_ptr<TransposeData> The generated data
      */
     std::unique_ptr<TransposeData>
-    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) override {
+    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, TDevice, TContext, TProgram>& settings) override {
         int width_in_blocks = settings.programSettings->matrixSize / settings.programSettings->blockSize;
         global_width = width_in_blocks;
 
@@ -384,7 +385,7 @@ public:
  * @param mpi_size Size of the communication world
  * @param p Width of the PQ grid the FPGAs are arranged in
  */
-    DistributedPQTransposeDataHandler(int mpi_rank, int mpi_size, int p) : TransposeDataHandler(mpi_rank, mpi_size) {
+    DistributedPQTransposeDataHandler(int mpi_rank, int mpi_size, int p) : TransposeDataHandler<TDevice, TContext, TProgram>(mpi_rank, mpi_size) {
         if (mpi_size % p != 0) {
             throw std::runtime_error("Number of MPI ranks must be multiple of P! P=" + std::to_string(p));
         }

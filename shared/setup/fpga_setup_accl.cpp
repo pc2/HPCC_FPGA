@@ -22,7 +22,7 @@ namespace fpga_setup {
 
     std::unique_ptr<ACCL::ACCL>
     fpgaSetupACCL(xrt::device &context,
-              const std::string *usedKernelFile) {
+              xrt::uuid &program) {
         int current_rank;
         MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
 
@@ -39,12 +39,6 @@ namespace fpga_setup {
         return std::unique_ptr<ACCL::ACCL>(new ACCL::ACCL(ranks, current_rank,
                           "tcp://localhost:" +
                             std::to_string(5500 + current_rank)));
-    }
-
-
-    std::unique_ptr<xrt::device>
-    selectFPGADevice(int defaultDevice) {
-        return std::unique_ptr<xrt::device>(nullptr);
     }
 
 }  // namespace fpga_setup

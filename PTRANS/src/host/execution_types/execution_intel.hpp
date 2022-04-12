@@ -43,7 +43,7 @@ namespace intel {
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
 static  std::unique_ptr<transpose::TransposeExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data) {
+    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, cl::Device, cl::Context, cl::Program>& config, transpose::TransposeData& data) {
         int err;
 
         if (config.programSettings->dataHandlerIdentifier != transpose::data_handler::DataHandlerType::diagonal) {
