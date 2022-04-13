@@ -498,22 +498,29 @@ public:
             std::unique_ptr<ACCL::ACCL> accl;
 #endif
             if (!programSettings->testOnly) {
-//                usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
-//                                                                    programSettings->defaultDevice);
+#ifdef USE_XRT_HOST
+                usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultDevice);
+                context = false;
+                program = fpga_setup::fpgaSetup(usedDevice);
+#endif                                                             
 #ifdef USE_OCL_HOST
-//                context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
-//                program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
-//                                                                    &programSettings->kernelFileName);
+                usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
+                                                                    programSettings->defaultDevice);
+                context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
+                program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
+                                                                    &programSettings->kernelFileName);
 #endif
 #ifdef USE_ACCL
-                xrt::device dev;
-                xrt::uuid *program;
-                accl = fpga_setup::fpgaSetupACCL(dev, *program);
+                accl = fpga_setup::fpgaSetupACCL(*usedDevice, *program);
 #endif
             }
 
             executionSettings = std::unique_ptr<ExecutionSettings<TSettings, TDevice, TContext, TProgram>>(new ExecutionSettings<TSettings, TDevice, TContext, TProgram>(std::move(programSettings), std::move(usedDevice), 
-                                                                    std::move(context), std::move(program), std::move(accl)));
+                                                                    std::move(context), std::move(program) 
+#ifdef USE_ACCL
+                                                                    , std::move(accl)
+#endif
+                                                                    ));
             if (mpi_comm_rank == 0) {
                 if (!checkInputParameters()) {
                     std::cerr << "ERROR: Input parameter check failed!" << std::endl;

@@ -101,7 +101,7 @@ Converts the reveived OpenCL error to a string
             CL_ERR_TO_STR(CL_INVALID_DEVICE_PARTITION_COUNT);
 
             default:
-                return "UNKNOWN ERROR CODE";
+                return "UNKNOWN ERROR CODE: " + std::to_string(err);
         }
     }
 

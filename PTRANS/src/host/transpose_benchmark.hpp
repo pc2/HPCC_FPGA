@@ -31,7 +31,6 @@ SOFTWARE.
 #include "parameters.h"
 #include "hpcc_benchmark.hpp"
 #include "transpose_data.hpp"
-
 #include "execution_types/execution_intel.hpp"
 #include "execution_types/execution_intel_pq.hpp"
 #include "execution_types/execution_pcie.hpp"
@@ -113,6 +112,7 @@ public:
     std::unique_ptr<TransposeExecutionTimings>
     executeKernel(TransposeData &data) override {
         switch (this->executionSettings->programSettings->communicationType) {
+#ifdef USE_OCL_HOST
             case hpcc_base::CommunicationType::intel_external_channels: 
                                     if (this->executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
                                         return transpose::fpga_execution::intel::calculate(*(this->executionSettings), data);
@@ -127,6 +127,7 @@ public:
                                     else {
                                         return transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
                                     } break;
+#endif
 #ifdef MKL_FOUND
             case hpcc_base::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*(this->executionSettings), data, *dataHandler); break;
 #endif

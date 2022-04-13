@@ -29,7 +29,7 @@ namespace fpga_setup {
         int current_size;
         MPI_Comm_size(MPI_COMM_WORLD, & current_size);
 
-        return std::unique_ptr<xrt::uuid>(new device.load_xclbin(kernelFileName));
+        return std::make_unique<xrt::uuid>(std::move(device.load_xclbin(kernelFileName)));
     }
 
     std::unique_ptr<xrt::device>
