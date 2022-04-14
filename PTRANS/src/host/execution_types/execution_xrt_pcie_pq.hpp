@@ -108,6 +108,9 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 xrt::bo bufferA(*config.device, data.A, data.numBlocks * data.blockSize * data.blockSize * 
                                 sizeof(HOST_DATA_TYPE), transposeKernel.group_id(0));
                 xrt::bo bufferB(*config.device, data.B + bufferStartList[r] * data.blockSize * data.blockSize, buffer_size * sizeof(HOST_DATA_TYPE), transposeKernel.group_id(1));
+                // TODO For small matrices, the 4KB alignment might fail for buffer B. Temporary fix seen in lines below (requires extra copying)
+                //xrt::bo bufferB(*config.device, buffer_size * sizeof(HOST_DATA_TYPE), transposeKernel.group_id(1));
+                //bufferB.write(data.B + bufferStartList[r] * data.blockSize * data.blockSize);
                 xrt::bo bufferA_out(*config.device, buffer_size * sizeof(HOST_DATA_TYPE), transposeKernel.group_id(2));
 
                 auto run = transposeKernel(bufferA, bufferB, bufferA_out, static_cast<cl_uint>(bufferOffsetList[r]),static_cast<cl_uint>(bufferOffsetList[r]),
@@ -159,9 +162,9 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
         auto startKernelCalculation = std::chrono::high_resolution_clock::now();
         for (int r = 0; r < transposeKernelList.size(); r++)
         {
-             runs.push_back(transposeKernelList[r](bufferListA[r], bufferListB[r], bufferListA_out[r], static_cast<cl_uint>(bufferOffsetList[r]),static_cast<cl_uint>(bufferOffsetList[r]),
+             runs.push_back(transposeKernelList[r](bufferListA[r], bufferListB[r], bufferListA_out[r], static_cast<cl_uint>(bufferStartList[r] + bufferOffsetList[r]),static_cast<cl_uint>(bufferOffsetList[r]),
                         static_cast<cl_uint>(blocksPerReplication[r]), static_cast<cl_uint>(handler.getWidthforRank()),
-                        static_cast<cl_uint>((bufferSizeList[r]) / (local_matrix_width * data.blockSize * data.blockSize))));
+                        static_cast<cl_uint>(handler.getHeightforRank())));
         }
         for (int r = 0; r < transposeKernelList.size(); r++)
         {
@@ -219,14 +222,6 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 transferTimings,
                 calculationTimings
         });
-
-        for (int i=0; i < local_matrix_height; i++) {
-            for (int j=0; j < local_matrix_width; j++) {
-                std::cout << data.result[i * local_matrix_width + j] << ",";
-            }
-            std::cout << std::endl; 
-        }
-        std::cout << std::endl; 
 
         return result;
     }
