@@ -15,6 +15,10 @@ if (USE_ACCL)
     target_include_directories(hpcc_fpga_base PRIVATE ${ACCL_INCLUDE_PATH})
     target_link_libraries(hpcc_fpga_base accl)
 endif()
+if (USE_XRT_HOST)
+    target_link_directories(hpcc_fpga_base PUBLIC ${XRT_SEARCH_PATH})
+    target_link_libraries(hpcc_fpga_base xrt_coreutil xrt_core)
+endif()
 
 find_package(OpenCL QUIET)
 

@@ -28,6 +28,9 @@ FpgaSetupException::what() const noexcept
     return error_message.c_str();
 }
 
+
+#ifdef USE_OCL_HOST
+
 OpenClException::OpenClException(std::string error_name)
     : FpgaSetupException("An OpenCL error occured: " + error_name) {}
 
@@ -178,37 +181,6 @@ Sets up the given FPGA with the kernel in the provided file.
     }
 
 /**
-Sets up the C++ environment by configuring std::cout and checking the clock
-granularity using bm_helper::checktick()
-*/
-    void
-    setupEnvironmentAndClocks() {
-        std::cout << std::setprecision(5) << std::scientific;
-
-        int world_rank = 0;
-
-#ifdef _USE_MPI_
-        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-#endif
-
-        if (world_rank == 0) {
-            std::cout << HLINE;
-            std::cout << "General setup:" << std::endl;
-
-            // Check clock granularity and output result
-            std::cout << "C++ high resolution clock is used." << std::endl;
-            std::cout << "The clock precision seems to be "
-                    << static_cast<double>
-                        (std::chrono::high_resolution_clock::period::num) /
-                        std::chrono::high_resolution_clock::period::den * 10e9
-                    << "ns" << std::endl;
-
-            std::cout << HLINE;
-        }
-    }
-
-
-/**
 Searches an selects an FPGA device using the CL library functions.
 If multiple platforms or devices are given, the user will be prompted to
 choose a device.
@@ -319,6 +291,38 @@ choose a device.
         }
 
         return std::unique_ptr<cl::Device>(new cl::Device(deviceList[chosenDeviceId]));
+    }
+
+
+#endif
+/**
+Sets up the C++ environment by configuring std::cout and checking the clock
+granularity using bm_helper::checktick()
+*/
+    void
+    setupEnvironmentAndClocks() {
+        std::cout << std::setprecision(5) << std::scientific;
+
+        int world_rank = 0;
+
+#ifdef _USE_MPI_
+        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+#endif
+
+        if (world_rank == 0) {
+            std::cout << HLINE;
+            std::cout << "General setup:" << std::endl;
+
+            // Check clock granularity and output result
+            std::cout << "C++ high resolution clock is used." << std::endl;
+            std::cout << "The clock precision seems to be "
+                    << static_cast<double>
+                        (std::chrono::high_resolution_clock::period::num) /
+                        std::chrono::high_resolution_clock::period::den * 10e9
+                    << "ns" << std::endl;
+
+            std::cout << HLINE;
+        }
     }
 
 }  // namespace fpga_setup

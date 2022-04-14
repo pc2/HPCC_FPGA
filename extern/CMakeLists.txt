@@ -55,17 +55,19 @@ if(NOT extern_cxxopts_POPULATED)
     EXCLUDE_FROM_ALL)
 endif()
 
+if (DEFINED USE_ACCL)
 # -------------------------------------------------------------------------------
 # ACCL Library
 FetchContent_Declare(
 	extern_accl
 
-	GIT_REPOSITORY	https://github.com/Mellich/ACCL.git
-	GIT_TAG		dev)
+    GIT_REPOSITORY	https://github.com/TristanLaan/ACCL.git
+	GIT_TAG		xrt_hardware_support)
 
 FetchContent_GetProperties(extern_accl)
 if(NOT extern_accl_POPULATED)
 	message(STATUS "Fetching mandatory build dependency ACCL")
 	FetchContent_Populate(extern_accl)
 	set(extern_accl_SOURCE_DIR ${extern_accl_SOURCE_DIR} PARENT_SCOPE)
+endif()
 endif()

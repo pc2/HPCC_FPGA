@@ -13,7 +13,8 @@
 
 /* External libraries */
 #include "parameters.h"
-#include "xrt.h"
+#include "experimental/xrt_ip.h"
+#include "xrt/xrt_kernel.h"
 #ifdef _USE_MPI_
 #include "mpi.h"
 #endif
@@ -38,9 +39,10 @@ namespace fpga_setup {
         }
 #ifdef ACCL_HARDWARE_SUPPORT
         auto cclo_ip = xrt::ip(device, program, "ccl_offload:{ccl_offload_" + std::to_string(0) + "}");
-        auto hostctl_ip = xrt::kernel(device, program, "hostctrl:{hostctrl_" + std::to_string(0) + "}",
+        auto hostctrl_ip = xrt::kernel(device, program, "hostctrl:{hostctrl_" + std::to_string(0) + "}",
                 xrt::kernel::cu_access_mode::exclusive);
-        return std::unique_ptr<ACCL::ACCL>(new ACCL::ACCL(ranks, rank, device, cclo_ip, hostctrl_ip, 0, {0}, 0);
+        std::vector<int> mem(1,0);
+        return std::unique_ptr<ACCL::ACCL>(new ACCL::ACCL(ranks, current_rank, device, cclo_ip, hostctrl_ip, 0, mem, 0));
 #else
                 // TODO: Add start port here. Currenty hardcoded!
         return std::unique_ptr<ACCL::ACCL>(new ACCL::ACCL(ranks, current_rank,

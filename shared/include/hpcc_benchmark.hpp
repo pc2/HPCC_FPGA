@@ -38,6 +38,9 @@ SOFTWARE.
 #ifdef USE_ACCL
 #include "setup/fpga_setup_accl.hpp"
 #endif
+#ifdef USE_XRT_HOST
+#include "setup/fpga_setup_xrt.hpp"
+#endif
 #include "setup/fpga_setup.hpp"
 #include "cxxopts.hpp"
 #include "parameters.h"
@@ -500,8 +503,8 @@ public:
             if (!programSettings->testOnly) {
 #ifdef USE_XRT_HOST
                 usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultDevice);
-                context = false;
-                program = fpga_setup::fpgaSetup(usedDevice);
+                context = std::unique_ptr<bool>(new bool(false));
+                program = fpga_setup::fpgaSetup(*usedDevice, programSettings->kernelFileName);
 #endif                                                             
 #ifdef USE_OCL_HOST
                 usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
@@ -511,7 +514,7 @@ public:
                                                                     &programSettings->kernelFileName);
 #endif
 #ifdef USE_ACCL
-                accl = fpga_setup::fpgaSetupACCL(*usedDevice, *program);
+                //accl = fpga_setup::fpgaSetupACCL(*usedDevice, *program);
 #endif
             }
 
@@ -696,9 +699,13 @@ std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings, TDevice,
         std::string device_name;
         os << std::left;
         if (!printedExecutionSettings.programSettings->testOnly) {
-#ifndef USE_ACCL
+#ifdef USE_OCL_HOST
 		printedExecutionSettings.device->getInfo(CL_DEVICE_NAME, &device_name);
 #endif
+#ifdef USE_XRT_HOST
+		device_name = printedExecutionSettings.device->template get_info<xrt::info::device::name>();
+#endif
+
 	}
         else {
             device_name = "TEST RUN: Not selected!";

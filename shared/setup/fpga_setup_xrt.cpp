@@ -14,6 +14,7 @@
 /* External libraries */
 #include "parameters.h"
 
+#include "xrt.h"
 #ifdef _USE_MPI_
 #include "mpi.h"
 #endif
@@ -22,14 +23,14 @@ namespace fpga_setup {
 
     std::unique_ptr<xrt::uuid>
     fpgaSetup(xrt::device &device,
-              std::string &kernelFileName) {
+              const std::string &kernelFileName) {
         int current_rank;
         MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
 
         int current_size;
         MPI_Comm_size(MPI_COMM_WORLD, & current_size);
 
-        return std::make_unique<xrt::uuid>(std::move(device.load_xclbin(kernelFileName)));
+        return std::unique_ptr<xrt::uuid>(new xrt::uuid(device.load_xclbin(kernelFileName)));
     }
 
     std::unique_ptr<xrt::device>
