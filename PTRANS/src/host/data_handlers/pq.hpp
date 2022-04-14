@@ -136,7 +136,7 @@ public:
      * @param settings The execution settings that contain information about the data size
      * @return std::unique_ptr<TransposeData> The generated data
      */
-    std::unique_ptr<TransposeData>
+    std::unique_ptr<TransposeData<TContext>>
     generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, TDevice, TContext, TProgram>& settings) override {
         int width_in_blocks = settings.programSettings->matrixSize / settings.programSettings->blockSize;
         global_width = width_in_blocks;
@@ -165,15 +165,15 @@ public:
         }
         
         // Allocate memory for a single device and all its memory banks
-        auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
+        auto d = std::unique_ptr<transpose::TransposeData<TContext>>(new transpose::TransposeData<TContext>(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
 
         // Fill the allocated memory with pseudo random values
         std::mt19937 gen(this->mpi_comm_rank);
         std::uniform_real_distribution<> dis(-100.0, 100.0);
         for (size_t i = 0; i < blocks_per_rank * settings.programSettings->blockSize; i++) {
             for (size_t j = 0; j < settings.programSettings->blockSize; j++) {
-                d->A[i * settings.programSettings->blockSize + j] = dis(gen);
-                d->B[i * settings.programSettings->blockSize + j] = dis(gen);
+                d->A[i * settings.programSettings->blockSize + j] = i * settings.programSettings->blockSize + j;//dis(gen);
+                d->B[i * settings.programSettings->blockSize + j] = 0.0; //dis(gen);
                 d->result[i * settings.programSettings->blockSize + j] = 0.0;
             }
         }
@@ -188,7 +188,7 @@ public:
      *              Exchanged data will be stored in the same object.
      */
     void
-    exchangeData(TransposeData& data) override {
+    exchangeData(TransposeData<TContext>& data) override {
 
         MPI_Status status;     
 
@@ -371,7 +371,7 @@ public:
     }
 
     void 
-    reference_transpose(TransposeData& data) {
+    reference_transpose(TransposeData<TContext>& data) {
         for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
             for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
                 data.A[i * height_per_rank * data.blockSize + j] -= (data.result[j * width_per_rank * data.blockSize + i] - data.B[j * width_per_rank * data.blockSize + i]);

@@ -31,10 +31,18 @@ SOFTWARE.
 #include "parameters.h"
 #include "hpcc_benchmark.hpp"
 #include "transpose_data.hpp"
+#ifdef USE_OCL_HOST
 #include "execution_types/execution_intel.hpp"
 #include "execution_types/execution_intel_pq.hpp"
 #include "execution_types/execution_pcie.hpp"
 #include "execution_types/execution_pcie_pq.hpp"
+#endif
+#ifdef USE_XRT_HOST
+#include "execution_types/execution_xrt_pcie_pq.hpp"
+#ifdef USE_ACCL
+#include "execution_types/execution_xrt_accl_pq.hpp"
+#endif
+#endif
 #include "execution_types/execution_cpu.hpp"
 #include "communication_types.hpp"
 
@@ -54,7 +62,7 @@ namespace transpose {
  */
 template<class TDevice, class TContext, class TProgram> 
 class TransposeBenchmark : 
-public hpcc_base::HpccFpgaBenchmark<TransposeProgramSettings,TDevice, TContext, TProgram, TransposeData, TransposeExecutionTimings> {
+public hpcc_base::HpccFpgaBenchmark<TransposeProgramSettings,TDevice, TContext, TProgram, TransposeData<TContext>, TransposeExecutionTimings> {
 protected:
 
     /**
@@ -85,7 +93,7 @@ public:
      * 
      * @return std::unique_ptr<TransposeData> The input and output data of the benchmark
      */
-    std::unique_ptr<TransposeData>
+    std::unique_ptr<TransposeData<TContext>>
     generateInputData() override {
         return this->dataHandler->generateData(*(this->executionSettings));
     }
@@ -110,7 +118,7 @@ public:
      * @return std::unique_ptr<TransposeExecutionTimings> Measured runtimes of the kernel execution
      */
     std::unique_ptr<TransposeExecutionTimings>
-    executeKernel(TransposeData &data) override {
+    executeKernel(TransposeData<TContext> &data) override {
         switch (this->executionSettings->programSettings->communicationType) {
 #ifdef USE_OCL_HOST
             case hpcc_base::CommunicationType::intel_external_channels: 
@@ -128,6 +136,14 @@ public:
                                         return transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
                                     } break;
 #endif
+#ifdef USE_XRT_HOST
+            case hpcc_base::CommunicationType::pcie_mpi:
+                                    return transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
+#ifdef USE_ACCL
+            case hpcc_base::CommunicationType::accl:
+                                    return transpose::fpga_execution::accl_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
+#endif
+#endif
 #ifdef MKL_FOUND
             case hpcc_base::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*(this->executionSettings), data, *dataHandler); break;
 #endif
@@ -143,7 +159,7 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(TransposeData &data) override {
+    validateOutputAndPrintError(TransposeData<TContext> &data) override {
 
         // exchange the data using MPI depending on the chosen distribution scheme
         this->dataHandler->exchangeData(data);
@@ -152,7 +168,7 @@ public:
 
         double max_error = 0.0;
         for (size_t i = 0; i < this->executionSettings->programSettings->blockSize * this->executionSettings->programSettings->blockSize * data.numBlocks; i++) {
-            max_error = std::max(fabs(data.A[i]), max_error);
+            max_error = std::max(std::abs<double>(data.A[i]), max_error);
         }
 
         double global_max_error = 0;
@@ -229,7 +245,7 @@ public:
      * @param argc the number of program input parameters
      * @param argv the program input parameters as array of strings
      */
-    TransposeBenchmark(int argc, char* argv[]) : hpcc_base::HpccFpgaBenchmark<transpose::TransposeProgramSettings,TDevice, TContext, TProgram, transpose::TransposeData, transpose::TransposeExecutionTimings>(argc, argv) {
+    TransposeBenchmark(int argc, char* argv[]) : hpcc_base::HpccFpgaBenchmark<transpose::TransposeProgramSettings,TDevice, TContext, TProgram, transpose::TransposeData<TContext>, transpose::TransposeExecutionTimings>(argc, argv) {
         if (this->setupBenchmark(argc, argv)) {
             this->setTransposeDataHandler(this->executionSettings->programSettings->dataHandlerIdentifier);
         }
@@ -238,7 +254,7 @@ public:
     /**
      * @brief Construct a new Transpose Benchmark object
      */
-    TransposeBenchmark() : hpcc_base::HpccFpgaBenchmark<transpose::TransposeProgramSettings,TDevice, TContext, TProgram, transpose::TransposeData, transpose::TransposeExecutionTimings>() {}
+    TransposeBenchmark() : hpcc_base::HpccFpgaBenchmark<transpose::TransposeProgramSettings,TDevice, TContext, TProgram, transpose::TransposeData<TContext>, transpose::TransposeExecutionTimings>() {}
 
 };
 

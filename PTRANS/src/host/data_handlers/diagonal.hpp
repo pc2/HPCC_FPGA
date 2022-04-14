@@ -69,7 +69,7 @@ public:
      * @param settings The execution settings that contain information about the data size
      * @return std::unique_ptr<TransposeData> The generated data
      */
-    std::unique_ptr<TransposeData>
+    std::unique_ptr<TransposeData<TContext>>
     generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, TDevice, TContext, TProgram>& settings) override {
         MPI_Type_contiguous(settings.programSettings->blockSize * settings.programSettings->blockSize, MPI_FLOAT, &data_block);
         MPI_Type_commit(&data_block);
@@ -119,7 +119,7 @@ public:
     #endif
         
         // Allocate memory for a single device and all its memory banks
-        auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
+        auto d = std::unique_ptr<transpose::TransposeData<TContext>>(new transpose::TransposeData<TContext>(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
 
         // Fill the allocated memory with pseudo random values
         std::mt19937 gen(this->mpi_comm_rank);
@@ -142,7 +142,7 @@ public:
      *              Exchanged data will be stored in the same object.
      */
     void
-    exchangeData(TransposeData& data) override {
+    exchangeData(TransposeData<TContext>& data) override {
 
     #ifndef NDEBUG
         // std::cout << "Start data exchange " << mpi_comm_rank << std::endl;
@@ -185,7 +185,7 @@ public:
     }
 
     void 
-    reference_transpose(TransposeData& data) {
+    reference_transpose(TransposeData<TContext>& data) {
         size_t block_offset = data.blockSize * data.blockSize;
         for (size_t b = 0; b < data.numBlocks; b++) {
             for (size_t i = 0; i < data.blockSize; i++) {
