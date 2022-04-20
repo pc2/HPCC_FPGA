@@ -39,7 +39,7 @@ SOFTWARE.
 #endif
 
 #include "parameters.h"
-#include "linpack_benchmark.hpp"
+#include "linpack_data.hpp"
 
 namespace linpack {
 namespace execution {
@@ -50,8 +50,9 @@ namespace pcie {
 
  @copydoc bm_execution::calculate()
 */
+template<class TDevice, class TContext, class TProgram>
 std::unique_ptr<linpack::LinpackExecutionTimings>
-calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings>&config,
+calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings, TDevice, TContext, TProgram>&config,
           linpack::LinpackData& data) {
 
     cl_int err;

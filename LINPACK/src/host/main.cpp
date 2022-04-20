@@ -12,7 +12,7 @@ The program entry point
 int
 main(int argc, char *argv[]) {
     // Setup benchmark
-    LinpackBenchmark bm(argc, argv);
+    LinpackBenchmark<cl::Device, cl::Context, cl::Program> bm(argc, argv);
     bool success = bm.executeBenchmark();
     if (success) {
         return 0;
