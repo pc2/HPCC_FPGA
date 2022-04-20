@@ -61,8 +61,8 @@ if (DEFINED USE_ACCL)
 FetchContent_Declare(
 	extern_accl
 
-    GIT_REPOSITORY	https://github.com/Xilinx/ACCL.git
-	GIT_TAG		dev)
+    GIT_REPOSITORY	https://github.com/TristanLaan/ACCL.git
+	GIT_TAG		simbuffer_bo_constructor)
 
 FetchContent_GetProperties(extern_accl)
 if(NOT extern_accl_POPULATED)
