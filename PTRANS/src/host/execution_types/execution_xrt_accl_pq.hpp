@@ -28,13 +28,207 @@ SOFTWARE.
 #include <chrono>
 
 /* Project's headers */
+#include "buffer.hpp"
+#include "cclo.hpp"
+#include "constants.hpp"
+#include "fpgabuffer.hpp"
 #include "transpose_benchmark.hpp"
 #include "data_handlers/data_handler_types.h"
 #include "data_handlers/pq.hpp"
+#include "transpose_data.hpp"
 
 namespace transpose {
 namespace fpga_execution {
 namespace accl_pq {
+
+    void accl_exchangeData(ACCL::ACCL &accl, transpose::data_handler::DistributedPQTransposeDataHandler<xrt::device, bool, xrt::uuid> &handler,
+                            transpose::TransposeData<bool> & data, xrt::bo bufferAXrt, int global_width) {
+       
+        int pq_width = handler.getP();
+        int pq_height = handler.getQ();
+        int width_per_rank = handler.getWidthforRank();
+        int height_per_rank = handler.getHeightforRank();
+        MPI_Datatype data_block;
+        MPI_Type_vector(data.blockSize,data.blockSize,(handler.getWidthforRank() - 1)*data.blockSize, MPI_FLOAT, &data_block);
+        MPI_Type_commit(&data_block);
+
+        int mpi_comm_rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
+        int pq_row = mpi_comm_rank / pq_width;
+        int pq_col = mpi_comm_rank % pq_width;
+ 
+        auto AcclBufferA = ACCL::FPGABuffer<HOST_DATA_TYPE>(bufferAXrt, data.blockSize * data.blockSize * data.numBlocks * sizeof(HOST_DATA_TYPE), ACCL::dataType::float32, true, data.A);
+
+        if (pq_width == pq_height) {
+            if (pq_col != pq_row) {
+
+                int pair_rank = pq_width * pq_col + pq_row;
+
+                // To re-calculate the matrix transposition locally on this host, we need to 
+                // exchange matrix A for every kernel replication
+                // The order of the matrix blocks does not change during the exchange, because they are distributed diagonally 
+                // and will be handled in the order below:
+                //
+                // . . 1 3
+                // . . . 2
+                // 1 . . .
+                // 3 2 . .
+                auto AcclBufferA_recv = accl.create_buffer(data.exchange, data.blockSize * data.blockSize * data.numBlocks * sizeof(HOST_DATA_TYPE), ACCL::dataType::float32); 
+
+                // Send and receive matrix A using ACCL directly on FPGA 
+                auto send = accl.send(0, AcclBufferA, data.blockSize * data.blockSize * data.numBlocks, pair_rank, 0,true,ACCL::streamFlags::NO_STREAM, true);
+                accl.recv(0, *AcclBufferA_recv, data.blockSize * data.blockSize * data.numBlocks, pair_rank, 0, true, ACCL::streamFlags::NO_STREAM);
+                send->wait();
+                // Copy received matrix from receiving buffer to A buffer completely on FPGA
+                accl.copy(*AcclBufferA_recv, AcclBufferA, data.blockSize * data.blockSize * data.numBlocks, true, true); 
+            }
+        }
+        else {
+            // Taken from "Parallel matrix transpose algorithms on distributed memory concurrent computers" by J. Choi, J. J. Dongarra, D. W. Walker
+            // and translated to C++
+            // This will do a diagonal exchange of matrix blocks.
+
+            // Determine LCM using GCD from standard library using the C++14 call
+            // In C++17 this changes to std::gcd in numeric, also std::lcm is directly available in numeric
+            int gcd = std::__gcd(pq_height, pq_width);
+            int least_common_multiple = pq_height * pq_width / gcd;
+
+            // If the global matrix size is not a multiple of the LCM block size, the numbers of send and received blocks
+            // may be wrongly calculated. Throw exception to prevent this and make aware of this issue!
+            if (global_width % least_common_multiple > 0) {
+                throw std::runtime_error("Implementation does not support matrix sizes that are not multiple of LCM blocks! Results may be wrong!");
+            }
+
+            // MPI requests for non-blocking communication
+            // First half of vector is for Isend, second half for Irecv!
+            std::vector<ACCL::CCLO*> accl_requests(2 * gcd);
+
+            // Begin algorithm from Figure 14 for general case
+            int g = transpose::data_handler::mod(pq_row - pq_col, gcd);
+            int p = transpose::data_handler::mod(pq_col + g, pq_width);
+            int q = transpose::data_handler::mod(pq_row - g, pq_height);
+
+            // Pre-calculate target ranks in LCM block
+            // The vector list variable can be interpreted as 2D matrix. Every entry represents the target rank of the sub-block
+            // Since the LCM block will repeat, we only need to store this small amount of data!
+            std::vector<int> target_list(least_common_multiple/pq_height * least_common_multiple/pq_width);
+            for (int row = 0; row  < least_common_multiple/pq_height; row++) {
+                for (int col = 0; col  < least_common_multiple/pq_width; col++) {
+                    int global_block_col = pq_col + col * pq_width;
+                    int global_block_row = pq_row + row * pq_height;
+                    int destination_rank = (global_block_col % pq_height) * pq_width + (global_block_row % pq_width);
+                    target_list[row * least_common_multiple/pq_width + col] = destination_rank;
+                }
+            }
+
+            // Create some ACCL buffers to send and receive from other FPGAs
+            // They can reside completely on FPGA
+            std::vector<std::unique_ptr<ACCL::BaseBuffer>> send_buffers;
+            std::vector<std::unique_ptr<ACCL::BaseBuffer>> recv_buffers;
+            for (int i = 0; i < gcd; i++) {
+                // TODO Is there a way to initialize buffer only in FPGA memory with ACCL?
+                send_buffers.push_back(accl.create_buffer<HOST_DATA_TYPE>(data.blockSize * data.blockSize * data.numBlocks * sizeof(HOST_DATA_TYPE), ACCL::dataType::float32)); 
+                recv_buffers.push_back(accl.create_buffer<HOST_DATA_TYPE>(data.blockSize * data.blockSize * data.numBlocks * sizeof(HOST_DATA_TYPE), ACCL::dataType::float32)); 
+            }
+            int current_parallel_execution = 0;
+            for (int j = 0; j < least_common_multiple/pq_width; j++) {
+                for (int i = 0; i < least_common_multiple/pq_height; i++) {
+                    // Determine sender and receiver rank of current rank for current communication step
+                    int send_rank = transpose::data_handler::mod(p + i * gcd, pq_width) + transpose::data_handler::mod(q - j * gcd, pq_height) * pq_width;
+                    int recv_rank = transpose::data_handler::mod(p - i * gcd, pq_width) + transpose::data_handler::mod(q + j * gcd, pq_height) * pq_width;
+
+                    // Also count receiving buffer size because sending and receiving buffer size may differ in certain scenarios!
+                    int receiving_size = 0;
+                    int sending_size = 0;
+
+                    std::vector<int> send_rows;
+                    std::vector<int> send_cols;
+                    // Look up which blocks are affected by the current rank
+                    for (int row = 0; row  < least_common_multiple/pq_height; row++) {
+                        for (int col = 0; col  < least_common_multiple/pq_width; col++) {
+                            if (target_list[row * least_common_multiple/pq_width + col] == send_rank) {
+                                send_rows.push_back(row);
+                                send_cols.push_back(col);
+                                sending_size += data.blockSize * data.blockSize;
+                            }
+                            if (target_list[row * least_common_multiple/pq_width + col] == recv_rank) {
+                                receiving_size += data.blockSize * data.blockSize;
+                            }
+                        }
+                    }
+                    receiving_size *= (height_per_rank)/(least_common_multiple/pq_height) * ((width_per_rank)/(least_common_multiple/pq_width));
+                    sending_size *= (height_per_rank)/(least_common_multiple/pq_height) * ((width_per_rank)/(least_common_multiple/pq_width));
+
+                    // Copy the required date for this communication step to the send buffer!
+                    for (int t=0; t < send_rows.size(); t++) {
+                        for (int lcm_row = 0; lcm_row < (height_per_rank)/(least_common_multiple/pq_height); lcm_row++) {
+                            for (int lcm_col = 0; lcm_col < (width_per_rank)/(least_common_multiple/pq_width); lcm_col++) {
+                                size_t sending_buffer_offset = lcm_row * data.blockSize * data.blockSize * ((width_per_rank)/(least_common_multiple/pq_width)) + lcm_col * data.blockSize * data.blockSize;
+                                size_t matrix_buffer_offset = (send_cols[t] + lcm_col * least_common_multiple/pq_width)  * data.blockSize + (send_rows[t] + lcm_row * least_common_multiple/pq_height) * width_per_rank * data.blockSize * data.blockSize;
+                                for (int block_row = 0; block_row < data.blockSize; block_row++) {
+                                    // TODO May be more efficient when done async!
+                                    accl.copy(*AcclBufferA.slice(matrix_buffer_offset + block_row * width_per_rank * data.blockSize, matrix_buffer_offset + block_row * width_per_rank * data.blockSize + data.blockSize),*send_buffers[current_parallel_execution]->slice(sending_buffer_offset, sending_buffer_offset + data.blockSize),data.blockSize, true, true);
+                                }
+                            }
+                        }
+                    }
+
+                    // Do actual MPI communication
+#ifndef NDEBUG
+                    std::cout << "Rank " << mpi_comm_rank << ": blocks (" << sending_size / (data.blockSize * data.blockSize) << "," << receiving_size / (data.blockSize * data.blockSize) << ") send " << send_rank << ", recv " << recv_rank << std::endl << std::flush;
+#endif
+                    accl_requests[current_parallel_execution] = (accl.send(0, *send_buffers[current_parallel_execution], sending_size, send_rank, 0, false, ACCL::streamFlags::NO_STREAM, true));
+                    accl_requests[current_parallel_execution] = (accl.recv(0, *recv_buffers[current_parallel_execution], sending_size, send_rank, 0, false, ACCL::streamFlags::NO_STREAM, true));
+                    // Increase the counter for parallel executions
+                    current_parallel_execution = (current_parallel_execution + 1) % gcd;
+
+                    // Wait for MPI requests if GCD MPI calls are scheduled in parallel
+                    if ((current_parallel_execution) % gcd == 0) {
+
+
+                        for (auto& req :accl_requests) {
+                        
+                            MPI_Status status;
+                            int index;
+
+                            // Wait for all send and recv events to complete
+                            // TODO do the CCLO pointers need to be freed?
+                            accl.nop(false, accl_requests);
+                            // For each message that was received in parallel
+                            if (index >= gcd) {
+                                std::vector<int> recv_rows;
+                                std::vector<int> recv_cols;
+                                // Look up which blocks are affected by the current rank
+                                for (int row = 0; row  < least_common_multiple/pq_height; row++) {
+                                    for (int col = 0; col  < least_common_multiple/pq_width; col++) {
+                                        if (target_list[row * least_common_multiple/pq_width + col] == status.MPI_SOURCE) {
+                                            recv_rows.push_back(row);
+                                            recv_cols.push_back(col);
+                                        }
+                                    }
+                                }
+                                // Copy received data to matrix A buffer
+                                for (int t=0; t < recv_rows.size(); t++) {
+                                    for (int lcm_row = 0; lcm_row < (height_per_rank)/(least_common_multiple/pq_height); lcm_row++) {
+                                        for (int lcm_col = 0; lcm_col < (width_per_rank)/(least_common_multiple/pq_width); lcm_col++) {
+                                            size_t receiving_buffer_offset = lcm_row * data.blockSize * data.blockSize * ((width_per_rank)/(least_common_multiple/pq_width)) + lcm_col * data.blockSize * data.blockSize;
+                                            size_t matrix_buffer_offset = (recv_cols[t] + lcm_col * least_common_multiple/pq_width)  * data.blockSize + (recv_rows[t] + lcm_row * least_common_multiple/pq_height) * width_per_rank * data.blockSize * data.blockSize;
+                                            for (int block_row = 0; block_row < data.blockSize; block_row++) {
+                                                // TODO May be more efficient when done async!
+                                                accl.copy(*recv_buffers[current_parallel_execution]->slice(receiving_buffer_offset, receiving_buffer_offset + data.blockSize),*AcclBufferA.slice(matrix_buffer_offset + block_row * width_per_rank * data.blockSize, matrix_buffer_offset + block_row * width_per_rank * data.blockSize + data.blockSize), data.blockSize, true, true);
+
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } 
+                }
+            }
+        }
+    }
+
 
     /**
  * @brief Transpose and add the matrices using the OpenCL kernel using a PQ distribution and PCIe+MPI over the host for communication
@@ -97,22 +291,13 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 
                 total_offset += (bufferOffsetList.back() + blocks_per_replication) / local_matrix_width * local_matrix_width;
 
-                int memory_bank_info_a = 0;
-                int memory_bank_info_b = 0;
-                int memory_bank_info_out = 0;
-                
                 // create the kernels
                 xrt::kernel transposeKernel(*config.device, *config.program, ("transpose0:{transpose0_" +  std::to_string(r + 1) + "}").c_str());
 
-               
                 xrt::bo bufferA(*config.device, data.A, data.numBlocks * data.blockSize * data.blockSize * 
                                 sizeof(HOST_DATA_TYPE), transposeKernel.group_id(0));
                 xrt::bo bufferB(*config.device, data.B + bufferStartList[r] * data.blockSize * data.blockSize, buffer_size * sizeof(HOST_DATA_TYPE), transposeKernel.group_id(1));
                 xrt::bo bufferA_out(*config.device, buffer_size * sizeof(HOST_DATA_TYPE), transposeKernel.group_id(2));
-
-                auto run = transposeKernel(bufferA, bufferB, bufferA_out, static_cast<cl_uint>(bufferOffsetList[r]),static_cast<cl_uint>(bufferOffsetList[r]),
-                        static_cast<cl_uint>(blocks_per_replication), static_cast<cl_uint>(handler.getWidthforRank()),
-                        static_cast<cl_uint>((bufferSizeList[r]) / (local_matrix_width * data.blockSize * data.blockSize)));
 
                 bufferListA.push_back(bufferA);
                 bufferListB.push_back(bufferB);
@@ -141,33 +326,26 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 
             auto startCalculation = std::chrono::high_resolution_clock::now();
 
+
+            // Exchange A data via ACCL
+            if (bufferListA.size() > 1) {
+                std::cerr << "WARNING: Only the matrix A of the first kernel replication will be exchanged via ACCL!" << std::endl;
+            }
+            accl_exchangeData(*config.accl, handler, data, bufferListA[0], config.programSettings->matrixSize / data.blockSize);
+
+            std::vector<xrt::run> runs;
+            auto startKernelCalculation = std::chrono::high_resolution_clock::now();
             for (int r = 0; r < transposeKernelList.size(); r++)
             {
-                bufferListA[r].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+                 runs.push_back(transposeKernelList[r](bufferListA[r], bufferListB[r], bufferListA_out[r], static_cast<cl_uint>(bufferOffsetList[r]),static_cast<cl_uint>(bufferOffsetList[r]),
+                            static_cast<cl_uint>(blocksPerReplication[r]), static_cast<cl_uint>(handler.getWidthforRank()),
+                            static_cast<cl_uint>((bufferSizeList[r]) / (local_matrix_width * data.blockSize * data.blockSize))));
             }
-
-
-        // Exchange A data via PCIe and MPI
-        handler.exchangeData(data);
-
-        for (int r = 0; r < transposeKernelList.size(); r++)
-        {
-            bufferListA[r].sync(XCL_BO_SYNC_BO_TO_DEVICE);
-        }
-
-        std::vector<xrt::run> runs;
-        auto startKernelCalculation = std::chrono::high_resolution_clock::now();
-        for (int r = 0; r < transposeKernelList.size(); r++)
-        {
-             runs.push_back(transposeKernelList[r](bufferListA[r], bufferListB[r], bufferListA_out[r], static_cast<cl_uint>(bufferOffsetList[r]),static_cast<cl_uint>(bufferOffsetList[r]),
-                        static_cast<cl_uint>(blocksPerReplication[r]), static_cast<cl_uint>(handler.getWidthforRank()),
-                        static_cast<cl_uint>((bufferSizeList[r]) / (local_matrix_width * data.blockSize * data.blockSize))));
-        }
-        for (int r = 0; r < transposeKernelList.size(); r++)
-        {
-            runs[r].wait();
-        }
-        auto endCalculation = std::chrono::high_resolution_clock::now();
+            for (int r = 0; r < transposeKernelList.size(); r++)
+            {
+                runs[r].wait();
+            }
+            auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
                 int mpi_rank;
                 MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
@@ -176,9 +354,6 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                         << "s (" << ((config.programSettings->matrixSize * config.programSettings->matrixSize * sizeof(HOST_DATA_TYPE) * 3) 
                                 / std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startKernelCalculation).count() * 1.0e-9) << " GB/s)" << std::endl;
 #endif
-
-        // Transfer back data for next repetition!
-        handler.exchangeData(data);
 
             std::chrono::duration<double> calculationTime =
                     std::chrono::duration_cast<std::chrono::duration<double>>

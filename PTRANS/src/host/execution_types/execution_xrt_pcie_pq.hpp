@@ -113,10 +113,6 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                 //bufferB.write(data.B + bufferStartList[r] * data.blockSize * data.blockSize);
                 xrt::bo bufferA_out(*config.device, buffer_size * sizeof(HOST_DATA_TYPE), transposeKernel.group_id(2));
 
-                auto run = transposeKernel(bufferA, bufferB, bufferA_out, static_cast<cl_uint>(bufferOffsetList[r]),static_cast<cl_uint>(bufferOffsetList[r]),
-                        static_cast<cl_uint>(blocks_per_replication), static_cast<cl_uint>(handler.getWidthforRank()),
-                        static_cast<cl_uint>((bufferSizeList[r]) / (local_matrix_width * data.blockSize * data.blockSize)));
-
                 bufferListA.push_back(bufferA);
                 bufferListB.push_back(bufferB);
                 bufferListA_out.push_back(bufferA_out);

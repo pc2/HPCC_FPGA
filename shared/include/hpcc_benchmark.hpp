@@ -514,7 +514,7 @@ public:
                                                                     &programSettings->kernelFileName);
 #endif
 #ifdef USE_ACCL
-                //accl = fpga_setup::fpgaSetupACCL(*usedDevice, *program);
+                accl = fpga_setup::fpgaSetupACCL(*usedDevice, *program);
 #endif
             }
 

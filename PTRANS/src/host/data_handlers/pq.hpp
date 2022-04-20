@@ -130,6 +130,14 @@ public:
         return height_per_rank;
     }
 
+    int getP() {
+        return pq_width;
+    }
+
+    int getQ() {
+        return pq_height;
+    }
+
     /**
      * @brief Generate data for transposition based on the implemented distribution scheme
      * 
