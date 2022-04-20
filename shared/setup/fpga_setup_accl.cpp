@@ -46,8 +46,7 @@ namespace fpga_setup {
 #else
                 // TODO: Add start port here. Currenty hardcoded!
         return std::unique_ptr<ACCL::ACCL>(new ACCL::ACCL(ranks, current_rank,
-                          "tcp://localhost:" +
-                            std::to_string(5500 + current_rank)));
+                            5500));
 #endif
         }
 
