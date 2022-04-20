@@ -48,17 +48,14 @@ namespace accl_pq {
         int pq_height = handler.getQ();
         int width_per_rank = handler.getWidthforRank();
         int height_per_rank = handler.getHeightforRank();
-        MPI_Datatype data_block;
-        MPI_Type_vector(data.blockSize,data.blockSize,(handler.getWidthforRank() - 1)*data.blockSize, MPI_FLOAT, &data_block);
-        MPI_Type_commit(&data_block);
 
         int mpi_comm_rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &mpi_comm_rank);
         int pq_row = mpi_comm_rank / pq_width;
         int pq_col = mpi_comm_rank % pq_width;
  
-        auto AcclBufferA = ACCL::FPGABuffer<HOST_DATA_TYPE>(bufferAXrt, data.blockSize * data.blockSize * data.numBlocks * sizeof(HOST_DATA_TYPE), ACCL::dataType::float32, true, data.A);
-
+        auto AcclBufferA = accl.create_buffer<HOST_DATA_TYPE>(bufferAXrt, data.blockSize * data.blockSize * data.numBlocks, ACCL::dataType::float32);
+        
         if (pq_width == pq_height) {
             if (pq_col != pq_row) {
 
@@ -73,14 +70,14 @@ namespace accl_pq {
                 // . . . 2
                 // 1 . . .
                 // 3 2 . .
-                auto AcclBufferA_recv = accl.create_buffer(data.exchange, data.blockSize * data.blockSize * data.numBlocks * sizeof(HOST_DATA_TYPE), ACCL::dataType::float32); 
+                auto AcclBufferA_recv = accl.create_buffer(data.exchange, data.blockSize * data.blockSize * data.numBlocks, ACCL::dataType::float32); 
 
                 // Send and receive matrix A using ACCL directly on FPGA 
-                auto send = accl.send(0, AcclBufferA, data.blockSize * data.blockSize * data.numBlocks, pair_rank, 0,true,ACCL::streamFlags::NO_STREAM, true);
+                auto send = accl.send(0, *AcclBufferA, data.blockSize * data.blockSize * data.numBlocks, pair_rank, 0,true,ACCL::streamFlags::NO_STREAM, true);
                 accl.recv(0, *AcclBufferA_recv, data.blockSize * data.blockSize * data.numBlocks, pair_rank, 0, true, ACCL::streamFlags::NO_STREAM);
                 send->wait();
                 // Copy received matrix from receiving buffer to A buffer completely on FPGA
-                accl.copy(*AcclBufferA_recv, AcclBufferA, data.blockSize * data.blockSize * data.numBlocks, true, true); 
+                accl.copy(*AcclBufferA_recv, *AcclBufferA, data.blockSize * data.blockSize * data.numBlocks, true, true); 
             }
         }
         else {
@@ -127,8 +124,8 @@ namespace accl_pq {
             std::vector<std::unique_ptr<ACCL::BaseBuffer>> recv_buffers;
             for (int i = 0; i < gcd; i++) {
                 // TODO Is there a way to initialize buffer only in FPGA memory with ACCL?
-                send_buffers.push_back(accl.create_buffer<HOST_DATA_TYPE>(data.blockSize * data.blockSize * data.numBlocks * sizeof(HOST_DATA_TYPE), ACCL::dataType::float32)); 
-                recv_buffers.push_back(accl.create_buffer<HOST_DATA_TYPE>(data.blockSize * data.blockSize * data.numBlocks * sizeof(HOST_DATA_TYPE), ACCL::dataType::float32)); 
+                send_buffers.push_back(accl.create_buffer<HOST_DATA_TYPE>(data.blockSize * data.blockSize * data.numBlocks, ACCL::dataType::float32)); 
+                recv_buffers.push_back(accl.create_buffer<HOST_DATA_TYPE>(data.blockSize * data.blockSize * data.numBlocks, ACCL::dataType::float32)); 
             }
             int current_parallel_execution = 0;
             for (int j = 0; j < least_common_multiple/pq_width; j++) {
@@ -159,6 +156,9 @@ namespace accl_pq {
                     receiving_size *= (height_per_rank)/(least_common_multiple/pq_height) * ((width_per_rank)/(least_common_multiple/pq_width));
                     sending_size *= (height_per_rank)/(least_common_multiple/pq_height) * ((width_per_rank)/(least_common_multiple/pq_width));
 
+#ifndef NDEBUG
+                    std::cout << "Copy data to send buffers" << std::endl;
+#endif
                     // Copy the required date for this communication step to the send buffer!
                     for (int t=0; t < send_rows.size(); t++) {
                         for (int lcm_row = 0; lcm_row < (height_per_rank)/(least_common_multiple/pq_height); lcm_row++) {
@@ -167,7 +167,17 @@ namespace accl_pq {
                                 size_t matrix_buffer_offset = (send_cols[t] + lcm_col * least_common_multiple/pq_width)  * data.blockSize + (send_rows[t] + lcm_row * least_common_multiple/pq_height) * width_per_rank * data.blockSize * data.blockSize;
                                 for (int block_row = 0; block_row < data.blockSize; block_row++) {
                                     // TODO May be more efficient when done async!
-                                    accl.copy(*AcclBufferA.slice(matrix_buffer_offset + block_row * width_per_rank * data.blockSize, matrix_buffer_offset + block_row * width_per_rank * data.blockSize + data.blockSize),*send_buffers[current_parallel_execution]->slice(sending_buffer_offset, sending_buffer_offset + data.blockSize),data.blockSize, true, true);
+                                    std::cout << "A(" << matrix_buffer_offset + block_row * width_per_rank * data.blockSize 
+                                                    << "," << matrix_buffer_offset + block_row * width_per_rank * data.blockSize + data.blockSize
+                                                << ") send(" << sending_buffer_offset
+                                                << "," << sending_buffer_offset + data.blockSize << ")" << std::endl;
+                                    accl.copy(*AcclBufferA->slice(
+                                                    matrix_buffer_offset + block_row * width_per_rank * data.blockSize, 
+                                                    matrix_buffer_offset + block_row * width_per_rank * data.blockSize + data.blockSize),
+                                                *send_buffers[current_parallel_execution]->slice(
+                                                    sending_buffer_offset,
+                                                    sending_buffer_offset + data.blockSize),
+                                                data.blockSize, true, true);
                                 }
                             }
                         }
@@ -215,7 +225,7 @@ namespace accl_pq {
                                             size_t matrix_buffer_offset = (recv_cols[t] + lcm_col * least_common_multiple/pq_width)  * data.blockSize + (recv_rows[t] + lcm_row * least_common_multiple/pq_height) * width_per_rank * data.blockSize * data.blockSize;
                                             for (int block_row = 0; block_row < data.blockSize; block_row++) {
                                                 // TODO May be more efficient when done async!
-                                                accl.copy(*recv_buffers[current_parallel_execution]->slice(receiving_buffer_offset, receiving_buffer_offset + data.blockSize),*AcclBufferA.slice(matrix_buffer_offset + block_row * width_per_rank * data.blockSize, matrix_buffer_offset + block_row * width_per_rank * data.blockSize + data.blockSize), data.blockSize, true, true);
+                                                accl.copy(*recv_buffers[current_parallel_execution]->slice(receiving_buffer_offset, receiving_buffer_offset + data.blockSize),*AcclBufferA->slice(matrix_buffer_offset + block_row * width_per_rank * data.blockSize, matrix_buffer_offset + block_row * width_per_rank * data.blockSize + data.blockSize), data.blockSize, true, true);
 
                                             }
                                         }
@@ -268,6 +278,9 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 
         size_t total_offset = 0;
         size_t row_offset = 0;
+#ifndef NDEBUG
+        std::cout << "Start kernel creation" << std::endl;
+#endif
         // Setup the kernels depending on the number of kernel replications
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
 
@@ -307,9 +320,12 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
 
         std::vector<double> transferTimings;
         std::vector<double> calculationTimings;
-
+        
         for (int repetition = 0; repetition < config.programSettings->numRepetitions; repetition++) {
 
+#ifndef NDEBUG
+        std::cout << "Start data transfer" << std::endl;
+#endif
             auto startTransfer = std::chrono::high_resolution_clock::now();
 
             for (int r = 0; r < transposeKernelList.size(); r++) {
@@ -331,8 +347,13 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
             if (bufferListA.size() > 1) {
                 std::cerr << "WARNING: Only the matrix A of the first kernel replication will be exchanged via ACCL!" << std::endl;
             }
+#ifndef NDEBUG
+        std::cout << "Start data exchange with ACCL" << std::endl;
+#endif
             accl_exchangeData(*config.accl, handler, data, bufferListA[0], config.programSettings->matrixSize / data.blockSize);
-
+#ifndef NDEBUG
+        std::cout << "End data exchange with ACCL" << std::endl;
+#endif
             std::vector<xrt::run> runs;
             auto startKernelCalculation = std::chrono::high_resolution_clock::now();
             for (int r = 0; r < transposeKernelList.size(); r++)
@@ -341,6 +362,9 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
                             static_cast<cl_uint>(blocksPerReplication[r]), static_cast<cl_uint>(handler.getWidthforRank()),
                             static_cast<cl_uint>((bufferSizeList[r]) / (local_matrix_width * data.blockSize * data.blockSize))));
             }
+#ifndef NDEBUG
+        std::cout << "Wait for kernels to complete" << std::endl;
+#endif
             for (int r = 0; r < transposeKernelList.size(); r++)
             {
                 runs[r].wait();
