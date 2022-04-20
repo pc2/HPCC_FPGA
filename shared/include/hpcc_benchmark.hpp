@@ -514,7 +514,12 @@ public:
                                                                     &programSettings->kernelFileName);
 #endif
 #ifdef USE_ACCL
-                accl = fpga_setup::fpgaSetupACCL(*usedDevice, *program);
+                if (programSettings->communicationType == CommunicationType::accl) {
+                    accl = fpga_setup::fpgaSetupACCL(*usedDevice, *program);
+                }
+                else {
+                    accl = std::unique_ptr<ACCL::ACCL>(nullptr);
+                }
 #endif
             }
 
