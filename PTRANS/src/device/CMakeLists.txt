@@ -11,7 +11,7 @@ if (INTELFPGAOPENCL_FOUND)
 endif()
 
 if (VITIS_FOUND)
-    generate_kernel_targets_xilinx(transpose_PQ_PCIE transpose_DIAG_PCIE)
+    generate_kernel_targets_xilinx(transpose_PQ_PCIE transpose_DIAG_PCIE transpose_PQ_ACCL_buffers)
     add_test(NAME test_emulation_PQ_PCIE_xilinx COMMAND Transpose_xilinx -f transpose_PQ_PCIE_emulate.xclbin -n 1 -m 1 WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
     add_test(NAME test_output_parsing_xilinx COMMAND ${CMAKE_SOURCE_DIR}/../scripts/evaluation/execute_and_parse.sh ./Transpose_xilinx -f transpose_PQ_PCIE_emulate.xclbin -n 1 -m 1
             WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})

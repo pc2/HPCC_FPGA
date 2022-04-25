@@ -9,6 +9,10 @@ else()
         set(VPP_FLAGS "-O3")
 endif()
 
+if (USE_ACCL)
+    include(${CMAKE_SOURCE_DIR}/../cmake/accl.cmake)
+endif()
+
 ##
 # This function will create build targets for the kernels for emulationand synthesis for xilinx.
 ##
@@ -20,6 +24,10 @@ function(generate_kernel_targets_xilinx)
                 set(base_file_part "src/device/custom/${base_file_name}")
         else()
                 set(base_file_part "src/device/${kernel_file_name}")
+        endif()
+        string(REGEX MATCH ".*_ACCL.*" is_accl_kernel ${kernel_file_name})
+        if (is_accl_kernel AND NOT USE_ACCL)
+            continue()
         endif()
         set(base_file "${CMAKE_SOURCE_DIR}/${base_file_part}.cl")
         if (KERNEL_REPLICATION_ENABLED)
@@ -39,6 +47,9 @@ function(generate_kernel_targets_xilinx)
         else()
             set(gen_xilinx_link_settings ${XILINX_LINK_SETTINGS_FILE})
             set(xilinx_link_settings ${CMAKE_BINARY_DIR}/settings/settings.link.xilinx.${kernel_file_name}.ini)
+        endif()
+        if (USE_ACCL AND is_accl_kernel)
+            list(APPEND additional_xos ${ACCL_UDP_XOS}) 
         endif()
         set(xilinx_report_folder "${EXECUTABLE_OUTPUT_PATH}/xilinx_reports")
         set(local_CLFLAGS ${CLFLAGS} -DXILINX_FPGA)
@@ -95,7 +106,7 @@ function(generate_kernel_targets_xilinx)
                 DEPENDS ${XILINX_COMPILE_SETTINGS_FILE}
                 )
         add_custom_command(OUTPUT ${bitstream_f}
-                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} ${VPP_FLAGS} -t hw ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} ${VPP_FLAGS} -t hw ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile} ${additional_xos}
                 MAIN_DEPENDENCY ${bitstream_compile}
                 DEPENDS ${xilinx_link_settings}
                 )
@@ -110,6 +121,9 @@ function(generate_kernel_targets_xilinx)
 		DEPENDS ${bitstream_compile} 
                 DEPENDS ${CMAKE_BINARY_DIR}/src/common/parameters.h
                 )
+            if(USE_ACCL AND is_accl_kernel)
+            add_dependencies(${kernel_file_name}_xilinx accl_udp)
+        endif()
         list(APPEND kernel_emulation_targets_xilinx ${kernel_file_name}_emulate_xilinx)
         set(kernel_emulation_targets_xilinx ${kernel_emulation_targets_xilinx} CACHE INTERNAL "Kernel emulation targets used to define dependencies for the tests for Xilinx devices")
     endforeach ()
