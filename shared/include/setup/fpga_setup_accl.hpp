@@ -22,18 +22,17 @@ SOFTWARE.
 #ifndef SRC_HOST_FPGA_SETUP_ACCL_H_
 #define SRC_HOST_FPGA_SETUP_ACCL_H_
 
-#include <string>
-#include <vector>
-#include <iostream>
-#include <iomanip>
 #include <chrono>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <memory>
+#include <string>
+#include <vector>
 
 /* External libraries */
-#include "xrt/xrt_device.h"
 #include "accl.hpp"
-
+#include "xrt/xrt_device.h"
 
 namespace fpga_setup {
 
@@ -41,12 +40,12 @@ namespace fpga_setup {
 Sets up the given FPGA with the kernel in the provided file.
 
 @param device The device used for the program
-@param usedKernelFile The path to the kernel file
+@param program The program used to find the ACCL kernels for hardware execution
+@param useAcclEmulation Construct an ACCL emulation instance instead of hardware execution
 @return The ACCL instance used for communication
 */
-    std::unique_ptr<ACCL::ACCL>
-    fpgaSetupACCL(xrt::device &device,
-              xrt::uuid &program);
+std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
+                                          bool useAcclEmulation);
 
-}  // namespace fpga_setup
-#endif  // SRC_HOST_FPGA_SETUP_H_
+} // namespace fpga_setup
+#endif // SRC_HOST_FPGA_SETUP_H_

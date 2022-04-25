@@ -127,6 +127,11 @@ public:
     CommunicationType communicationType;
 
     /**
+     * @brief Use ACCL emulation constructor instead of hardware execution
+     */
+    bool useAcclEmulation;
+
+    /**
      * @brief Construct a new Base Settings object
      * 
      * @param results The resulting map from parsing the program input parameters
@@ -145,6 +150,11 @@ public:
             kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : NUM_REPLICATIONS),
 #else
             kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : 1),
+#endif
+#ifdef USE_ACCL
+            useAcclEmulation(static_cast<bool>(results.count("accl-emulation"))),
+#else
+            useAcclEmulation(false),
 #endif
 #ifdef COMMUNICATION_TYPE_SUPPORT_ENABLED
             communicationType(retrieveCommunicationType(results["comm-type"].as<std::string>(), results["f"].as<std::string>())),
@@ -394,6 +404,9 @@ public:
 #ifdef INTEL_FPGA
                 ("i", "Use memory Interleaving")
 #endif
+#ifdef USE_ACCL
+                ("accl-emulation", "Use the accl emulation instead of hardware execution")
+#endif
                 ("skip-validation", "Skip the validation of the output data. This will speed up execution and helps when working with special data types.")
                 ("device", "Index of the device that has to be used. If not given you "\
             "will be asked which device to use if there are multiple devices "\
@@ -515,7 +528,7 @@ public:
 #endif
 #ifdef USE_ACCL
                 if (programSettings->communicationType == CommunicationType::accl) {
-                    accl = fpga_setup::fpgaSetupACCL(*usedDevice, *program);
+                    accl = fpga_setup::fpgaSetupACCL(*usedDevice, *program, programSettings->useAcclEmulation);
                 }
                 else {
                     accl = std::unique_ptr<ACCL::ACCL>(nullptr);
