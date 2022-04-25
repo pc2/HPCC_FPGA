@@ -180,8 +180,8 @@ public:
         std::uniform_real_distribution<> dis(-100.0, 100.0);
         for (size_t i = 0; i < blocks_per_rank * settings.programSettings->blockSize; i++) {
             for (size_t j = 0; j < settings.programSettings->blockSize; j++) {
-                d->A[i * settings.programSettings->blockSize + j] = i * settings.programSettings->blockSize + j;//dis(gen);
-                d->B[i * settings.programSettings->blockSize + j] = 0.0; //dis(gen);
+                d->A[i * settings.programSettings->blockSize + j] = dis(gen);
+                d->B[i * settings.programSettings->blockSize + j] = dis(gen);
                 d->result[i * settings.programSettings->blockSize + j] = 0.0;
             }
         }
@@ -216,11 +216,11 @@ public:
                 // 3 2 . .
    
 
-                size_t remaining_data_size = data.numBlocks;
+                size_t remaining_data_size = data.numBlocks * data.blockSize * data.blockSize;
                 size_t offset = 0;
                 while (remaining_data_size > 0) {
                     int next_chunk = (remaining_data_size > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max(): remaining_data_size;
-                    MPI_Sendrecv(&data.A[offset], next_chunk, data_block, pair_rank, 0, &data.exchange[offset], next_chunk, data_block, pair_rank, 0, MPI_COMM_WORLD, &status);
+                    MPI_Sendrecv(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, &data.exchange[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD, &status);
 
                     remaining_data_size -= next_chunk;
                     offset += static_cast<size_t>(next_chunk) * static_cast<size_t>(data.blockSize * data.blockSize);
@@ -379,7 +379,7 @@ public:
     }
 
     void 
-    reference_transpose(TransposeData<TContext>& data) {
+    reference_transpose(TransposeData<TContext>& data) override {
         for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
             for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
                 data.A[i * height_per_rank * data.blockSize + j] -= (data.result[j * width_per_rank * data.blockSize + i] - data.B[j * width_per_rank * data.blockSize + i]);
