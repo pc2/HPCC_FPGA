@@ -10,7 +10,7 @@ else()
 endif()
 
 if (USE_ACCL)
-    include(${CMAKE_SOURCE_DIR}/../cmake/accl.cmake)
+   include(${CMAKE_SOURCE_DIR}/../cmake/accl.cmake)
 endif()
 
 ##
@@ -54,7 +54,9 @@ function(generate_kernel_targets_xilinx)
         set(xilinx_report_folder "${EXECUTABLE_OUTPUT_PATH}/xilinx_reports")
         set(local_CLFLAGS ${CLFLAGS} -DXILINX_FPGA)
         list(APPEND local_CLFLAGS --report_dir=${xilinx_report_folder} --log_dir=${xilinx_report_folder}/logs)
-
+        if (is_accl_kernel)
+            list(APPEND local_CLFLAGS ${ACCL_LINK_CONFIG})
+        endif()
         string(REGEX MATCH "^.+\.tcl" is_tcl_script ${XILINX_COMPILE_SETTINGS_FILE})
         if (is_tcl_script)
                 set(CLFLAGS --hls.pre_tcl ${XILINX_COMPILE_SETTINGS_FILE})

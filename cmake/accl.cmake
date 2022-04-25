@@ -4,13 +4,17 @@ set(ACCL_UDP_ETH_IF 0 CACHE STRING "Ethernet interface used. On ETHZ: 0 = switch
 set(ACCL_DEVICE_NAME "xcu280-fsvh2892-2L-e" CACHE STRING "Name of the FPGA used on the target platform")
 
 set(ACCL_CCLO_KERNEL_DIR ${extern_accl_SOURCE_DIR}/kernels/cclo/)
-set(ACCL_CCLO_KERNEL_XO cclo_offload.xo)
+set(ACCL_CCLO_KERNEL_XO ccl_offload.xo)
 
 set(ACCL_HARDWARE_DIR ${extern_accl_SOURCE_DIR}/test/hardware)
 set(ACCL_VNX_DIR ${ACCL_HARDWARE_DIR}/xup_vitis_network_example/)
+set(ACCL_NETLAYER_HLS ${ACCL_VNX_DIR}/NetLayers/100G-fpga-network-stack-core)
 set(ACCL_UDP_MAC_XO ${ACCL_VNX_DIR}/Ethernet/_x.${FPGA_BOARD_NAME}/cmac_${ACCL_UDP_ETH_IF}.xo)
 set(ACCL_UDP_NET_XO ${ACCL_VNX_DIR}/NetLayers/_x.${FPGA_BOARD_NAME}/networklayer.xo)
 
+set(ACCL_HLS_IP_FOLDER ${ACCL_NETLAYER_HLS}/synthesis_results_HMB)
+list(APPEND ACCL_LINK_CONFIG --advanced.param compiler.userPostSysLinkOverlayTcl=${ACCL_VNX_DIR}/Ethernet/post_sys_link.tcl)
+list(APPEND ACCL_LINK_CONFIG --user_ip_repo_paths ${ACCL_HLS_IP_FOLDER})
 add_custom_command(
     OUTPUT ${ACCL_CCLO_KERNEL_DIR}/${ACCL_CCLO_KERNEL_XO}
     COMMAND make STACK_TYPE=${ACCL_STACK_TYPE} PLATFORM=${FPGA_BOARD_NAME}
@@ -34,7 +38,7 @@ set(ACCL_PLUGINS_COMPRESSION ${ACCL_PLUGINS_DIR}/hp_compression/hp_compression.x
 set(ACCL_PLUGINS_LOOPBACK ${ACCL_PLUGINS_DIR}/loopback/loopback.xo)
 
 set(ACCL_UDP_XOS ${ACCL_PLUGINS_LOOPBACK} ${ACCL_PLUGINS_COMPRESSION} ${ACCL_PLUGINS_SUM} ${ACCL_PLUGINS_HOSTCTRL}
-    ${ACCL_CCLO_KERNEL_XO} ${ACCL_UDP_MAC_XO} ${ACCL_UDP_NET_XO} PARENT_SCOPE)
+    ${ACCL_CCLO_KERNEL_DIR}/${ACCL_CCLO_KERNEL_XO} ${ACCL_UDP_MAC_XO} ${ACCL_UDP_NET_XO} CACHE INTERNAL "Object files required for ACCL")
 
 add_custom_target(
     accl_udp_stack
