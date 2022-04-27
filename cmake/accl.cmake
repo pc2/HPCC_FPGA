@@ -48,7 +48,8 @@ add_custom_command(
     COMMAND mkdir build && cd build && cmake .. -DFDEV_NAME=u280 
             -DVIVADO_HLS_ROOT_DIR=/proj/xbuilds/2020.1_released/installs/lin64/Vivado/2020.1 
             -DVIVADO_ROOT_DIR=/proj/xbuilds/2020.1_released/installs/lin64/Vivado/2020.1 
-            -DTCP_STACK_EN=1 -DTCP_STACK_RX_DDR_BYPASS_EN=1 -DTCP_STACK_WINDOW_SCALING_EN=0
+            -DTCP_STACK_EN=1 -DTCP_STACK_RX_DDR_BYPASS_EN=1 -DTCP_STACK_WINDOW_SCALING_EN=0 &&
+            make installip
     WORKING_DIRECTORY ${ACCL_TCP_BASE_DIR})
 
 add_custom_command(
