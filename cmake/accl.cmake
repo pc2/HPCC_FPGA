@@ -32,7 +32,7 @@ add_custom_target(
     DEPENDS ${ACCL_UDP_MAC_XO} ${ACCL_UDP_NET_XO})
 
 # TCP related definitions
-set(ACCL_TCP_BASE_DIR ${extern_accl_SOURCE_DIR}/Vitis_with_100Gbps_TCP-IP)
+set(ACCL_TCP_BASE_DIR ${ACCL_HARDWARE_DIR}/Vitis_with_100Gbps_TCP-IP)
 set(ACCL_TCP_XO ${ACCL_TCP_BASE_DIR}/_x.hw.${FPGA_BOARD_NAME}/network_krnl.xo)
 set(ACCL_TCP_CMAC_XO ${ACCL_TCP_BASE_DIR}/_x.hw.${FPGA_BOARD_NAME}/cmac_krnl.xo)
 if (ACCL_STACK_TYPE STREQUAL "TCP")
@@ -130,5 +130,9 @@ add_custom_target(
     accl_tcp)
 add_dependencies(accl_tcp accl_tcp_stack accl_cclo accl_plugins)
 
-
-
+add_custom_target(accl_device)
+if (ACCL_STACK_TYPE STREQUAL "UDP")
+    add_dependencies(accl_device accl_udp)
+else()
+    add_dependencies(accl_device accl_tcp)
+endif()

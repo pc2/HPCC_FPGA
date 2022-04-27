@@ -123,8 +123,8 @@ function(generate_kernel_targets_xilinx)
 		DEPENDS ${bitstream_compile} 
                 DEPENDS ${CMAKE_BINARY_DIR}/src/common/parameters.h
                 )
-            if(USE_ACCL AND is_accl_kernel)
-            add_dependencies(${kernel_file_name}_xilinx accl_udp)
+        if(USE_ACCL AND is_accl_kernel)
+            add_dependencies(${kernel_file_name}_xilinx accl_device)
         endif()
         list(APPEND kernel_emulation_targets_xilinx ${kernel_file_name}_emulate_xilinx)
         set(kernel_emulation_targets_xilinx ${kernel_emulation_targets_xilinx} CACHE INTERNAL "Kernel emulation targets used to define dependencies for the tests for Xilinx devices")
