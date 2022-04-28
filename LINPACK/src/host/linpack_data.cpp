@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "linpack_benchmark.hpp"
+#include "linpack_data.hpp"
 
 /* C++ standard library headers */
 #include <memory>
@@ -32,7 +32,6 @@ SOFTWARE.
 
 /* Project's headers */
 #include "communication_types.hpp"
-#include "execution_types/execution_types.hpp"
 #include "parameters.h"
 
 linpack::LinpackProgramSettings::LinpackProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),

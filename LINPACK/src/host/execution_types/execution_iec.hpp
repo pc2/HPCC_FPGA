@@ -44,9 +44,8 @@ namespace iec {
 /*
  Prepare kernels and execute benchmark for a bitstream that makes use of intel external channels
 */
-template<class TDevice, class TContext, class TProgram>
 std::unique_ptr<linpack::LinpackExecutionTimings>
-calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings, TDevice, TContext, TProgram>&config,
+calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings, cl::Device, cl::Context, cl::Program>&config,
           linpack::LinpackData& data) {
 
     int err;

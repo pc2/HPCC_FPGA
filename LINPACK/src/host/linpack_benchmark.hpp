@@ -308,8 +308,13 @@ public:
     executeKernel(LinpackData &data) override {
     std::unique_ptr<linpack::LinpackExecutionTimings> timings;
     switch (this->executionSettings->programSettings->communicationType) {
+#ifdef USE_OCL_HOST
         case hpcc_base::CommunicationType::pcie_mpi : timings = execution::pcie::calculate(*this->executionSettings, data); break;
         case hpcc_base::CommunicationType::intel_external_channels: timings = execution::iec::calculate(*this->executionSettings, data); break;
+#endif
+#ifdef USE_XRT_HOST
+        case hpcc_base::CommunicationType::accl : timings = execution::accl_buffers::calculate(*this->executionSettings, data); break;
+#endif
         default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(this->executionSettings->programSettings->communicationType));
     }
 #ifdef DISTRIBUTED_VALIDATION
