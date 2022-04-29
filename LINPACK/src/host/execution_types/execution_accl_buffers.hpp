@@ -73,7 +73,11 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
   std::vector<ACCL::rank_t> col_ranks;
 
   // Create sub-groups for rows and columns
-  for (int i = 0; i < config.programSettings->torus_width; i++) {
+  for (int i = config.programSettings->torus_row *
+               config.programSettings->torus_width;
+       i < config.programSettings->torus_row *
+               (config.programSettings->torus_width + 1);
+       i++) {
     row_ranks.push_back(all_accl_ranks[i]);
   }
   for (int i = config.programSettings->torus_col; i < all_accl_ranks.size();
