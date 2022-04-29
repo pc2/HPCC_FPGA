@@ -48,8 +48,8 @@ namespace accl_buffers {
  @copydoc bm_execution::calculate()
 */
 std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
-    const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings, xrt::device,
-                                       bool, xrt::uuid> &config,
+    const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings,
+                                       xrt::device, bool, xrt::uuid> &config,
     linpack::LinpackData &data) {
 
   cl_int err;
@@ -62,38 +62,32 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
   uint blocks_per_row = data.matrix_width / config.programSettings->blockSize;
   uint blocks_per_col = data.matrix_height / config.programSettings->blockSize;
 
-  // TODO: Allow to handle Communicators in ACCL!
-  // // Communicate with all ranks in the same row of the torus
-  // // Configure ACCL Communicators
-  
-  // // Create Ranks. This must be the same configuration as used for
-  // // the global communicator!
-  // std::vector<ACCL::rank_t> all_accl_ranks = {};
-  // for (int i = 0; i < config.programSettings->torus_width * config.programSettings->torus_; ++i) {
-  //   // TODO: Replace the ip addresses and ports here for execution of real hardware?
-  //   ACCL::rank_t new_rank = {"127.0.0.1", 5500 + i, i, 1024};
-  //   all_accl_ranks.emplace_back(new_rank);
-  // }
+  // Communicate with all ranks in the same row of the torus
+  // Configure ACCL Communicators
 
-  // std::vector<ACCL::rank_t> row_ranks;
-  // std::vector<ACCL::rank_t> col_ranks;
+  // Get group of global communicator
+  std::vector<ACCL::rank_t> all_accl_ranks =
+      config.accl->get_comm_group(ACCL::GLOBAL_COMM);
 
-  // for (int i = 0; i < config.programSettings->torus_width; i++) {
-  //   row_ranks.push_back(all_accl_ranks[i]);
-  // }
-  // for (int i = config.programSettings->torus_col; i < all_accl_ranks.size();
-  //      i += config.programSettings->torus_width) {
-  //   col_ranks.push_back(all_accl_ranks[config.programSettings->torus_row *
-  //                                          config.programSettings->torus_width +
-  //                                      i]);
-  // }
+  std::vector<ACCL::rank_t> row_ranks;
+  std::vector<ACCL::rank_t> col_ranks;
 
-  // // Row communicator should now be index 1
-  // config.accl->configure_communicator(row_ranks,
-  //                                     config.programSettings->torus_col);
-  // // Column communicator should now be index 2
-  // config.accl->configure_communicator(col_ranks,
-  //                                     config.programSettings->torus_row);
+  // Create sub-groups for rows and columns
+  for (int i = 0; i < config.programSettings->torus_width; i++) {
+    row_ranks.push_back(all_accl_ranks[i]);
+  }
+  for (int i = config.programSettings->torus_col; i < all_accl_ranks.size();
+       i += config.programSettings->torus_width) {
+    col_ranks.push_back(all_accl_ranks[config.programSettings->torus_row *
+                                           config.programSettings->torus_width +
+                                       i]);
+  }
+
+  // Create communicators from sub-groups
+  ACCL::CommunicatorId row_comm = config.accl->configure_communicator(
+      row_ranks, config.programSettings->torus_col);
+  ACCL::CommunicatorId col_comm = config.accl->configure_communicator(
+      col_ranks, config.programSettings->torus_row);
 
   // TODO: Select the correct memory groups!
   // Create Buffers for input and output
@@ -126,17 +120,19 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
     Buffer_left_list.emplace_back();
     Buffer_top_list.emplace_back();
     for (int i = 0; i < blocks_per_row; i++) {
-      Buffer_top_list.back().push_back(config.accl->create_buffer<HOST_DATA_TYPE>(
-          config.programSettings->blockSize *
-              (config.programSettings->blockSize),
-          ACCL::dataType::float32, 1));
+      Buffer_top_list.back().push_back(
+          config.accl->create_buffer<HOST_DATA_TYPE>(
+              config.programSettings->blockSize *
+                  (config.programSettings->blockSize),
+              ACCL::dataType::float32, 1));
     }
 
     for (int i = 0; i < blocks_per_col; i++) {
-      Buffer_left_list.back().push_back(config.accl->create_buffer<HOST_DATA_TYPE>(
-          config.programSettings->blockSize *
-              (config.programSettings->blockSize),
-          ACCL::dataType::float32, 1));
+      Buffer_left_list.back().push_back(
+          config.accl->create_buffer<HOST_DATA_TYPE>(
+              config.programSettings->blockSize *
+                  (config.programSettings->blockSize),
+              ACCL::dataType::float32, 1));
     }
   }
 
@@ -253,15 +249,15 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
           // FPGAs
 
           // Broadcast LU block in column to update all left blocks
-          config.accl->bcast(2, *Buffer_lu2,
+          config.accl->bcast(*Buffer_lu2,
                              config.programSettings->blockSize *
                                  config.programSettings->blockSize,
-                             local_block_row_remainder, true, true);
+                             local_block_row_remainder, col_comm, true, true);
           // Broadcast LU block in row to update all top blocks
-          config.accl->bcast(1, *Buffer_lu2,
+          config.accl->bcast(*Buffer_lu2,
                              config.programSettings->blockSize *
                                  config.programSettings->blockSize,
-                             local_block_col_remainder, true, true);
+                             local_block_col_remainder, row_comm, true, true);
         }
 
         if (num_top_blocks > 0) {
@@ -314,19 +310,19 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                lbi <
                std::max(static_cast<int>(blocks_per_col - local_block_col), 0);
                lbi++) {
-            config.accl->bcast(1, *Buffer_left_list[block_row % 2][lbi],
+            config.accl->bcast(*Buffer_left_list[block_row % 2][lbi],
                                config.programSettings->blockSize *
                                    config.programSettings->blockSize,
-                               local_block_col_remainder, true, true);
+                               local_block_col_remainder, row_comm, true, true);
           }
           for (int tbi = 0;
                tbi <
                std::max(static_cast<int>(blocks_per_row - local_block_row), 0);
                tbi++) {
-            config.accl->bcast(2, *Buffer_top_list[block_row % 2][tbi],
+            config.accl->bcast(*Buffer_top_list[block_row % 2][tbi],
                                config.programSettings->blockSize *
                                    config.programSettings->blockSize,
-                               local_block_row_remainder, true, true);
+                               local_block_row_remainder, col_comm, true, true);
           }
 
           // update all remaining inner blocks using only global memory
