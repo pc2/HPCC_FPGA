@@ -13,7 +13,7 @@ if (USE_ACCL)
    include(${CMAKE_SOURCE_DIR}/../cmake/accl.cmake)
 endif()
 
-set(file_endings "cpp" "cl")
+set(file_endings "cl" "cpp" )
 
 ##
 # This function will create build targets for the kernels for emulationand synthesis for xilinx.
@@ -32,6 +32,9 @@ function(generate_kernel_targets_xilinx)
             continue()
         endif()
         set(file_exists No)
+        if (DEFINED FORCE_FILE_ENDING)
+                set(file_endings ${FORCE_FILE_ENDING})
+        endif()
         foreach (ending ${file_endings})
             set(search_file_name "${CMAKE_SOURCE_DIR}/${base_file_part}.${ending}")
             if (NOT file_exists AND EXISTS ${search_file_name})
