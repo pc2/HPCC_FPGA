@@ -13,6 +13,8 @@ if (USE_ACCL)
    include(${CMAKE_SOURCE_DIR}/../cmake/accl.cmake)
 endif()
 
+set(file_endings "cpp" "cl")
+
 ##
 # This function will create build targets for the kernels for emulationand synthesis for xilinx.
 ##
@@ -29,11 +31,19 @@ function(generate_kernel_targets_xilinx)
         if (is_accl_kernel AND NOT USE_ACCL)
             continue()
         endif()
-        set(base_file "${CMAKE_SOURCE_DIR}/${base_file_part}.cl")
+        set(file_exists No)
+        foreach (ending ${file_endings})
+            set(search_file_name "${CMAKE_SOURCE_DIR}/${base_file_part}.${ending}")
+            if (NOT file_exists AND EXISTS ${search_file_name})
+                set(file_exists Yes)
+                set(selected_file_ending ${ending})
+                set(base_file "${search_file_name}")
+            endif()
+        endforeach()
         if (KERNEL_REPLICATION_ENABLED)
-            set(source_f "${CMAKE_BINARY_DIR}/${base_file_part}_replicated_xilinx.cl")
+            set(source_f "${CMAKE_BINARY_DIR}/${base_file_part}_replicated_xilinx.${selected_file_ending}")
         else()
-            set(source_f "${CMAKE_BINARY_DIR}/${base_file_part}_copied_xilinx.cl")
+            set(source_f "${CMAKE_BINARY_DIR}/${base_file_part}_copied_xilinx.${selected_file_ending}")
         endif()
         set(bitstream_compile xilinx_tmp_compile/${kernel_file_name}.xo)
         set(bitstream_compile_emulate xilinx_tmp_compile/${kernel_file_name}_emulate.xo)
@@ -55,7 +65,7 @@ function(generate_kernel_targets_xilinx)
         set(local_CLFLAGS ${CLFLAGS} -DXILINX_FPGA)
         list(APPEND local_CLFLAGS --report_dir=${xilinx_report_folder} --log_dir=${xilinx_report_folder}/logs)
         if (is_accl_kernel)
-            list(APPEND local_CLFLAGS ${ACCL_LINK_CONFIG})
+            list(APPEND local_harware_only_flags ${ACCL_LINK_CONFIG})
         endif()
         string(REGEX MATCH "^.+\.tcl" is_tcl_script ${XILINX_COMPILE_SETTINGS_FILE})
         if (is_tcl_script)
@@ -108,7 +118,7 @@ function(generate_kernel_targets_xilinx)
                 DEPENDS ${XILINX_COMPILE_SETTINGS_FILE}
                 )
         add_custom_command(OUTPUT ${bitstream_f}
-                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} ${VPP_FLAGS} -t hw ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile} ${additional_xos}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} ${VPP_FLAGS} ${local_harware_only_flags} -t hw ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile} ${additional_xos}
                 MAIN_DEPENDENCY ${bitstream_compile}
                 DEPENDS ${xilinx_link_settings}
                 )
