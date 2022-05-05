@@ -167,16 +167,23 @@ public:
         this->dataHandler->reference_transpose(data);
 
         double max_error = 0.0;
+        int error_count = 0;
         for (size_t i = 0; i < this->executionSettings->programSettings->blockSize * this->executionSettings->programSettings->blockSize * data.numBlocks; i++) {
             max_error = std::max(std::abs<double>(data.A[i]), max_error);
+            if (std::abs<double>(data.A[i]) - 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() > 0.0) {
+                error_count++;
+            }
         }
 
         double global_max_error = 0;
+        int global_error_count = 0;
         MPI_Reduce(&max_error, &global_max_error, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&error_count, &global_error_count, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
         if (this->mpi_comm_rank == 0) {
-            std::cout << "Maximum error: " << global_max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
-            std::cout << "Mach. Epsilon: " << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl;
+            std::cout << "Erronous entries: " << global_error_count << std::endl;
+            std::cout << "Maximum error:    " << global_max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
+            std::cout << "Mach. Epsilon:    " << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl;
         }
 
         return static_cast<double>(global_max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
