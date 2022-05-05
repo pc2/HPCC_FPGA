@@ -223,7 +223,7 @@ public:
                     MPI_Sendrecv(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, &data.exchange[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD, &status);
 
                     remaining_data_size -= next_chunk;
-                    offset += static_cast<size_t>(next_chunk) * static_cast<size_t>(data.blockSize * data.blockSize);
+                    offset += static_cast<size_t>(next_chunk);
                 }
 
                 // Exchange window pointers
