@@ -121,7 +121,7 @@ function(generate_kernel_targets_xilinx)
                 DEPENDS ${XILINX_COMPILE_SETTINGS_FILE}
                 )
         add_custom_command(OUTPUT ${bitstream_f}
-                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} ${VPP_FLAGS} ${local_harware_only_flags} -t hw ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_f} ${bitstream_compile} ${additional_xos}
+                COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} ${VPP_FLAGS} ${local_harware_only_flags} -t hw ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} --platform ${FPGA_BOARD_NAME} -R2 -l --config ${xilinx_link_settings} -o ${bitstream_f} ${additional_xos} ${bitstream_compile}
                 MAIN_DEPENDENCY ${bitstream_compile}
                 DEPENDS ${xilinx_link_settings}
                 )
