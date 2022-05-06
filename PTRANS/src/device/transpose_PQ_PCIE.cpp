@@ -46,9 +46,11 @@ void transpose/*PY_CODE_GEN i*/( const DEVICE_DATA_TYPE *A,
     // local memory double buffer for a matrix block
     DEVICE_DATA_TYPE a_block[block_size * block_size / channel_width][channel_width];
 #pragma HLS ARRAY_PARTITION variable = a_block complete dim = 2
+#pragma HLS BIND_STORAGE variable = a_block type = RAM_1P impl = URAM
     // local memory double buffer for a matrix block
     DEVICE_DATA_TYPE a_plus_b_block[block_size * block_size / channel_width][channel_width];
 #pragma HLS ARRAY_PARTITION variable = a_plus_b_block complete dim = 2
+#pragma HLS BIND_STORAGE variable = a_plus_b_block type = RAM_1P impl = URAM
 
     // transpose the matrix block-wise from global memory
 block_loop:
@@ -75,14 +77,14 @@ read_A_line:
 
                 unsigned int chunk = row * (block_size / channel_width) + col;
 
-                unsigned rot = (row) & (channel_width - 1);
+                unsigned rot = (row) % (channel_width);
 
                 // rotate temporary buffer to store data into local buffer
                 for (unsigned unroll_count = 0; unroll_count < channel_width; unroll_count++) {
                     // every block of (N / channel_width), rotates the index by 1
                     // store in double buffer
                     a_block[chunk][unroll_count] = rotate_in[(unroll_count + channel_width - rot)
-                                                                                                & (channel_width - 1)];
+                                                                                                % (channel_width)];
                 }
             }
         }
@@ -109,17 +111,17 @@ read_B_line:
                 unsigned int offset = row / channel_width;
 
                 for (unsigned unroll_count = 0; unroll_count < channel_width; unroll_count++) {
-                    unsigned rot = ((channel_width + unroll_count - row) * (block_size / channel_width)) &
-                                                                                                (BLOCK_SIZE - 1);
+                    unsigned rot = ((channel_width + unroll_count - row) * (block_size / channel_width)) %
+                                                                                                (block_size);
                     unsigned row_rotate = base + offset + rot;
                     rotate_out[unroll_count] = a_block[row_rotate][unroll_count];
                 }
 
-                unsigned rot_out = row & (channel_width - 1);
+                unsigned rot_out = row % (channel_width);
 
                 // rotate temporary buffer to store data into local buffer
                 for (unsigned unroll_count = 0; unroll_count < channel_width; unroll_count++) {
-                    data_chunk[unroll_count] = rotate_out[(unroll_count + rot_out) & (channel_width - 1)];
+                    data_chunk[unroll_count] = rotate_out[(unroll_count + rot_out) % (channel_width)];
                 }
 
                 // load tranposed A from global memory
