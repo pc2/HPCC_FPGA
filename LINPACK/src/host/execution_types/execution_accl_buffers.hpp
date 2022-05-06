@@ -88,9 +88,9 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
   }
 
   // Create communicators from sub-groups
-  ACCL::CommunicatorId row_comm = config.accl->configure_communicator(
+  ACCL::CommunicatorId row_comm = config.accl->create_communicator(
       row_ranks, config.programSettings->torus_col);
-  ACCL::CommunicatorId col_comm = config.accl->configure_communicator(
+  ACCL::CommunicatorId col_comm = config.accl->create_communicator(
       col_ranks, config.programSettings->torus_row);
 
   // TODO: Select the correct memory groups!
