@@ -43,23 +43,24 @@ void transpose/*PY_CODE_GEN i*/( const DEVICE_DATA_TYPE *A,
             const unsigned int width_in_blocks,
             const unsigned int height_in_blocks) {
 
-    // local memory double buffer for a matrix block
-    DEVICE_DATA_TYPE a_block[block_size * block_size / channel_width][channel_width];
-#pragma HLS ARRAY_PARTITION variable = a_block complete dim = 2
-#pragma HLS BIND_STORAGE variable = a_block type = RAM_1P impl = URAM
-    // local memory double buffer for a matrix block
-    DEVICE_DATA_TYPE a_plus_b_block[block_size * block_size / channel_width][channel_width];
-#pragma HLS ARRAY_PARTITION variable = a_plus_b_block complete dim = 2
-#pragma HLS BIND_STORAGE variable = a_plus_b_block type = RAM_1P impl = URAM
-
     // transpose the matrix block-wise from global memory
 block_loop:
     for (unsigned int block = 0; block < number_of_blocks; block++) {
+
+        // local memory double buffer for a matrix block
+        DEVICE_DATA_TYPE a_block[block_size * block_size / channel_width][channel_width];
+#pragma HLS ARRAY_PARTITION variable = a_block complete dim = 2
+// #pragma HLS BIND_STORAGE variable = a_block type = RAM_1P impl = URAM
+        // local memory double buffer for a matrix block
+        DEVICE_DATA_TYPE a_plus_b_block[block_size * block_size / channel_width][channel_width];
+#pragma HLS ARRAY_PARTITION variable = a_plus_b_block complete dim = 2
+// #pragma HLS BIND_STORAGE variable = a_plus_b_block type = RAM_1P impl = URAM
+
 read_A:
         for (unsigned int row = 0; row < block_size; row++) {
 read_A_line:
             for (unsigned int col = 0; col < block_size / channel_width; col++) {
-        #pragma HLS unroll region
+#pragma HLS PIPELINE
                 unsigned long block_row_a = (block + offset_a) / width_in_blocks;
                 unsigned long block_col_a = (block + offset_a) % width_in_blocks;
                 unsigned long ls_address_trans = block_col_a * block_size * block_size * height_in_blocks +
@@ -94,7 +95,7 @@ read_B:
         for (unsigned int row = 0; row < block_size; row++) {
 read_B_line:
             for (unsigned int col = 0; col < block_size / channel_width; col++) {
-#pragma HLS unroll region
+#pragma HLS PIPELINE
                 unsigned long block_row = (block + offset_b) / width_in_blocks;
                 unsigned long block_col = (block + offset_b) % width_in_blocks;
                 unsigned long ls_address_row = block_row * block_size * block_size * width_in_blocks +
@@ -139,7 +140,7 @@ write_result:
         for (unsigned int row = 0; row < block_size; row++) {
 write_result_line:
             for (unsigned int col = 0; col < block_size / channel_width; col++) {
-#pragma HLS unroll region
+#pragma HLS PIPELINE
                 unsigned long block_row = (block + offset_b) / width_in_blocks;
                 unsigned long block_col = (block + offset_b) % width_in_blocks;
                 unsigned long ls_address_row = block_row * block_size * block_size * width_in_blocks +
