@@ -162,9 +162,11 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
             endTransfer - startTransfer);
 
     MPI_Barrier(MPI_COMM_WORLD);
-
+    int mpi_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     auto startCalculation = std::chrono::high_resolution_clock::now();
 
+    if (mpi_size > 1) {
     for (int r = 0; r < transposeKernelList.size(); r++) {
       bufferListA[r].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
     }
@@ -176,6 +178,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
               data.exchange);
     for (int r = 0; r < transposeKernelList.size(); r++) {
       bufferListA[r].sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    }
     }
 
     std::vector<xrt::run> runs;
