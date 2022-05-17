@@ -82,9 +82,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
   }
   for (int i = config.programSettings->torus_col; i < all_accl_ranks.size();
        i += config.programSettings->torus_width) {
-    col_ranks.push_back(all_accl_ranks[config.programSettings->torus_row *
-                                           config.programSettings->torus_width +
-                                       i]);
+    col_ranks.push_back(all_accl_ranks[i]);
   }
 
   // Create communicators from sub-groups
@@ -93,27 +91,50 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
   ACCL::CommunicatorId col_comm = config.accl->create_communicator(
       col_ranks, config.programSettings->torus_row);
 
-  // TODO: Select the correct memory groups!
-  // Create Buffers for input and output
-  // TODO: Need to set a memory group for the buffers here!
-  xrt::bo Buffer_a(
-      *config.device, data.A,
-      sizeof(HOST_DATA_TYPE) * data.matrix_height * data.matrix_width, 0);
+  // Create global memory buffers
+  auto lu_tmp_kernel = xrt::kernel(*config.device, *config.program, "lu");
+  xrt::bo Buffer_a(*config.device, data.A,
+                   sizeof(HOST_DATA_TYPE) * data.matrix_height *
+                       data.matrix_width,
+                   lu_tmp_kernel.group_id(0));
   xrt::bo Buffer_b(*config.device, data.b,
-                   sizeof(HOST_DATA_TYPE) * data.matrix_width, 0);
+                   sizeof(HOST_DATA_TYPE) * data.matrix_width,
+                   lu_tmp_kernel.group_id(0));
   xrt::bo Buffer_pivot(*config.device, data.ipvt,
-                       sizeof(cl_int) * data.matrix_height, 0);
+                       sizeof(cl_int) * data.matrix_height,
+                       lu_tmp_kernel.group_id(0));
+
+  // TODO: To make this code work with the ACCL simulator, we need to create
+  // buffers using bos. This vector is used to store these bos during execution.
+  // They will be accessed via the ACCL buffers are not required in the code
+  // itself. Fixing the simulator code of ACCL to always create a bo would fix
+  // this issue.
+  std::vector<xrt::bo> tmp_bos;
 
   /* --- Setup MPI communication and required additional buffers --- */
 
   // Buffers only used to store data received over the network layer
   // The content will not be modified by the host
+  tmp_bos.emplace_back(*config.device,
+                       sizeof(HOST_DATA_TYPE) *
+                           (config.programSettings->blockSize) *
+                           (config.programSettings->blockSize),
+                       lu_tmp_kernel.group_id(1));
   auto Buffer_lu1 = config.accl->create_buffer<HOST_DATA_TYPE>(
+      tmp_bos.back(),
       (config.programSettings->blockSize) * (config.programSettings->blockSize),
-      ACCL::dataType::float32, 1);
+      ACCL::dataType::float32);
+  tmp_bos.emplace_back(*config.device,
+                       sizeof(HOST_DATA_TYPE) *
+                           (config.programSettings->blockSize) *
+                           (config.programSettings->blockSize),
+                       lu_tmp_kernel.group_id(2));
   auto Buffer_lu2 = config.accl->create_buffer<HOST_DATA_TYPE>(
+      tmp_bos.back(),
       (config.programSettings->blockSize) * (config.programSettings->blockSize),
-      ACCL::dataType::float32, 1);
+      ACCL::dataType::float32);
+  Buffer_lu1->sync_to_device();
+  Buffer_lu2->sync_to_device();
 
   std::vector<std::vector<std::unique_ptr<ACCL::BaseBuffer>>> Buffer_left_list;
   std::vector<std::vector<std::unique_ptr<ACCL::BaseBuffer>>> Buffer_top_list;
@@ -124,19 +145,33 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
     Buffer_left_list.emplace_back();
     Buffer_top_list.emplace_back();
     for (int i = 0; i < blocks_per_row; i++) {
+      tmp_bos.emplace_back(*config.device,
+                           sizeof(HOST_DATA_TYPE) *
+                               (config.programSettings->blockSize) *
+                               (config.programSettings->blockSize),
+                           lu_tmp_kernel.group_id(0));
       Buffer_top_list.back().push_back(
           config.accl->create_buffer<HOST_DATA_TYPE>(
-              config.programSettings->blockSize *
+              tmp_bos.back(),
+              (config.programSettings->blockSize) *
                   (config.programSettings->blockSize),
-              ACCL::dataType::float32, 1));
+              ACCL::dataType::float32));
+      Buffer_top_list.back().back()->sync_to_device();
     }
 
     for (int i = 0; i < blocks_per_col; i++) {
+      tmp_bos.emplace_back(*config.device,
+                           sizeof(HOST_DATA_TYPE) *
+                               (config.programSettings->blockSize) *
+                               (config.programSettings->blockSize),
+                           lu_tmp_kernel.group_id(2));
       Buffer_left_list.back().push_back(
           config.accl->create_buffer<HOST_DATA_TYPE>(
-              config.programSettings->blockSize *
+              tmp_bos.back(),
+              (config.programSettings->blockSize) *
                   (config.programSettings->blockSize),
-              ACCL::dataType::float32, 1));
+              ACCL::dataType::float32));
+      Buffer_left_list.back().back()->sync_to_device();
     }
   }
 
@@ -242,9 +277,12 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                       << local_block_row << "," << local_block_col << std::endl;
 #endif
             auto lu_run =
-                lu_kernel(Buffer_a, Buffer_lu1, Buffer_lu2, local_block_col,
-                          local_block_row, blocks_per_row);
-            lu_run.wait();
+                lu_kernel(Buffer_a, *Buffer_lu1->bo(), *Buffer_lu2->bo(),
+                          local_block_col, local_block_row, blocks_per_row);
+            ert_cmd_state state = lu_run.wait();
+            if (state != ERT_CMD_STATE_COMPLETED) {
+              std::cerr << "Execution Lu failed: " << state << std::endl;
+            }
           }
 
           // Exchange LU blocks on all ranks to prevent stalls in MPI broadcast
@@ -278,9 +316,9 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 
             comm_kernel_runs.push_back(
                 k(Buffer_a,
-                  Buffer_top_list[block_row % 2][tops - start_col_index],
-                  Buffer_lu1, (tops == start_col_index), tops, local_block_row,
-                  blocks_per_row));
+                  *Buffer_top_list[block_row % 2][tops - start_col_index]->bo(),
+                  *Buffer_lu1->bo(), (tops == start_col_index), tops,
+                  local_block_row, blocks_per_row));
           }
         }
         if (num_left_blocks > 0) {
@@ -294,11 +332,11 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                       << config.programSettings->torus_col << " Left   " << tops
                       << "," << local_block_col << std::endl;
 #endif
-            comm_kernel_runs.push_back(
-                k(Buffer_a,
-                  Buffer_left_list[block_row % 2][tops - start_row_index],
-                  Buffer_lu2, (tops == start_row_index), local_block_col, tops,
-                  blocks_per_row));
+            comm_kernel_runs.push_back(k(
+                Buffer_a,
+                *Buffer_left_list[block_row % 2][tops - start_row_index]->bo(),
+                *Buffer_lu2->bo(), (tops == start_row_index), local_block_col,
+                tops, blocks_per_row));
           }
         }
 
@@ -346,16 +384,24 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
           // this block updated
           xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
 
-          int block_col = static_cast<cl_uint>(
+          int current_block_col = static_cast<cl_uint>(
               (data.matrix_width / config.programSettings->blockSize) -
               num_inner_block_cols);
-          int block_row = static_cast<cl_uint>(
+          int current_block_row = static_cast<cl_uint>(
               (data.matrix_height / config.programSettings->blockSize) -
               num_inner_block_rows + lbi);
 
-          outer_mms.push_back(k(Buffer_a, Buffer_left_list[block_row % 2][lbi],
-                                Buffer_top_list[block_row % 2][0], block_col,
-                                block_row, blocks_per_row));
+#ifndef NDEBUG
+          std::cout << "Torus " << config.programSettings->torus_row << ","
+                    << config.programSettings->torus_col << " MM col "
+                    << current_block_row << "," << current_block_col
+                    << std::endl;
+#endif
+
+          outer_mms.push_back(
+              k(Buffer_a, *Buffer_left_list[block_row % 2][lbi]->bo(),
+                *Buffer_top_list[block_row % 2][0]->bo(), current_block_col,
+                current_block_row, blocks_per_row));
         }
 
 #pragma omp for
@@ -365,16 +411,24 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
           // this block updated
           xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
 
-          int block_col = static_cast<cl_uint>(
+          int current_block_col = static_cast<cl_uint>(
               (data.matrix_width / config.programSettings->blockSize) -
               num_inner_block_cols + tbi);
-          int block_row = static_cast<cl_uint>(
+          int current_block_row = static_cast<cl_uint>(
               (data.matrix_height / config.programSettings->blockSize) -
               num_inner_block_rows);
 
-          outer_mms.push_back(k(Buffer_a, Buffer_left_list[block_row % 2][0],
-                                Buffer_top_list[block_row % 2][tbi], block_col,
-                                block_row, blocks_per_row));
+#ifndef NDEBUG
+          std::cout << "Torus " << config.programSettings->torus_row << ","
+                    << config.programSettings->torus_col << " MM row "
+                    << current_block_row << "," << current_block_col
+                    << std::endl;
+#endif
+
+          outer_mms.push_back(
+              k(Buffer_a, *Buffer_left_list[block_row % 2][0]->bo(),
+                *Buffer_top_list[block_row % 2][tbi]->bo(), current_block_col,
+                current_block_row, blocks_per_row));
         }
 
         // Clear inner MM runs vector for this iteration
@@ -389,17 +443,24 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 
             xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
 
-            int block_col = static_cast<cl_uint>(
+            int current_block_col = static_cast<cl_uint>(
                 (data.matrix_width / config.programSettings->blockSize) -
                 num_inner_block_cols + tbi);
-            int block_row = static_cast<cl_uint>(
+            int current_block_row = static_cast<cl_uint>(
                 (data.matrix_height / config.programSettings->blockSize) -
                 num_inner_block_rows + lbi);
 
-            inner_mms.push_back(k(Buffer_a,
-                                  Buffer_left_list[block_row % 2][lbi],
-                                  Buffer_top_list[block_row % 2][tbi],
-                                  block_col, block_row, blocks_per_row));
+#ifndef NDEBUG
+            std::cout << "Torus " << config.programSettings->torus_row << ","
+                      << config.programSettings->torus_col << " MM     "
+                      << current_block_row << "," << current_block_col
+                      << std::endl;
+#endif
+
+            inner_mms.push_back(
+                k(Buffer_a, *Buffer_left_list[block_row % 2][lbi]->bo(),
+                  *Buffer_top_list[block_row % 2][tbi]->bo(), current_block_col,
+                  current_block_row, blocks_per_row));
           }
         }
 
@@ -416,11 +477,9 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
       }
     }
 
-#ifdef NDEBUG
     t2 = std::chrono::high_resolution_clock::now();
     std::cout << "Torus " << config.programSettings->torus_row << ","
               << config.programSettings->torus_col << "End! " << std::endl;
-#endif
 
 #ifndef NDEBUG
     std::cout << "Torus " << config.programSettings->torus_row << ","
