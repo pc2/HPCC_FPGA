@@ -85,22 +85,15 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                        sizeof(cl_int) * data.matrix_height, lu_tmp_kernel.group_id(0));
 
   /* --- Setup MPI communication and required additional buffers --- */
-  HOST_DATA_TYPE *lu_block, *lu_trans_block;
-  posix_memalign(reinterpret_cast<void **>(&lu_block), 4096,
-                 sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize) *
-                     (config.programSettings->blockSize));
-  posix_memalign(reinterpret_cast<void **>(&lu_trans_block), 4096,
-                 sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize) *
-                     (config.programSettings->blockSize));
 
   // Buffers only used to store data received over the network layer
   // The content will not be modified by the host
-  xrt::bo Buffer_lu1(*config.device, lu_trans_block,
+  xrt::bo Buffer_lu1(*config.device,
                      sizeof(HOST_DATA_TYPE) *
                          (config.programSettings->blockSize) *
                          (config.programSettings->blockSize),
                      lu_tmp_kernel.group_id(1));
-  xrt::bo Buffer_lu2(*config.device, lu_block,
+  xrt::bo Buffer_lu2(*config.device,
                      sizeof(HOST_DATA_TYPE) *
                          (config.programSettings->blockSize) *
                          (config.programSettings->blockSize),
@@ -108,31 +101,19 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 
   std::vector<std::vector<xrt::bo>> Buffer_left_list(2);
   std::vector<std::vector<xrt::bo>> Buffer_top_list(2);
-  std::vector<std::vector<HOST_DATA_TYPE *>> left_blocks;
-  std::vector<std::vector<HOST_DATA_TYPE *>> top_blocks;
 
   for (int double_buffer = 0; double_buffer < 2; double_buffer++) {
-      top_blocks.emplace_back(blocks_per_row);
-      left_blocks.emplace_back(blocks_per_col);
     for (int i = 0; i < blocks_per_row; i++) {
-      posix_memalign(
-          reinterpret_cast<void **>(&(top_blocks[double_buffer][i])), 4096,
-          sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize) *
-              (config.programSettings->blockSize));
       Buffer_top_list[double_buffer].emplace_back(
-          *config.device, top_blocks[double_buffer][i],
+          *config.device,
           sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize) *
               (config.programSettings->blockSize),
           lu_tmp_kernel.group_id(0));
     }
 
     for (int i = 0; i < blocks_per_col; i++) {
-      posix_memalign(
-          reinterpret_cast<void **>(&(left_blocks[double_buffer][i])), 4096,
-          sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize) *
-              (config.programSettings->blockSize));
       Buffer_left_list[double_buffer].emplace_back(
-          *config.device, left_blocks[double_buffer][i],
+          *config.device,
           sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize) *
               (config.programSettings->blockSize),
           lu_tmp_kernel.group_id(2));
@@ -151,8 +132,8 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
     Buffer_b.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
     // Command queues
-    // A new command queue is created for every iteration of the algorithm to
-    // reduce the overhead of too large queues
+    // A new command queue is created for every iteration of the
+    // algorithm to reduce the overhead of too large queues
     std::vector<xrt::run> inner_mms;
     std::thread flush_thread;
 
@@ -252,12 +233,12 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
           }
 
           // Broadcast LU block in column to update all left blocks
-          MPI_Bcast(lu_block,
+          MPI_Bcast(Buffer_lu2.map(),
                     config.programSettings->blockSize *
                         config.programSettings->blockSize,
                     MPI_DATA_TYPE, local_block_row_remainder, col_communicator);
           // Broadcast LU block in row to update all top blocks
-          MPI_Bcast(lu_trans_block,
+          MPI_Bcast(Buffer_lu1.map(),
                     config.programSettings->blockSize *
                         config.programSettings->blockSize,
                     MPI_DATA_TYPE, local_block_col_remainder, row_communicator);
@@ -319,7 +300,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                lbi++) {
             Buffer_left_list[block_row % 2][lbi].sync(
                 XCL_BO_SYNC_BO_FROM_DEVICE);
-            MPI_Bcast(left_blocks[block_row % 2][lbi],
+            MPI_Bcast(Buffer_left_list[block_row % 2][lbi].map(),
                       config.programSettings->blockSize *
                           config.programSettings->blockSize,
                       MPI_DATA_TYPE, local_block_col_remainder,
@@ -332,7 +313,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                tbi++) {
             Buffer_top_list[block_row % 2][tbi].sync(
                 XCL_BO_SYNC_BO_FROM_DEVICE);
-            MPI_Bcast(top_blocks[block_row % 2][tbi],
+            MPI_Bcast(Buffer_top_list[block_row % 2][tbi].map(),
                       config.programSettings->blockSize *
                           config.programSettings->blockSize,
                       MPI_DATA_TYPE, local_block_row_remainder,
@@ -355,24 +336,25 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 
           // select the matrix multiplication kernel that should be used for
           // this block updated
-          xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
+          xrt::kernel k(*config.device, *config.program,
+                        "inner_update_mm0");
 
-          int block_col = static_cast<cl_uint>(
+          int current_block_col = static_cast<cl_uint>(
               (data.matrix_width / config.programSettings->blockSize) -
               num_inner_block_cols);
-          int block_row = static_cast<cl_uint>(
+          int current_block_row = static_cast<cl_uint>(
               (data.matrix_height / config.programSettings->blockSize) -
               num_inner_block_rows + lbi);
 
 #ifndef NDEBUG
           std::cout << "Torus " << config.programSettings->torus_row << ","
-                    << config.programSettings->torus_col << " MM row "
-                    << block_row << "," << block_col << std::endl;
+                    << config.programSettings->torus_col << " MM col "
+                    << current_block_row << "," << current_block_col << std::endl;
 #endif
 
           outer_mms.push_back(k(Buffer_a, Buffer_left_list[block_row % 2][lbi],
-                                Buffer_top_list[block_row % 2][0], block_col,
-                                block_row, blocks_per_row));
+                                Buffer_top_list[block_row % 2][0], current_block_col,
+                                current_block_row, blocks_per_row));
         }
 
 #pragma omp for
@@ -380,24 +362,25 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 
           // select the matrix multiplication kernel that should be used for
           // this block updated
-          xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
+          xrt::kernel k(*config.device, *config.program,
+                        "inner_update_mm0");
 
-          int block_col = static_cast<cl_uint>(
+          int current_block_col = static_cast<cl_uint>(
               (data.matrix_width / config.programSettings->blockSize) -
               num_inner_block_cols + tbi);
-          int block_row = static_cast<cl_uint>(
+          int current_block_row = static_cast<cl_uint>(
               (data.matrix_height / config.programSettings->blockSize) -
               num_inner_block_rows);
 
 #ifndef NDEBUG
           std::cout << "Torus " << config.programSettings->torus_row << ","
-                    << config.programSettings->torus_col << " MM col "
-                    << block_row << "," << block_col << std::endl;
+                    << config.programSettings->torus_col << " MM row "
+                    << current_block_row << "," << current_block_col << std::endl;
 #endif
 
           outer_mms.push_back(k(Buffer_a, Buffer_left_list[block_row % 2][0],
-                                Buffer_top_list[block_row % 2][tbi], block_col,
-                                block_row, blocks_per_row));
+                                Buffer_top_list[block_row % 2][tbi], current_block_col,
+                                current_block_row, blocks_per_row));
         }
 
         // Clear inner MM runs vector for this iteration
@@ -410,25 +393,26 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
             // select the matrix multiplication kernel that should be used for
             // this block updated
 
-            xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
+            xrt::kernel k(*config.device, *config.program,
+                          "inner_update_mm0");
 
-            int block_col = static_cast<cl_uint>(
+            int current_block_col = static_cast<cl_uint>(
                 (data.matrix_width / config.programSettings->blockSize) -
                 num_inner_block_cols + tbi);
-            int block_row = static_cast<cl_uint>(
+            int current_block_row = static_cast<cl_uint>(
                 (data.matrix_height / config.programSettings->blockSize) -
                 num_inner_block_rows + lbi);
 
 #ifndef NDEBUG
             std::cout << "Torus " << config.programSettings->torus_row << ","
                       << config.programSettings->torus_col << " MM     "
-                      << block_row << "," << block_col << std::endl;
+                      << current_block_row << "," << current_block_col << std::endl;
 #endif
 
             inner_mms.push_back(k(Buffer_a,
                                   Buffer_left_list[block_row % 2][lbi],
                                   Buffer_top_list[block_row % 2][tbi],
-                                  block_col, block_row, blocks_per_row));
+                                  current_block_col, current_block_row, blocks_per_row));
           }
         }
 
