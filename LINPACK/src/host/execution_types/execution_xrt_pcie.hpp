@@ -76,13 +76,16 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
   // TODO: Need to set a memory group for the buffers here!
 
   auto lu_tmp_kernel = xrt::kernel(*config.device, *config.program, "lu");
-  xrt::bo Buffer_a(
-      *config.device, data.A,
-      sizeof(HOST_DATA_TYPE) * data.matrix_height * data.matrix_width, lu_tmp_kernel.group_id(0));
+  xrt::bo Buffer_a(*config.device, data.A,
+                   sizeof(HOST_DATA_TYPE) * data.matrix_height *
+                       data.matrix_width,
+                   lu_tmp_kernel.group_id(0));
   xrt::bo Buffer_b(*config.device, data.b,
-                   sizeof(HOST_DATA_TYPE) * data.matrix_width, lu_tmp_kernel.group_id(0));
+                   sizeof(HOST_DATA_TYPE) * data.matrix_width,
+                   lu_tmp_kernel.group_id(0));
   xrt::bo Buffer_pivot(*config.device, data.ipvt,
-                       sizeof(cl_int) * data.matrix_height, lu_tmp_kernel.group_id(0));
+                       sizeof(cl_int) * data.matrix_height,
+                       lu_tmp_kernel.group_id(0));
 
   /* --- Setup MPI communication and required additional buffers --- */
 
@@ -336,8 +339,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 
           // select the matrix multiplication kernel that should be used for
           // this block updated
-          xrt::kernel k(*config.device, *config.program,
-                        "inner_update_mm0");
+          xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
 
           int current_block_col = static_cast<cl_uint>(
               (data.matrix_width / config.programSettings->blockSize) -
@@ -349,12 +351,14 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 #ifndef NDEBUG
           std::cout << "Torus " << config.programSettings->torus_row << ","
                     << config.programSettings->torus_col << " MM col "
-                    << current_block_row << "," << current_block_col << std::endl;
+                    << current_block_row << "," << current_block_col
+                    << std::endl;
 #endif
 
           outer_mms.push_back(k(Buffer_a, Buffer_left_list[block_row % 2][lbi],
-                                Buffer_top_list[block_row % 2][0], current_block_col,
-                                current_block_row, blocks_per_row));
+                                Buffer_top_list[block_row % 2][0],
+                                current_block_col, current_block_row,
+                                blocks_per_row));
         }
 
 #pragma omp for
@@ -362,8 +366,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 
           // select the matrix multiplication kernel that should be used for
           // this block updated
-          xrt::kernel k(*config.device, *config.program,
-                        "inner_update_mm0");
+          xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
 
           int current_block_col = static_cast<cl_uint>(
               (data.matrix_width / config.programSettings->blockSize) -
@@ -375,12 +378,14 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 #ifndef NDEBUG
           std::cout << "Torus " << config.programSettings->torus_row << ","
                     << config.programSettings->torus_col << " MM row "
-                    << current_block_row << "," << current_block_col << std::endl;
+                    << current_block_row << "," << current_block_col
+                    << std::endl;
 #endif
 
           outer_mms.push_back(k(Buffer_a, Buffer_left_list[block_row % 2][0],
-                                Buffer_top_list[block_row % 2][tbi], current_block_col,
-                                current_block_row, blocks_per_row));
+                                Buffer_top_list[block_row % 2][tbi],
+                                current_block_col, current_block_row,
+                                blocks_per_row));
         }
 
         // Clear inner MM runs vector for this iteration
@@ -393,8 +398,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
             // select the matrix multiplication kernel that should be used for
             // this block updated
 
-            xrt::kernel k(*config.device, *config.program,
-                          "inner_update_mm0");
+            xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
 
             int current_block_col = static_cast<cl_uint>(
                 (data.matrix_width / config.programSettings->blockSize) -
@@ -406,13 +410,14 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 #ifndef NDEBUG
             std::cout << "Torus " << config.programSettings->torus_row << ","
                       << config.programSettings->torus_col << " MM     "
-                      << current_block_row << "," << current_block_col << std::endl;
+                      << current_block_row << "," << current_block_col
+                      << std::endl;
 #endif
 
-            inner_mms.push_back(k(Buffer_a,
-                                  Buffer_left_list[block_row % 2][lbi],
-                                  Buffer_top_list[block_row % 2][tbi],
-                                  current_block_col, current_block_row, blocks_per_row));
+            inner_mms.push_back(
+                k(Buffer_a, Buffer_left_list[block_row % 2][lbi],
+                  Buffer_top_list[block_row % 2][tbi], current_block_col,
+                  current_block_row, blocks_per_row));
           }
         }
 
