@@ -3,6 +3,7 @@
 set(ACCL_STACK_TYPE "UDP" CACHE STRING "Network layer used in ACCL")
 set(ACCL_UDP_ETH_IF 0 CACHE STRING "Ethernet interface used. On ETHZ: 0 = switch, 1 = direct")
 set(ACCL_DEVICE_NAME "xcu280-fsvh2892-2L-e" CACHE STRING "Name of the FPGA used on the target platform")
+set(ACCL_BUFFER_SIZE 8192 CACHE STRING "Size of ACCL buffers in bytes")
 set(ACCL_HARDWARE_DIR ${extern_accl_SOURCE_DIR}/test/hardware)
 set(ACCL_CCLO_ADDITIONAL_BUILD_ARGS "" CACHE STRING "Add additional build arguments that will be passed to the CCLO makefile")
 set(ACCL_CCLO_BUILD_ARGS ${ACCL_CCLO_ADDITIONAL_BUILD_ARGS})
