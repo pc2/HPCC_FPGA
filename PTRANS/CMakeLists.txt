@@ -18,6 +18,11 @@ set(HOST_EMULATION_REORDER No CACHE BOOL "Reorder the scheduling of FPGA kernels
 
 mark_as_advanced(READ_KERNEL_NAME WRITE_KERNEL_NAME USE_BUFFER_WRITE_RECT_FOR_A XILINX_UNROLL_INNER_LOOPS)
 
+if (USE_ACCL)
+    math(EXPR calculate_accl_buffer_size "${BLOCK_SIZE} * ${BLOCK_SIZE} * 8")
+    set(ACCL_BUFFER_SIZE ${calculate_accl_buffer_size} CACHE STRING "Size of ACCL buffers in bytes")
+endif()
+
 set(USE_MPI Yes)
 set(USE_OPENMP Yes)
 set(USE_DEPRECATED_HPP_HEADER No)

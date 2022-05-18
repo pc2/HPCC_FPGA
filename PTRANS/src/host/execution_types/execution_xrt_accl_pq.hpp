@@ -62,6 +62,7 @@ void accl_exchangeData(
     acclBuffersA.push_back(accl.create_buffer<HOST_DATA_TYPE>(
         bo, data.blockSize * data.blockSize * data.numBlocks,
         ACCL::dataType::float32));
+    acclBuffersA.back()->sync_from_device();
   }
 
   if (pq_width == pq_height) {
@@ -78,17 +79,38 @@ void accl_exchangeData(
       // . . . 2
       // 1 . . .
       // 3 2 . .
-      // auto AcclBufferA_recv = accl.create_buffer<HOST_DATA_TYPE>(
-      //     data.blockSize * data.blockSize * data.numBlocks,
-      //     ACCL::dataType::float32);
-      // AcclBufferA_recv->sync_to_device();
+      auto acclBufferA_recv = accl.create_buffer<HOST_DATA_TYPE>(
+          data.blockSize * data.blockSize * data.numBlocks,
+          ACCL::dataType::float32);
+      acclBufferA_recv->sync_to_device();
       // Send and receive matrix A using ACCL directly on FPGA
-      accl.send(0, *acclBuffersA[0],
-                data.blockSize * data.blockSize * data.numBlocks, pair_rank, 0,
-                true, ACCL::streamFlags::NO_STREAM);
-      accl.recv(0, *acclBuffersA[0],
-                data.blockSize * data.blockSize * data.numBlocks, pair_rank, 0,
-                true, ACCL::streamFlags::NO_STREAM);
+      if (mpi_comm_rank < pair_rank) {
+        for (int block_num = 0; block_num < data.numBlocks; block_num++) {
+          accl.send(0,
+                    *acclBuffersA[0]->slice(
+                        data.blockSize * data.blockSize * block_num,
+                        data.blockSize * data.blockSize * (block_num + 1)),
+                    data.blockSize * data.blockSize, pair_rank, 0, true,
+                    ACCL::streamFlags::NO_STREAM);
+        }
+        accl.recv(0, *acclBufferA_recv,
+                  data.blockSize * data.blockSize * data.numBlocks, pair_rank,
+                  1, true, ACCL::streamFlags::NO_STREAM);
+      } else {
+        accl.recv(0, *acclBufferA_recv,
+                  data.blockSize * data.blockSize * data.numBlocks, pair_rank,
+                  0, true, ACCL::streamFlags::NO_STREAM);
+        for (int block_num = 0; block_num < data.numBlocks; block_num++) {
+          accl.send(0,
+                    *acclBuffersA[0]->slice(
+                        data.blockSize * data.blockSize * block_num,
+                        data.blockSize * data.blockSize * (block_num + 1)),
+                    data.blockSize * data.blockSize, pair_rank, 1, true,
+                    ACCL::streamFlags::NO_STREAM);
+        }
+      }
+      accl.copy(*acclBufferA_recv, *acclBuffersA[0],
+                data.blockSize * data.blockSize * data.numBlocks, true, true);
     }
   } else {
     // Taken from "Parallel matrix transpose algorithms on distributed memory
@@ -254,10 +276,12 @@ void accl_exchangeData(
 #endif
         accl_requests[current_parallel_execution] = (accl.send(
             0, *send_buffers[current_parallel_execution], sending_size,
-            send_rank, 0, true, ACCL::streamFlags::NO_STREAM, ACCL::dataType::none, true));
+            send_rank, 0, true, ACCL::streamFlags::NO_STREAM,
+            ACCL::dataType::none, true));
         accl_requests[current_parallel_execution + gcd] = (accl.recv(
             0, *recv_buffers[current_parallel_execution], sending_size,
-            send_rank, 0, true, ACCL::streamFlags::NO_STREAM, ACCL::dataType::none, true));
+            send_rank, 0, true, ACCL::streamFlags::NO_STREAM,
+            ACCL::dataType::none, true));
         // Increase the counter for parallel executions
         current_parallel_execution = (current_parallel_execution + 1) % gcd;
 
@@ -569,6 +593,10 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
       }
     }
     endTransfer = std::chrono::high_resolution_clock::now();
+
+    accl_exchangeData(*config.accl, handler, data, bufferListA,
+                      config.programSettings->matrixSize / data.blockSize);
+
     transferTime += std::chrono::duration_cast<std::chrono::duration<double>>(
         endTransfer - startTransfer);
     transferTimings.push_back(transferTime.count());

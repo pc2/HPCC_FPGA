@@ -16,6 +16,8 @@
 #define NUM_REPLICATIONS @NUM_REPLICATIONS@
 #cmakedefine HOST_EMULATION_REORDER
 
+#cmakedefine ACCL_BUFFER_SIZE @ACCL_BUFFER_SIZE@
+
 /**
  * Kernel Parameters
  */

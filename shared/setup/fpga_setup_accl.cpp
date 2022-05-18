@@ -32,7 +32,7 @@ std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &progra
   std::vector<ACCL::rank_t> ranks = {};
   for (int i = 0; i < current_size; ++i) {
     // TODO: Replace the ip addresses and ports here for execution of real hardware?
-    ACCL::rank_t new_rank = {"127.0.0.1", 5500 + i, i, 1024};
+    ACCL::rank_t new_rank = {"127.0.0.1", 5500 + i, i, ACCL_BUFFER_SIZE};
     ranks.emplace_back(new_rank);
   }
   if (!useAcclEmulation) {
@@ -45,7 +45,7 @@ std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &progra
   } else {
     // TODO: Add start port here. Currenty hardcoded!
     return std::unique_ptr<ACCL::ACCL>(
-        new ACCL::ACCL(ranks, current_rank, 5500, device, ACCL::networkProtocol::TCP, 16, 1024));
+        new ACCL::ACCL(ranks, current_rank, 5500, device, ACCL::networkProtocol::TCP, 16, ACCL_BUFFER_SIZE));
   }
 }
 
