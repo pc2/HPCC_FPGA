@@ -73,10 +73,10 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
   std::vector<ACCL::rank_t> col_ranks;
 
   // Create sub-groups for rows and columns
-  for (int i = config.programSettings->torus_row *
-               config.programSettings->torus_width;
-       i < config.programSettings->torus_row *
-               (config.programSettings->torus_width + 1);
+  for (int i = config.programSettings->torus_width *
+               config.programSettings->torus_row;
+       i < config.programSettings->torus_width *
+               (config.programSettings->torus_row + 1);
        i++) {
     row_ranks.push_back(all_accl_ranks[i]);
   }
@@ -296,12 +296,11 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                                  config.programSettings->blockSize,
                              local_block_row_remainder, col_comm, true, true);
           // Broadcast LU block in row to update all top blocks
-          config.accl->bcast(*Buffer_lu2,
+          config.accl->bcast(*Buffer_lu1,
                              config.programSettings->blockSize *
                                  config.programSettings->blockSize,
                              local_block_col_remainder, row_comm, true, true);
         }
-
         if (num_top_blocks > 0) {
 
 // Create top kernels
@@ -343,8 +342,9 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 #pragma omp single
         {
           // Wait until all top and left blocks are calculated
-          std::for_each(comm_kernel_runs.begin(), comm_kernel_runs.end(),
-                        [](xrt::run &e) { e.wait(); });
+          for (auto &run : comm_kernel_runs) {
+            run.wait();
+          }
 
           // Send the left and top blocks to all other ranks so they can be used
           // to update all inner blocks
@@ -366,7 +366,6 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                                    config.programSettings->blockSize,
                                local_block_row_remainder, col_comm, true, true);
           }
-
           // update all remaining inner blocks using only global memory
         }
 
@@ -374,8 +373,9 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 
         // Wait for previous inner MMs to complete.
         // They may need to be reused by the next outer MM calls!
-        std::for_each(inner_mms.begin(), inner_mms.end(),
-                      [](xrt::run &e) { e.wait(); });
+        for (auto &run : inner_mms) {
+          run.wait();
+        }
 
 #pragma omp for
         for (int lbi = 1; lbi < num_inner_block_rows; lbi++) {
@@ -464,16 +464,17 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
           }
         }
 
+        // Wait for all outer MMs to complete because the results are required
+        // by the next communication phase
+        for (auto &run : outer_mms) {
+          run.wait();
+        }
+
 #ifndef NDEBUG
         MPI_Barrier(MPI_COMM_WORLD);
         if (is_calulating_lu_block)
           std::cout << "---------------" << std::endl;
 #endif
-
-        // Wait for all outer MMs to complete because the results are required
-        // by the next communication phase
-        std::for_each(outer_mms.begin(), outer_mms.end(),
-                      [](xrt::run &e) { e.wait(); });
       }
     }
 
