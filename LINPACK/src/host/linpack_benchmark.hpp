@@ -341,13 +341,15 @@ public:
     double resid = 0.0;
     double normx = 0.0;
 #ifndef DISTRIBUTED_VALIDATION
-    if (mpi_comm_rank > 0) {
+    auto base_data = this->generateInputData();
+    if (this->mpi_comm_rank > 0) {
         for (int j = 0; j < matrix_height; j++) {
             for (int i = 0; i < matrix_width; i+= this->executionSettings->programSettings->blockSize) {
                 MPI_Send(&data.A[matrix_width * j + i], this->executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
+                MPI_Send(&base_data->A[matrix_width * j + i], this->executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 1, MPI_COMM_WORLD);
             }
         }
-        if (executionSettings->programSettings->torus_row == 0) {
+        if (this->executionSettings->programSettings->torus_row == 0) {
             for (int i = 0; i < matrix_width; i+= this->executionSettings->programSettings->blockSize) {
                 MPI_Send(&data.b[i], this->executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
             }
@@ -360,17 +362,20 @@ public:
         std::vector<HOST_DATA_TYPE> total_b_original(n);
         std::vector<HOST_DATA_TYPE> total_b(n);
         std::vector<HOST_DATA_TYPE> total_a(n*n);
+        std::vector<HOST_DATA_TYPE> total_a_old(n*n);
         for (int j = 0; j < n; j++) {
             for (int i = 0; i < n; i+= this->executionSettings->programSettings->blockSize) {
                 int recvcol= (i / this->executionSettings->programSettings->blockSize) % this->executionSettings->programSettings->torus_width;
                 int recvrow= (j / this->executionSettings->programSettings->blockSize) % this->executionSettings->programSettings->torus_height;
                 int recvrank = this->executionSettings->programSettings->torus_width * recvrow + recvcol;
                 if (recvrank > 0) {
-                    MPI_Recv(&total_a[j * n + i],executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvrank, 0, MPI_COMM_WORLD,  &status);
+                    MPI_Recv(&total_a[j * n + i], this->executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvrank, 0, MPI_COMM_WORLD,  &status);
+                    MPI_Recv(&total_a_old[j * n + i], this->executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvrank, 1, MPI_COMM_WORLD,  &status);
                 }
                 else {
                     for (int k=0; k < this->executionSettings->programSettings->blockSize; k++) {
                         total_a[j * n + i + k] = data.A[current_offset + k];
+                        total_a_old[j * n + i + k] = base_data->A[current_offset + k];
                     }
                     current_offset += this->executionSettings->programSettings->blockSize;
                 }
@@ -397,6 +402,22 @@ public:
             resid = (resid > std::abs(total_b[i] - 1)) ? resid : std::abs(total_b[i] - 1);
             normx = (normx > std::abs(total_b_original[i])) ? normx : std::abs(total_b_original[i]);
         }
+
+#ifndef NDEBUG 
+        double residn = resid / (static_cast<double>(n)*normx*eps);
+        if (residn > 1.0) {
+            gefa_ref_nopvt(total_a_old.data(), n, n);
+
+            for (int i=0; i < n; i++) {
+                for (int j=0; j < n; j++) {
+                    double error = std::abs(total_a[i * n + j] - total_a_old[i * n + j]);
+                    std::cout << ((error > 1.0e-6) ? error : 0.0) << ",";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+        }
+#endif
     }
 #else
     double local_resid = 0;
