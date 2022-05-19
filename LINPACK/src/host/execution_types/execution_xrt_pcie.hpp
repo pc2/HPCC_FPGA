@@ -71,21 +71,21 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
   MPI_Comm_split(MPI_COMM_WORLD, config.programSettings->torus_col, 0,
                  &col_communicator);
 
-  // TODO: Select the correct memory groups!
-  // Create Buffers for input and output
-  // TODO: Need to set a memory group for the buffers here!
+  xrt::kernel kernel_mm(*config.device, *config.program, "inner_update_mm0");
+  xrt::kernel kernel_lu(*config.device, *config.program, "lu");
+  xrt::kernel kernel_top(*config.device, *config.program, "top_update");
+  xrt::kernel kernel_left(*config.device, *config.program, "left_update");
 
-  auto lu_tmp_kernel = xrt::kernel(*config.device, *config.program, "lu");
   xrt::bo Buffer_a(*config.device, data.A,
                    sizeof(HOST_DATA_TYPE) * data.matrix_height *
                        data.matrix_width,
-                   lu_tmp_kernel.group_id(0));
+                   kernel_lu.group_id(0));
   xrt::bo Buffer_b(*config.device, data.b,
                    sizeof(HOST_DATA_TYPE) * data.matrix_width,
-                   lu_tmp_kernel.group_id(0));
+                   kernel_lu.group_id(0));
   xrt::bo Buffer_pivot(*config.device, data.ipvt,
                        sizeof(cl_int) * data.matrix_height,
-                       lu_tmp_kernel.group_id(0));
+                       kernel_lu.group_id(0));
 
   /* --- Setup MPI communication and required additional buffers --- */
 
@@ -95,12 +95,12 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                      sizeof(HOST_DATA_TYPE) *
                          (config.programSettings->blockSize) *
                          (config.programSettings->blockSize),
-                     lu_tmp_kernel.group_id(1));
+                     kernel_lu.group_id(1));
   xrt::bo Buffer_lu2(*config.device,
                      sizeof(HOST_DATA_TYPE) *
                          (config.programSettings->blockSize) *
                          (config.programSettings->blockSize),
-                     lu_tmp_kernel.group_id(2));
+                     kernel_lu.group_id(2));
 
   std::vector<std::vector<xrt::bo>> Buffer_left_list(2);
   std::vector<std::vector<xrt::bo>> Buffer_top_list(2);
@@ -111,7 +111,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
           *config.device,
           sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize) *
               (config.programSettings->blockSize),
-          lu_tmp_kernel.group_id(0));
+          kernel_lu.group_id(0));
     }
 
     for (int i = 0; i < blocks_per_col; i++) {
@@ -119,7 +119,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
           *config.device,
           sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize) *
               (config.programSettings->blockSize),
-          lu_tmp_kernel.group_id(2));
+          kernel_lu.group_id(2));
     }
   }
 
@@ -216,8 +216,6 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
         {
 
           if (is_calulating_lu_block) {
-            // create the LU kernel
-            auto lu_kernel = xrt::kernel(*config.device, *config.program, "lu");
 
 #ifndef NDEBUG
             std::cout << "Torus " << config.programSettings->torus_row << ","
@@ -225,7 +223,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                       << local_block_row << "," << local_block_col << std::endl;
 #endif
             auto lu_run =
-                lu_kernel(Buffer_a, Buffer_lu1, Buffer_lu2, local_block_col,
+                kernel_lu(Buffer_a, Buffer_lu1, Buffer_lu2, local_block_col,
                           local_block_row, blocks_per_row);
             ert_cmd_state state = lu_run.wait();
             if (state != ERT_CMD_STATE_COMPLETED) {
@@ -254,7 +252,6 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 // Create top kernels
 #pragma omp for
           for (int tops = start_col_index; tops < blocks_per_row; tops++) {
-            xrt::kernel k(*config.device, *config.program, "top_update");
 #ifndef NDEBUG
             std::cout << "Torus " << config.programSettings->torus_row << ","
                       << config.programSettings->torus_col << " Top    "
@@ -262,7 +259,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 #endif
 
             comm_kernel_runs.push_back(
-                k(Buffer_a,
+                kernel_top(Buffer_a,
                   Buffer_top_list[block_row % 2][tops - start_col_index],
                   Buffer_lu1, (tops == start_col_index), tops, local_block_row,
                   blocks_per_row));
@@ -275,14 +272,13 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 // Create left kernels
 #pragma omp for
           for (int tops = start_row_index; tops < blocks_per_col; tops++) {
-            xrt::kernel k(*config.device, *config.program, "left_update");
 #ifndef NDEBUG
             std::cout << "Torus " << config.programSettings->torus_row << ","
                       << config.programSettings->torus_col << " Left   " << tops
                       << "," << local_block_col << std::endl;
 #endif
             comm_kernel_runs.push_back(
-                k(Buffer_a,
+                kernel_left(Buffer_a,
                   Buffer_left_list[block_row % 2][tops - start_row_index],
                   Buffer_lu2, (tops == start_row_index), local_block_col, tops,
                   blocks_per_row));
@@ -339,10 +335,6 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 #pragma omp for
         for (int lbi = 1; lbi < num_inner_block_rows; lbi++) {
 
-          // select the matrix multiplication kernel that should be used for
-          // this block updated
-          xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
-
           int current_block_col = static_cast<cl_uint>(
               (data.matrix_width / config.programSettings->blockSize) -
               num_inner_block_cols);
@@ -357,7 +349,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                     << std::endl;
 #endif
 
-          outer_mms.push_back(k(Buffer_a, Buffer_left_list[block_row % 2][lbi],
+          outer_mms.push_back(kernel_mm(Buffer_a, Buffer_left_list[block_row % 2][lbi],
                                 Buffer_top_list[block_row % 2][0],
                                 current_block_col, current_block_row,
                                 blocks_per_row));
@@ -365,10 +357,6 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 
 #pragma omp for
         for (int tbi = 0; tbi < num_inner_block_cols; tbi++) {
-
-          // select the matrix multiplication kernel that should be used for
-          // this block updated
-          xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
 
           int current_block_col = static_cast<cl_uint>(
               (data.matrix_width / config.programSettings->blockSize) -
@@ -384,7 +372,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                     << std::endl;
 #endif
 
-          outer_mms.push_back(k(Buffer_a, Buffer_left_list[block_row % 2][0],
+          outer_mms.push_back(kernel_mm(Buffer_a, Buffer_left_list[block_row % 2][0],
                                 Buffer_top_list[block_row % 2][tbi],
                                 current_block_col, current_block_row,
                                 blocks_per_row));
@@ -397,10 +385,6 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 #pragma omp for collapse(2) schedule(static)
         for (int lbi = 1; lbi < num_inner_block_rows; lbi++) {
           for (int tbi = 1; tbi < num_inner_block_cols; tbi++) {
-            // select the matrix multiplication kernel that should be used for
-            // this block updated
-
-            xrt::kernel k(*config.device, *config.program, "inner_update_mm0");
 
             int current_block_col = static_cast<cl_uint>(
                 (data.matrix_width / config.programSettings->blockSize) -
@@ -417,7 +401,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 #endif
 
             inner_mms.push_back(
-                k(Buffer_a, Buffer_left_list[block_row % 2][lbi],
+                kernel_mm(Buffer_a, Buffer_left_list[block_row % 2][lbi],
                   Buffer_top_list[block_row % 2][tbi], current_block_col,
                   current_block_row, blocks_per_row));
           }
@@ -426,6 +410,9 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
         // Wait for all outer MMs to complete because the results are required
         // by the next communication phase
         for (auto &run : outer_mms) {
+          run.wait();
+        }
+        for (auto &run : inner_mms) {
           run.wait();
         }
 
