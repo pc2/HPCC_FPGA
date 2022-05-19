@@ -65,7 +65,7 @@ function(generate_kernel_targets_xilinx)
             list(APPEND additional_xos ${ACCL_XOS}) 
         endif()
         set(xilinx_report_folder "${EXECUTABLE_OUTPUT_PATH}/xilinx_reports")
-        set(local_CLFLAGS ${CLFLAGS} -DXILINX_FPGA)
+        set(local_CLFLAGS -DXILINX_FPGA)
         list(APPEND local_CLFLAGS --report_dir=${xilinx_report_folder} --log_dir=${xilinx_report_folder}/logs)
         if (is_accl_kernel)
             list(APPEND local_harware_only_flags ${ACCL_LINK_CONFIG})
@@ -76,6 +76,7 @@ function(generate_kernel_targets_xilinx)
         else()
                 set(CLFLAGS --config ${XILINX_COMPILE_SETTINGS_FILE})
         endif()
+        list(APPEND local_CLFLAGS ${CLFLAGS})
 
         # build emulation config for device
         add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/emconfig.json
