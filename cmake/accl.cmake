@@ -4,7 +4,8 @@ set(ACCL_STACK_TYPE "UDP" CACHE STRING "Network layer used in ACCL")
 set(ACCL_UDP_ETH_IF 0 CACHE STRING "Ethernet interface used. On ETHZ: 0 = switch, 1 = direct")
 set(ACCL_DEVICE_NAME "xcu280-fsvh2892-2L-e" CACHE STRING "Name of the FPGA used on the target platform")
 set(ACCL_HARDWARE_DIR ${extern_accl_SOURCE_DIR}/test/hardware)
-
+set(ACCL_CCLO_ADDITIONAL_BUILD_ARGS "" CACHE STRING "Add additional build arguments that will be passed to the CCLO makefile")
+set(ACCL_CCLO_BUILD_ARGS ${ACCL_CCLO_ADDITIONAL_BUILD_ARGS})
 # UDP related definitions
 set(ACCL_VNX_DIR ${ACCL_HARDWARE_DIR}/xup_vitis_network_example/)
 set(ACCL_NETLAYER_HLS ${ACCL_VNX_DIR}/NetLayers/100G-fpga-network-stack-core)
@@ -14,7 +15,7 @@ set(ACCL_HLS_IP_FOLDER ${ACCL_NETLAYER_HLS}/synthesis_results_HMB)
 if (ACCL_STACK_TYPE STREQUAL "UDP")
     list(APPEND ACCL_LINK_CONFIG --advanced.param compiler.userPostSysLinkOverlayTcl=${ACCL_VNX_DIR}/Ethernet/post_sys_link.tcl)
     list(APPEND ACCL_LINK_CONFIG --user_ip_repo_paths ${ACCL_HLS_IP_FOLDER})
-    set(ACCL_CCLO_BUILD_ARGS STACK_TYPE=${ACCL_STACK_TYPE})
+    list(APPEND ACCL_CCLO_BUILD_ARGS STACK_TYPE=${ACCL_STACK_TYPE})
 endif()
 
 add_custom_command(
@@ -38,7 +39,7 @@ set(ACCL_TCP_CMAC_XO ${ACCL_TCP_BASE_DIR}/_x.hw.${FPGA_BOARD_NAME}/cmac_krnl.xo)
 if (ACCL_STACK_TYPE STREQUAL "TCP")
     list(APPEND ACCL_LINK_CONFIG --advanced.param compiler.userPostSysLinkOverlayTcl=${ACCL_TCP_BASE_DIR}/scripts/post_sys_link.tcl)
     list(APPEND ACCL_LINK_CONFIG --user_ip_repo_paths ${ACCL_TCP_BASE_DIR}/build/fpga-network-stack/iprepo)
-    set(ACCL_CCLO_BUILD_ARGS STACK_TYPE=${ACCL_STACK_TYPE} EN_FANIN=1)
+    list(APPEND ACCL_CCLO_BUILD_ARGS STACK_TYPE=${ACCL_STACK_TYPE} EN_FANIN=1)
 endif()
 
 # TODO: This is very sppecific to the Xilinx build system, because
