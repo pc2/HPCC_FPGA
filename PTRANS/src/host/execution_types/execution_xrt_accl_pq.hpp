@@ -254,10 +254,10 @@ void accl_exchangeData(
 #endif
         accl_requests[current_parallel_execution] = (accl.send(
             0, *send_buffers[current_parallel_execution], sending_size,
-            send_rank, 0, true, ACCL::streamFlags::NO_STREAM, true));
+            send_rank, 0, true, ACCL::streamFlags::NO_STREAM, ACCL::dataType::none, true));
         accl_requests[current_parallel_execution + gcd] = (accl.recv(
             0, *recv_buffers[current_parallel_execution], sending_size,
-            send_rank, 0, true, ACCL::streamFlags::NO_STREAM, true));
+            send_rank, 0, true, ACCL::streamFlags::NO_STREAM, ACCL::dataType::none, true));
         // Increase the counter for parallel executions
         current_parallel_execution = (current_parallel_execution + 1) % gcd;
 
