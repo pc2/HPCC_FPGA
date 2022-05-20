@@ -30,6 +30,7 @@
 
 #cmakedefine USE_SVM
 #cmakedefine DISTRIBUTED_VALIDATION
+#cmakedefine ACCL_BUFFER_SIZE @ACCL_BUFFER_SIZE@
 
 /*
 Short description of the program
