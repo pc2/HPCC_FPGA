@@ -314,7 +314,9 @@ public:
 #endif
 #ifdef USE_XRT_HOST
         case hpcc_base::CommunicationType::pcie_mpi : timings = execution::xrt_pcie::calculate(*this->executionSettings, data); break;
+#ifdef USE_ACCL
         case hpcc_base::CommunicationType::accl : timings = execution::accl_buffers::calculate(*this->executionSettings, data); break;
+#endif
 #endif
         default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(this->executionSettings->programSettings->communicationType));
     }

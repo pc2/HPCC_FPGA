@@ -27,9 +27,9 @@ SOFTWARE.
 #include "execution_types/execution_iec.hpp"
 #endif
 #ifdef USE_XRT_HOST
+#include "execution_types/execution_xrt_pcie.hpp"
 #ifdef USE_ACCL
 #include "execution_types/execution_accl_buffers.hpp"
-#include "execution_types/execution_xrt_pcie.hpp"
 #endif
 #endif
 #endif
