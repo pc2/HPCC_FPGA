@@ -86,9 +86,9 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
   }
 
   // Create communicators from sub-groups
-  ACCL::CommunicatorId row_comm = config.accl->create_communicator(
+  ACCL::communicatorId row_comm = config.accl->create_communicator(
       row_ranks, config.programSettings->torus_col);
-  ACCL::CommunicatorId col_comm = config.accl->create_communicator(
+  ACCL::communicatorId col_comm = config.accl->create_communicator(
       col_ranks, config.programSettings->torus_row);
 
   // Create global memory buffers
