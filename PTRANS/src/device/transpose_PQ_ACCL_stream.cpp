@@ -53,6 +53,7 @@ void transpose_read/*PY_CODE_GEN i*/( const DEVICE_DATA_TYPE *A,
     // transpose the matrix block-wise from global memory
 block_loop:
     for (unsigned int block = 0; block < number_of_blocks + 1; block++) {
+#pragma HLS loop_tripcount min=1 max=1024 avg=1
 
 read_A:
         for (unsigned int row = 0; row < block_size; row++) {
@@ -161,7 +162,7 @@ void transpose_write/*PY_CODE_GEN i*/(const DEVICE_DATA_TYPE *B,
     // transpose the matrix block-wise from global memory
 block_loop:
     for (unsigned int block = 0; block < number_of_blocks; block++) {
-
+#pragma HLS loop_tripcount min=1 max=1024 avg=1
         // Read transposed A from local memory and add B 
 read_B:
         for (unsigned int row = 0; row < block_size; row++) {
