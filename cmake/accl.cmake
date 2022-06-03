@@ -1,7 +1,7 @@
 
 # General definitions
 set(ACCL_STACK_TYPE "UDP" CACHE STRING "Network layer used in ACCL")
-set(ACCL_UDP_ETH_IF 0 CACHE STRING "Ethernet interface used. On ETHZ: 0 = switch, 1 = direct")
+set(ACCL_UDP_ETH_IFS 1 CACHE STRING "Number of Ethernet interfaces to synthesize for UDP stack")
 set(ACCL_DEVICE_NAME "xcu280-fsvh2892-2L-e" CACHE STRING "Name of the FPGA used on the target platform")
 set(ACCL_BUFFER_SIZE 8192 CACHE STRING "Size of ACCL buffers in bytes")
 set(ACCL_HARDWARE_DIR ${extern_accl_SOURCE_DIR}/test/hardware)
@@ -10,7 +10,6 @@ set(ACCL_CCLO_BUILD_ARGS ${ACCL_CCLO_ADDITIONAL_BUILD_ARGS})
 # UDP related definitions
 set(ACCL_VNX_DIR ${ACCL_HARDWARE_DIR}/xup_vitis_network_example/)
 set(ACCL_NETLAYER_HLS ${ACCL_VNX_DIR}/NetLayers/100G-fpga-network-stack-core)
-set(ACCL_UDP_MAC_XO ${ACCL_VNX_DIR}/Ethernet/_x.${FPGA_BOARD_NAME}/cmac_${ACCL_UDP_ETH_IF}.xo)
 set(ACCL_UDP_NET_XO ${ACCL_VNX_DIR}/NetLayers/_x.${FPGA_BOARD_NAME}/networklayer.xo)
 set(ACCL_HLS_IP_FOLDER ${ACCL_NETLAYER_HLS}/synthesis_results_HMB)
 if (ACCL_STACK_TYPE STREQUAL "UDP")
@@ -19,10 +18,17 @@ if (ACCL_STACK_TYPE STREQUAL "UDP")
     list(APPEND ACCL_CCLO_BUILD_ARGS STACK_TYPE=${ACCL_STACK_TYPE})
 endif()
 
-add_custom_command(
-    OUTPUT ${ACCL_UDP_MAC_XO}
-    COMMAND make -C ${ACCL_VNX_DIR}/Ethernet DEVICE=${FPGA_BOARD_NAME} INTERFACE=${ACCL_UDP_ETH_IF} all
-    WORKING_DIRECTORY ${ACCL_HARDWARE_DIR}) 
+set(ACCL_UDP_MAC_XOS "")
+
+math(EXPR loopend "${ACCL_UDP_ETH_IFS} - 1")
+foreach(i RANGE ${loopend})
+    set(CURRENT_MAC_XO ${ACCL_VNX_DIR}/Ethernet/_x.${FPGA_BOARD_NAME}/cmac_${i}.xo)
+    add_custom_command(
+        OUTPUT ${CURRENT_MAC_XO}
+        COMMAND make -C ${ACCL_VNX_DIR}/Ethernet DEVICE=${FPGA_BOARD_NAME} INTERFACE=${i} all
+        WORKING_DIRECTORY ${ACCL_HARDWARE_DIR}) 
+    list(APPEND ACCL_UDP_MAC_XOS ${CURRENT_MAC_XO})
+endforeach()
 
 add_custom_command(
     OUTPUT ${ACCL_UDP_NET_XO}
@@ -31,7 +37,7 @@ add_custom_command(
 
 add_custom_target(
     accl_udp_stack
-    DEPENDS ${ACCL_UDP_MAC_XO} ${ACCL_UDP_NET_XO})
+    DEPENDS ${ACCL_UDP_MAC_XOS} ${ACCL_UDP_NET_XO})
 
 # TCP related definitions
 set(ACCL_TCP_BASE_DIR ${ACCL_HARDWARE_DIR}/Vitis_with_100Gbps_TCP-IP)
@@ -114,7 +120,7 @@ add_custom_target(
     ${ACCL_PLUGINS_COMPRESSION})
 
 set(ACCL_UDP_XOS ${ACCL_PLUGINS_LOOPBACK} ${ACCL_PLUGINS_COMPRESSION} ${ACCL_PLUGINS_SUM} ${ACCL_PLUGINS_HOSTCTRL}
-    ${ACCL_CCLO_KERNEL_DIR}/${ACCL_CCLO_KERNEL_XO} ${ACCL_UDP_MAC_XO} ${ACCL_UDP_NET_XO} CACHE INTERNAL "Object files required for ACCL with UDP")
+    ${ACCL_CCLO_KERNEL_DIR}/${ACCL_CCLO_KERNEL_XO} ${ACCL_UDP_MAC_XOS} ${ACCL_UDP_NET_XO} CACHE INTERNAL "Object files required for ACCL with UDP")
 
 set(ACCL_TCP_XOS ${ACCL_PLUGINS_LOOPBACK} ${ACCL_PLUGINS_COMPRESSION} ${ACCL_PLUGINS_SUM} ${ACCL_PLUGINS_HOSTCTRL}
     ${ACCL_CCLO_KERNEL_DIR}/${ACCL_CCLO_KERNEL_XO} ${ACCL_TCP_CMAC_XO} ${ACCL_TCP_XO} CACHE INTERNAL "Object files required for ACCL with TCP")
