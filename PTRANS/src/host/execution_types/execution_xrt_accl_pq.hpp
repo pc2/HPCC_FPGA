@@ -62,7 +62,6 @@ void accl_exchangeData(
     acclBuffersA.push_back(accl.create_buffer<HOST_DATA_TYPE>(
         bo, data.blockSize * data.blockSize * data.numBlocks,
         ACCL::dataType::float32));
-    acclBuffersA.back()->sync_from_device();
   }
 
   if (pq_width == pq_height) {
@@ -82,33 +81,24 @@ void accl_exchangeData(
       auto acclBufferA_recv = accl.create_buffer<HOST_DATA_TYPE>(
           data.blockSize * data.blockSize * data.numBlocks,
           ACCL::dataType::float32);
-      acclBufferA_recv->sync_to_device();
       // Send and receive matrix A using ACCL directly on FPGA
-      if (mpi_comm_rank < pair_rank) {
-        for (int block_num = 0; block_num < data.numBlocks; block_num++) {
-          accl.send(0,
-                    *acclBuffersA[0]->slice(
+      for (int block_chunk = 0; block_chunk < data.numBlocks; block_chunk+= 16) {
+        for (int block_num = block_chunk; block_num < std::min<size_t>(data.numBlocks, block_chunk + 16); block_num++) {
+          accl.send(*acclBuffersA[0]->slice(
                         data.blockSize * data.blockSize * block_num,
                         data.blockSize * data.blockSize * (block_num + 1)),
-                    data.blockSize * data.blockSize, pair_rank, 0, true,
+                    data.blockSize * data.blockSize, pair_rank, 0, ACCL::GLOBAL_COMM, true,
                     ACCL::streamFlags::NO_STREAM);
         }
-        accl.recv(0, *acclBufferA_recv,
-                  data.blockSize * data.blockSize * data.numBlocks, pair_rank,
-                  1, true, ACCL::streamFlags::NO_STREAM);
-      } else {
-        accl.recv(0, *acclBufferA_recv,
-                  data.blockSize * data.blockSize * data.numBlocks, pair_rank,
-                  0, true, ACCL::streamFlags::NO_STREAM);
-        for (int block_num = 0; block_num < data.numBlocks; block_num++) {
-          accl.send(0,
-                    *acclBuffersA[0]->slice(
+        for (int block_num = block_chunk; block_num < std::min<size_t>(data.numBlocks, block_chunk + 16); block_num++) {
+          accl.recv(*acclBufferA_recv->slice(
                         data.blockSize * data.blockSize * block_num,
                         data.blockSize * data.blockSize * (block_num + 1)),
-                    data.blockSize * data.blockSize, pair_rank, 1, true,
-                    ACCL::streamFlags::NO_STREAM);
+                    data.blockSize * data.blockSize, pair_rank,
+                    1, ACCL::GLOBAL_COMM, true, ACCL::streamFlags::NO_STREAM);
         }
       }
+
       accl.copy(*acclBufferA_recv, *acclBuffersA[0],
                 data.blockSize * data.blockSize * data.numBlocks, true, true);
     }
@@ -275,12 +265,12 @@ void accl_exchangeData(
                   << std::flush;
 #endif
         accl_requests[current_parallel_execution] = (accl.send(
-            0, *send_buffers[current_parallel_execution], sending_size,
-            send_rank, 0, true, ACCL::streamFlags::NO_STREAM,
+            *send_buffers[current_parallel_execution], sending_size,
+            send_rank, 0, ACCL::GLOBAL_COMM, true, ACCL::streamFlags::NO_STREAM,
             ACCL::dataType::none, true));
         accl_requests[current_parallel_execution + gcd] = (accl.recv(
-            0, *recv_buffers[current_parallel_execution], sending_size,
-            send_rank, 0, true, ACCL::streamFlags::NO_STREAM,
+            *recv_buffers[current_parallel_execution], sending_size,
+            send_rank, 0, ACCL::GLOBAL_COMM, true, ACCL::streamFlags::NO_STREAM,
             ACCL::dataType::none, true));
         // Increase the counter for parallel executions
         current_parallel_execution = (current_parallel_execution + 1) % gcd;
@@ -458,10 +448,13 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
         *config.device, *config.program,
         ("transpose0:{transpose0_" + std::to_string(r + 1) + "}").c_str());
 
-    xrt::bo bufferA(*config.device, data.A,
+    if (r == 0 || config.programSettings->copyA) {
+      xrt::bo bufferA(*config.device, data.A,
                     data.numBlocks * data.blockSize * data.blockSize *
                         sizeof(HOST_DATA_TYPE),
                     transposeKernel.group_id(0));
+      bufferListA.push_back(bufferA);
+    }
     xrt::bo bufferB(
         *config.device,
         &data.B[bufferStartList[r] * data.blockSize * data.blockSize],
@@ -469,7 +462,6 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     xrt::bo bufferA_out(*config.device, buffer_size * sizeof(HOST_DATA_TYPE),
                         transposeKernel.group_id(2));
 
-    bufferListA.push_back(bufferA);
     bufferListB.push_back(bufferB);
     bufferListA_out.push_back(bufferA_out);
     transposeKernelList.push_back(transposeKernel);
@@ -487,7 +479,9 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     auto startTransfer = std::chrono::high_resolution_clock::now();
 
     for (int r = 0; r < transposeKernelList.size(); r++) {
-      bufferListA[r].sync(XCL_BO_SYNC_BO_TO_DEVICE);
+      if (r == 0 || config.programSettings->copyA) {
+        bufferListA[r].sync(XCL_BO_SYNC_BO_TO_DEVICE);
+      }
       bufferListB[r].sync(XCL_BO_SYNC_BO_TO_DEVICE);
     }
     auto endTransfer = std::chrono::high_resolution_clock::now();
@@ -501,12 +495,6 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     auto startCalculation = std::chrono::high_resolution_clock::now();
 
     // Exchange A data via ACCL
-    if (bufferListA.size() > 1) {
-      std::cerr << "WARNING: Only the matrix A of the first kernel replication "
-                   "will be exchanged "
-                   "via ACCL!"
-                << std::endl;
-    }
 #ifndef NDEBUG
     std::cout << "Start data exchange with ACCL" << std::endl;
 #endif
@@ -519,7 +507,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     auto startKernelCalculation = std::chrono::high_resolution_clock::now();
     for (int r = 0; r < transposeKernelList.size(); r++) {
       runs.push_back(transposeKernelList[r](
-          bufferListA[r], bufferListB[r], bufferListA_out[r],
+          (config.programSettings->copyA ? bufferListA[r] : bufferListA[0]), bufferListB[r], bufferListA_out[r],
           static_cast<cl_uint>(bufferOffsetList[r]),
           static_cast<cl_uint>(bufferOffsetList[r]),
           static_cast<cl_uint>(blocksPerReplication[r]),
