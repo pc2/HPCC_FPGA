@@ -62,7 +62,7 @@ FetchContent_Declare(
 	extern_accl
 
     GIT_REPOSITORY	https://github.com/Xilinx/ACCL.git
-	GIT_TAG		dev)
+	GIT_TAG		main)
 
 FetchContent_GetProperties(extern_accl)
 if(NOT extern_accl_POPULATED)
