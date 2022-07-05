@@ -19,6 +19,11 @@ set(USE_DEPRECATED_HPP_HEADER No)
 
 set(COMMUNICATION_TYPE_SUPPORT_ENABLED Yes)
 
+if (USE_ACCL)
+    math(EXPR calculate_accl_buffer_size "2 ^ ${DEFAULT_MAX_MESSAGE_SIZE} * 4")
+    set(ACCL_BUFFER_SIZE ${calculate_accl_buffer_size} CACHE STRING "Size of ACCL buffers in bytes")
+endif()
+
 set(DATA_TYPE char)
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
 unset(DATA_TYPE CACHE)

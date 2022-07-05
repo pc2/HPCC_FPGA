@@ -23,6 +23,7 @@
 #define DEVICE_DATA_TYPE @DEVICE_DATA_TYPE@
 
 #cmakedefine HOST_EMULATION_REORDER
+#cmakedefine ACCL_BUFFER_SIZE @ACCL_BUFFER_SIZE@
 
 /*
 Short description of the program.
