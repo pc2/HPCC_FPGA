@@ -79,8 +79,8 @@ namespace network::execution_types::accl {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 for (int l = 0; l < looplength; l++) {
-			config.accl->send(0, *acclSendBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
-			config.accl->recv(0, *acclRecvBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+			config.accl->send(*acclSendBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+			config.accl->recv(*acclRecvBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
