@@ -75,6 +75,12 @@ public:
     bool distributeBuffers;
 
     /**
+    * @brief If true, create a copy of matrix A for each kernel replication
+    *
+    */
+    bool copyA;
+
+    /**
      * @brief Construct a new Transpose Program Settings object
      * 
      * @param results the result map from parsing the program input parameters

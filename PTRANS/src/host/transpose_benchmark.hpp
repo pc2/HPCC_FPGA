@@ -81,7 +81,8 @@ protected:
                 cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_P_VALUE)))
             ("distribute-buffers", "Distribute buffers over memory banks. This will use three memory banks instead of one for a single kernel replication, but kernel replications may interfere. This is an Intel only attribute, since buffer placement is decided at compile time for Xilinx FPGAs.")
             ("handler", "Specify the used data handler that distributes the data over devices and memory banks",
-                cxxopts::value<std::string>()->default_value(DEFAULT_DIST_TYPE));
+                cxxopts::value<std::string>()->default_value(DEFAULT_DIST_TYPE))
+            ("copy-a", "Create a copy of matrix A for each kernel replication");
     }
 
     std::unique_ptr<transpose::data_handler::TransposeDataHandler<TDevice, TContext, TProgram>> dataHandler;
@@ -164,6 +165,11 @@ public:
         // exchange the data using MPI depending on the chosen distribution scheme
         this->dataHandler->exchangeData(data);
 
+#ifndef NDEBUG
+        std::vector<HOST_DATA_TYPE> oldA(this->executionSettings->programSettings->blockSize * this->executionSettings->programSettings->blockSize * data.numBlocks);
+        std::copy(data.A, data.A + oldA.size(), oldA.data());
+#endif
+
         this->dataHandler->reference_transpose(data);
 
         double max_error = 0.0;
@@ -174,6 +180,38 @@ public:
                 error_count++;
             }
         }
+
+#ifndef NDEBUG
+        long height_per_rank = reinterpret_cast<data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>*>(this->dataHandler.get())->getHeightforRank();
+        long width_per_rank = reinterpret_cast<data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>*>(this->dataHandler.get())->getWidthforRank();
+        if (error_count > 0) {
+            std::cout << "A:" << std::endl;
+            for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
+                for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+                    std::cout << oldA[j * width_per_rank * data.blockSize + i] << ", ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+            std::cout << "B:" << std::endl;
+            for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
+                for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+                    std::cout << data.B[j * width_per_rank * data.blockSize + i] << ", ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+            std::cout << "Transposed A:" << std::endl;
+            for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
+                for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+                    std::cout << data.A[j * width_per_rank * data.blockSize + i] << ", ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+        }
+
+#endif
 
         double global_max_error = 0;
         int global_error_count = 0;

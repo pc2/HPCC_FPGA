@@ -7,7 +7,7 @@
 transpose::TransposeProgramSettings::TransposeProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     matrixSize(results["m"].as<uint>() * results["b"].as<uint>()),
     blockSize(results["b"].as<uint>()), dataHandlerIdentifier(transpose::data_handler::stringToHandler(results["handler"].as<std::string>())),
-    distributeBuffers(results["distribute-buffers"].count() > 0), p(results["p"].as<uint>()) {
+    distributeBuffers(results["distribute-buffers"].count() > 0), p(results["p"].as<uint>()), copyA(results["copy-a"].count() > 0) {
 
         // auto detect data distribution type if required
         if (dataHandlerIdentifier == transpose::data_handler::DataHandlerType::automatic) {

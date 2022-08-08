@@ -122,10 +122,13 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     xrt::kernel transposeKernel(*config.device, *config.program,
                                 ("transpose0:{transpose0_" + std::to_string(r + 1) + "}").c_str());
 
-    xrt::bo bufferA(*config.device, data.A,
+    if ( r == 0 || config.programSettings->copyA) {
+      xrt::bo bufferA(*config.device, data.A,
                     data.numBlocks * data.blockSize * data.blockSize *
                         sizeof(HOST_DATA_TYPE),
                     transposeKernel.group_id(0));
+      bufferListA.push_back(bufferA);
+    }
     xrt::bo bufferB(
         *config.device,
         &data.B[bufferStartList[r] * data.blockSize * data.blockSize],
@@ -138,7 +141,6 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     xrt::bo bufferA_out(*config.device, buffer_size * sizeof(HOST_DATA_TYPE),
                         transposeKernel.group_id(2));
 
-    bufferListA.push_back(bufferA);
     bufferListB.push_back(bufferB);
     bufferListA_out.push_back(bufferA_out);
     transposeKernelList.push_back(transposeKernel);
@@ -152,7 +154,9 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     auto startTransfer = std::chrono::high_resolution_clock::now();
 
     for (int r = 0; r < transposeKernelList.size(); r++) {
-      bufferListA[r].sync(XCL_BO_SYNC_BO_TO_DEVICE);
+      if ( r == 0 || config.programSettings->copyA) {
+        bufferListA[r].sync(XCL_BO_SYNC_BO_TO_DEVICE);
+      }
       bufferListB[r].sync(XCL_BO_SYNC_BO_TO_DEVICE);
     }
     auto endTransfer = std::chrono::high_resolution_clock::now();
@@ -168,7 +172,9 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
 
     if (mpi_size > 1) {
     for (int r = 0; r < transposeKernelList.size(); r++) {
-      bufferListA[r].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+      if ( r == 0 || config.programSettings->copyA) {
+        bufferListA[r].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+      }
     }
 
     // Exchange A data via PCIe and MPI
@@ -177,7 +183,9 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     std::copy(data.A, data.A + data.numBlocks * data.blockSize * data.blockSize,
               data.exchange);
     for (int r = 0; r < transposeKernelList.size(); r++) {
-      bufferListA[r].sync(XCL_BO_SYNC_BO_TO_DEVICE);
+      if ( r == 0 || config.programSettings->copyA) {
+        bufferListA[r].sync(XCL_BO_SYNC_BO_TO_DEVICE);
+      }
     }
     }
 
@@ -185,7 +193,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     auto startKernelCalculation = std::chrono::high_resolution_clock::now();
     for (int r = 0; r < transposeKernelList.size(); r++) {
       runs.push_back(transposeKernelList[r](
-          bufferListA[r], bufferListB[r], bufferListA_out[r],
+          (config.programSettings->copyA ? bufferListA[r] : bufferListA[0]), bufferListB[r], bufferListA_out[r],
           static_cast<cl_uint>(bufferStartList[r] + bufferOffsetList[r]),
           static_cast<cl_uint>(bufferOffsetList[r]), static_cast<cl_uint>(blocksPerReplication[r]),
           static_cast<cl_uint>(handler.getWidthforRank()),

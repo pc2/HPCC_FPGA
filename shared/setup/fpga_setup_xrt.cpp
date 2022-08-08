@@ -35,6 +35,9 @@ namespace fpga_setup {
 
     std::unique_ptr<xrt::device>
     selectFPGADevice(int defaultDevice) {
-        return std::unique_ptr<xrt::device>(new xrt::device(defaultDevice));
+        int current_rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
+
+        return std::unique_ptr<xrt::device>(new xrt::device(current_rank));
     } 
 }  // namespace fpga_setup
