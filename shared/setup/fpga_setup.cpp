@@ -224,7 +224,7 @@ choose a device.
 @return A list containing a single selected device
 */
     std::unique_ptr<cl::Device>
-    selectFPGADevice(int defaultPlatform, int defaultDevice) {
+    selectFPGADevice(int defaultPlatform, int defaultDevice, std::string platformString) {
         // Integer used to store return codes of OpenCL library calls
         int err;
 
@@ -243,7 +243,19 @@ choose a device.
         // Choose the target platform
         long unsigned int chosenPlatformId = 0;
         if (defaultPlatform >= 0) {
-            if (defaultPlatform < static_cast<int>(platformList.size())) {
+            if (platformString.size() > 0) {
+                bool found = false;
+                for (int i = 0; i < platformList.size(); i++) {
+                    if (platformList[i].getInfo<CL_PLATFORM_NAME>() == platformString) {
+                        chosenPlatformId = i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    throw FpgaSetupException("Invalid platform string specified: " + platformString);
+                }
+            } else if (defaultPlatform < static_cast<int>(platformList.size())) {
                 chosenPlatformId = defaultPlatform;
             } else {
                 std::cerr << "Default platform " << defaultPlatform

@@ -170,21 +170,28 @@ TEST_F(BaseHpccBenchmarkTest, ExecutionSuccessWhenTestOnlyAndSetupSuccess) {
  * Checks if using default platform and device is successful
  */
 TEST_F(BaseHpccBenchmarkTest, SuccessUseDefaultPlatform) {
-    EXPECT_NE(fpga_setup::selectFPGADevice(bm->getExecutionSettings().programSettings->defaultPlatform, bm->getExecutionSettings().programSettings->defaultDevice).get(), nullptr);
+    EXPECT_NE(fpga_setup::selectFPGADevice(bm->getExecutionSettings().programSettings->defaultPlatform, bm->getExecutionSettings().programSettings->defaultDevice, bm->getExecutionSettings().programSettings->platformString).get(), nullptr);
 }
 
 /**
  * Checks if non existing platform leads to an error
  */
 TEST_F(BaseHpccBenchmarkTest, FindNonExistingPlatform) {
-    ASSERT_THROW(fpga_setup::selectFPGADevice(100, bm->getExecutionSettings().programSettings->defaultDevice).get(), fpga_setup::FpgaSetupException);
+    ASSERT_THROW(fpga_setup::selectFPGADevice(100, bm->getExecutionSettings().programSettings->defaultDevice, bm->getExecutionSettings().programSettings->platformString).get(), fpga_setup::FpgaSetupException);
 }
 
 /**
  * Checks if non existing device leads to an error
  */
 TEST_F(BaseHpccBenchmarkTest, FindNonExistingDevice) {
-    ASSERT_THROW(fpga_setup::selectFPGADevice(bm->getExecutionSettings().programSettings->defaultPlatform, 100).get(), fpga_setup::FpgaSetupException);
+    ASSERT_THROW(fpga_setup::selectFPGADevice(bm->getExecutionSettings().programSettings->defaultPlatform, 100, bm->getExecutionSettings().programSettings->platformString).get(), fpga_setup::FpgaSetupException);
+}
+
+/*
+ * Check if wrong platform string leads to an error
+ */
+TEST_F(BaseHpccBenchmarkTest, FindNonExistingPlatformString) {
+    ASSERT_THROW(fpga_setup::selectFPGADevice(bm->getExecutionSettings().programSettings->defaultPlatform, bm->getExecutionSettings().programSettings->defaultDevice, "This is not a platform").get(), fpga_setup::FpgaSetupException);
 }
 
 /**

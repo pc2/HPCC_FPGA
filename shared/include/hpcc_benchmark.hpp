@@ -90,6 +90,12 @@ public:
     int defaultPlatform;
 
     /**
+     * @brief The platform string of the platform that should be used
+     *
+     */
+    std::string platformString;
+
+    /**
      * @brief The default device that should be used for execution. 
      *          A number representing the index in the list of available devices
      * 
@@ -134,6 +140,7 @@ public:
             skipValidation(static_cast<bool>(results.count("skip-validation"))), 
             defaultPlatform(results["platform"].as<int>()),
             defaultDevice(results["device"].as<int>()),
+            platformString(results["platform_str"].as<std::string>()),
             kernelFileName(results["f"].as<std::string>()),
 #ifdef NUM_REPLICATIONS
             kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : NUM_REPLICATIONS),
@@ -380,6 +387,7 @@ public:
             "you will be asked which platform to use if there are multiple "\
             "platforms available.",
                 cxxopts::value<int>()->default_value(std::to_string(DEFAULT_PLATFORM)))
+                ("platform_str", "Name of the platform that has to be used", cxxopts::value<std::string>()->default_value(std::string()))
 #ifdef NUM_REPLICATIONS
                 ("r", "Number of used kernel replications",
                 cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)))
@@ -478,7 +486,8 @@ public:
 
             if (!programSettings->testOnly) {
                 usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
-                                                                    programSettings->defaultDevice);
+                                                                    programSettings->defaultDevice,
+                                                                    programSettings->platformString);
 
                 context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
                 program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
