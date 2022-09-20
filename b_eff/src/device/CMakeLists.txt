@@ -16,5 +16,5 @@ if (INTELFPGAOPENCL_FOUND)
 endif()
 
 if (VITIS_FOUND)
-        generate_kernel_targets_xilinx(communication_ACCL)
+        generate_kernel_targets_xilinx(communication_ACCL communication_ACCL_pl)
 endif()
