@@ -93,9 +93,10 @@ add_custom_target(
 # Build the ACCL Plugins
 set(ACCL_PLUGINS_DIR ${extern_accl_SOURCE_DIR}/kernels/plugins)
 set(ACCL_PLUGINS_HOSTCTRL ${ACCL_PLUGINS_DIR}/hostctrl/hostctrl.xo)
-set(ACCL_PLUGINS_SUM ${ACCL_PLUGINS_DIR}/reduce_sum/reduce_sum.xo)
+set(ACCL_PLUGINS_SUM ${ACCL_PLUGINS_DIR}/reduce_ops/reduce_ops.xo)
 set(ACCL_PLUGINS_COMPRESSION ${ACCL_PLUGINS_DIR}/hp_compression/hp_compression.xo)
 set(ACCL_PLUGINS_LOOPBACK ${ACCL_PLUGINS_DIR}/loopback/loopback.xo)
+set(ACCL_PLUGINS_ARBITER ${ACCL_PLUGINS_DIR}/client_arbiter/client_arbiter.xo)
 
 add_custom_command(
     OUTPUT ${ACCL_PLUGINS_HOSTCTRL}
@@ -104,7 +105,7 @@ add_custom_command(
 add_custom_command(
     OUTPUT ${ACCL_PLUGINS_SUM}
     COMMAND vitis_hls build.tcl -tclargs ip ${ACCL_DEVICE_NAME}
-    WORKING_DIRECTORY ${ACCL_PLUGINS_DIR}/reduce_sum ) 
+    WORKING_DIRECTORY ${ACCL_PLUGINS_DIR}/reduce_ops ) 
 add_custom_command(
     OUTPUT ${ACCL_PLUGINS_COMPRESSION}
     COMMAND vitis_hls build.tcl -tclargs ip ${ACCL_DEVICE_NAME}
@@ -113,11 +114,16 @@ add_custom_command(
     OUTPUT ${ACCL_PLUGINS_LOOPBACK}
     COMMAND vitis_hls build_loopback.tcl -tclargs ip ${ACCL_DEVICE_NAME}
     WORKING_DIRECTORY ${ACCL_PLUGINS_DIR}/loopback ) 
+add_custom_command(
+    OUTPUT ${ACCL_PLUGINS_ARBITER}
+    COMMAND vitis_hls build_client_arbiter.tcl -tclargs ip ${ACCL_DEVICE_NAME}
+    WORKING_DIRECTORY ${ACCL_PLUGINS_DIR}/client_arbiter ) 
+
 
 add_custom_target(
     accl_plugins
     DEPENDS ${ACCL_PLUGINS_LOOPBACK} ${ACCL_PLUGINS_SUM} ${ACCL_PLUGINS_HOSTCTRL} 
-    ${ACCL_PLUGINS_COMPRESSION})
+    ${ACCL_PLUGINS_COMPRESSION} ${ACCL_PLUGINS_ARBITER})
 
 set(ACCL_UDP_XOS ${ACCL_PLUGINS_LOOPBACK} ${ACCL_PLUGINS_COMPRESSION} ${ACCL_PLUGINS_SUM} ${ACCL_PLUGINS_HOSTCTRL}
     ${ACCL_CCLO_KERNEL_DIR}/${ACCL_CCLO_KERNEL_XO} ${ACCL_UDP_MAC_XOS} ${ACCL_UDP_NET_XO} CACHE INTERNAL "Object files required for ACCL with UDP")
@@ -125,6 +131,10 @@ set(ACCL_UDP_XOS ${ACCL_PLUGINS_LOOPBACK} ${ACCL_PLUGINS_COMPRESSION} ${ACCL_PLU
 set(ACCL_TCP_XOS ${ACCL_PLUGINS_LOOPBACK} ${ACCL_PLUGINS_COMPRESSION} ${ACCL_PLUGINS_SUM} ${ACCL_PLUGINS_HOSTCTRL}
     ${ACCL_CCLO_KERNEL_DIR}/${ACCL_CCLO_KERNEL_XO} ${ACCL_TCP_CMAC_XO} ${ACCL_TCP_XO} CACHE INTERNAL "Object files required for ACCL with TCP")
 
+if (DEFINED USE_ACCL_CLIENT_ARBITER)
+    list(APPEND ${ACCL_UDP_XOS} ${ACCL_PLUGINS_ARBITER})
+    list(APPEND ${ACCL_TCP_XOS} ${ACCL_PLUGINS_ARBITER})
+endif()
 if (ACCL_STACK_TYPE STREQUAL "UDP")
     set(ACCL_XOS ${ACCL_UDP_XOS} CACHE INTERNAL "Object files required for ACCL")
 else()

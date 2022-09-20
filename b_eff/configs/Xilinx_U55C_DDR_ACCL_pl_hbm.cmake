@@ -13,10 +13,11 @@ set(USE_ACCL Yes CACHE BOOL "" FORCE)
 set(USE_XRT_HOST Yes CACHE BOOL "" FORCE)
 set(USE_OCL_HOST No CACHE BOOL "" FORCE)
 set(FPGA_BOARD_NAME "xilinx_u55c_gen3x16_xdma_3_202210_1" CACHE STRING "" FORCE)
-set(XILINX_LINK_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.accl_buffers.u55c.hbm.ini CACHE FILEPATH "" FORCE)
+set(XILINX_LINK_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.accl_pl.u55c.hbm.ini CACHE FILEPATH "" FORCE)
 set(XILINX_COMPILE_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.compile.xilinx.accl_buffers.ini CACHE FILEPATH "" FORCE)
 set(XILINX_ADDITIONAL_LINK_FLAGS --kernel_frequency 250 CACHE STRING "" FORCE)
 set(XILINX_KERNEL_NAMES "sendrecv" CACHE STRING "" FORCE)
+set(USE_ACCL_CLIENT_ARBITER Yes CACHE BOOL "Use the client arbiter kernel to connect multiple kernels to the CCLO cmd stream" FORCE)
 # STREAM specific options
 # Defaults to a total of ~12GB data
 set(CHANNEL_WIDTH 0 CACHE STRING "Width of a single external channel in Byte will not be considered" FORCE)
