@@ -61,8 +61,8 @@ if (DEFINED USE_ACCL)
 FetchContent_Declare(
 	extern_accl
 
-    GIT_REPOSITORY	https://github.com/Xilinx/ACCL.git
-	GIT_TAG		main)
+    GIT_REPOSITORY	https://github.com/Mellich/ACCL.git
+	GIT_TAG		udp_address_fix_and_new_tcp)
 
 FetchContent_GetProperties(extern_accl)
 if(NOT extern_accl_POPULATED)
