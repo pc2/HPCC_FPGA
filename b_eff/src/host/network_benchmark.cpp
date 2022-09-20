@@ -36,8 +36,11 @@ SOFTWARE.
 
 network::NetworkProgramSettings::NetworkProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     maxLoopLength(results["u"].as<uint>()), minLoopLength(results["l"].as<uint>()), maxMessageSize(results["m"].as<uint>()), 
-    minMessageSize(results["min-size"].as<uint>()), llOffset(results["o"].as<uint>()), llDecrease(results["d"].as<uint>()) {
-
+    minMessageSize(results["min-size"].as<uint>()), llOffset(results["o"].as<uint>()), llDecrease(results["d"].as<uint>())
+#ifdef USE_ACCL
+    , accl_from_programable_logic(results["accl-pl"].count()) 
+#endif
+{
 }
 
 std::map<std::string, std::string>
@@ -86,7 +89,11 @@ network::NetworkBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
         ("o", "Offset used before reducing repetitions",
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_OFFSET)))
         ("d", "Number os steps the repetitions are decreased to its minimum",
-            cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_DECREASE)));
+            cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_DECREASE)))
+#ifdef USE_ACCL
+        ("accl-pl", "Use second ACCL command kernel to schedule sends and recevs from PL")
+#endif
+;
 }
 
 std::unique_ptr<network::NetworkExecutionTimings>
@@ -113,8 +120,10 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
 #ifdef INTEL_FPGA
 	    case hpcc_base::CommunicationType::intel_external_channels: timing = execution_types::iec::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
 #endif
+#else
+	    case hpcc_base::CommunicationType::accl: if (!executionSettings->programSettings->accl_from_programable_logic) { timing = execution_types::accl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
+                                                } else { timing = execution_types::accl_pl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);} break;
 #endif
-	    case hpcc_base::CommunicationType::accl: timing = execution_types::accl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
 	    default: throw std::runtime_error("Selected Communication type not supported: " + hpcc_base::commToString(executionSettings->programSettings->communicationType));
         }
         timing_results.push_back(timing);

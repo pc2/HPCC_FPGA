@@ -141,6 +141,12 @@ public:
     uint llDecrease;
 
     /**
+    * @brief Use the second command kernel to schedule sends and receives directly from PL
+    *
+    */
+    bool accl_from_programable_logic;
+
+    /**
      * @brief Construct a new Network Program Settings object
      * 
      * @param results the result map from parsing the program input parameters

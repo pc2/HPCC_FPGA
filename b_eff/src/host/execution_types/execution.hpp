@@ -28,4 +28,5 @@ SOFTWARE.
 #endif
 #else
 #include "execution_types/execution_accl.hpp"
+#include "execution_types/execution_accl_pl.hpp"
 #endif
