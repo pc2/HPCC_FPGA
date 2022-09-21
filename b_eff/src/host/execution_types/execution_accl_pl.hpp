@@ -80,7 +80,8 @@ namespace network::execution_types::accl_pl {
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
-                auto run = sendrecvKernel(acclSendBuffers[i]->bo(), acclRecvBuffers[i]->bo(), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, config.accl->get_communicator_adr());
+                auto run = sendrecvKernel(acclSendBuffers[i]->bo(), acclRecvBuffers[i]->bo(), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                                            config.accl->get_communicator_adr(), config.accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}));
                 run.wait();
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();

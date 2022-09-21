@@ -21,15 +21,13 @@ SOFTWARE.
 */
 #include "accl_hls.h"
 
-extern "C" {
 
-void send_recv(char *read_buffer,char *write_buffer,  unsigned int size_in_bytes, unsigned int num_iterations, 
-                unsigned int neighbor_rank, addr_t communicator_addr,
-                hls::stream<ap_uint<32> > &cmd, hls::stream<ap_uint<32> > &sts) {
+void send_recv(float *read_buffer,float *write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations, 
+                ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
+                hls::stream<command_word> &cmd, hls::stream<command_word > &sts) {
+    accl_hls::ACCLCommand accl_cmd(cmd, sts, communicator_addr, datapath_cfg,0,0);
     for (int i = 0; i < num_iterations; i++) {
-        ACCLCommand accl_cmd(cmd, sts, communicator_addr, 0,0,0);
-        accl_cmd.send(size_in_bytes, 0, neighbor_rank, read_buffer);
-        accl_cmd.recv(size_in_bytes, 0, neighbor_rank, write_buffer);
+        accl_cmd.send(size, 0, neighbor_rank, (ap_uint<64>)read_buffer);
+        accl_cmd.recv(size, 0, neighbor_rank, (ap_uint<64>)write_buffer);
     }
-}
 }
