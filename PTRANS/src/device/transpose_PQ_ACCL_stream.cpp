@@ -118,11 +118,12 @@ read_A_line:
                         data_chunk[unroll_count] = rotate_out[(unroll_count + rot_out) % (channel_width)];
                     }
 
-                    ap_uint<512> data = 0;
+                    ap_uint<512> data;
 
                     // load tranposed A from global memory
                     for (unsigned unroll_count = 0; unroll_count < channel_width; unroll_count++) {
-                        data |= ((ap_uint<8*sizeof(DEVICE_DATA_TYPE)>)data_chunk[unroll_count]) << (unroll_count * sizeof(DEVICE_DATA_TYPE));
+                        data(unroll_count * sizeof(DEVICE_DATA_TYPE)*8, unroll_count * sizeof(DEVICE_DATA_TYPE)*8 + sizeof(DEVICE_DATA_TYPE) * 8 - 1) 
+                                = data_chunk[unroll_count];
                     }
 
                     ap_axiu<512, 0, 0, 8> tmp;
@@ -182,7 +183,7 @@ read_B_line:
 
                 // rotate temporary buffer to store data into local buffer
                 for (unsigned unroll_count = 0; unroll_count < channel_width; unroll_count++) {
-                    data_chunk[unroll_count] = (DEVICE_DATA_TYPE)((tmp.data >> (unroll_count * sizeof(DEVICE_DATA_TYPE))) & ((1 << 32) - 1));
+                    data_chunk[unroll_count] = tmp.data(unroll_count * sizeof(DEVICE_DATA_TYPE)*8, unroll_count * sizeof(DEVICE_DATA_TYPE)*8 + sizeof(DEVICE_DATA_TYPE) * 8 - 1);
                 }
 
                 // load tranposed A from global memory
