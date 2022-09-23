@@ -126,11 +126,11 @@ linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
 }
 
 void
-linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutionTimings &output) {
+linpack::LinpackBenchmark::collectResults(const linpack::LinpackExecutionTimings &output) {
     // Calculate performance for kernel execution plus data transfer
-    double tmean = 0;
-    double tlumean = 0;
-    double tslmean = 0;
+    double t = 0;
+    double tlu = 0;
+    double tsl = 0;
     double tmin = std::numeric_limits<double>::max();
     double lu_min = std::numeric_limits<double>::max();
     double sl_min = std::numeric_limits<double>::max();
@@ -154,13 +154,13 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
     }
 
     double total_matrix_size = static_cast<double>(executionSettings->programSettings->matrixSize);
-    double gflops_lu = ((2.0e0*total_matrix_size * total_matrix_size * total_matrix_size)/ 3.0) / 1.0e9; 
-    double gflops_sl = (2.0*(total_matrix_size * total_matrix_size))/1.0e9;
+    double gflop_lu = ((2.0e0*total_matrix_size * total_matrix_size * total_matrix_size)/ 3.0) / 1.0e9; 
+    double gflop_sl = (2.0*(total_matrix_size * total_matrix_size))/1.0e9;
     for (int i =0; i < global_lu_times.size(); i++) {
         double currentTime = global_lu_times[i] + global_sl_times[i];
-        tmean +=  currentTime;
-        tlumean +=  global_lu_times[i];
-        tslmean += global_sl_times[i];
+        t +=  currentTime;
+        tlu +=  global_lu_times[i];
+        tsl += global_sl_times[i];
         if (currentTime < tmin) {
             tmin = currentTime;
         }
@@ -171,29 +171,47 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
             sl_min = global_sl_times[i];
         }
     }
-    tmean = tmean / global_lu_times.size();
-    tlumean = tlumean / global_lu_times.size();
-    tslmean = tslmean / global_sl_times.size();
+    
+    results.emplace("t_mean", hpcc_base::HpccResult(t / global_lu_times.size(), "s"));
+    results.emplace("t_min", hpcc_base::HpccResult(tmin, "?"));
+    results.emplace("tlu_mean", hpcc_base::HpccResult(tlu / global_lu_times.size(), "s"));
+    results.emplace("tlu_min", hpcc_base::HpccResult(lu_min, "s"));
+    results.emplace("tsl_mean", hpcc_base::HpccResult(tsl / global_sl_times.size(), "s"));
+    results.emplace("tsl_min", hpcc_base::HpccResult(sl_min, "s"));
+    results.emplace("gflops", hpcc_base::HpccResult((gflop_lu + gflop_sl) / tmin, "GFLOP/s"));
+    results.emplace("gflops_lu", hpcc_base::HpccResult(gflop_lu / lu_min, "GFLOP/s"));
+    results.emplace("gflops_sl", hpcc_base::HpccResult(gflop_sl / sl_min, "GFLOP/s"));
+    
+    return;
+}
 
-     std::cout << std::setw(ENTRY_SPACE)
+void
+linpack::LinpackBenchmark::printResults() {
+    if (mpi_comm_rank > 0) {
+        return;
+    }
+
+    std::cout << std::setw(ENTRY_SPACE)
               << "Method" << std::setw(ENTRY_SPACE)
               << "best" << std::setw(ENTRY_SPACE) << "mean"
               << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
 
+    /*
     std::cout << std::setw(ENTRY_SPACE) << "total" << std::setw(ENTRY_SPACE)
-              << tmin << std::setw(ENTRY_SPACE) << tmean
-              << std::setw(ENTRY_SPACE) << ((gflops_lu + gflops_sl) / tmin)
+              << results["t_min"] << std::setw(ENTRY_SPACE) << results["t_mean"]
+              << std::setw(ENTRY_SPACE) << results["gflops"]
               << std::endl;
 
     std::cout << std::setw(ENTRY_SPACE) << "GEFA" << std::setw(ENTRY_SPACE)
-            << lu_min << std::setw(ENTRY_SPACE) << tlumean
-            << std::setw(ENTRY_SPACE) << ((gflops_lu) / lu_min)
+            << results["tlu_min"] << std::setw(ENTRY_SPACE) << results["tlu_mean"]
+            << std::setw(ENTRY_SPACE) << results["gflops_lu"]
             << std::endl;
 
     std::cout << std::setw(ENTRY_SPACE) << "GESL" << std::setw(ENTRY_SPACE)
-              << sl_min << std::setw(ENTRY_SPACE) << tslmean
-              << std::setw(ENTRY_SPACE) << (gflops_sl / sl_min)
+              << results["tsl_min"] << std::setw(ENTRY_SPACE) << results["tsl_mean"]
+              << std::setw(ENTRY_SPACE) << results["gflops_sl"]
               << std::endl;
+              */
 }
 
 std::unique_ptr<linpack::LinpackData>

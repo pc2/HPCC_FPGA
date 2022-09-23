@@ -264,8 +264,12 @@ public:
      * 
      * @param output Measured runtimes of the kernel execution
      */
+    
     void
-    collectAndPrintResults(const LinpackExecutionTimings &output) override;
+    collectResults(const LinpackExecutionTimings &output) override;
+    
+    void
+    printResults() override;
 
     /**
      * @brief Construct a new Linpack Benchmark object

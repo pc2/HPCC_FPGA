@@ -23,6 +23,7 @@ SOFTWARE.
 #define SHARED_HPCC_BENCHMARK_HPP_
 
 #include <memory>
+#include <iostream>
 
 /* External library headers */
 #ifdef USE_DEPRECATED_HPP_HEADER
@@ -37,6 +38,7 @@ SOFTWARE.
 /* Project's headers */
 #include "setup/fpga_setup.hpp"
 #include "cxxopts.hpp"
+#include "nlohmann/json.hpp"
 #include "parameters.h"
 #include "communication_types.hpp"
 
@@ -45,12 +47,33 @@ SOFTWARE.
 
 #define ENTRY_SPACE 15
 
+using json = nlohmann::json;
+
 /**
  * @brief Contains all classes and functions that are used as basis
  *          for all benchmarks.
  * 
  */
 namespace hpcc_base {
+
+class HpccResult {
+    double value;
+    std::string unit;
+
+public:
+    HpccResult(double value, std::string unit): value(value), unit(unit) {}
+    
+    friend std::ostream &operator<<(std::ostream &os, const HpccResult &result) {
+        os << result.value << " " << result.unit;
+        return os;
+    }
+
+    std::string to_string() const {
+        std::ostringstream oss;
+        oss << *this;
+        return oss.str();
+    }
+};
 
 /**
  * @brief This class should be derived and extended for every benchmark.
@@ -119,6 +142,8 @@ public:
      * 
      */
     bool testOnly;
+    
+    std::string dumpfilePath;
 
     /**
      * @brief Type of inter-FPGA communication used
@@ -152,6 +177,7 @@ public:
 #else
             communicationType(retrieveCommunicationType("UNSUPPORTED", results["f"].as<std::string>())),
 #endif
+            dumpfilePath(results["dump"].as<std::string>()),
             testOnly(static_cast<bool>(results.count("test"))) {}
 
     /**
@@ -236,6 +262,17 @@ public:
         programSettings = nullptr;
     }
 
+    std::string
+    getDeviceName() const {
+        std::string device_name;
+        if (!programSettings->testOnly) {
+            device->getInfo(CL_DEVICE_NAME, &device_name);
+        } else {
+            device_name = "TEST RUN: Not selected!";
+        }
+        return device_name;
+    }
+
 };
 
 /**
@@ -294,6 +331,15 @@ protected:
      * 
      */
     bool mpi_external_init = true;
+    
+
+    /**
+     *
+     * @brief vector containing the benchmark results
+     *
+     */
+    std::map<std::string, HpccResult> results;
+
 
 public:
 
@@ -331,7 +377,10 @@ public:
      * @param output  The measurement data of the kernel execution
      */
     virtual void
-    collectAndPrintResults(const TOutput &output) = 0;
+    collectResults(const TOutput &output) = 0;
+    
+    virtual void
+    printResults() = 0;
 
     /**
      * @brief Method that can be overwritten by inheriting classes to check the validity of input parameters.
@@ -396,6 +445,7 @@ public:
                 ("comm-type", "Used communication type for inter-FPGA communication",
                 cxxopts::value<std::string>()->default_value(DEFAULT_COMM_TYPE))
 #endif
+                ("dump", "dump benchmark configuration and results to this file", cxxopts::value<std::string>()->default_value(std::string("")))
                 ("test", "Only test given configuration and skip execution and validation")
                 ("h,help", "Print this help");
 
@@ -447,6 +497,32 @@ public:
         std::cout << std::endl;
         std::cout << "Summary:" << std::endl;
         std::cout << *executionSettings << std::endl;
+    }
+    
+    std::map<std::string, std::string> getResultsMap() {
+        // TODO: nested maps, recursive?
+        std::map<std::string, std::string> results_string;
+        for (auto const &result: results) {
+            results_string[result.first] = result.second.to_string();
+        }
+        return results_string;
+    }
+    
+    void
+    dumpConfigurationAndResults(std::string file_path) {
+        std::fstream fs;
+        fs.open(file_path, std::ios_base::out);
+        if (!fs.is_open()) {
+            std::cout << "Unable to open file for dumping configuration and results" << std::endl;
+        } else {
+            json dump;
+            std::string device_name = executionSettings->getDeviceName();
+            dump["device"] = device_name;
+            dump["settings"] = json(executionSettings->programSettings->getSettingsMap());
+            dump["results"] = getResultsMap();
+
+            fs << dump;
+        }
     }
 
     /**
@@ -586,7 +662,13 @@ public:
                     std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
                 }
             }
-            collectAndPrintResults(*output);
+            collectResults(*output);
+            
+            if (executionSettings->programSettings->dumpfilePath.size() > 0) {
+                dumpConfigurationAndResults(executionSettings->programSettings->dumpfilePath);
+            }
+            
+            printResults();
 
             if (mpi_comm_rank == 0) {
                 if (!validateSuccess) {
@@ -658,6 +740,7 @@ public:
 
 };
 
+
 /**
  * @brief Prints the execution settings to an output stream
  * 
@@ -668,14 +751,8 @@ public:
  */
 template <class TSettings>
 std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings){
-        std::string device_name;
+        std::string device_name = printedExecutionSettings.getDeviceName();
         os << std::left;
-        if (!printedExecutionSettings.programSettings->testOnly) {
-        printedExecutionSettings.device->getInfo(CL_DEVICE_NAME, &device_name);
-        }
-        else {
-            device_name = "TEST RUN: Not selected!";
-        }
         for (auto k : printedExecutionSettings.programSettings->getSettingsMap()) {
             os   << std::setw(2 * ENTRY_SPACE) << k.first << k.second << std::endl;
         }

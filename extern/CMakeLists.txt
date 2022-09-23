@@ -54,3 +54,24 @@ if(NOT extern_cxxopts_POPULATED)
     ${extern_cxxopts_BINARY_DIR}
     EXCLUDE_FROM_ALL)
 endif()
+
+# ------------------------------------------------------------------------------
+# A header only library for handling json
+FetchContent_Declare(
+  extern_json
+
+  URL      https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz
+  URL_HASH SHA256=8c4b26bf4b422252e13f332bc5e388ec0ab5c3443d24399acb675e68278d341f)
+
+FetchContent_GetProperties(extern_json)
+if(NOT extern_json_POPULATED)
+  message(STATUS "Fetching mandatory build dependency json")
+  FetchContent_Populate(extern_json)
+  add_subdirectory(
+    ${extern_json_SOURCE_DIR}
+    ${extern_json_BINARY_DIR}
+    EXCLUDE_FROM_ALL)
+  set(extern_json_SOURCE_DIR ${extern_json_SOURCE_DIR} PARENT_SCOPE)
+endif()
+
+

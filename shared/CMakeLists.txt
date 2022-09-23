@@ -15,6 +15,6 @@ else()
 endif()
 
 target_include_directories(hpcc_fpga_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(hpcc_fpga_base cxxopts)
+target_link_libraries(hpcc_fpga_base cxxopts nlohmann_json::nlohmann_json)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)

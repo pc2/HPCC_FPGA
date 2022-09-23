@@ -45,7 +45,10 @@ public:
     checkInputParameters() override { return configurationCheckSucceeds;}
 
     void
-    collectAndPrintResults(const int &output) override {}
+    collectResults(const int &output) override {}
+
+    void
+    printResults() override {}
 
     MinimalBenchmark() : HpccFpgaBenchmark(0, { nullptr}) {}
 
@@ -94,7 +97,10 @@ public:
         return returnValidate;}
 
     void
-    collectAndPrintResults(const int &output) override {}
+    collectResults(const int &output) override {}
+
+    void
+    printResults() override {}
 
     bool
     checkInputParameters() override {
