@@ -3,7 +3,7 @@ project(HPCCBaseLibrary VERSION 1.0.1)
 set(HPCC_BASE_SOURCES "")
 
 if (USE_ACCL)
-    include(${extern_accl_SOURCE_DIR}/driver/xrt/CMakeLists.txt)
+    add_subdirectory(${extern_accl_SOURCE_DIR}/driver/xrt ${CMAKE_BINARY_DIR}/lib/accl)
     list(APPEND HPCC_BASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup_accl.cpp)
 endif()
 if (USE_XRT_HOST)
