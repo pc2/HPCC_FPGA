@@ -15,7 +15,7 @@ set(USE_OCL_HOST No CACHE BOOL "" FORCE)
 set(ACCL_STACK_TYPE "UDP" CACHE STRING "" FORCE)
 set(FPGA_BOARD_NAME "xilinx_u55c_gen3x16_xdma_3_202210_1" CACHE STRING "" FORCE)
 set(XILINX_LINK_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.transpose_pq_accl_stream.hbm.ini CACHE FILEPATH "" FORCE)
-set(XILINX_COMPILE_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.compile.xilinx.transpose_pq_pcie.ddr.ini CACHE FILEPATH "" FORCE)
+set(XILINX_COMPILE_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.compile.xilinx.transpose_pq_pcie.hbm.ini CACHE FILEPATH "" FORCE)
 set(XILINX_KERNEL_NAMES transpose_read0 transpose_write0 CACHE STRING "" FORCE)
 
 # STREAM specific options
