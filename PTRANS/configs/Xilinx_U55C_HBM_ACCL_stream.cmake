@@ -23,6 +23,6 @@ set(XILINX_KERNEL_NAMES transpose_read0 transpose_write0 CACHE STRING "" FORCE)
 set(DEFAULT_MATRIX_SIZE 8 CACHE STRING "Default size of the used matrices" FORCE)
 set(BLOCK_SIZE 256 CACHE STRING "Block size used in the FPGA kernel" FORCE)
 set(CHANNEL_WIDTH 16 CACHE STRING "Width of a single channel in number of values. Also specifies the width of memory" FORCE)
-set(NUM_REPLICATIONS 2 CACHE STRING "Number of kernel replications (should match number of external channels here)" FORCE)
+set(NUM_REPLICATIONS 1 CACHE STRING "Number of kernel replications (should match number of external channels here)" FORCE)
 
 set(USE_DEPRECATED_HPP_HEADER Yes CACHE BOOL "Use cl.hpp intead of cl2.hpp" FORCE)
