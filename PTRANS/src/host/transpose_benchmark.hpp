@@ -41,6 +41,7 @@ SOFTWARE.
 #include "execution_types/execution_xrt_pcie_pq.hpp"
 #ifdef USE_ACCL
 #include "execution_types/execution_xrt_accl_pq.hpp"
+#include "execution_types/execution_xrt_accl_stream_pq.hpp"
 #endif
 #endif
 #include "execution_types/execution_cpu.hpp"
@@ -141,8 +142,10 @@ public:
             case hpcc_base::CommunicationType::pcie_mpi:
                                     return transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
 #ifdef USE_ACCL
+            // case hpcc_base::CommunicationType::accl:
+            //                         return transpose::fpga_execution::accl_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
             case hpcc_base::CommunicationType::accl:
-                                    return transpose::fpga_execution::accl_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
+                                    return transpose::fpga_execution::accl_stream_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
 #endif
 #endif
 #ifdef MKL_FOUND

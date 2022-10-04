@@ -517,7 +517,9 @@ public:
 #ifdef USE_XRT_HOST
                 usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultDevice);
                 context = std::unique_ptr<bool>(new bool(false));
-                program = fpga_setup::fpgaSetup(*usedDevice, programSettings->kernelFileName);
+                if (!programSettings->useAcclEmulation) {
+                    program = fpga_setup::fpgaSetup(*usedDevice, programSettings->kernelFileName);
+                }
 #endif                                                             
 #ifdef USE_OCL_HOST
                 usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
