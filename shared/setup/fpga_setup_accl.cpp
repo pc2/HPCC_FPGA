@@ -99,7 +99,7 @@ std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &progra
   } else {
     // TODO: Add start port here. Currenty hardcoded!
     return std::unique_ptr<ACCL::ACCL>(
-        new ACCL::ACCL(ranks, current_rank, 6000, device, ACCL::networkProtocol::UDP, 16, ACCL_BUFFER_SIZE));
+        new ACCL::ACCL(ranks, current_rank, 6000, device, ACCL::networkProtocol::TCP, 16, ACCL_BUFFER_SIZE));
   }
 }
 

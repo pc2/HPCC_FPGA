@@ -206,7 +206,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
 #endif
 
     HLSLIB_DATAFLOW_INIT();
-    hlslib::Stream<stream_word> cclo2krnl, krnl2cclo;
+    hlslib::Stream<stream_word> cclo2krnl("cclo2krnl"), krnl2cclo("krnl2cclo");
     hlslib::Stream<command_word> cmd, sts;
 
     int pq_width = handler.getP();
@@ -219,7 +219,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     int pq_col = mpi_comm_rank % pq_width;
 
     int pair_rank = pq_width * pq_col + pq_row;
-    std::vector<unsigned int> dest = {0,9, 18};
+    std::vector<unsigned int> dest = {0};
     CCLO_BFM cclo(6000, mpi_comm_rank, mpi_comm_size, dest, cmd, sts, cclo2krnl, krnl2cclo);
     cclo.run();
     MPI_Barrier(MPI_COMM_WORLD);
@@ -275,17 +275,15 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     config.accl->stream_put(*dbuffer, data.blockSize * data.blockSize * data.numBlocks,
                    pair_rank, 9, ACCL::GLOBAL_COMM,
                    false, ACCL::streamFlags::OP0_STREAM);
-    // config.accl->send(*dbuffer, data.blockSize * data.blockSize * data.numBlocks,
-    //                pair_rank, 9, ACCL::GLOBAL_COMM,
-    //                false, ACCL::streamFlags::OP0_STREAM | ACCL::streamFlags::RES_STREAM );
 #ifndef NDEBUG
     std::cout << "Wait for kernels to complete" << std::endl;
 #endif
     for (int r = 0; r < runs.size(); r++) {
       runs[r].wait();
     }
-    cclo.stop();
+    MPI_Barrier(MPI_COMM_WORLD);
     HLSLIB_DATAFLOW_FINALIZE();
+    cclo.stop();
     auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
     int mpi_rank;

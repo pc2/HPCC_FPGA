@@ -118,12 +118,14 @@ read_A_line:
 
                     // load tranposed A from global memory
                     for (unsigned unroll_count = 0; unroll_count < channel_width; unroll_count++) {
+                        DEVICE_DATA_TYPE v = data_chunk[unroll_count];
                         tmp.data((unroll_count + 1) * sizeof(DEVICE_DATA_TYPE)*8 - 1, unroll_count * sizeof(DEVICE_DATA_TYPE)*8) 
-                                = data_chunk[unroll_count];
+                                = *reinterpret_cast<ap_uint<sizeof(DEVICE_DATA_TYPE)*8>*>(&v);
                     }
-                    tmp.dest = 0;
+                    tmp.dest = 9;
+                    tmp.last = 1;
                     tmp.keep = -1;
-                    STREAM_WRITE(krnl2cclo,tmp);               
+                    STREAM_WRITE(krnl2cclo,tmp);              
                 }
             }
         }
@@ -175,7 +177,8 @@ read_B_line:
 
                 // rotate temporary buffer to store data into local buffer
                 for (unsigned unroll_count = 0; unroll_count < channel_width; unroll_count++) {
-                    data_chunk[unroll_count] = tmp.data((unroll_count + 1) * sizeof(DEVICE_DATA_TYPE)*8 - 1, unroll_count * sizeof(DEVICE_DATA_TYPE)*8);
+                    ap_uint<sizeof(DEVICE_DATA_TYPE)*8> v = tmp.data((unroll_count + 1) * sizeof(DEVICE_DATA_TYPE)*8 - 1, unroll_count * sizeof(DEVICE_DATA_TYPE)*8);
+                    data_chunk[unroll_count] = *reinterpret_cast<DEVICE_DATA_TYPE*>(&v);
                 }
 
                 // load tranposed A from global memory
