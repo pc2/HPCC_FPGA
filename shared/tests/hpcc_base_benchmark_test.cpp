@@ -16,7 +16,7 @@
 // and enable the included tests
 void use_hpcc_base_lib() {}
 
-class MinimalBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int, int> {
+class MinimalBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int> {
 
 protected:
 
@@ -35,8 +35,8 @@ public:
     std::unique_ptr<int>
     generateInputData() override { return returnInputData ? std::unique_ptr<int>(new int) : std::unique_ptr<int>(nullptr);}
 
-    std::unique_ptr<int>
-    executeKernel(int &data) override { return returnExecuteKernel ? std::unique_ptr<int>(new int) : std::unique_ptr<int>(nullptr);}
+    void
+    executeKernel(int &data) override { return;}
 
     bool
     validateOutputAndPrintError(int &data) override { return returnValidate;}
@@ -45,7 +45,7 @@ public:
     checkInputParameters() override { return configurationCheckSucceeds;}
 
     void
-    collectResults(const int &output) override {}
+    collectResults() override {}
 
     void
     printResults() override {}
@@ -55,7 +55,7 @@ public:
 };
 
 
-class SuccessBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int, int> {
+class SuccessBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int> {
 
 protected:
 
@@ -83,13 +83,13 @@ public:
         generateInputDatacalled++;
         return std::unique_ptr<int>(new int);}
 
-    std::unique_ptr<int>
+    void
     executeKernel(int &data) override { 
         if (!returnExecuteKernel) {
             throw fpga_setup::FpgaSetupException("Test execute kernel failed");
         }
         executeKernelcalled++;
-        return std::unique_ptr<int>(new int);}
+        return;}
 
     bool
     validateOutputAndPrintError(int &data) override { 
@@ -97,7 +97,7 @@ public:
         return returnValidate;}
 
     void
-    collectResults(const int &output) override {}
+    collectResults() override {}
 
     void
     printResults() override {}
@@ -108,7 +108,7 @@ public:
             return false;
         }
         else {
-            return hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int, int>::checkInputParameters();
+            return hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int>::checkInputParameters();
         }
     }
 

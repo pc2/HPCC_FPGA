@@ -40,7 +40,7 @@ struct LinpackKernelTest : testing::TestWithParam<uint> {
  * Execution returns correct results for a single repetition
  */
 TEST_P(LinpackKernelTest, FPGACorrectResultsOneRepetition) {
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     for (int i = 0; i < array_size; i++) {
         EXPECT_NEAR(data->b[i], 1.0, 1.0e-3);
     }
@@ -50,7 +50,7 @@ TEST_P(LinpackKernelTest, FPGACorrectResultsOneRepetition) {
  * GEFA Execution returns correct results for a single repetition
  */
 TEST_P(LinpackKernelTest, DISABLED_FPGACorrectResultsGEFA) {
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     auto data2 = bm->generateInputData();
     if (bm->getExecutionSettings().programSettings->isDiagonallyDominant) {
         linpack::gefa_ref_nopvt(data2->A, array_size, array_size);

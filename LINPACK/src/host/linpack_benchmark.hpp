@@ -210,7 +210,7 @@ public:
  * @brief Implementation of the Linpack benchmark
  * 
  */
-class LinpackBenchmark : public hpcc_base::HpccFpgaBenchmark<LinpackProgramSettings, LinpackData, LinpackExecutionTimings> {
+class LinpackBenchmark : public hpcc_base::HpccFpgaBenchmark<LinpackProgramSettings, LinpackData> {
 
 protected:
 
@@ -246,7 +246,7 @@ public:
      * @param data The input and output data of the benchmark
      * @return std::unique_ptr<LinpackExecutionTimings> Measured runtimes of the kernel execution
      */
-    std::unique_ptr<LinpackExecutionTimings>
+    void
     executeKernel(LinpackData &data) override;
 
     /**
@@ -266,7 +266,7 @@ public:
      */
     
     void
-    collectResults(const LinpackExecutionTimings &output) override;
+    collectResults() override;
     
     void
     printResults() override;

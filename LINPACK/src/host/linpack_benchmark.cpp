@@ -111,9 +111,8 @@ linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
         ("emulation", "Use kernel arguments for emulation. This may be necessary to simulate persistent local memory on the FPGA");
 }
 
-std::unique_ptr<linpack::LinpackExecutionTimings>
+void
 linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
-    std::unique_ptr<linpack::LinpackExecutionTimings> timings;
     switch (executionSettings->programSettings->communicationType) {
         case hpcc_base::CommunicationType::pcie_mpi : timings = execution::pcie::calculate(*executionSettings, data); break;
         case hpcc_base::CommunicationType::intel_external_channels: timings = execution::iec::calculate(*executionSettings, data); break;
@@ -122,11 +121,10 @@ linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
 #ifdef DISTRIBUTED_VALIDATION
     distributed_gesl_nopvt_ref(data);
 #endif
-    return timings;
 }
 
 void
-linpack::LinpackBenchmark::collectResults(const linpack::LinpackExecutionTimings &output) {
+linpack::LinpackBenchmark::collectResults() {
     // Calculate performance for kernel execution plus data transfer
     double t = 0;
     double tlu = 0;
@@ -139,10 +137,10 @@ linpack::LinpackBenchmark::collectResults(const linpack::LinpackExecutionTimings
     std::cout << "Rank " << mpi_comm_rank << ": Result collection started" << std::endl;
 #endif
 
-    std::vector<double> global_lu_times(output.gefaTimings.size());
-    MPI_Reduce(output.gefaTimings.data(), global_lu_times.data(), output.gefaTimings.size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    std::vector<double> global_sl_times(output.geslTimings.size());
-    MPI_Reduce(output.geslTimings.data(), global_sl_times.data(), output.geslTimings.size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    std::vector<double> global_lu_times(timings["gefa"].size());
+    MPI_Reduce(timings["gefa"].data(), global_lu_times.data(), timings["gefa"].size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    std::vector<double> global_sl_times(timings["gesl"].size());
+    MPI_Reduce(timings["gesl"].data(), global_sl_times.data(), timings["gesl"].size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 #ifndef NDEBUG
     std::cout << "Rank " << mpi_comm_rank << ": Result collection done" << std::endl;
 #endif
@@ -187,10 +185,6 @@ linpack::LinpackBenchmark::collectResults(const linpack::LinpackExecutionTimings
 
 void
 linpack::LinpackBenchmark::printResults() {
-    if (mpi_comm_rank > 0) {
-        return;
-    }
-
     std::cout << std::setw(ENTRY_SPACE)
               << "Method" << std::setw(ENTRY_SPACE)
               << "best" << std::setw(ENTRY_SPACE) << "mean"

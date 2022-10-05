@@ -282,7 +282,7 @@ public:
  * @tparam TData Class used to represent the benchmark input and output data
  * @tparam TOutput Class representing the measurements like timings etc
  */
-template <class TSettings, class TData, class TOutput>
+template <class TSettings, class TData>
 class HpccFpgaBenchmark {
 
 private:
@@ -332,10 +332,16 @@ protected:
      */
     bool mpi_external_init = true;
     
+    /**
+     *
+     * @brief map containing the benchmark timings
+     *
+     */
+    std::map<std::string, std::vector<double>> timings;
 
     /**
      *
-     * @brief vector containing the benchmark results
+     * @brief map containing the benchmark results
      *
      */
     std::map<std::string, HpccResult> results;
@@ -357,7 +363,7 @@ public:
      * @param data The initialized data for the kernel. It will be replaced by the kernel output for validation
      * @return std::unique_ptr<TOutput> A data class containing the measurement results of the execution
      */
-    virtual std::unique_ptr<TOutput>
+    virtual void
     executeKernel(TData &data) = 0;
 
     /**
@@ -377,7 +383,7 @@ public:
      * @param output  The measurement data of the kernel execution
      */
     virtual void
-    collectResults(const TOutput &output) = 0;
+    collectResults() = 0;
     
     virtual void
     printResults() = 0;
@@ -508,6 +514,12 @@ public:
         return results_string;
     }
     
+    std::map<std::string, std::string> getEnvironmentMap() {
+        std::map<std::string, std::string> env; 
+        env["LD_LIBRARY_PATH"] = std::string(std::getenv("LD_LIBRARY_PATH"));
+        return env;
+    }
+    
     void
     dumpConfigurationAndResults(std::string file_path) {
         std::fstream fs;
@@ -516,10 +528,17 @@ public:
             std::cout << "Unable to open file for dumping configuration and results" << std::endl;
         } else {
             json dump;
-            std::string device_name = executionSettings->getDeviceName();
-            dump["device"] = device_name;
-            dump["settings"] = json(executionSettings->programSettings->getSettingsMap());
+            dump["name"] = PROGRAM_NAME;
+#ifdef _USE_MPI_
+            dump["mpi"] ={{"version", MPI_VERSION}, {"subversion", MPI_SUBVERSION}};
+#endif
+            dump["config_time"] = CONFIG_TIME;
+            dump["git_commit"] = GIT_COMMIT_HASH;
+            dump["device"] = executionSettings->getDeviceName();
+            dump["settings"] = executionSettings->programSettings->getSettingsMap();
+            dump["timings"] = timings;
             dump["results"] = getResultsMap();
+            dump["environment"] = getEnvironmentMap();
 
             fs << dump;
         }
@@ -639,7 +658,7 @@ public:
 
             bool validateSuccess = false;
             auto exe_start = std::chrono::high_resolution_clock::now();
-            std::unique_ptr<TOutput> output =  executeKernel(*data);
+            executeKernel(*data);
 
 #ifdef _USE_MPI_
         MPI_Barrier(MPI_COMM_WORLD);
@@ -662,15 +681,15 @@ public:
                     std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
                 }
             }
-            collectResults(*output);
+            collectResults();
             
-            if (executionSettings->programSettings->dumpfilePath.size() > 0) {
-                dumpConfigurationAndResults(executionSettings->programSettings->dumpfilePath);
-            }
-            
-            printResults();
-
             if (mpi_comm_rank == 0) {
+                if (executionSettings->programSettings->dumpfilePath.size() > 0) {
+                    dumpConfigurationAndResults(executionSettings->programSettings->dumpfilePath);
+                }
+            
+                printResults();
+
                 if (!validateSuccess) {
                     std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
                 }
