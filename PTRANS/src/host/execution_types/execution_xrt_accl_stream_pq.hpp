@@ -221,7 +221,9 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     int pair_rank = pq_width * pq_col + pq_row;
     std::vector<unsigned int> dest = {0};
     CCLO_BFM cclo(6000, mpi_comm_rank, mpi_comm_size, dest, cmd, sts, cclo2krnl, krnl2cclo);
-    cclo.run();
+    if (config.programSettings->useAcclEmulation) {
+      cclo.run();
+    }
     MPI_Barrier(MPI_COMM_WORLD);
 
     auto startCalculation = std::chrono::high_resolution_clock::now();
@@ -283,7 +285,9 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     }
     MPI_Barrier(MPI_COMM_WORLD);
     HLSLIB_DATAFLOW_FINALIZE();
-    cclo.stop();
+    if (config.programSettings->useAcclEmulation) {
+      cclo.stop();
+    }
     auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
     int mpi_rank;
