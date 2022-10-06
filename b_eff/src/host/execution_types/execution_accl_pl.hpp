@@ -30,10 +30,17 @@ SOFTWARE.
 /* External library headers */
 #include "mpi.h"
 #include "accl.hpp"
+#include "cclo_bfm.h"
+#include "accl_hls.h"
 
 /* Project's headers */
 
+extern void send_recv(const float *read_buffer,float *write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations, 
+                ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
+                STREAM<command_word> &cmd, STREAM<command_word > &sts);
+
 namespace network::execution_types::accl_pl {
+
 
     /*
     Implementation for the single kernel.
@@ -57,13 +64,23 @@ namespace network::execution_types::accl_pl {
         int current_size;
         MPI_Comm_size(MPI_COMM_WORLD, & current_size);
 
+        hlslib::Stream<stream_word> cclo2krnl("cclo2krnl"), krnl2cclo("krnl2cclo");
+        hlslib::Stream<command_word> cmd, sts;
+
+        std::vector<unsigned int> dest = {0};
+        CCLO_BFM cclo(6000, current_rank, current_size, dest, cmd, sts, cclo2krnl, krnl2cclo);
+        if (config.programSettings->useAcclEmulation) {
+            cclo.run();
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+
         std::vector<double> calculationTimings;
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             dummyBufferContents.clear();
-	    recvBufferContents.clear();
-	    acclSendBuffers.clear();
-	    acclRecvBuffers.clear();
-	    int size_in_values = (size_in_bytes + 3) / 4;
+            recvBufferContents.clear();
+            acclSendBuffers.clear();
+            acclRecvBuffers.clear();
+            int size_in_values = (size_in_bytes + 3) / 4;
             // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
@@ -74,15 +91,21 @@ namespace network::execution_types::accl_pl {
                 acclRecvBuffers.back()->sync_to_device();
             }
 
-            xrt::kernel sendrecvKernel(*config.device, *config.program, "sendrecv");
+            xrt::kernel sendrecvKernel(*config.device, *config.program, "send_recv");
 
             double calculationTime = 0.0;
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
+                if (!config.programSettings->useAcclEmulation) {
                 auto run = sendrecvKernel(acclSendBuffers[i]->bo(), acclRecvBuffers[i]->bo(), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
-                                            config.accl->get_communicator_adr(), config.accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}));
+                                            config.accl->get_communicator_addr(), config.accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}));
                 run.wait();
+                } else {
+                    send_recv(reinterpret_cast<float*>(acclSendBuffers[i]->buffer()), reinterpret_cast<float*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                                            config.accl->get_communicator_addr(), config.accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}),
+                                            cmd, sts);
+                }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
                 #ifndef NDEBUG
@@ -98,10 +121,16 @@ namespace network::execution_types::accl_pl {
         std::cout << "Rank " << current_rank << ": Done " << r << std::endl;
 #endif
         }
+
+        if (config.programSettings->useAcclEmulation) {
+            cclo.stop();
+        }
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-            acclRecvBuffers.back()->sync_from_device();
+            if (!config.programSettings->useAcclEmulation) {
+                acclRecvBuffers.back()->sync_from_device();
+            }
 		    std::copy(recvBufferContents[r].begin(), recvBufferContents[r].begin() + validationData.size() / config.programSettings->kernelReplications, validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
         }
         std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
