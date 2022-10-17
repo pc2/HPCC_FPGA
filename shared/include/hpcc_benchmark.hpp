@@ -517,10 +517,44 @@ public:
         return results_string;
     }
     
-    std::map<std::string, std::string> getEnvironmentMap() {
+    std::map<std::string, std::string>
+    getEnvironmentMap() {
         std::map<std::string, std::string> env; 
         env["LD_LIBRARY_PATH"] = std::string(std::getenv("LD_LIBRARY_PATH"));
         return env;
+    }
+
+    json
+    parseFPGATorusString(std::string str) {
+        json j; 
+        size_t space = str.find(" "); 
+        std::string p_str = str.substr(0, space);
+        std::string q_str = str.substr(space, str.size());
+        j["P"] = stoi(p_str.substr(p_str.find("=") + 1, p_str.find(",")));
+        j["Q"] = stoi(q_str.substr(q_str.find("=") + 1, q_str.size()));
+        return j;
+    }
+
+    std::map<std::string, json>
+    jsonifySettingsMap(std::map<std::string, std::string> settings_map) {
+        json j;
+        for (const auto& item: settings_map) {
+            std::string key = item.first;
+            std::string value = item.second;
+            try {
+                int value_int = stoi(value); 
+                j[key] = value_int;
+            } catch (std::invalid_argument const &ex) {
+                if (key == "FPGA Torus") {
+                    j[key] = parseFPGATorusString(value);
+                } else if (key == "Emulate") {
+                    j[key] = value == "Yes";
+                } else {
+                    j[key] = value; 
+                }
+            }     
+        }
+        return j;
     }
     
     void
@@ -538,7 +572,7 @@ public:
             dump["config_time"] = CONFIG_TIME;
             dump["git_commit"] = GIT_COMMIT_HASH;
             dump["device"] = executionSettings->getDeviceName();
-            dump["settings"] = executionSettings->programSettings->getSettingsMap();
+            dump["settings"] = jsonifySettingsMap(executionSettings->programSettings->getSettingsMap());
             dump["timings"] = timings;
             dump["results"] = getResultsJson();
             dump["environment"] = getEnvironmentMap();
