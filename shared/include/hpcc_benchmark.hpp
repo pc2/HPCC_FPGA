@@ -571,6 +571,7 @@ public:
 #endif
             dump["config_time"] = CONFIG_TIME;
             dump["git_commit"] = GIT_COMMIT_HASH;
+            dump["version"] = VERSION;
             dump["device"] = executionSettings->getDeviceName();
             dump["settings"] = jsonifySettingsMap(executionSettings->programSettings->getSettingsMap());
             dump["timings"] = timings;
