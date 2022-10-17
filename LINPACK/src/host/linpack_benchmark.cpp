@@ -171,7 +171,7 @@ linpack::LinpackBenchmark::collectResults() {
     }
     
     results.emplace("t_mean", hpcc_base::HpccResult(t / global_lu_times.size(), "s"));
-    results.emplace("t_min", hpcc_base::HpccResult(tmin, "?"));
+    results.emplace("t_min", hpcc_base::HpccResult(tmin, "s"));
     results.emplace("tlu_mean", hpcc_base::HpccResult(tlu / global_lu_times.size(), "s"));
     results.emplace("tlu_min", hpcc_base::HpccResult(lu_min, "s"));
     results.emplace("tsl_mean", hpcc_base::HpccResult(tsl / global_sl_times.size(), "s"));
@@ -190,22 +190,20 @@ linpack::LinpackBenchmark::printResults() {
               << "best" << std::setw(ENTRY_SPACE) << "mean"
               << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
 
-    /*
     std::cout << std::setw(ENTRY_SPACE) << "total" << std::setw(ENTRY_SPACE)
-              << results["t_min"] << std::setw(ENTRY_SPACE) << results["t_mean"]
-              << std::setw(ENTRY_SPACE) << results["gflops"]
+              << results.at("t_min") << std::setw(ENTRY_SPACE) << results.at("t_mean")
+              << std::setw(ENTRY_SPACE) << results.at("gflops")
               << std::endl;
 
     std::cout << std::setw(ENTRY_SPACE) << "GEFA" << std::setw(ENTRY_SPACE)
-            << results["tlu_min"] << std::setw(ENTRY_SPACE) << results["tlu_mean"]
-            << std::setw(ENTRY_SPACE) << results["gflops_lu"]
+            << results.at("tlu_min") << std::setw(ENTRY_SPACE) << results.at("tlu_mean")
+            << std::setw(ENTRY_SPACE) << results.at("gflops_lu")
             << std::endl;
 
     std::cout << std::setw(ENTRY_SPACE) << "GESL" << std::setw(ENTRY_SPACE)
-              << results["tsl_min"] << std::setw(ENTRY_SPACE) << results["tsl_mean"]
-              << std::setw(ENTRY_SPACE) << results["gflops_sl"]
+              << results.at("tsl_min") << std::setw(ENTRY_SPACE) << results.at("tsl_mean")
+              << std::setw(ENTRY_SPACE) << results.at("gflops_sl")
               << std::endl;
-              */
 }
 
 std::unique_ptr<linpack::LinpackData>
