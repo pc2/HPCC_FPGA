@@ -57,10 +57,10 @@ using json = nlohmann::json;
 namespace hpcc_base {
 
 class HpccResult {
+public:
     double value;
     std::string unit;
 
-public:
     HpccResult(double value, std::string unit): value(value), unit(unit) {}
     
     friend std::ostream &operator<<(std::ostream &os, const HpccResult &result) {
@@ -505,11 +505,14 @@ public:
         std::cout << *executionSettings << std::endl;
     }
     
-    std::map<std::string, std::string> getResultsMap() {
+    std::map<std::string, json> getResultsJson() {
         // TODO: nested maps, recursive?
-        std::map<std::string, std::string> results_string;
+        std::map<std::string, json> results_string;
         for (auto const &result: results) {
-            results_string[result.first] = result.second.to_string();
+            json j;
+            j["unit"] = result.second.unit;
+            j["value"] = result.second.value;
+            results_string[result.first] = j;
         }
         return results_string;
     }
@@ -537,7 +540,7 @@ public:
             dump["device"] = executionSettings->getDeviceName();
             dump["settings"] = executionSettings->programSettings->getSettingsMap();
             dump["timings"] = timings;
-            dump["results"] = getResultsMap();
+            dump["results"] = getResultsJson();
             dump["environment"] = getEnvironmentMap();
 
             fs << dump;
