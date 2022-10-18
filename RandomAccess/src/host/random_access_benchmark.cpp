@@ -87,45 +87,49 @@ random_access::RandomAccessBenchmark::addAdditionalParseOptions(cxxopts::Options
             cxxopts::value<uint>()->default_value(std::to_string(HPCC_FPGA_RA_RNG_COUNT_LOG)));
 }
 
-std::unique_ptr<random_access::RandomAccessExecutionTimings>
+void
 random_access::RandomAccessBenchmark::executeKernel(RandomAccessData &data) {
-    return bm_execution::calculate(*executionSettings, data.data, mpi_comm_rank, mpi_comm_size);
+    timings = bm_execution::calculate(*executionSettings, data.data, mpi_comm_rank, mpi_comm_size);
 }
 
 void
-random_access::RandomAccessBenchmark::collectAndPrintResults(const random_access::RandomAccessExecutionTimings &output) {
+random_access::RandomAccessBenchmark::collectResults() {
 
-    std::vector<double> avgTimings(output.times.size());
+    std::vector<double> avgTimings(timings.at("execution").size());
 #ifdef _USE_MPI_
     // Copy the object variable to a local variable to make it accessible to the lambda function
     int mpi_size = mpi_comm_size;
-    MPI_Reduce(output.times.data(),avgTimings.data(),output.times.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    std::for_each(avgTimings.begin(),avgTimings.end(), [mpi_size](double& x) {x /= mpi_size;});
+    MPI_Reduce(timings.at("execution").data(), avgTimings.data(),timings.at("execution").size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    std::for_each(avgTimings.begin(), avgTimings.end(), [mpi_size](double& x) {x /= mpi_size;});
 #else
-    std::copy(output.times.begin(), output.times.end(), avgTimings.begin());
+    std::copy(timings.at("execution").begin(), timings.at("execution").end(), avgTimings.begin());
 #endif
-    if (mpi_comm_rank == 0) {
+    // Calculate performance for kernel execution
+    double tmean = 0;
+    double tmin = std::numeric_limits<double>::max();
+    double gups = static_cast<double>(4 * executionSettings->programSettings->dataSize * mpi_comm_size) / 1000000000;
+    for (double currentTime : avgTimings) {
+        tmean +=  currentTime;
+        if (currentTime < tmin) {
+            tmin = currentTime;
+        }
+    }
+    tmean = tmean / timings.at("execution").size();
+
+    results.emplace("t_min", hpcc_base::HpccResult(tmin, "s"));
+    results.emplace("t_mean", hpcc_base::HpccResult(tmean, "s"));
+    results.emplace("guops", hpcc_base::HpccResult(gups / tmin, "GUOP/s"));
+}
+
+void random_access::RandomAccessBenchmark::printResults() {
         std::cout << std::setw(ENTRY_SPACE)
                 << "best" << std::setw(ENTRY_SPACE) << "mean"
                 << std::setw(ENTRY_SPACE) << "GUOPS" << std::endl;
 
-        // Calculate performance for kernel execution
-        double tmean = 0;
-        double tmin = std::numeric_limits<double>::max();
-        double gups = static_cast<double>(4 * executionSettings->programSettings->dataSize * mpi_comm_size) / 1000000000;
-        for (double currentTime : avgTimings) {
-            tmean +=  currentTime;
-            if (currentTime < tmin) {
-                tmin = currentTime;
-            }
-        }
-        tmean = tmean / output.times.size();
-
         std::cout << std::setw(ENTRY_SPACE)
-                << tmin << std::setw(ENTRY_SPACE) << tmean
-                << std::setw(ENTRY_SPACE) << gups / tmin
+                << results.at("t_min") << std::setw(ENTRY_SPACE) << results.at("t_mean")
+                << std::setw(ENTRY_SPACE) << results.at("guops")
                 << std::endl;
-    }
 }
 
 bool

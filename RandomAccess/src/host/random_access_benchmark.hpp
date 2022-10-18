@@ -115,24 +115,10 @@ public:
 };
 
 /**
- * @brief Measured execution timing from the kernel execution
- * 
- */
-class RandomAccessExecutionTimings {
-public:
-    /**
-     * @brief A vector containing the timings for all repetitions
-     * 
-     */
-    std::vector<double> times;
-
-};
-
-/**
  * @brief Implementation of the random access benchmark
  * 
  */
-class RandomAccessBenchmark : public hpcc_base::HpccFpgaBenchmark<RandomAccessProgramSettings, RandomAccessData, RandomAccessExecutionTimings> {
+class RandomAccessBenchmark : public hpcc_base::HpccFpgaBenchmark<RandomAccessProgramSettings, RandomAccessData> {
 
 protected:
 
@@ -158,9 +144,8 @@ public:
      * @brief RandomAccess specific implementation of the kernel execution
      * 
      * @param data The benchmark input and output data
-     * @return std::unique_ptr<RandomAccessExecutionTimings> 
      */
-    std::unique_ptr<RandomAccessExecutionTimings>
+    void
     executeKernel(RandomAccessData &data) override;
 
     /**
@@ -179,7 +164,10 @@ public:
      * @param output The measurement values that are generated yb the kernel execution
      */
     void
-    collectAndPrintResults(const RandomAccessExecutionTimings &output) override;
+    collectResults() override;
+
+    void
+    printResults() override;
 
     /**
      * @brief Check the given bencmark configuration and its validity

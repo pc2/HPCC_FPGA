@@ -28,8 +28,8 @@ struct RandomAccessKernelTest : testing::Test {
  * Check if the number of measurements from the calculation matches the number of repetitions
  */
 TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements1Rep) {
-    auto result = bm->executeKernel( *data);
-    EXPECT_EQ(result->times.size(), 1);
+    bm->executeKernel( *data);
+    EXPECT_EQ(bm->getTimingsMap().at("execution").size(), 1);
 }
 
 /**
@@ -37,15 +37,15 @@ TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements1Rep) {
  */
 TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements3Rep) {
     bm->getExecutionSettings().programSettings->numRepetitions = 3;
-    auto result = bm->executeKernel(*data);
-    EXPECT_EQ(result->times.size(), 3);
+    bm->executeKernel(*data);
+    EXPECT_EQ(bm->getTimingsMap().at("execution").size(), 3);
 }
 
 /**
  * Execution returns correct results for a single repetition
  */
 TEST_F(RandomAccessKernelTest, FPGAErrorBelow1Percent) {
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     bool success = bm->validateOutputAndPrintError(*data);
     EXPECT_TRUE(success);
 }
