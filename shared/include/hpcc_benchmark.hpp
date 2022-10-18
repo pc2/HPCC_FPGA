@@ -510,6 +510,11 @@ public:
         return timings;
     }
     
+    void
+    addTimings(std::string key, std::vector<double> value) {
+        timings.emplace(key, value);
+    }
+    
     std::map<std::string, json> getResultsJson() {
         // TODO: nested maps, recursive?
         std::map<std::string, json> results_string;

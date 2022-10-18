@@ -65,22 +65,22 @@ transpose::TransposeBenchmark::addAdditionalParseOptions(cxxopts::Options &optio
             cxxopts::value<std::string>()->default_value(DEFAULT_DIST_TYPE));
 }
 
-std::unique_ptr<transpose::TransposeExecutionTimings>
+void
 transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
     switch (executionSettings->programSettings->communicationType) {
         case hpcc_base::CommunicationType::intel_external_channels: 
                                 if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
-                                    return transpose::fpga_execution::intel::calculate(*executionSettings, data);
+                                    timings = transpose::fpga_execution::intel::calculate(*executionSettings, data);
                                 }
                                 else {
-                                    return transpose::fpga_execution::intel_pq::calculate(*executionSettings, data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*dataHandler));
+                                    timings = transpose::fpga_execution::intel_pq::calculate(*executionSettings, data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*dataHandler));
                                 } break;
         case hpcc_base::CommunicationType::pcie_mpi :                                 
                                 if (executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
-                                    return transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler);
+                                    timings = transpose::fpga_execution::pcie::calculate(*executionSettings, data, *dataHandler);
                                 }
                                 else {
-                                    return transpose::fpga_execution::pcie_pq::calculate(*executionSettings, data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*dataHandler));
+                                    timings = transpose::fpga_execution::pcie_pq::calculate(*executionSettings, data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler&>(*dataHandler));
                                 } break;
 #ifdef MKL_FOUND
         case hpcc_base::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*executionSettings, data, *dataHandler); break;
@@ -90,63 +90,70 @@ transpose::TransposeBenchmark::executeKernel(TransposeData &data) {
 }
 
 void
-transpose::TransposeBenchmark::collectAndPrintResults(const transpose::TransposeExecutionTimings &output) {
+transpose::TransposeBenchmark::collectResults() {
     double flops = static_cast<double>(executionSettings->programSettings->matrixSize) * executionSettings->programSettings->matrixSize;
 
     // Number of experiment repetitions
-    uint number_measurements = output.calculationTimings.size();
+    uint number_measurements = timings.at("calculation").size();
     std::vector<double> max_measures(number_measurements);
     std::vector<double> max_transfers(number_measurements);
 #ifdef _USE_MPI_
         // Copy the object variable to a local variable to make it accessible to the lambda function
         int mpi_size = mpi_comm_size;
-        MPI_Reduce(output.calculationTimings.data(), max_measures.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        MPI_Reduce(output.transferTimings.data(), max_transfers.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(timings.at("calculation").data(), max_measures.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(timings.at("transfer").data(), max_transfers.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 #else
-        std::copy(output.calculationTimings.begin(), output.calculationTimings.end(), max_measures.begin());
-        std::copy(output.transferTimings.begin(), output.transferTimings.end(), max_transfers.begin());
+        std::copy(timings.at("calculation").begin(), timings.at("calculation").end(), max_measures.begin());
+        std::copy(timings.at("transfer").begin(), timings.at("transfer").end(), max_transfers.begin());
 #endif
 
     double avgCalculationTime = accumulate(max_measures.begin(), max_measures.end(), 0.0)
                                 / max_measures.size();
+    results.emplace("avg_calc_t", hpcc_base::HpccResult(avgCalculationTime, "s"));
+
     double minCalculationTime = *min_element(max_measures.begin(), max_measures.end());
+    results.emplace("min_calc_t", hpcc_base::HpccResult(minCalculationTime, "s"));
 
     double avgTransferTime = accumulate(max_transfers.begin(), max_transfers.end(), 0.0)
                                 / max_transfers.size();
+    results.emplace("avg_transfer_t", hpcc_base::HpccResult(avgTransferTime, "s"));
+
     double minTransferTime = *min_element(max_transfers.begin(), max_transfers.end());
+    results.emplace("min_transfer_t", hpcc_base::HpccResult(minTransferTime, "s"));
+    
+    results.emplace("avg_t", hpcc_base::HpccResult(avgCalculationTime + avgTransferTime, "s"));
+    results.emplace("min_t", hpcc_base::HpccResult(minCalculationTime + minTransferTime, "s"));
 
-    double avgCalcFLOPS = flops / avgCalculationTime;
-    double maxCalcFLOPS = flops / minCalculationTime;
-    double avgMemBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / avgCalculationTime;
-    double maxMemBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / minCalculationTime;
-    double avgTransferBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime;
-    double maxTransferBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime;
+    results.emplace("avg_calc_flops", hpcc_base::HpccResult(flops / avgCalculationTime, "GFLOP/s"));
+    results.emplace("max_calc_flops", hpcc_base::HpccResult(flops / minCalculationTime, "GFLOP/s"));
+    results.emplace("avg_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgCalculationTime, "GB/s"));
+    results.emplace("max_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minCalculationTime, "GB/s"));
+    results.emplace("avg_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime, "GB/s"));
+    results.emplace("max_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime, "GB/s"));
+}
 
-
-
-
-    if (mpi_comm_rank == 0) {
-        std::cout << "       total [s]     transfer [s]  calc [s]      calc FLOPS    Mem [B/s]     PCIe [B/s]" << std::endl;
-        std::cout << "avg:   " << (avgTransferTime + avgCalculationTime)
-                << "   " << avgTransferTime
-                << "   " << avgCalculationTime
-                << "   " << avgCalcFLOPS
-                << "   " << avgMemBandwidth
-                << "   " << avgTransferBandwidth
-                << std::endl;
-        std::cout << "best:  " << (minTransferTime + minCalculationTime)
-                << "   " << minTransferTime
-                << "   " << minCalculationTime
-                << "   " << maxCalcFLOPS
-                << "   " << maxMemBandwidth
-                << "   " << maxTransferBandwidth
-                << std::endl;
-    }
+void
+transpose::TransposeBenchmark::printResults() {
+    std::cout << "       total [s]     transfer [s]  calc [s]      calc FLOPS    Mem [B/s]     PCIe [B/s]" << std::endl;
+    std::cout << "avg:   " << results.at("avg_t")
+            << "   " << results.at("avg_transfer_t")
+            << "   " << results.at("avg_calc_t")
+            << "   " << results.at("avg_calc_flops")
+            << "   " << results.at("avg_mem_bandwidth")
+            << "   " << results.at("avg_transfer_bandwidth")
+            << std::endl;
+    std::cout << "best:  " << results.at("min_t")
+            << "   " << results.at("min_transfer_t")
+            << "   " << results.at("min_calculation_t")
+            << "   " << results.at("max_calc_flops")
+            << "   " << results.at("max_mem_bandwidth")
+            << "   " << results.at("max_transfer_bandwidth")
+            << std::endl;
 }
 
 std::unique_ptr<transpose::TransposeData>
 transpose::TransposeBenchmark::generateInputData() {
-    return dataHandler->generateData(*executionSettings);
+return dataHandler->generateData(*executionSettings);
 }
 
 bool  

@@ -195,12 +195,12 @@ TEST_F(TransposeKernelTest, FPGAAAndBAreSummedUp4Blocks) {
  */
 TEST_F(TransposeKernelTest, FPGATimingsMeasuredForEveryIteration) {
     bm->getExecutionSettings().programSettings->numRepetitions = 10;
-    auto result = bm->executeKernel(*data);
-    EXPECT_EQ(result->calculationTimings.size(), 10);
-    EXPECT_EQ(result->transferTimings.size(), 10);
+    bm->executeKernel(*data);
+    EXPECT_EQ(bm->getTimingsMap().at("calculation").size(), 10);
+    EXPECT_EQ(bm->getTimingsMap().at("transfer").size(), 10);
     for (int t = 0; t < 10; t++) {
-        EXPECT_GE(result->transferTimings[t], 0.0);
-        EXPECT_GE(result->calculationTimings[t], 0.0);
+        EXPECT_GE(bm->getTimingsMap().at("transfer")[t], 0.0);
+        EXPECT_GE(bm->getTimingsMap().at("calculation")[t], 0.0);
     }
 }
 

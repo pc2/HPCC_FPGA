@@ -24,16 +24,16 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatHeader) {
     std::vector<double> calculateTimings;
     transferTimings.push_back(1.0);
     calculateTimings.push_back(1.0);
-    std::shared_ptr<transpose::TransposeExecutionTimings> results(
-            new transpose::TransposeExecutionTimings{transferTimings, calculateTimings});
-
+    bm->addTimings("transfer", transferTimings);
+    bm->addTimings("calculation", calculateTimings);
 
     // Redirect stout buffer to local buffer to make checks possible
     std::stringstream newStdOutBuffer;
     std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
     std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
-    bm->collectAndPrintResults(*results);
+    bm->collectResults();
+    bm->printResults();
 
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);
@@ -50,8 +50,8 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
     std::vector<double> calculateTimings;
     transferTimings.push_back(1.0);
     calculateTimings.push_back(1.0);
-    std::shared_ptr<transpose::TransposeExecutionTimings> results(
-            new transpose::TransposeExecutionTimings{transferTimings, calculateTimings});
+    bm->addTimings("transfer", transferTimings);
+    bm->addTimings("calculation", calculateTimings);
 
 
     // Redirect stout buffer to local buffer to make checks possible
@@ -59,7 +59,8 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
     std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
     std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
-    bm->collectAndPrintResults(*results);
+    bm->collectResults();
+    bm->printResults();
 
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);
