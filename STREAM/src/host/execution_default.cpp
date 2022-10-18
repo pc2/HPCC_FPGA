@@ -67,7 +67,7 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::unique_ptr<stream::StreamExecutionTimings>
+    std::map<std::string, std::vector<double>>
     calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings>& config,
             HOST_DATA_TYPE* A,
             HOST_DATA_TYPE* B,
@@ -105,7 +105,7 @@ namespace bm_execution {
                                           add_kernels, triad_kernels, command_queues);
         }
         if (!success) {
-            return std::unique_ptr<stream::StreamExecutionTimings>(nullptr);
+            return std::map<std::string, std::vector<double>>();
         }
 
         //
@@ -331,11 +331,7 @@ namespace bm_execution {
 
         }
 
-        std::unique_ptr<stream::StreamExecutionTimings> result(new stream::StreamExecutionTimings{
-                timingMap,
-                config.programSettings->streamArraySize
-        });
-        return result;
+        return timingMap;
     }
 
     bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,

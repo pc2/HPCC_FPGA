@@ -128,29 +128,10 @@ public:
 };
 
 /**
- * @brief Measured execution timing from the kernel execution
- * 
- */
-class StreamExecutionTimings {
-public:
-    /**
-     * @brief A map containing the timings for all stream operation types
-     * 
-     */
-    std::map<std::string,std::vector<double>> timings;
-
-    /**
-     * @brief The used array size
-     * 
-     */
-    uint arraySize;
-};
-
-/**
  * @brief Implementation of the Sream benchmark
  * 
  */
-class StreamBenchmark : public hpcc_base::HpccFpgaBenchmark<StreamProgramSettings, StreamData, StreamExecutionTimings> {
+class StreamBenchmark : public hpcc_base::HpccFpgaBenchmark<StreamProgramSettings, StreamData> {
 
 protected:
 
@@ -176,9 +157,8 @@ public:
      * @brief Stream specific implementation of the kernel execution
      * 
      * @param data 
-     * @return std::unique_ptr<StreamExecutionTimings> 
      */
-    std::unique_ptr<StreamExecutionTimings>
+    void
     executeKernel( StreamData &data) override;
 
     /**
@@ -194,10 +174,12 @@ public:
     /**
      * @brief Stream specific implementation of printing the execution results
      * 
-     * @param output 
      */
     void
-    collectAndPrintResults(const StreamExecutionTimings &output) override;
+    collectResults() override;
+
+    void
+    printResults() override;
 
     /**
      * @brief Construct a new Stream Benchmark object

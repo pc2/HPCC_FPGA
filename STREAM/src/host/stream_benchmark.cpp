@@ -102,19 +102,18 @@ stream::StreamBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
             ("multi-kernel", "Use the legacy multi kernel implementation");
 }
 
-std::unique_ptr<stream::StreamExecutionTimings>
+void
 stream::StreamBenchmark::executeKernel(StreamData &data) {
-    return bm_execution::calculate(*executionSettings,
+    timings = bm_execution::calculate(*executionSettings,
               data.A,
               data.B,
               data.C);
 }
 
 void
-stream::StreamBenchmark::collectAndPrintResults(const stream::StreamExecutionTimings &output) {
-
+stream::StreamBenchmark::collectResults() {
     std::map<std::string,std::vector<double>> totalTimingsMap;
-    for (auto v : output.timings) {
+    for (auto v : timings) {
         // Number of experiment repetitions
         uint number_measurements = v.second.size();
         // create a new 
@@ -127,29 +126,35 @@ stream::StreamBenchmark::collectAndPrintResults(const stream::StreamExecutionTim
 #else
         std::copy(v.second.begin(), v.second.end(), avg_measures.begin());
 #endif
-        totalTimingsMap.insert({v.first,avg_measures});
+
+        double minTime = *min_element(v.second.begin(), v.second.end());
+        double avgTime = accumulate(v.second.begin(), v.second.end(), 0.0)
+                        / v.second.size();
+        double maxTime = *max_element(v.second.begin(), v.second.end());
+
+        double bestRate = (static_cast<double>(sizeof(HOST_DATA_TYPE)) * executionSettings->programSettings->streamArraySize * bm_execution::multiplicatorMap[v.first] / minTime) * 1.0e-6 * mpi_comm_size;
+        
+        results.emplace(v.first + "_min_t", hpcc_base::HpccResult(minTime, "s"));
+        results.emplace(v.first + "_avg_t", hpcc_base::HpccResult(avgTime, "s"));
+        results.emplace(v.first + "_max_t", hpcc_base::HpccResult(maxTime, "s"));
+        results.emplace(v.first + "_best_rate", hpcc_base::HpccResult(bestRate, "MB/s"));
     }
+}
 
-    if (mpi_comm_rank == 0) {
-        std::cout << std::setw(ENTRY_SPACE) << "Function";
-        std::cout << std::setw(ENTRY_SPACE) << "Best Rate MB/s";
-        std::cout << std::setw(ENTRY_SPACE) << "Avg time s";
-        std::cout << std::setw(ENTRY_SPACE) << "Min time" ;
-        std::cout << std::setw(ENTRY_SPACE) << "Max time" << std::endl;
+void
+stream::StreamBenchmark::printResults() {
+    std::cout << std::setw(ENTRY_SPACE) << "Function";
+    std::cout << std::setw(ENTRY_SPACE) << "Best Rate";
+    std::cout << std::setw(ENTRY_SPACE) << "Avg time";
+    std::cout << std::setw(ENTRY_SPACE) << "Min time" ;
+    std::cout << std::setw(ENTRY_SPACE) << "Max time" << std::endl;
 
-        for (auto v : totalTimingsMap) {
-            double minTime = *min_element(v.second.begin(), v.second.end());
-            double avgTime = accumulate(v.second.begin(), v.second.end(), 0.0)
-                            / v.second.size();
-            double maxTime = *max_element(v.second.begin(), v.second.end());
-
-            std::cout << std::setw(ENTRY_SPACE) << v.first;
-            std::cout << std::setw(ENTRY_SPACE)
-            << (static_cast<double>(sizeof(HOST_DATA_TYPE)) * output.arraySize * bm_execution::multiplicatorMap[v.first] / minTime) * 1.0e-6 * mpi_comm_size
-                    << std::setw(ENTRY_SPACE) << avgTime
-                    << std::setw(ENTRY_SPACE) << minTime
-                    << std::setw(ENTRY_SPACE) << maxTime << std::endl;
-        }
+    for (auto key : keys) {
+        std::cout << std::setw(ENTRY_SPACE) << key;
+        std::cout << std::setw(ENTRY_SPACE) << results.at(key + "_best_rate")
+                << std::setw(ENTRY_SPACE) << results.at(key + "_avg_t")
+                << std::setw(ENTRY_SPACE) << results.at(key + "_min_t")
+                << std::setw(ENTRY_SPACE) << results.at(key + "_max_t") << std::endl;
     }
 }
 
