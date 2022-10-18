@@ -505,6 +505,11 @@ public:
         std::cout << *executionSettings << std::endl;
     }
     
+    std::map<std::string, std::vector<double>>
+    getTimingsMap() {
+        return timings;
+    }
+    
     std::map<std::string, json> getResultsJson() {
         // TODO: nested maps, recursive?
         std::map<std::string, json> results_string;
@@ -547,7 +552,7 @@ public:
             } catch (std::invalid_argument const &ex) {
                 if (key == "FPGA Torus") {
                     j[key] = parseFPGATorusString(value);
-                } else if (key == "Emulate") {
+                } else if (key == "Emulate" || key == "Replicate Inputs") {
                     j[key] = value == "Yes";
                 } else {
                     j[key] = value; 

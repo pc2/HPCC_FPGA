@@ -137,7 +137,7 @@ public:
  * @brief Implementation of the FFT benchmark
  * 
  */
-class FFTBenchmark : public hpcc_base::HpccFpgaBenchmark<FFTProgramSettings, FFTData, FFTExecutionTimings> {
+class FFTBenchmark : public hpcc_base::HpccFpgaBenchmark<FFTProgramSettings, FFTData> {
 
 protected:
 
@@ -165,7 +165,7 @@ public:
      * @param data The input and output data of the benchmark
      * @return std::unique_ptr<FFTExecutionTimings> Measured runtimes of the kernel execution
      */
-    std::unique_ptr<FFTExecutionTimings>
+    void
     executeKernel(FFTData &data) override;
 
     /**
@@ -184,7 +184,10 @@ public:
      * @param output Measured runtimes of the kernel execution
      */
     void
-    collectAndPrintResults(const FFTExecutionTimings &output) override;
+    collectResults() override;
+    
+    void
+    printResults() override;
 
     /**
      * @brief Construct a new FFT Benchmark object

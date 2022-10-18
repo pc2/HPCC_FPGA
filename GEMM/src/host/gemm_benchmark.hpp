@@ -171,24 +171,10 @@ public:
 };
 
 /**
- * @brief Measured execution timing from the kernel execution
- * 
- */
-class GEMMExecutionTimings {
-public:
-    /**
-     * @brief A vector containing the timings for all repetitions for the kernel execution
-     * 
-     */
-    std::vector<double> timings;
-
-};
-
-/**
  * @brief Implementation of the GEMM benchmark
  * 
  */
-class GEMMBenchmark : public hpcc_base::HpccFpgaBenchmark<GEMMProgramSettings, GEMMData, GEMMExecutionTimings> {
+class GEMMBenchmark : public hpcc_base::HpccFpgaBenchmark<GEMMProgramSettings, GEMMData> {
 
 protected:
 
@@ -203,7 +189,7 @@ protected:
 public:
 
     /**
-     * @brief LINPACK specific implementation of the data generation
+     * @brief GEMM specific implementation of the data generation
      * 
      * @return std::unique_ptr<GEMMData> The input and output data of the benchmark
      */
@@ -216,7 +202,7 @@ public:
      * @param data The input and output data of the benchmark
      * @return std::unique_ptr<GEMMExecutionTimings> Measured runtimes of the kernel execution
      */
-    std::unique_ptr<GEMMExecutionTimings>
+    void
     executeKernel(GEMMData &data) override;
 
     /**
@@ -229,13 +215,14 @@ public:
     bool
     validateOutputAndPrintError(GEMMData &data) override;
 
+    void collectResults() override;
     /**
      * @brief GEMM specific implementation of printing the execution results
      * 
      * @param output Measured runtimes of the kernel execution
      */
     void
-    collectAndPrintResults(const GEMMExecutionTimings &output) override;
+    printResults() override;
 
     /**
      * @brief Construct a new GEMM Benchmark object

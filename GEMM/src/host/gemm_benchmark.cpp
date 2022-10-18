@@ -99,29 +99,25 @@ gemm::GEMMBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
             ("replicate-inputs", "Also replicates the input buffer for each kernel");
 }
 
-std::unique_ptr<gemm::GEMMExecutionTimings>
+void
 gemm::GEMMBenchmark::executeKernel(GEMMData &data) {
-    return bm_execution::calculate(*executionSettings, data.A, data.B, data.C, data.C_out, data.alpha, data.beta);
+    timings = bm_execution::calculate(*executionSettings, data.A, data.B, data.C, data.C_out, data.alpha, data.beta);
 }
 
 void
-gemm::GEMMBenchmark::collectAndPrintResults(const gemm::GEMMExecutionTimings &output) {
+gemm::GEMMBenchmark::collectResults() {
 
-    uint number_measurements = output.timings.size();
+    uint number_measurements = timings.at("execution").size();
     std::vector<double> avg_measures(number_measurements);
 #ifdef _USE_MPI_
     // Copy the object variable to a local variable to make it accessible to the lambda function
     int mpi_size = mpi_comm_size;
-    MPI_Reduce(output.timings.data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(timings.at("execution").data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     std::for_each(avg_measures.begin(),avg_measures.end(), [mpi_size](double& x) {x /= mpi_size;});
 #else
-    std::copy(output.timings.begin(), output.timings.end(), avg_measures.begin());
+    std::copy(timings.at("execution").begin(), timings.at("execution").end(), avg_measures.begin());
 #endif
     if (mpi_comm_rank == 0) {
-        std::cout << std::setw(ENTRY_SPACE)
-                << "best" << std::setw(ENTRY_SPACE) << "mean"
-                << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
-
         // Calculate performance for kernel execution
         double tmean = 0;
         double tmin = std::numeric_limits<double>::max();
@@ -136,12 +132,22 @@ gemm::GEMMBenchmark::collectAndPrintResults(const gemm::GEMMExecutionTimings &ou
             }
         }
         tmean = tmean / avg_measures.size();
-
-        std::cout << std::setw(ENTRY_SPACE)
-                << tmin << std::setw(ENTRY_SPACE) << tmean
-                << std::setw(ENTRY_SPACE) << gflops / tmin
-                << std::endl;
+        results.emplace("t_mean", hpcc_base::HpccResult(tmean, "s"));
+        results.emplace("t_min", hpcc_base::HpccResult(tmin, "s"));
+        results.emplace("gflops", hpcc_base::HpccResult(gflops / tmin, "GFLOP/s"));
     }
+}
+
+void
+gemm::GEMMBenchmark::printResults() {
+    std::cout << std::setw(ENTRY_SPACE)
+            << "best" << std::setw(ENTRY_SPACE) << "mean"
+            << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
+
+    std::cout << std::setw(ENTRY_SPACE)
+            << results.at("t_min") << std::setw(ENTRY_SPACE) << results.at("t_mean")
+            << std::setw(ENTRY_SPACE) << results.at("gflops")
+            << std::endl;
 }
 
 std::unique_ptr<gemm::GEMMData>

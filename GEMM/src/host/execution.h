@@ -48,9 +48,9 @@ simple exchange of the different calculation methods.
                 execution in number of items
 @param blockSize Size of a block that is calculated by the kernel
 
-@return The time measurements and the error rate counted from the executions
+@return The time measurements
 */
-std::unique_ptr<gemm::GEMMExecutionTimings>
+std::map<std::string, std::vector<double>>
 calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config, HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c,
         HOST_DATA_TYPE* c_out, HOST_DATA_TYPE alpha, HOST_DATA_TYPE beta);
 }  // namespace bm_execution
