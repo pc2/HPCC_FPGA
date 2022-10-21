@@ -86,10 +86,12 @@ std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &progra
     std::cout << "Create hostctrl" << std::endl;
     auto hostctrl_ip = xrt::kernel(device, program, "hostctrl:{hostctrl_" + std::to_string(0) + "}",
                                    xrt::kernel::cu_access_mode::exclusive);
- 
+    std::cout << "Create CMAC" << std::endl;
     auto cmac = CMAC(xrt::ip(device, program, "cmac_0:{cmac_0}"));
+    std::cout << "Create Network Layer" << std::endl;
      auto network_layer = Networklayer(
           xrt::ip(device, program, "networklayer:{networklayer_0}"));
+    std::cout << "Configure VNX" << std::endl;
      configure_vnx(cmac, network_layer, ranks, current_rank);
 
     std::vector<int> mem(1, 0);
