@@ -28,18 +28,14 @@ SOFTWARE.
 #include <vector>
 
 /* Project's headers */
-#include "buffer.hpp"
-#include "cclo.hpp"
-#include "constants.hpp"
 #include "data_handlers/data_handler_types.h"
 #include "data_handlers/pq.hpp"
-#include "fpgabuffer.hpp"
 #include "transpose_data.hpp"
 #include "cclo_bfm.h"
 #include "Simulation.h"
-#include "dummybuffer.hpp"
+#include "accl.hpp"
 
-extern void transpose_write(const DEVICE_DATA_TYPE* B,
+void transpose_write_sendrecv(const DEVICE_DATA_TYPE* B,
                     DEVICE_DATA_TYPE* C,
                 const int* target_list,
                 int pq_row, int pq_col, 
@@ -49,7 +45,7 @@ extern void transpose_write(const DEVICE_DATA_TYPE* B,
                 int width_per_rank,
                 STREAM<stream_word> &cclo2krnl);
   
-extern void transpose_read(const DEVICE_DATA_TYPE* A,
+void transpose_read_sendrecv(const DEVICE_DATA_TYPE* A,
                 const int* target_list,
                 int pq_row, int pq_col, 
                 int pq_width, int pq_height,
@@ -60,7 +56,7 @@ extern void transpose_read(const DEVICE_DATA_TYPE* A,
 
 namespace transpose {
 namespace fpga_execution {
-namespace accl_stream_pq {
+namespace accl_stream_sendrecv_pq {
 
 /**
  * @brief Transpose and add the matrices using the OpenCL kernel using a PQ
@@ -104,6 +100,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
   std::vector<xrt::bo> bufferListB;
   std::vector<xrt::bo> bufferListA_out;
   std::vector<std::unique_ptr<ACCL::Buffer<int>>> bufferListTargets;
+  std::vector<std::unique_ptr<ACCL::Buffer<DEVICE_DATA_TYPE>>> bufferListCopy;
   std::vector<xrt::kernel> transposeReadKernelList;
   std::vector<xrt::kernel> transposeWriteKernelList;
   std::vector<size_t> blocksPerReplication;
@@ -159,6 +156,10 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     bufferStartList.push_back(total_offset);
     bufferOffsetList.push_back(row_offset);
 
+#ifndef NDEBUG
+    std::cout << "Blocks per replication: " << blocks_per_replication << std::endl;
+#endif
+
     row_offset = (row_offset + blocks_per_replication) % local_matrix_width;
 
     total_offset += (bufferOffsetList.back() + blocks_per_replication) /
@@ -170,6 +171,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     // repeat, we only need to store this small amount of data!
     auto target_list = config.accl->create_buffer<int>(least_common_multiple / pq_height *
                                 least_common_multiple / pq_width, ACCL::dataType::int32);
+    bufferListCopy.push_back(config.accl->create_buffer<DEVICE_DATA_TYPE>(buffer_size, ACCL::dataType::float32));
     for (int row = 0; row < least_common_multiple / pq_height; row++) {
       for (int col = 0; col < least_common_multiple / pq_width; col++) {
         int global_block_col = pq_col + col * pq_width;
@@ -187,10 +189,10 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
       // create the kernels
       xrt::kernel transposeReadKernel(
           *config.device, *config.program,
-          ("transpose_read0:{transpose_read0_" + std::to_string(r + 1) + "}").c_str());
+          ("transpose_read_sendrecv0:{transpose_read_sendrecv0_" + std::to_string(r + 1) + "}").c_str());
       xrt::kernel transposeWriteKernel(
           *config.device, *config.program,
-          ("transpose_write0:{transpose_write0_" + std::to_string(r + 1) + "}").c_str());
+          ("transpose_write_sendrecv0:{transpose_write_sendrecv0_" + std::to_string(r + 1) + "}").c_str());
 
       if (r == 0 || config.programSettings->copyA) {
         xrt::bo bufferA(*config.device, data.A,
@@ -249,10 +251,14 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     hlslib::Stream<stream_word> cclo2krnl("cclo2krnl"), krnl2cclo("krnl2cclo");
     hlslib::Stream<command_word> cmd, sts;
 
-    std::vector<unsigned int> dest = {0};
-    CCLO_BFM cclo(6000, mpi_comm_rank, mpi_comm_size, dest, cmd, sts, cclo2krnl, krnl2cclo);
+    std::vector<unsigned int> dest = {0, 9};
+    std::unique_ptr<CCLO_BFM> cclo;
     if (config.programSettings->useAcclEmulation) {
-      cclo.run();
+#ifndef NDEBUG
+      std::cout << "Start BFM" << std::endl;
+#endif
+      cclo = std::make_unique<CCLO_BFM>(6000, mpi_comm_rank, mpi_comm_size, dest, cmd, sts, cclo2krnl, krnl2cclo);
+      cclo->run();
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -260,7 +266,6 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
 
 #ifndef NDEBUG
     std::cout << "Start kernel execution" << std::endl;
-    std::cout << bufferListTargets[0]->buffer()[0] << std::endl;
 #endif
     std::vector<xrt::run> runs;
     auto startKernelCalculation = std::chrono::high_resolution_clock::now();
@@ -283,7 +288,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
                 (bufferSizeList[r]) /
                 (local_matrix_width * data.blockSize * data.blockSize))));
       } else {
-        HLSLIB_DATAFLOW_FUNCTION(transpose_read,
+        HLSLIB_DATAFLOW_FUNCTION(transpose_read_sendrecv,
             (config.programSettings->copyA ? data.A : data.A),
             bufferListTargets[r]->buffer(),
             pq_row, pq_col, pq_width, pq_height,
@@ -293,7 +298,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
                 (bufferSizeList[r]) /
                 (local_matrix_width * data.blockSize * data.blockSize)),
                 krnl2cclo);
-        HLSLIB_DATAFLOW_FUNCTION(transpose_write,
+        HLSLIB_DATAFLOW_FUNCTION(transpose_write_sendrecv,
             data.B, data.result,
             bufferListTargets[r]->buffer(),
             pq_row, pq_col, pq_width, pq_height,
@@ -352,14 +357,22 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
 #ifndef NDEBUG
                   std::cout << "Send blocks " << sending_size / (data.blockSize * data.blockSize) << " to " << send_rank << std::endl << std::flush;
 #endif
-                  config.accl->send(*dbuffer, sending_size, send_rank, ACCL::TAG_ANY, ACCL::GLOBAL_COMM, false, ACCL::streamFlags::OP0_STREAM);
-                  // TODO Use stream_put to simulate this implementation approach on single FPGA since send/recv to same rank is not working!
-                  // config.accl->stream_put(*dbuffer, sending_size, send_rank, 9, ACCL::GLOBAL_COMM, false, ACCL::streamFlags::OP0_STREAM);
+                  if (send_rank == mpi_comm_rank) {
+                    //TODO copy from and to string not implemented in driver yet
+                    // config.accl->copy_from_stream(*bufferListCopy[0], sending_size);
+                  } else {
+                    config.accl->send(ACCL::dataType::float32, sending_size, send_rank, 0);
+                  }
               } else {
   #ifndef NDEBUG
                   std::cout << "Recv blocks " <<   receiving_size / (data.blockSize * data.blockSize) << " from " << recv_rank << std::endl << std::flush;
   #endif
-                  config.accl->recv(*dbuffer, receiving_size, recv_rank, ACCL::TAG_ANY, ACCL::GLOBAL_COMM, false, ACCL::streamFlags::RES_STREAM);
+                if (recv_rank == mpi_comm_rank) {
+                  //TODO copy from and to string not implemented in driver yet
+                  // config.accl->copy_to_stream(*bufferListCopy[0], receiving_size);
+                } else {
+                  config.accl->recv(ACCL::dataType::float32, receiving_size, recv_rank, 0);
+                }
               }
           }
       }
@@ -374,7 +387,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     MPI_Barrier(MPI_COMM_WORLD);
     HLSLIB_DATAFLOW_FINALIZE();
     if (config.programSettings->useAcclEmulation) {
-      cclo.stop();
+      cclo->stop();
     }
     auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG

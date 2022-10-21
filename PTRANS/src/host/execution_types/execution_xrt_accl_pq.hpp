@@ -28,12 +28,9 @@ SOFTWARE.
 #include <vector>
 
 /* Project's headers */
-#include "buffer.hpp"
-#include "cclo.hpp"
-#include "constants.hpp"
+#include "accl.hpp"
 #include "data_handlers/data_handler_types.h"
 #include "data_handlers/pq.hpp"
-#include "fpgabuffer.hpp"
 #include "transpose_data.hpp"
 
 namespace transpose {
@@ -87,15 +84,14 @@ void accl_exchangeData(
           accl.send(*acclBuffersA[0]->slice(
                         data.blockSize * data.blockSize * block_num,
                         data.blockSize * data.blockSize * (block_num + 1)),
-                    data.blockSize * data.blockSize, pair_rank, 0, ACCL::GLOBAL_COMM, true,
-                    ACCL::streamFlags::NO_STREAM);
+                    data.blockSize * data.blockSize, pair_rank, 0, ACCL::GLOBAL_COMM, true);
         }
         for (int block_num = block_chunk; block_num < std::min<size_t>(data.numBlocks, block_chunk + 16); block_num++) {
           accl.recv(*acclBufferA_recv->slice(
                         data.blockSize * data.blockSize * block_num,
                         data.blockSize * data.blockSize * (block_num + 1)),
                     data.blockSize * data.blockSize, pair_rank,
-                    1, ACCL::GLOBAL_COMM, true, ACCL::streamFlags::NO_STREAM);
+                    1, ACCL::GLOBAL_COMM, true);
         }
       }
 
@@ -266,11 +262,11 @@ void accl_exchangeData(
 #endif
         accl_requests[current_parallel_execution] = (accl.send(
             *send_buffers[current_parallel_execution], sending_size,
-            send_rank, 0, ACCL::GLOBAL_COMM, true, ACCL::streamFlags::NO_STREAM,
+            send_rank, 0, ACCL::GLOBAL_COMM, true,
             ACCL::dataType::none, true));
         accl_requests[current_parallel_execution + gcd] = (accl.recv(
             *recv_buffers[current_parallel_execution], sending_size,
-            send_rank, 0, ACCL::GLOBAL_COMM, true, ACCL::streamFlags::NO_STREAM,
+            send_rank, 0, ACCL::GLOBAL_COMM, true,
             ACCL::dataType::none, true));
         // Increase the counter for parallel executions
         current_parallel_execution = (current_parallel_execution + 1) % gcd;

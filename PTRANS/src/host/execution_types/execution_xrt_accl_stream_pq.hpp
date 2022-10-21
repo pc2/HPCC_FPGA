@@ -28,16 +28,12 @@ SOFTWARE.
 #include <vector>
 
 /* Project's headers */
-#include "buffer.hpp"
-#include "cclo.hpp"
-#include "constants.hpp"
 #include "data_handlers/data_handler_types.h"
 #include "data_handlers/pq.hpp"
-#include "fpgabuffer.hpp"
 #include "transpose_data.hpp"
 #include "cclo_bfm.h"
 #include "Simulation.h"
-#include "dummybuffer.hpp"
+#include "accl.hpp"
 
 extern void transpose_write(const DEVICE_DATA_TYPE *B,
                                  DEVICE_DATA_TYPE *A_out,
@@ -201,10 +197,6 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-#ifndef NDEBUG
-    std::cout << "Start BFM" << std::endl;
-#endif
-
     HLSLIB_DATAFLOW_INIT();
     hlslib::Stream<stream_word> cclo2krnl("cclo2krnl"), krnl2cclo("krnl2cclo");
     hlslib::Stream<command_word> cmd, sts;
@@ -220,9 +212,13 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
 
     int pair_rank = pq_width * pq_col + pq_row;
     std::vector<unsigned int> dest = {0, 9};
-    CCLO_BFM cclo(6000, mpi_comm_rank, mpi_comm_size, dest, cmd, sts, cclo2krnl, krnl2cclo);
+    std::unique_ptr<CCLO_BFM> cclo;
     if (config.programSettings->useAcclEmulation) {
-      cclo.run();
+#ifndef NDEBUG
+      std::cout << "Start BFM" << std::endl;
+#endif
+      cclo = std::make_unique<CCLO_BFM>(6000, mpi_comm_rank, mpi_comm_size, dest, cmd, sts, cclo2krnl, krnl2cclo);
+      cclo->run();
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -272,11 +268,9 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
                 cclo2krnl);
       }
     }
-    auto dbuffer = config.accl->create_buffer<DEVICE_DATA_TYPE>(1,ACCL::dataType::float32);
     // Exchange A data via ACCL
-    config.accl->stream_put(*dbuffer, data.blockSize * data.blockSize * data.numBlocks,
-                   pair_rank, 9, ACCL::GLOBAL_COMM,
-                   false, ACCL::streamFlags::OP0_STREAM);
+    config.accl->stream_put(ACCL::dataType::float32, data.blockSize * data.blockSize * data.numBlocks,
+                   pair_rank, 0);
 #ifndef NDEBUG
     std::cout << "Wait for kernels to complete" << std::endl;
 #endif
@@ -286,7 +280,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     HLSLIB_DATAFLOW_FINALIZE();
     MPI_Barrier(MPI_COMM_WORLD);
     if (config.programSettings->useAcclEmulation) {
-      cclo.stop();
+      cclo->stop();
     }
     auto endCalculation = std::chrono::high_resolution_clock::now();
 #ifndef NDEBUG
