@@ -178,7 +178,7 @@ read_B_line:
     }
 }
 
-void transpose_read(const DEVICE_DATA_TYPE* A,
+void transpose_read_sendrecv(const DEVICE_DATA_TYPE* A,
                 const int* target_list,
                 int pq_row, int pq_col, 
                 int pq_width, int pq_height,
@@ -215,7 +215,7 @@ void transpose_read(const DEVICE_DATA_TYPE* A,
     }
 }
 
-void transpose_write(const DEVICE_DATA_TYPE* B,
+void transpose_write_sendrecv(const DEVICE_DATA_TYPE* B,
                     DEVICE_DATA_TYPE* C,
                 const int* target_list,
                 int pq_row, int pq_col, 
