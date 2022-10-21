@@ -41,6 +41,7 @@ SOFTWARE.
 #include "execution_types/execution_xrt_pcie_pq.hpp"
 #ifdef USE_ACCL
 #include "execution_types/execution_xrt_accl_pq.hpp"
+#include "execution_types/execution_xrt_accl_stream_pq_sendrecv.hpp"
 #include "execution_types/execution_xrt_accl_stream_pq.hpp"
 #endif
 #endif
@@ -83,7 +84,8 @@ protected:
             ("distribute-buffers", "Distribute buffers over memory banks. This will use three memory banks instead of one for a single kernel replication, but kernel replications may interfere. This is an Intel only attribute, since buffer placement is decided at compile time for Xilinx FPGAs.")
             ("handler", "Specify the used data handler that distributes the data over devices and memory banks",
                 cxxopts::value<std::string>()->default_value(DEFAULT_DIST_TYPE))
-            ("copy-a", "Create a copy of matrix A for each kernel replication");
+            ("copy-a", "Create a copy of matrix A for each kernel replication")
+            ("accl-stream", "Use design with user kernels directly connected to CCLO");
     }
 
     std::unique_ptr<transpose::data_handler::TransposeDataHandler<TDevice, TContext, TProgram>> dataHandler;
@@ -144,8 +146,18 @@ public:
 #ifdef USE_ACCL
             // case hpcc_base::CommunicationType::accl:
             //                         return transpose::fpga_execution::accl_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
-            case hpcc_base::CommunicationType::accl:
-                                    return transpose::fpga_execution::accl_stream_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
+            case hpcc_base::CommunicationType::accl: 
+                                    if (this->executionSettings->programSettings->useAcclStreams) {
+                                        auto h = reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler);
+                                        if (!h.getP() == h.getQ()) {
+                                            return transpose::fpga_execution::accl_stream_sendrecv_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
+                                        }
+                                        else {
+                                            return transpose::fpga_execution::accl_stream_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
+                                        }
+                                    } else {
+                                        return transpose::fpga_execution::accl_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
+                                    } break;
 #endif
 #endif
 #ifdef MKL_FOUND
@@ -188,30 +200,32 @@ public:
         long height_per_rank = reinterpret_cast<data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>*>(this->dataHandler.get())->getHeightforRank();
         long width_per_rank = reinterpret_cast<data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>*>(this->dataHandler.get())->getWidthforRank();
         if (error_count > 0) {
-            std::cout << "A:" << std::endl;
-            for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
-                for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
-                    std::cout << oldA[j * width_per_rank * data.blockSize + i] << ", ";
+            if ( this->mpi_comm_rank == 0) {
+                std::cout << "A:" << std::endl;
+                for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
+                    for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+                        std::cout << oldA[j * width_per_rank * data.blockSize + i] << ", ";
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << std::endl;
+                std::cout << "B:" << std::endl;
+                for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
+                    for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+                        std::cout << data.B[j * width_per_rank * data.blockSize + i] << ", ";
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << std::endl;
+                std::cout << "Transposed A:" << std::endl;
+                for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
+                    for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+                        std::cout << data.A[j * width_per_rank * data.blockSize + i] << ", ";
+                    }
+                    std::cout << std::endl;
                 }
                 std::cout << std::endl;
             }
-            std::cout << std::endl;
-            std::cout << "B:" << std::endl;
-            for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
-                for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
-                    std::cout << data.B[j * width_per_rank * data.blockSize + i] << ", ";
-                }
-                std::cout << std::endl;
-            }
-            std::cout << std::endl;
-            std::cout << "Transposed A:" << std::endl;
-            for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
-                for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
-                    std::cout << data.A[j * width_per_rank * data.blockSize + i] << ", ";
-                }
-                std::cout << std::endl;
-            }
-            std::cout << std::endl;
         }
 
 #endif

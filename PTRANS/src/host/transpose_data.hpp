@@ -81,6 +81,11 @@ public:
     bool copyA;
 
     /**
+     * @brief Indicate, if a design is used where the user kernels are directly connected to the ACCL CCLO
+    */
+    bool useAcclStreams;
+
+    /**
      * @brief Construct a new Transpose Program Settings object
      * 
      * @param results the result map from parsing the program input parameters
