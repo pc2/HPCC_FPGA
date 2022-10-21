@@ -200,9 +200,9 @@ void transpose_read_sendrecv(const DEVICE_DATA_TYPE* A,
             for (int col = 0; col < least_common_multiple/pq_width; col++) {
                 for (int row = 0; row < least_common_multiple/pq_height; row++) {
                     if (target_list[row * least_common_multiple/pq_width + col] == send_rank) {
-                        for (int lcm_row = 0; lcm_row < (height_per_rank)/(least_common_multiple/pq_height); lcm_row++) {
-                            for (int lcm_col = 0; lcm_col < (width_per_rank)/(least_common_multiple/pq_width); lcm_col++) {
-                                unsigned int matrix_buffer_offset = (col + lcm_col * least_common_multiple/pq_width) + (row + lcm_row * least_common_multiple/pq_height) * width_per_rank;
+                        for (int lcm_col = 0; lcm_col < (width_per_rank)/(least_common_multiple/pq_height); lcm_col++) {
+                            for (int lcm_row = 0; lcm_row < (height_per_rank)/(least_common_multiple/pq_width); lcm_row++) {
+                                unsigned int matrix_buffer_offset = (row + lcm_col * least_common_multiple/pq_height) + (col + lcm_row * least_common_multiple/pq_width) * width_per_rank;
                                 DEVICE_DATA_TYPE a_block[block_size * block_size / channel_width][channel_width];
                                 transpose_block_transpose(A, a_block, matrix_buffer_offset, width_per_rank, height_per_rank);
                                 transpose_block_forward(a_block, krnl2cclo);
@@ -237,9 +237,9 @@ void transpose_write_sendrecv(const DEVICE_DATA_TYPE* B,
             for (int col = 0; col < least_common_multiple/pq_width; col++) {
                 for (int row = 0; row < least_common_multiple/pq_height; row++) {
                     if (target_list[row * least_common_multiple/pq_width + col] == recv_rank) {
-                        for (int lcm_row = 0; lcm_row < (height_per_rank)/(least_common_multiple/pq_height); lcm_row++) {
-                            for (int lcm_col = 0; lcm_col < (width_per_rank)/(least_common_multiple/pq_width); lcm_col++) {
-                                unsigned int matrix_buffer_offset = (col + lcm_col * least_common_multiple/pq_width) + (row + lcm_row * least_common_multiple/pq_height) * width_per_rank;
+                        for (int lcm_row = 0; lcm_row < (height_per_rank)/(least_common_multiple/pq_width); lcm_row++) {
+                            for (int lcm_col = 0; lcm_col < (width_per_rank)/(least_common_multiple/pq_height); lcm_col++) {
+                                unsigned int matrix_buffer_offset = (row + lcm_col * least_common_multiple/pq_height) + (col + lcm_row * least_common_multiple/pq_width) * width_per_rank;
                                 transpose_block_receive(B,C,matrix_buffer_offset,width_per_rank, cclo2krnl);
                             }
                         }
