@@ -22,5 +22,6 @@ set(USE_ACCL_CLIENT_ARBITER Yes CACHE BOOL "Use the client arbiter kernel to con
 # Defaults to a total of ~12GB data
 set(CHANNEL_WIDTH 0 CACHE STRING "Width of a single external channel in Byte will not be considered" FORCE)
 set(NUM_REPLICATIONS 2 CACHE STRING "Number of kernel replications will not be considered" FORCE)
+set(ACCL_BUFFER_SIZE 4194304 CACHE STRING "Size of the ACCL buffers" FORCE)
 
 set(USE_DEPRECATED_HPP_HEADER Yes CACHE BOOL "Use cl.hpp intead of cl2.hpp" FORCE)
