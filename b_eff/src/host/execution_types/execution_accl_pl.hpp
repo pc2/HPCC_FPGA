@@ -68,9 +68,10 @@ namespace network::execution_types::accl_pl {
         hlslib::Stream<command_word> cmd, sts;
 
         std::vector<unsigned int> dest = {0};
-        CCLO_BFM cclo(6000, current_rank, current_size, dest, cmd, sts, cclo2krnl, krnl2cclo);
+        std::unique_ptr<CCLO_BFM> cclo;
         if (config.programSettings->useAcclEmulation) {
-            cclo.run();
+            cclo = std::make_unique<CCLO_BFM>(6000, current_rank, current_size, dest, cmd, sts, cclo2krnl, krnl2cclo);
+            cclo->run();
         }
         MPI_Barrier(MPI_COMM_WORLD);
 
@@ -123,7 +124,7 @@ namespace network::execution_types::accl_pl {
         }
 
         if (config.programSettings->useAcclEmulation) {
-            cclo.stop();
+            cclo->stop();
         }
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
