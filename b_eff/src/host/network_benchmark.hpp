@@ -42,7 +42,7 @@ struct aligned_allocator {
 
 	   pointer allocate(size_t pCount, const_pointer = 0){ 
 	    	T* mem = 0;
-	    	if (posix_memalign(reinterpret_cast<void**>(&mem), 1024 , sizeof(T) * pCount) != 0) {
+	    	if (posix_memalign(reinterpret_cast<void**>(&mem), 4096, sizeof(T) * pCount) != 0) {
 	    		throw std::bad_alloc();
 	        }
 		return mem; 
