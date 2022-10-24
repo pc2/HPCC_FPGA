@@ -527,6 +527,11 @@ public:
         return results_string;
     }
     
+    // override for special benchmarks like b_eff
+    virtual json getTimingsJson() {
+        return timings;
+    }
+    
     std::map<std::string, std::string>
     getEnvironmentMap() {
         std::map<std::string, std::string> env; 
@@ -584,7 +589,7 @@ public:
             dump["version"] = VERSION;
             dump["device"] = executionSettings->getDeviceName();
             dump["settings"] = jsonifySettingsMap(executionSettings->programSettings->getSettingsMap());
-            dump["timings"] = timings;
+            dump["timings"] = getTimingsJson();
             dump["results"] = getResultsJson();
             dump["environment"] = getEnvironmentMap();
 

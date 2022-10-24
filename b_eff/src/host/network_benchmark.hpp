@@ -64,11 +64,26 @@ namespace network {
         std::vector<double> calculationTimings;
     };
 
+    struct ExecutionResult {
+        std::vector<ExecutionTimings> execution_timings;
+        /**
+         * @brief maximum of minimum calculation time, filled by collectResults
+         * 
+         */
+        double maxMinCalculationTime;
+    
+        /**
+         * @brief maximum of calculated bandwidths, filled by collectResults
+         * 
+         */
+        double maxCalcBW;
+    };
+
     /**
      * @brief The data structure used to store all measurement results
      * 
      */
-    typedef std::map<int, std::shared_ptr<std::vector<std::shared_ptr<ExecutionTimings>>>> CollectedResultMap;
+    typedef std::map<int, ExecutionResult> CollectedTimingsMap;
 
 /**
  * @brief The Network benchmark specific program settings
@@ -195,25 +210,10 @@ public:
 };
 
 /**
- * @brief Measured execution timing from the kernel execution
- * 
- */
-class NetworkExecutionTimings {
-public:
-
-    /**
-     * @brief A vector containing the timings for all repetitions for the kernel execution
-     * 
-     */
-    CollectedResultMap timings;
-
-};
-
-/**
  * @brief Implementation of the Network benchmark
  * 
  */
-class NetworkBenchmark : public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, NetworkData, NetworkExecutionTimings> {
+class NetworkBenchmark : public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, NetworkData> {
 
 protected:
 
@@ -226,6 +226,31 @@ protected:
     addAdditionalParseOptions(cxxopts::Options &options) override;
 
 public:
+
+    CollectedTimingsMap collected_timings;
+    
+    json
+    getTimingsJson() override
+    {
+        json j;
+        for (const auto& timing: collected_timings) {
+            json timing_json;
+            timing_json["maxMinCalculationTime"] = timing.second.maxMinCalculationTime;
+            timing_json["maxCalcBW"] = timing.second.maxCalcBW;
+            std::vector<json> timings_json;
+            for (const auto& execution_timing: timing.second.execution_timings) {
+                json single_timing_json;
+                single_timing_json["looplength"] = execution_timing.looplength;
+                single_timing_json["messageSize"] = execution_timing.messageSize;
+                single_timing_json["timings"] = execution_timing.calculationTimings;
+                timings_json.push_back(single_timing_json);
+            }
+            timing_json["timings"] = timings_json;
+            
+            j[std::to_string(timing.first)] = timing_json;
+        }
+        return j;
+    }
 
     /**
      * @brief Network specific implementation of the data generation
@@ -241,7 +266,7 @@ public:
      * @param data The input and output data of the benchmark
      * @return std::unique_ptr<NetworkExecutionTimings> Measured runtimes of the kernel execution
      */
-    std::unique_ptr<NetworkExecutionTimings>
+    void
     executeKernel(NetworkData &data) override;
 
     /**
@@ -259,7 +284,10 @@ public:
      * @param output Measured runtimes of the kernel execution
      */
     void
-    collectAndPrintResults(const NetworkExecutionTimings &output) override;
+    collectResults() override;
+
+    void
+    printResults() override;
 
     /**
      * @brief Construct a new Network Benchmark object. This construtor will directly setup

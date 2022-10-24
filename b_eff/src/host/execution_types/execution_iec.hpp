@@ -39,7 +39,7 @@ namespace network::execution_types::iec {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<network::ExecutionTimings>
+    network::ExecutionTimings
     calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength,
                 cl::vector<HOST_DATA_TYPE> &validationData) {
 
@@ -164,12 +164,11 @@ namespace network::execution_types::iec {
             err = recvQueues[r].enqueueReadBuffer(validationBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * validationData.size() / config.programSettings->kernelReplications, &validationData.data()[r * validationData.size() / config.programSettings->kernelReplications]);
             ASSERT_CL(err);
         }
-        std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
+        return network::ExecutionTimings{
                 looplength,
                 messageSize,
                 calculationTimings
-        });
-        return result;
+        };
     }
 
 }  // namespace bm_execution
