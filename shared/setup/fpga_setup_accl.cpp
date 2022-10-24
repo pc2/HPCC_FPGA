@@ -77,7 +77,7 @@ std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &progra
   std::vector<ACCL::rank_t> ranks = {};
   for (int i = 0; i < current_size; ++i) {
     // TODO: Replace the ip addresses and ports here for execution of real hardware?
-    ACCL::rank_t new_rank = {"10.10.10." + std::to_string(current_rank), 5500 + i, i, ACCL_BUFFER_SIZE};
+    ACCL::rank_t new_rank = {"10.10.10." + std::to_string(i), 5500 + i, i, ACCL_BUFFER_SIZE};
     ranks.emplace_back(new_rank);
   }
   if (!useAcclEmulation) {
