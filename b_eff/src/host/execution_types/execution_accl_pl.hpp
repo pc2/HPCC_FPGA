@@ -92,7 +92,10 @@ namespace network::execution_types::accl_pl {
                 acclRecvBuffers.back()->sync_to_device();
             }
 
-            xrt::kernel sendrecvKernel(*config.device, *config.program, "send_recv");
+            xrt::kernel sendrecvKernel;
+            if (!config.programSettings->useAcclEmulation) {
+                sendrecvKernel(*config.device, *config.program, "send_recv");
+            }
 
             double calculationTime = 0.0;
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
