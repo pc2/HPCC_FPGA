@@ -149,7 +149,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                            sizeof(HOST_DATA_TYPE) *
                                (config.programSettings->blockSize) *
                                (config.programSettings->blockSize),
-                           lu_tmp_kernel.group_id(0));
+                           lu_tmp_kernel.group_id(1));
       Buffer_top_list.back().push_back(
           config.accl->create_buffer<HOST_DATA_TYPE>(
               tmp_bos.back(),

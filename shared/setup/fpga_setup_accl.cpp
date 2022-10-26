@@ -77,7 +77,7 @@ std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &progra
   std::vector<ACCL::rank_t> ranks = {};
   for (int i = 0; i < current_size; ++i) {
     // TODO: Replace the ip addresses and ports here for execution of real hardware?
-    ACCL::rank_t new_rank = {"10.10.10." + current_rank, 5500 + i, i, ACCL_BUFFER_SIZE};
+    ACCL::rank_t new_rank = {"10.10.10." + std::to_string(i), 5500 + i, i, ACCL_BUFFER_SIZE};
     ranks.emplace_back(new_rank);
   }
   if (!useAcclEmulation) {
@@ -86,10 +86,12 @@ std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &progra
     std::cout << "Create hostctrl" << std::endl;
     auto hostctrl_ip = xrt::kernel(device, program, "hostctrl:{hostctrl_" + std::to_string(0) + "}",
                                    xrt::kernel::cu_access_mode::exclusive);
- 
+    std::cout << "Create CMAC" << std::endl;
     auto cmac = CMAC(xrt::ip(device, program, "cmac_0:{cmac_0}"));
+    std::cout << "Create Network Layer" << std::endl;
      auto network_layer = Networklayer(
           xrt::ip(device, program, "networklayer:{networklayer_0}"));
+    std::cout << "Configure VNX" << std::endl;
      configure_vnx(cmac, network_layer, ranks, current_rank);
 
     std::vector<int> mem(1, 0);
@@ -99,7 +101,7 @@ std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &progra
   } else {
     // TODO: Add start port here. Currenty hardcoded!
     return std::unique_ptr<ACCL::ACCL>(
-        new ACCL::ACCL(ranks, current_rank, 5500, device, ACCL::networkProtocol::UDP, 16, ACCL_BUFFER_SIZE));
+        new ACCL::ACCL(ranks, current_rank, 6000, device, ACCL::networkProtocol::UDP, 16, ACCL_BUFFER_SIZE));
   }
 }
 

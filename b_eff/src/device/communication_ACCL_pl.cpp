@@ -22,9 +22,9 @@ SOFTWARE.
 #include "accl_hls.h"
 
 
-void send_recv(float *read_buffer,float *write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations, 
+void send_recv(const float *read_buffer,float *write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations, 
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
-                hls::stream<command_word> &cmd, hls::stream<command_word > &sts) {
+                STREAM<command_word> &cmd, STREAM<command_word> &sts) {
     accl_hls::ACCLCommand accl_cmd(cmd, sts, communicator_addr, datapath_cfg,0,0);
     for (int i = 0; i < num_iterations; i++) {
         accl_cmd.send(size, 0, neighbor_rank, (ap_uint<64>)read_buffer);

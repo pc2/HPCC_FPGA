@@ -6,15 +6,13 @@
  *  - Change to row-column loop structure
  *****************************************************************************/
 #include "parameters.h"
-#include "hls_stream.h"
 #include "ap_int.h"
 #include "ap_utils.h"
 #include "ap_axi_sdata.h"
+#include "accl_hls.h"
 
 const unsigned int block_size = BLOCK_SIZE;
 const unsigned int channel_width = CHANNEL_WIDTH;
-
-extern "C" {
 
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
 
@@ -41,10 +39,8 @@ void transpose_read/*PY_CODE_GEN i*/( const DEVICE_DATA_TYPE *A,
             const unsigned int number_of_blocks,
             const unsigned int width_in_blocks,
             const unsigned int height_in_blocks,
-            hls::stream<ap_axiu<512, 0, 0, 8> > &krnl2cclo) {
+            STREAM<stream_word> &krnl2cclo) {
 #pragma HLS INTERFACE axis register both port=krnl2cclo
-#pragma HLS INTERFACE ap_ctrl_none port=return
-
 
     // local memory double buffer for a matrix block
     DEVICE_DATA_TYPE a_block[2][block_size * block_size / channel_width][channel_width];
@@ -118,19 +114,18 @@ read_A_line:
                         data_chunk[unroll_count] = rotate_out[(unroll_count + rot_out) % (channel_width)];
                     }
 
-                    ap_uint<512> data;
+                    stream_word tmp;
 
                     // load tranposed A from global memory
                     for (unsigned unroll_count = 0; unroll_count < channel_width; unroll_count++) {
-                        data(unroll_count * sizeof(DEVICE_DATA_TYPE)*8, unroll_count * sizeof(DEVICE_DATA_TYPE)*8 + sizeof(DEVICE_DATA_TYPE) * 8 - 1) 
-                                = data_chunk[unroll_count];
+                        DEVICE_DATA_TYPE v = data_chunk[unroll_count];
+                        tmp.data((unroll_count + 1) * sizeof(DEVICE_DATA_TYPE)*8 - 1, unroll_count * sizeof(DEVICE_DATA_TYPE)*8) 
+                                = *reinterpret_cast<ap_uint<sizeof(DEVICE_DATA_TYPE)*8>*>(&v);
                     }
-
-                    ap_axiu<512, 0, 0, 8> tmp;
-                    tmp.data = data;
-                    tmp.dest = 0;
+                    tmp.dest = 9;
+                    tmp.last = 1;
                     tmp.keep = -1;
-                    krnl2cclo.write(tmp);               
+                    STREAM_WRITE(krnl2cclo,tmp);              
                 }
             }
         }
@@ -156,9 +151,8 @@ void transpose_write/*PY_CODE_GEN i*/(const DEVICE_DATA_TYPE *B,
             const unsigned int number_of_blocks,
             const unsigned int width_in_blocks,
             const unsigned int height_in_blocks,
-            hls::stream<ap_axiu<512, 0, 0, 8> > &cclo2krnl) {
+            STREAM<stream_word> &cclo2krnl) {
 #pragma HLS INTERFACE axis register both port=cclo2krnl
-#pragma HLS INTERFACE ap_ctrl_none port=return
 
     // transpose the matrix block-wise from global memory
 block_loop:
@@ -179,11 +173,12 @@ read_B_line:
                 DEVICE_DATA_TYPE data_chunk[channel_width];
 #pragma HLS ARRAY_PARTITION variable = data_chunk complete dim = 0
 
-                ap_axiu<512, 0, 0, 8> tmp = cclo2krnl.read();
+                stream_word tmp = STREAM_READ(cclo2krnl);
 
                 // rotate temporary buffer to store data into local buffer
                 for (unsigned unroll_count = 0; unroll_count < channel_width; unroll_count++) {
-                    data_chunk[unroll_count] = tmp.data(unroll_count * sizeof(DEVICE_DATA_TYPE)*8, unroll_count * sizeof(DEVICE_DATA_TYPE)*8 + sizeof(DEVICE_DATA_TYPE) * 8 - 1);
+                    ap_uint<sizeof(DEVICE_DATA_TYPE)*8> v = tmp.data((unroll_count + 1) * sizeof(DEVICE_DATA_TYPE)*8 - 1, unroll_count * sizeof(DEVICE_DATA_TYPE)*8);
+                    data_chunk[unroll_count] = *reinterpret_cast<DEVICE_DATA_TYPE*>(&v);
                 }
 
                 // load tranposed A from global memory
@@ -201,4 +196,3 @@ read_B_line:
 
 // PY_CODE_GEN block_end
 
-}
