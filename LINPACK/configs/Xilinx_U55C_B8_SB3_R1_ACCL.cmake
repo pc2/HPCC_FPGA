@@ -22,7 +22,7 @@ set(NUM_REPLICATIONS 1 CACHE STRING "Number of times the matrix multiplication k
 
 set(XILINX_KERNEL_NAMES lu top_update left_update inner_update_mm0 CACHE STRING "Names of all compute kernels" FORCE)
 set(XILINX_COMPILE_SETTINGS_FILE "${CMAKE_SOURCE_DIR}/settings/settings.compile.xilinx.hpl_torus_pcie.ddr.ini" CACHE STRING "Compile settings file" FORCE)
-set(XILINX_LINK_SETTINGS_FILE "${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.hpl_torus_accl.hbm.generator.ini" CACHE STRING "Link settings file" FORCE)
+set(XILINX_LINK_SETTINGS_FILE "${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.hpl_torus_accl.hbm.u55c.generator.ini" CACHE STRING "Link settings file" FORCE)
 
 set(USE_DEPRECATED_HPP_HEADER Yes CACHE BOOL "Use cl.hpp instead of cl2.hpp" FORCE)
 set(USE_PCIE_MPI_COMMUNICATION Yes CACHE BOOL "Use PCIe and MPI for communication between FPGAs" FORCE)
