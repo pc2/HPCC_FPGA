@@ -94,7 +94,7 @@ namespace network::execution_types::accl_pl {
 
             xrt::kernel sendrecvKernel;
             if (!config.programSettings->useAcclEmulation) {
-                sendrecvKernel(*config.device, *config.program, "send_recv");
+                sendrecvKernel = xrt::kernel(*config.device, *config.program, "send_recv");
             }
 
             double calculationTime = 0.0;
@@ -102,7 +102,7 @@ namespace network::execution_types::accl_pl {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 if (!config.programSettings->useAcclEmulation) {
-                auto run = sendrecvKernel(acclSendBuffers[i]->bo(), acclRecvBuffers[i]->bo(), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                auto run = sendrecvKernel(*(acclSendBuffers[i]->bo()), *(acclRecvBuffers[i]->bo()), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.accl->get_communicator_addr(), config.accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}));
                 run.wait();
                 } else {
