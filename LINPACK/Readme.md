@@ -32,13 +32,13 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
  
     mkdir build && cd build
     cmake ..
-    make LINPACK_intel
+    make Linpack_intel
     
 A whole emulation build can be done with
 
     mkdir build && cd build
     cmake ..
-    make LINPACK_intel
+    make Linpack_intel
     
 This will compile the host code as well a unit test binary with emulation kernels for functionality testing.
 
