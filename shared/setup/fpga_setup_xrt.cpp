@@ -39,6 +39,10 @@ namespace fpga_setup {
         MPI_Comm_rank(MPI_COMM_WORLD, & current_device);
         if (defaultDevice >= 0) {
             current_device = defaultDevice;
+        } else {
+            //TODO Use xrt::system::enumerate_devices() in "experimental/xrt_system.h" for future XRT versions
+            // instead of hardcoded number of devices.
+            current_device = current_device % 3;
         }
         return std::unique_ptr<xrt::device>(new xrt::device(current_device));
     } 
