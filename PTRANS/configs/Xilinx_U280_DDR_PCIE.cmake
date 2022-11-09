@@ -9,10 +9,13 @@
 set(USE_MPI Yes CACHE BOOL "" FORCE)
 set(USE_SVM No CACHE BOOL "" FORCE)
 set(USE_HBM No CACHE BOOL "" FORCE)
+set(USE_XRT_HOST Yes CACHE BOOL "" FORCE)
+set(USE_OCL_HOST No CACHE BOOL "" FORCE)
 set(FPGA_BOARD_NAME "xilinx_u280_xdma_201920_3" CACHE STRING "" FORCE)
 set(XILINX_LINK_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.transpose_pq_pcie.ddr.generator.ini CACHE FILEPATH "" FORCE)
 set(XILINX_COMPILE_SETTINGS_FILE ${CMAKE_SOURCE_DIR}/settings/settings.compile.xilinx.transpose_pq_pcie.ddr.ini CACHE FILEPATH "" FORCE)
 set(FORCE_FILE_ENDING "cpp" CACHE STRING "" FORCE)
+set(XILINX_KERNEL_NAMES transpose0 CACHE STRING "" FORCE)
 
 # STREAM specific options
 # Defaults to a total of ~12GB data
