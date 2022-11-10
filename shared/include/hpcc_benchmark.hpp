@@ -529,7 +529,18 @@ public:
     
     // override for special benchmarks like b_eff
     virtual json getTimingsJson() {
-        return timings;
+        json j;
+        for (auto const &key: timings) {
+            std::vector<json> timings_list;
+            for (auto const &timing: key.second) {
+                json j;
+                j["unit"] = "s";
+                j["value"] = timing;
+                timings_list.push_back(j);
+            }
+            j[key.first] = timings_list;
+        }
+        return j;
     }
     
     std::map<std::string, std::string>

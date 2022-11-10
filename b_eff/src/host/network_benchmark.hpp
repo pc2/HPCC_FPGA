@@ -242,7 +242,14 @@ public:
                 json single_timing_json;
                 single_timing_json["looplength"] = execution_timing.looplength;
                 single_timing_json["messageSize"] = execution_timing.messageSize;
-                single_timing_json["timings"] = execution_timing.calculationTimings;
+                std::vector<json> calculation_timings;
+                for (const auto& timing: execution_timing.calculationTimings) {
+                    json j;
+                    j["unit"] = "s";
+                    j["value"] = timing;
+                    calculation_timings.push_back(timing);
+                }
+                single_timing_json["timings"] = calculation_timings;
                 timings_json.push_back(single_timing_json);
             }
             timing_json["timings"] = timings_json;
