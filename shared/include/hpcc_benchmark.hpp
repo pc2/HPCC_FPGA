@@ -177,7 +177,7 @@ public:
 #else
             communicationType(retrieveCommunicationType("UNSUPPORTED", results["f"].as<std::string>())),
 #endif
-            dumpfilePath(results["dump"].as<std::string>()),
+            dumpfilePath(results["dump-json"].as<std::string>()),
             testOnly(static_cast<bool>(results.count("test"))) {}
 
     /**
@@ -451,7 +451,7 @@ public:
                 ("comm-type", "Used communication type for inter-FPGA communication",
                 cxxopts::value<std::string>()->default_value(DEFAULT_COMM_TYPE))
 #endif
-                ("dump", "dump benchmark configuration and results to this file", cxxopts::value<std::string>()->default_value(std::string("")))
+                ("dump-json", "dump benchmark configuration and results to this file in json format", cxxopts::value<std::string>()->default_value(std::string("")))
                 ("test", "Only test given configuration and skip execution and validation")
                 ("h,help", "Print this help");
 
