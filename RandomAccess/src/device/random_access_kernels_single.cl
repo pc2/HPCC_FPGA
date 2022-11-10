@@ -34,7 +34,11 @@ Constant used to update the pseudo random number
 #define BLOCK_SIZE_LOG GLOBAL_MEM_UNROLL_LOG
 #define BLOCK_SIZE (1 << BLOCK_SIZE_LOG)
 
-{% set kernel_param_attributes = generate_attributes(num_replications) %}
+{% if generate_attributes is defined %}
+    {% set kernel_param_attributes = generate_attributes(num_replications) %}
+{% else %}
+    {% set kernel_param_attributes = create_list("", num_replications) %}
+{% endif %}
 
 {% for i in range(num_replications) %}
 

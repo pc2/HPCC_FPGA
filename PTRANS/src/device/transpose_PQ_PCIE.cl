@@ -8,7 +8,11 @@
 
 #include "parameters.h"
 
-{% set kernel_param_attributes = generate_attributes(num_replications) %}
+{% if generate_attributes is defined %}
+        {% set kernel_param_attributes = generate_attributes(num_replications) %}
+{% else %}
+        {% set kernel_param_attributes = create_list("", num_replications) %}
+{% endif %}
 
 {% for i in range(num_replications) %}
 
@@ -35,7 +39,8 @@ __kernel
 void transpose{{ i }}(__global {{ kernel_param_attributes[i] }} DEVICE_DATA_TYPE *restrict A,
                                 __global {{ kernel_param_attributes[i] }} DEVICE_DATA_TYPE *restrict B,
                                 __global {{ kernel_param_attributes[i] }} DEVICE_DATA_TYPE *restrict A_out,
-            const uint offset,
+            const uint offset_a,
+            const uint offset_b,
             const uint number_of_blocks,
             const uint width_in_blocks,
             const uint height_in_blocks) {
