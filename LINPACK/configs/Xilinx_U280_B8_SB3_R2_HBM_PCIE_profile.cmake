@@ -25,8 +25,7 @@ set(REGISTER_BLOCK_MM_LOG 3 CACHE STRING "Size of the block that will be manipul
 set(NUM_REPLICATIONS 2 CACHE STRING "Number of times the matrix multiplication kernel will be replicated" FORCE)
 
 set(XILINX_COMPILE_SETTINGS_FILE "${CMAKE_SOURCE_DIR}/settings/settings.compile.xilinx.hpl_torus_pcie.ddr.ini" CACHE STRING "Compile settings file" FORCE)
-set(XILINX_LINK_SETTINGS_FILE
-    "${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.hpl_torus_pcie.hbm.u280.profile.generator.ini" CACHE STRING "Link settings file" FORCE)
+set(XILINX_LINK_SETTINGS_FILE "${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.hpl_torus_pcie.hbm.u280.profile.generator.ini" CACHE STRING "Link settings file" FORCE)
 
 set(USE_DEPRECATED_HPP_HEADER Yes CACHE BOOL "Use cl.hpp instead of cl2.hpp" FORCE)
 set(USE_PCIE_MPI_COMMUNICATION Yes CACHE BOOL "Use PCIe and MPI for communication between FPGAs" FORCE)
