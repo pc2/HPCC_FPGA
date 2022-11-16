@@ -157,7 +157,7 @@ choose a device.
 @return A list containing a single selected device
 */
     std::unique_ptr<cl::Device>
-    selectFPGADevice(int defaultPlatform, int defaultDevice);
+    selectFPGADevice(int defaultPlatform, int defaultDevice, std::string platformString);
 
 }  // namespace fpga_setup
 #endif  // SRC_HOST_FPGA_SETUP_H_
