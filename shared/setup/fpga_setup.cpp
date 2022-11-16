@@ -220,6 +220,9 @@ choose a device.
 @param defaultDevice The index of the device that has to be used. If a
                         value < 0 is given, the device can be chosen
                         interactively
+@param platformString The platform string which should be chosen.
+                        If it is empty, it will be ignored. If it is not empty,
+                        but the string is not found an exception is thrown.
 
 @return A list containing a single selected device
 */
