@@ -111,7 +111,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
           *config.device,
           sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize) *
               (config.programSettings->blockSize),
-          kernel_lu.group_id(1));
+          kernel_top.group_id(1));
     }
 
     for (int i = 0; i < blocks_per_col; i++) {
@@ -119,7 +119,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
           *config.device,
           sizeof(HOST_DATA_TYPE) * (config.programSettings->blockSize) *
               (config.programSettings->blockSize),
-          kernel_lu.group_id(2));
+          kernel_left.group_id(1));
     }
   }
 
