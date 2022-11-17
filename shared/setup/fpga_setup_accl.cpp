@@ -97,7 +97,7 @@ std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &progra
     std::vector<int> mem(1, 0);
     std::cout << "Create ACCL" << std::endl;
     return std::unique_ptr<ACCL::ACCL>(
-        new ACCL::ACCL(ranks, current_rank, device, cclo_ip, hostctrl_ip, 0, mem, 0, ACCL::networkProtocol::UDP));
+        new ACCL::ACCL(ranks, current_rank, device, cclo_ip, hostctrl_ip, 0, mem, ACCL::networkProtocol::UDP));
   } else {
     // TODO: Add start port here. Currenty hardcoded!
     return std::unique_ptr<ACCL::ACCL>(
