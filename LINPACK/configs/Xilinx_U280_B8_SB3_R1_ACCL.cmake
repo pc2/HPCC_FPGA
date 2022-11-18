@@ -20,6 +20,7 @@ set(LOCAL_MEM_BLOCK_LOG 8 CACHE STRING "Used to define the width and height of t
 set(REGISTER_BLOCK_LOG 3 CACHE STRING "Size of the block that will be manipulated in registers" FORCE)
 set(NUM_REPLICATIONS 1 CACHE STRING "Number of times the matrix multiplication kernel will be replicated" FORCE)
 
+set(XILINX_ADDITIONAL_LINK_FLAGS --kernel_frequency 250 CACHE STRING "" FORCE)
 set(XILINX_KERNEL_NAMES lu top_update left_update inner_update_mm0 CACHE STRING "Names of all compute kernels" FORCE)
 set(XILINX_COMPILE_SETTINGS_FILE "${CMAKE_SOURCE_DIR}/settings/settings.compile.xilinx.hpl_torus_pcie.ddr.ini" CACHE STRING "Compile settings file" FORCE)
 set(XILINX_LINK_SETTINGS_FILE "${CMAKE_SOURCE_DIR}/settings/settings.link.xilinx.hpl_torus_accl.hbm.u280.generator.ini" CACHE STRING "Link settings file" FORCE)
