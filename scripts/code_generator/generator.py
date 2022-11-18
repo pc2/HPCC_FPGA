@@ -4,7 +4,7 @@ import logging
 from jinja2 import Environment, PackageLoader, BaseLoader, TemplateNotFound, select_autoescape
 from os.path import join, exists, getmtime
 
-parser = argparse.ArgumentParser(description='Preprocessor for code replication and advanced code modification.')
+parser = argparse.ArgumentParser(description='Preprocessor for code replication and advanced code modification using jinja.')
 parser.add_argument('file', metavar='CODE_FILE', type=str,
                    help='Path to the file that is used as input')
 parser.add_argument("-o", dest="output_file", default=None, help="Path to the output file. If not given, output will printed to stdout.")
@@ -66,9 +66,6 @@ if __name__ == '__main__':
     if not args.file:
         logging.debug('no input file given')
         exit(1)
-    if not args.output_file: 
-        logging.debug('no output file given')
-        exit(1)
     for p in args.params:
         logging.debug("Parse statement: %s" % p)
         exec(p, globals())
@@ -82,11 +79,15 @@ if __name__ == '__main__':
     except:
         pass
 
-    if num_replications is None:
+    if not 'num_replications' in globals():
         num_replications = 1 
 
-    if num_total_replications is None:
+    if not 'num_total_replications' in globals():
         num_total_replications = 1
 
-    with open(args.output_file, 'w') as f:
-        f.write(template.render(num_replications=num_replications, num_total_replications=num_total_replications))
+    rendered_template = template.render(num_replications=num_replications, num_total_replications=num_total_replications)
+    try:
+        with open(args.output_file, 'w') as f:
+            f.write(rendered_template)
+    except:
+        sys.stdout.write(rendered_template)
