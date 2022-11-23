@@ -8,6 +8,7 @@
 #include "test_program_settings.h"
 #include "gmock/gmock.h"
 #include "hpcc_benchmark.hpp"
+#include "nlohmann/json.hpp"
 
 
 // Dirty GoogleTest and static library hack
@@ -263,4 +264,32 @@ TEST(SetupTest, BenchmarkSetupFails) {
     EXPECT_FALSE(bm->setupBenchmark(1, tmp_argv));
     delete [] tmp_argv;
     delete [] name_str;
+}
+
+using json = nlohmann::json;
+
+/**
+ *
+ * Check if dump-json flag produces valid json output
+ */
+TEST(SetupTest, BenchmarkJsonDump) {
+    std::unique_ptr<MinimalBenchmark> bm = std::unique_ptr<MinimalBenchmark>(new MinimalBenchmark());
+    bm->setupBenchmark(global_argc, global_argv);
+    bm->getExecutionSettings().programSettings->dumpfilePath = "out.json";
+    bm->executeBenchmark();
+    std::FILE *f = std::fopen("out.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        // json::parse will panic if f is nullptr
+        json j = json::parse(f);
+        // check if the expected keys are there
+        EXPECT_TRUE(j.contains("config_time"));
+        EXPECT_TRUE(j.contains("device"));
+        EXPECT_TRUE(j.contains("environment"));
+        EXPECT_TRUE(j.contains("git_commit"));
+        EXPECT_TRUE(j.contains("results"));
+        EXPECT_TRUE(j.contains("settings"));
+        EXPECT_TRUE(j.contains("timings"));
+        EXPECT_TRUE(j.contains("version"));
+    }
 }
