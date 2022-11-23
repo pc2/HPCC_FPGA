@@ -144,7 +144,7 @@ transpose::TransposeBenchmark::printResults() {
             << std::endl;
     std::cout << "best:  " << results.at("min_t")
             << "   " << results.at("min_transfer_t")
-            << "   " << results.at("min_calculation_t")
+            << "   " << results.at("min_calc_t")
             << "   " << results.at("max_calc_flops")
             << "   " << results.at("max_mem_bandwidth")
             << "   " << results.at("max_transfer_bandwidth")

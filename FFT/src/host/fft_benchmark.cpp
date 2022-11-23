@@ -123,7 +123,7 @@ fft::FFTBenchmark::printResults() {
         std::cout << std::setw(ENTRY_SPACE) << "Time in s:" << std::setw(ENTRY_SPACE) << results.at("t_avg")
                     << std::setw(ENTRY_SPACE) << results.at("t_min") << std::endl;
         std::cout << std::setw(ENTRY_SPACE) << "GFLOPS:" << std::setw(ENTRY_SPACE) << results.at("gflops_avg")
-                    << std::setw(ENTRY_SPACE) << results.at("gflop_min") << std::endl;
+                    << std::setw(ENTRY_SPACE) << results.at("gflops_min") << std::endl;
 }
 
 std::unique_ptr<fft::FFTData>
