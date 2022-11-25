@@ -244,8 +244,10 @@ build:b_eff:
 .test: &test
   stage: test
   script:
+    - mkdir -p build
     - cd build
-    - cmake ../$BENCHMARK_FOLDER -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../$BENCHMARK_FOLDER $BENCHMARK_OPTIONS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - $PREPARE_SCRIPT
     - make CTEST_OUTPUT_ON_FAILURE=1 test
   artifacts:
     when: on_failure
