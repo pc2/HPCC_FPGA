@@ -43,6 +43,9 @@ Input parameters (or options) can be appended to the host execution call like th
     Please note, that the benchmark will always fail with this option since it assumes the validation failed, so it will return a non-zero exit code! For reported measurements, the validation has to be enabled and the host should return
     with an exit code 0.
 
+``--comm-type COMM``:
+    This parameter chooses the communication strategy which will be used. Current Options are "IEC" for using the Intel External Channel, "PCIE" for using the host-to-host communicationa and "CPU" for calculating on the CPU.
+
 ``--test``:
     This option will also skip the execution of the benchmark. It can be used to test different data generation schemes or the benchmark summary before the actual execution. Please note, that the 
     host will exit with a non-zero exit code, because it will not be able to validate the output.
