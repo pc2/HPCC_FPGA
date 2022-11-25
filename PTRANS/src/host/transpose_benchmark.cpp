@@ -124,12 +124,12 @@ transpose::TransposeBenchmark::collectResults() {
     results.emplace("avg_t", hpcc_base::HpccResult(avgCalculationTime + avgTransferTime, "s"));
     results.emplace("min_t", hpcc_base::HpccResult(minCalculationTime + minTransferTime, "s"));
 
-    results.emplace("avg_calc_flops", hpcc_base::HpccResult(flops / avgCalculationTime * 1.0e9, "GFLOP/s"));
-    results.emplace("max_calc_flops", hpcc_base::HpccResult(flops / minCalculationTime * 1.0e9, "GFLOP/s"));
-    results.emplace("avg_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgCalculationTime * 1.0e9, "GB/s"));
-    results.emplace("max_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minCalculationTime * 1.0e9, "GB/s"));
-    results.emplace("avg_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime * 1.0e9, "GB/s"));
-    results.emplace("max_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime * 1.0e9, "GB/s"));
+    results.emplace("avg_calc_flops", hpcc_base::HpccResult(flops / avgCalculationTime * 1.0e-9, "GFLOP/s"));
+    results.emplace("max_calc_flops", hpcc_base::HpccResult(flops / minCalculationTime * 1.0e-9, "GFLOP/s"));
+    results.emplace("avg_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgCalculationTime * 1.0e-9, "GB/s"));
+    results.emplace("max_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minCalculationTime * 1.0e-9, "GB/s"));
+    results.emplace("avg_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime * 1.0e-9, "GB/s"));
+    results.emplace("max_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime * 1.0e-9, "GB/s"));
 }
 
 void
