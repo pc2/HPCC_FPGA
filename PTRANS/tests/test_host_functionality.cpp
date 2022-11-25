@@ -39,7 +39,7 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatHeader) {
     std::cout.rdbuf(oldStdOutBuffer);
 
     EXPECT_THAT(newStdOutBuffer.str(),
-                ::testing::MatchesRegex("(\\s+)total\\s\\[s\\](\\s+)transfer\\s\\[s\\](\\s+)calc\\s\\[s\\](\\s+)calc\\sFLOPS(\\s+)Mem\\s\\[B/s\\](\\s+)PCIe\\s\\[B/s\\]\n.*"));
+                ::testing::MatchesRegex("(\\s+)total\\stime(\\s+)transfer\\stime(\\s+)calc\\s+time(\\s+)calc\\sFLOPS(\\s+)Memory\\sBandwidth(\\s+)PCIe\\sBandwidth\n.*"));
 }
 
 /**
@@ -66,7 +66,7 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
     std::cout.rdbuf(oldStdOutBuffer);
 
     EXPECT_THAT(newStdOutBuffer.str(),
-                ::testing::MatchesRegex(".*\navg:\\s+2\\.00000e\\+00\\s+1\\.00000e\\+00\\s+1\\.00000e\\+00.*\n.*\n"));
+                ::testing::MatchesRegex(".*\navg:\\s+2\\.00000e\\+00\\s+s\\s+1\\.00000e\\+00\\s+s\\s+1\\.00000e\\+00\\s+s.*\n.*\n"));
 }
 
 /**
