@@ -124,17 +124,17 @@ transpose::TransposeBenchmark::collectResults() {
     results.emplace("avg_t", hpcc_base::HpccResult(avgCalculationTime + avgTransferTime, "s"));
     results.emplace("min_t", hpcc_base::HpccResult(minCalculationTime + minTransferTime, "s"));
 
-    results.emplace("avg_calc_flops", hpcc_base::HpccResult(flops / avgCalculationTime, "GFLOP/s"));
-    results.emplace("max_calc_flops", hpcc_base::HpccResult(flops / minCalculationTime, "GFLOP/s"));
-    results.emplace("avg_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgCalculationTime, "GB/s"));
-    results.emplace("max_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minCalculationTime, "GB/s"));
-    results.emplace("avg_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime, "GB/s"));
-    results.emplace("max_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime, "GB/s"));
+    results.emplace("avg_calc_flops", hpcc_base::HpccResult(flops / avgCalculationTime * 1.0e9, "GFLOP/s"));
+    results.emplace("max_calc_flops", hpcc_base::HpccResult(flops / minCalculationTime * 1.0e9, "GFLOP/s"));
+    results.emplace("avg_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgCalculationTime * 1.0e9, "GB/s"));
+    results.emplace("max_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minCalculationTime * 1.0e9, "GB/s"));
+    results.emplace("avg_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime * 1.0e9, "GB/s"));
+    results.emplace("max_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime * 1.0e9, "GB/s"));
 }
 
 void
 transpose::TransposeBenchmark::printResults() {
-    std::cout << "       total [s]     transfer [s]  calc [s]      calc FLOPS    Mem [B/s]     PCIe [B/s]" << std::endl;
+    std::cout << "       total time     transfer time  calc time      calc FLOPS    Memory Bandwidth     PCIe Bandwidth" << std::endl;
     std::cout << "avg:   " << results.at("avg_t")
             << "   " << results.at("avg_transfer_t")
             << "   " << results.at("avg_calc_t")
