@@ -110,7 +110,7 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
 
     for (auto& run : data.items) {
         if (world_rank == 0) {
-            std::cout << "Measure for " << (1 << run.messageSize) << " Byte" << std::endl;
+            std::cout << std::dec << "Measure for " << (1 << run.messageSize) << " Byte" << std::endl;
         }
         std::shared_ptr<network::ExecutionTimings> timing;
         switch (executionSettings->programSettings->communicationType) {
@@ -211,7 +211,7 @@ network::NetworkBenchmark::collectAndPrintResults(const network::NetworkExecutio
 
             maxBandwidths.push_back(maxCalcBW);
 
-            std::cout << std::setw(ENTRY_SPACE) << (1 << msgSizeResults.first) << "   "
+            std::cout << std::dec << std::setw(ENTRY_SPACE) << (1 << msgSizeResults.first) << "   "
                     << std::setw(ENTRY_SPACE) << looplength << "   "
                     << std::setw(ENTRY_SPACE) << totalMaxMinCalculationTime[i] << "   "
                     << std::setw(ENTRY_SPACE)  << maxCalcBW

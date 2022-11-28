@@ -36,6 +36,29 @@ SOFTWARE.
 
 namespace fpga_setup {
 
+
+struct ACCLContext {
+    std::unique_ptr<ACCL::ACCL> accl;
+    std::unique_ptr<ACCL::BaseBuffer> tx_buf_network;
+    std::unique_ptr<ACCL::BaseBuffer> rx_buf_network; 
+};
+
+
+static const std::map<std::string, ACCL::networkProtocol> acclProtocolMap = {
+    {"UDP", ACCL::networkProtocol::UDP}, 
+    {"TCP", ACCL::networkProtocol::TCP} 
+};
+
+static ACCL::networkProtocol acclProtocolStringToEnum(std::string string_representation) {
+    if (acclProtocolMap.count(string_representation)) {
+        return acclProtocolMap.at(string_representation);
+    }
+    else {
+        std::runtime_error("ACCL network protocol could not be parsed from string: " + string_representation);
+    }
+    return ACCL::networkProtocol::UDP;
+}
+
 /**
 Sets up the given FPGA with the kernel in the provided file.
 
@@ -44,8 +67,9 @@ Sets up the given FPGA with the kernel in the provided file.
 @param useAcclEmulation Construct an ACCL emulation instance instead of hardware execution
 @return The ACCL instance used for communication
 */
-std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
-                                          bool useAcclEmulation);
+ACCLContext fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
+                                          bool useAcclEmulation,
+                                          ACCL::networkProtocol protocol);
 
 } // namespace fpga_setup
 #endif // SRC_HOST_FPGA_SETUP_H_

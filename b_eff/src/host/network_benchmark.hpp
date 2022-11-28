@@ -251,8 +251,11 @@ class NetworkBenchmark :
     public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, cl::Device, cl::Context, cl::Program, NetworkData, NetworkExecutionTimings> 
 #endif
 #ifdef USE_XRT_HOST
+#ifdef USE_ACCL
+    public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, xrt::device, fpga_setup::ACCLContext, xrt::uuid, NetworkData, NetworkExecutionTimings> 
+#else
     public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, xrt::device, bool, xrt::uuid, NetworkData, NetworkExecutionTimings> 
-
+#endif
 #endif
    {
     protected:

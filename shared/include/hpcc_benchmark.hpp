@@ -126,10 +126,18 @@ public:
      */
     CommunicationType communicationType;
 
+#ifdef USE_ACCL
     /**
      * @brief Use ACCL emulation constructor instead of hardware execution
      */
     bool useAcclEmulation;
+
+    /**
+     * @brief Used ACCL network stack
+     * 
+     */
+    ACCL::networkProtocol acclProtocol;
+#endif
 
     /**
      * @brief Construct a new Base Settings object
@@ -153,8 +161,7 @@ public:
 #endif
 #ifdef USE_ACCL
             useAcclEmulation(static_cast<bool>(results.count("accl-emulation"))),
-#else
-            useAcclEmulation(false),
+            acclProtocol(fpga_setup::acclProtocolStringToEnum(results["accl-protocol"].as<std::string>())),
 #endif
 #ifdef COMMUNICATION_TYPE_SUPPORT_ENABLED
             communicationType(retrieveCommunicationType(results["comm-type"].as<std::string>(), results["f"].as<std::string>())),
@@ -219,14 +226,6 @@ public:
      */
     std::unique_ptr<TProgram> program;
 
-#ifdef USE_ACCL
-    /**
-     * @brief Pointer to ACCL instance
-     *
-     */
-    std::unique_ptr<ACCL::ACCL> accl;
-#endif
-
     /**
      * @brief Construct a new Execution Settings object
      * 
@@ -237,16 +236,10 @@ public:
      */
     ExecutionSettings(std::unique_ptr<TSettings> programSettings_, std::unique_ptr<TDevice> device_, 
                         std::unique_ptr<TContext> context_, std::unique_ptr<TProgram> program_
-#ifdef USE_ACCL
-                        , std::unique_ptr<ACCL::ACCL> accl_
-#endif
                         
                         ): 
                                     programSettings(std::move(programSettings_)), device(std::move(device_)), 
-                                    context(std::move(context_)), program(std::move(program_))
-#ifdef USE_ACCL
-                                            , accl(std::move(accl_))
-#endif                                      
+                                    context(std::move(context_)), program(std::move(program_))                                    
                                              {}
 
     /**
@@ -406,6 +399,8 @@ public:
 #endif
 #ifdef USE_ACCL
                 ("accl-emulation", "Use the accl emulation instead of hardware execution")
+                ("accl-protocol", "Specify the network protocol that should be used with ACCL.",
+                cxxopts::value<std::string>()->default_value("UDP"))
 #endif
                 ("skip-validation", "Skip the validation of the output data. This will speed up execution and helps when working with special data types.")
                 ("device", "Index of the device that has to be used. If not given you "\
@@ -510,13 +505,13 @@ public:
             std::unique_ptr<TContext> context;
             std::unique_ptr<TProgram> program;
             std::unique_ptr<TDevice> usedDevice;
-#ifdef USE_ACCL
-            std::unique_ptr<ACCL::ACCL> accl;
-#endif
+
             if (!programSettings->testOnly) {
 #ifdef USE_XRT_HOST
                 usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultDevice);
+#ifndef USE_ACCL
                 context = std::unique_ptr<bool>(new bool(false));
+#endif
                 if (!programSettings->useAcclEmulation) {
                     program = fpga_setup::fpgaSetup(*usedDevice, programSettings->kernelFileName);
                 }
@@ -530,19 +525,17 @@ public:
 #endif
 #ifdef USE_ACCL
                 if (programSettings->communicationType == CommunicationType::accl) {
-                    accl = fpga_setup::fpgaSetupACCL(*usedDevice, *program, programSettings->useAcclEmulation);
+                    context = std::unique_ptr<fpga_setup::ACCLContext>(new fpga_setup::ACCLContext(fpga_setup::fpgaSetupACCL(*usedDevice, *program, programSettings->useAcclEmulation,
+                    programSettings->acclProtocol)));
                 }
                 else {
-                    accl = std::unique_ptr<ACCL::ACCL>(nullptr);
+                    context = std::unique_ptr<fpga_setup::ACCLContext>(new fpga_setup::ACCLContext());
                 }
 #endif
             }
 
             executionSettings = std::unique_ptr<ExecutionSettings<TSettings, TDevice, TContext, TProgram>>(new ExecutionSettings<TSettings, TDevice, TContext, TProgram>(std::move(programSettings), std::move(usedDevice), 
-                                                                    std::move(context), std::move(program) 
-#ifdef USE_ACCL
-                                                                    , std::move(accl)
-#endif
+                                                                    std::move(context), std::move(program)
                                                                     ));
             if (mpi_comm_rank == 0) {
                 if (!checkInputParameters()) {

@@ -66,8 +66,23 @@ void configure_vnx(CMAC &cmac, Networklayer &network_layer,
   network_layer.arp_discovery();
 }
 
-std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
-                                          bool useAcclEmulation) {
+void configure_tcp(ACCL::BaseBuffer &tx_buf_network, ACCL::BaseBuffer &rx_buf_network,
+                   xrt::kernel &network_krnl, std::vector<ACCL::rank_t> &ranks,
+                   int rank) {
+  std::cout << "Configure TCP Network Kernel" << std::endl;
+  tx_buf_network.sync_to_device();
+  rx_buf_network.sync_to_device();
+
+  uint local_fpga_ip = ACCL::ip_encode(ranks[rank].ip);
+  std::cout << "rank: " << rank << " FPGA IP: " << std::hex << local_fpga_ip
+            << std::endl;
+
+  network_krnl(local_fpga_ip, static_cast<uint32_t>(rank), local_fpga_ip,
+               *(tx_buf_network.bo()), *(rx_buf_network.bo()));
+}
+
+ACCLContext fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
+                                          bool useAcclEmulation, ACCL::networkProtocol protocol) {
   int current_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
 
@@ -80,29 +95,50 @@ std::unique_ptr<ACCL::ACCL> fpgaSetupACCL(xrt::device &device, xrt::uuid &progra
     ACCL::rank_t new_rank = {"10.10.10." + std::to_string(i), 5500 + i, i, ACCL_BUFFER_SIZE};
     ranks.emplace_back(new_rank);
   }
+
+  ACCLContext accl;
+
   if (!useAcclEmulation) {
     std::cout << "Create cclo ip" << std::endl;
     auto cclo_ip = xrt::ip(device, program, "ccl_offload:{ccl_offload_" + std::to_string(0) + "}");
     std::cout << "Create hostctrl" << std::endl;
     auto hostctrl_ip = xrt::kernel(device, program, "hostctrl:{hostctrl_" + std::to_string(0) + "}",
                                    xrt::kernel::cu_access_mode::exclusive);
-    std::cout << "Create CMAC" << std::endl;
-    auto cmac = CMAC(xrt::ip(device, program, "cmac_0:{cmac_0}"));
-    std::cout << "Create Network Layer" << std::endl;
-     auto network_layer = Networklayer(
-          xrt::ip(device, program, "networklayer:{networklayer_0}"));
-    std::cout << "Configure VNX" << std::endl;
-     configure_vnx(cmac, network_layer, ranks, current_rank);
-
+    if (protocol == ACCL::networkProtocol::UDP) {
+      std::cout << "Create CMAC" << std::endl;
+      auto cmac = CMAC(xrt::ip(device, program, "cmac_0:{cmac_0}"));
+      std::cout << "Create Network Layer" << std::endl;
+      auto network_layer = Networklayer(
+            xrt::ip(device, program, "networklayer:{networklayer_0}"));
+      std::cout << "Configure VNX" << std::endl;
+      configure_vnx(cmac, network_layer, ranks, current_rank);
+    }
+    if (protocol == ACCL::networkProtocol::TCP) {
+      auto network_krnl = xrt::kernel(device, program, "network_krnl:{network_krnl_0}",
+                      xrt::kernel::cu_access_mode::exclusive);
+      accl.tx_buf_network = std::unique_ptr<ACCL::BaseBuffer>(new ACCL::FPGABuffer<int8_t>(
+          64 * 1024 * 1024, ACCL::dataType::int8, device, network_krnl.group_id(3)));
+      accl.rx_buf_network = std::unique_ptr<ACCL::BaseBuffer>(new ACCL::FPGABuffer<int8_t>(
+          64 * 1024 * 1024, ACCL::dataType::int8, device, network_krnl.group_id(4)));
+      configure_tcp(*accl.tx_buf_network, *accl.rx_buf_network, network_krnl, ranks, current_rank);
+    }
     std::vector<int> mem(1, 0);
     std::cout << "Create ACCL" << std::endl;
-    return std::unique_ptr<ACCL::ACCL>(
-        new ACCL::ACCL(ranks, current_rank, device, cclo_ip, hostctrl_ip, 0, mem, ACCL::networkProtocol::UDP));
+    accl.accl = std::unique_ptr<ACCL::ACCL>(
+        new ACCL::ACCL(ranks, current_rank, device, cclo_ip, hostctrl_ip, 0, mem, protocol, 16, ACCL_BUFFER_SIZE));
   } else {
     // TODO: Add start port here. Currenty hardcoded!
-    return std::unique_ptr<ACCL::ACCL>(
-        new ACCL::ACCL(ranks, current_rank, 6000, device, ACCL::networkProtocol::UDP, 16, ACCL_BUFFER_SIZE));
+    accl.accl = std::unique_ptr<ACCL::ACCL>(
+        new ACCL::ACCL(ranks, current_rank, 6000, device, protocol, 16, ACCL_BUFFER_SIZE));
   }
+
+  if (protocol == ACCL::networkProtocol::TCP) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    accl.accl->open_port();
+    MPI_Barrier(MPI_COMM_WORLD);
+    accl.accl->open_con();
+  }
+  return accl;
 }
 
 } // namespace fpga_setup

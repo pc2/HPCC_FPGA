@@ -86,8 +86,8 @@ namespace network::execution_types::accl_pl {
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
                 recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
-                acclSendBuffers.push_back(config.accl->create_buffer(dummyBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
-                acclRecvBuffers.push_back(config.accl->create_buffer(recvBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
+                acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
+                acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
                 acclSendBuffers.back()->sync_to_device();
                 acclRecvBuffers.back()->sync_to_device();
             }
@@ -103,11 +103,11 @@ namespace network::execution_types::accl_pl {
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 if (!config.programSettings->useAcclEmulation) {
                 auto run = sendrecvKernel(*(acclSendBuffers[i]->bo()), *(acclRecvBuffers[i]->bo()), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
-                                            config.accl->get_communicator_addr(), config.accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}));
+                                            config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}));
                 run.wait();
                 } else {
                     send_recv(reinterpret_cast<float*>(acclSendBuffers[i]->buffer()), reinterpret_cast<float*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
-                                            config.accl->get_communicator_addr(), config.accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}),
+                                            config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}),
                                             cmd, sts);
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();

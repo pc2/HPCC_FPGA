@@ -45,11 +45,11 @@ namespace network::execution_types::accl {
                 cl::vector<HOST_DATA_TYPE> &validationData) {
 
         int err;
-        std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferContents;
-        std::vector<cl::vector<HOST_DATA_TYPE>> recvBufferContents;
-	std::vector<std::unique_ptr<ACCL::Buffer<HOST_DATA_TYPE>>> acclSendBuffers;
-	std::vector<std::unique_ptr<ACCL::Buffer<HOST_DATA_TYPE>>> acclRecvBuffers;
-        cl_uint size_in_bytes = std::max(static_cast<int>(validationData.size()), (1 << messageSize));
+        std::vector<cl::vector<float>> dummyBufferContents;
+        std::vector<cl::vector<float>> recvBufferContents;
+	std::vector<std::unique_ptr<ACCL::Buffer<float>>> acclSendBuffers;
+	std::vector<std::unique_ptr<ACCL::Buffer<float>>> acclRecvBuffers;
+        size_t size_in_bytes = std::max(static_cast<size_t>(validationData.size()), static_cast<size_t>(1 << messageSize));
 
         int current_rank;
         MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
@@ -66,10 +66,10 @@ namespace network::execution_types::accl {
 	    int size_in_values = (size_in_bytes + 3) / 4;
             // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-                dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
-                recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
-		acclSendBuffers.push_back(config.accl->create_buffer(dummyBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
-		acclRecvBuffers.push_back(config.accl->create_buffer(recvBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
+                dummyBufferContents.emplace_back(size_in_values, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
+                recvBufferContents.emplace_back(size_in_values, static_cast<HOST_DATA_TYPE>(0));
+		acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_values, ACCL::dataType::float32));
+		acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_values, ACCL::dataType::float32));
 		acclSendBuffers.back()->sync_to_device();
 		acclRecvBuffers.back()->sync_to_device();
             }
@@ -83,12 +83,12 @@ namespace network::execution_types::accl {
                     std::cout << "Send " << size_in_values << " bytes to " 
                                 << ((current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size) << std::endl;
 #endif
-			config.accl->send(*acclSendBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+			config.context->accl->send(*acclSendBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
 #ifndef NDEBUG
                     std::cout << "Recv " << size_in_values << " bytes from " 
                                 << ((current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size) << std::endl;
 #endif
-            config.accl->recv(*acclRecvBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
+            config.context->accl->recv(*acclRecvBuffers[i], size_in_values, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0);
 #ifndef NDEBUG
                     std::cout << "Done" << std::endl;
 #endif
