@@ -3,12 +3,13 @@
 set(ACCL_STACK_TYPE "UDP" CACHE STRING "Network layer used in ACCL")
 set(ACCL_UDP_ETH_IFS 1 CACHE STRING "Number of Ethernet interfaces to synthesize for UDP stack")
 set(ACCL_DEVICE_NAME "xcu280-fsvh2892-2L-e" CACHE STRING "Name of the FPGA used on the target platform")
-set(ACCL_BUFFER_SIZE 8192 CACHE STRING "Size of ACCL buffers in bytes")
+set(DEFAULT_ACCL_BUFFER_SIZE 8192 CACHE STRING "Size of ACCL buffers in KB")
+set(DEFAULT_ACCL_BUFFER_COUNT 16 CACHE STRING "Number of ACCL buffers")
 set(ACCL_HARDWARE_DIR ${extern_accl_SOURCE_DIR}/test/hardware)
 set(ACCL_CCLO_ADDITIONAL_BUILD_ARGS "" CACHE STRING "Add additional build arguments that will be passed to the CCLO makefile")
 set(ACCL_CCLO_BUILD_ARGS ${ACCL_CCLO_ADDITIONAL_BUILD_ARGS})
 # UDP related definitions
-set(ACCL_VNX_DIR ${ACCL_HARDWARE_DIR}/xup_vitis_network_example/)
+set(ACCL_VNX_DIR ${extern_accl_udp_SOURCE_DIR})
 set(ACCL_NETLAYER_HLS ${ACCL_VNX_DIR}/NetLayers/100G-fpga-network-stack-core)
 set(ACCL_UDP_NET_XO ${ACCL_VNX_DIR}/NetLayers/_x.${FPGA_BOARD_NAME}/networklayer.xo)
 set(ACCL_HLS_IP_FOLDER ${ACCL_NETLAYER_HLS}/synthesis_results_HBM)
@@ -42,7 +43,7 @@ add_custom_target(
     DEPENDS ${ACCL_UDP_MAC_XOS} ${ACCL_UDP_NET_XO})
 
 # TCP related definitions
-set(ACCL_TCP_BASE_DIR ${ACCL_HARDWARE_DIR}/Vitis_with_100Gbps_TCP-IP)
+set(ACCL_TCP_BASE_DIR ${extern_accl_tcp_SOURCE_DIR})
 set(ACCL_TCP_XO ${ACCL_TCP_BASE_DIR}/_x.hw.${FPGA_BOARD_NAME}/network_krnl.xo)
 set(ACCL_TCP_CMAC_XO ${ACCL_TCP_BASE_DIR}/_x.hw.${FPGA_BOARD_NAME}/cmac_krnl.xo)
 if (ACCL_STACK_TYPE STREQUAL "TCP")
