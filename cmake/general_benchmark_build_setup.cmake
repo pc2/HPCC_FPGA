@@ -165,6 +165,10 @@ check_type_size("${HOST_DATA_TYPE}" DATA_TYPE_SIZE)
 
 # Configure the header file with definitions used by the host code
 configure_file(
+        "${CMAKE_SOURCE_DIR}/../shared/include/base_parameters.h.in"
+        "${CMAKE_BINARY_DIR}/src/common/base_parameters.h"
+)
+configure_file(
         "${CMAKE_SOURCE_DIR}/src/common/parameters.h.in"
         "${CMAKE_BINARY_DIR}/src/common/parameters.h"
 )

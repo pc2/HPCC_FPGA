@@ -1,31 +1,20 @@
 #ifndef SRC_COMMON_PARAMETERS_H_
 #define SRC_COMMON_PARAMETERS_H_
 
-#define VERSION "@PROJECT_VERSION@"
+#include "base_parameters.h"
 
 #define READ_KERNEL_NAME "@READ_KERNEL_NAME@"
 #define WRITE_KERNEL_NAME "@WRITE_KERNEL_NAME@"
-#define DEFAULT_REPETITIONS @DEFAULT_REPETITIONS@
 #define DEFAULT_MATRIX_SIZE @DEFAULT_MATRIX_SIZE@
 #define DEFAULT_COMM_TYPE "@DEFAULT_COMM_TYPE@"
 #define DEFAULT_DIST_TYPE "@DEFAULT_DIST_TYPE@"
-#define DEFAULT_PLATFORM @DEFAULT_PLATFORM@
-#define DEFAULT_DEVICE @DEFAULT_DEVICE@
 #define DEFAULT_P_VALUE @DEFAULT_P_VALUE@
-
-#define NUM_REPLICATIONS @NUM_REPLICATIONS@
-#cmakedefine HOST_EMULATION_REORDER
-
-#cmakedefine ACCL_BUFFER_SIZE @ACCL_BUFFER_SIZE@
 
 /**
  * Kernel Parameters
  */
 #define BLOCK_SIZE @BLOCK_SIZE@
 #define CHANNEL_WIDTH @CHANNEL_WIDTH@
-
-#define HOST_DATA_TYPE @HOST_DATA_TYPE@
-#define DEVICE_DATA_TYPE @DEVICE_DATA_TYPE@
 
 #cmakedefine USE_SVM
 #cmakedefine USE_BUFFER_WRITE_RECT_FOR_A
@@ -38,10 +27,5 @@ Moreover the version and build time is also compiled into the description.
 #define PROGRAM_DESCRIPTION "Implementation of the matrix transposition benchmark"\
                             " proposed in the HPCC benchmark suite for FPGA.\n"\
                             "Version: " VERSION "\n"
-
-/**
-Output separator
-*/
-#define HLINE "-------------------------------------------------------------\n"
 
 #endif // SRC_COMMON_PARAMETERS_H_
