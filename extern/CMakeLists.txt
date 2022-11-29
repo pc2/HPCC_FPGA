@@ -55,7 +55,7 @@ if(NOT extern_cxxopts_POPULATED)
     EXCLUDE_FROM_ALL)
 endif()
 
-if (DEFINED USE_ACCL)
+if (USE_ACCL)
 # -------------------------------------------------------------------------------
 # ACCL Library
 FetchContent_Declare(

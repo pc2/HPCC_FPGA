@@ -3,9 +3,6 @@ INCLUDE (CheckTypeSize)
 
 set (CMAKE_CXX_STANDARD 14)
 
-# Download build dependencies
-add_subdirectory(${CMAKE_SOURCE_DIR}/../extern ${CMAKE_BINARY_DIR}/extern)
-
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     enable_testing()
 endif()
@@ -45,11 +42,13 @@ if (NOT KERNEL_REPLICATION_ENABLED)
  unset(NUM_REPLICATIONS)
 endif()
 
-
 if (HPCC_FPGA_CONFIG)
     message(STATUS "HPCC FPGA configuration defined. Overwrite default values with configuration: ${HPCC_FPGA_CONFIG}")
     include(${HPCC_FPGA_CONFIG})
 endif()
+
+# Download build dependencies
+add_subdirectory(${CMAKE_SOURCE_DIR}/../extern ${CMAKE_BINARY_DIR}/extern)
 
 # Set the used data type
 if (NOT DATA_TYPE)
