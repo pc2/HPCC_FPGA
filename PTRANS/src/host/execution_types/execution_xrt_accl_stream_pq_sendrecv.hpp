@@ -72,10 +72,10 @@ namespace accl_stream_sendrecv_pq {
  */
 static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings,
-                                       xrt::device, bool, xrt::uuid> &config,
-    transpose::TransposeData<bool> &data,
+                                       xrt::device, fpga_setup::ACCLContext, xrt::uuid> &config,
+    transpose::TransposeData<fpga_setup::ACCLContext> &data,
     transpose::data_handler::DistributedPQTransposeDataHandler<
-        xrt::device, bool, xrt::uuid> &handler) {
+        xrt::device, fpga_setup::ACCLContext, xrt::uuid> &handler) {
   int err;
 
   if (config.programSettings->dataHandlerIdentifier !=
@@ -169,9 +169,9 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     // The vector list variable can be interpreted as 2D matrix. Every entry
     // represents the target rank of the sub-block Since the LCM block will
     // repeat, we only need to store this small amount of data!
-    auto target_list = config.accl->create_buffer<int>(least_common_multiple / pq_height *
+    auto target_list = config.context->accl->create_buffer<int>(least_common_multiple / pq_height *
                                 least_common_multiple / pq_width, ACCL::dataType::int32);
-    bufferListCopy.push_back(config.accl->create_buffer<DEVICE_DATA_TYPE>(buffer_size, ACCL::dataType::float32));
+    bufferListCopy.push_back(config.context->accl->create_buffer<DEVICE_DATA_TYPE>(buffer_size, ACCL::dataType::float32));
     for (int row = 0; row < least_common_multiple / pq_height; row++) {
       for (int col = 0; col < least_common_multiple / pq_width; col++) {
         int global_block_col = pq_col + col * pq_width;
@@ -313,7 +313,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
 #ifndef NDEBUG
     std::cout << "Start ACCL send/recv" << std::endl;
 #endif
-    auto dbuffer = config.accl->create_buffer<DEVICE_DATA_TYPE>(1,ACCL::dataType::float32);
+    auto dbuffer = config.context->accl->create_buffer<DEVICE_DATA_TYPE>(1,ACCL::dataType::float32);
     int g = transpose::data_handler::mod(pq_row - pq_col, gcd);
     int p = transpose::data_handler::mod(pq_col + g, pq_width);
     int q = transpose::data_handler::mod(pq_row - g, pq_height);
@@ -361,7 +361,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
                     //TODO copy from and to string not implemented in driver yet
                     // config.accl->copy_from_stream(*bufferListCopy[0], sending_size);
                   } else {
-                    config.accl->send(ACCL::dataType::float32, sending_size, send_rank, 0);
+                    config.context->accl->send(ACCL::dataType::float32, sending_size, send_rank, 0);
                   }
               } else {
   #ifndef NDEBUG
@@ -371,7 +371,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
                   //TODO copy from and to string not implemented in driver yet
                   // config.accl->copy_to_stream(*bufferListCopy[0], receiving_size);
                 } else {
-                  config.accl->recv(ACCL::dataType::float32, receiving_size, recv_rank, 0);
+                  config.context->accl->recv(ACCL::dataType::float32, receiving_size, recv_rank, 0);
                 }
               }
           }

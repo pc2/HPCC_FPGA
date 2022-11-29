@@ -48,12 +48,13 @@ namespace pcie_pq {
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured
  * execution times
  */
+template<class TContext>
 static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings,
-                                       xrt::device, bool, xrt::uuid> &config,
-          transpose::TransposeData<bool> &data,
+                                       xrt::device, TContext, xrt::uuid> &config,
+          transpose::TransposeData<TContext> &data,
     transpose::data_handler::DistributedPQTransposeDataHandler<
-        xrt::device, bool, xrt::uuid> &handler) {
+        xrt::device, TContext, xrt::uuid> &handler) {
   int err;
 
   if (config.programSettings->dataHandlerIdentifier !=

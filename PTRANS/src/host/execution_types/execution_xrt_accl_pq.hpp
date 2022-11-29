@@ -40,8 +40,8 @@ namespace accl_pq {
 void accl_exchangeData(
     ACCL::ACCL &accl,
     transpose::data_handler::DistributedPQTransposeDataHandler<
-        xrt::device, bool, xrt::uuid> &handler,
-    transpose::TransposeData<bool> &data, std::vector<xrt::bo> &bufferAXrt,
+        xrt::device, fpga_setup::ACCLContext, xrt::uuid> &handler,
+    transpose::TransposeData<fpga_setup::ACCLContext> &data, std::vector<xrt::bo> &bufferAXrt,
     int global_width) {
 
   int pq_width = handler.getP();
@@ -368,10 +368,10 @@ void accl_exchangeData(
  */
 static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings,
-                                       xrt::device, bool, xrt::uuid> &config,
-    transpose::TransposeData<bool> &data,
+                                       xrt::device, fpga_setup::ACCLContext, xrt::uuid> &config,
+    transpose::TransposeData<fpga_setup::ACCLContext> &data,
     transpose::data_handler::DistributedPQTransposeDataHandler<
-        xrt::device, bool, xrt::uuid> &handler) {
+        xrt::device, fpga_setup::ACCLContext, xrt::uuid> &handler) {
   int err;
 
   if (config.programSettings->dataHandlerIdentifier !=
@@ -494,7 +494,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
 #ifndef NDEBUG
     std::cout << "Start data exchange with ACCL" << std::endl;
 #endif
-    accl_exchangeData(*config.accl, handler, data, bufferListA,
+    accl_exchangeData(*(config.context->accl), handler, data, bufferListA,
                       config.programSettings->matrixSize / data.blockSize);
 #ifndef NDEBUG
     std::cout << "End data exchange with ACCL" << std::endl;
@@ -578,7 +578,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     }
     endTransfer = std::chrono::high_resolution_clock::now();
 
-    accl_exchangeData(*config.accl, handler, data, bufferListA,
+    accl_exchangeData(*(config.context->accl), handler, data, bufferListA,
                       config.programSettings->matrixSize / data.blockSize);
 
     transferTime += std::chrono::duration_cast<std::chrono::duration<double>>(

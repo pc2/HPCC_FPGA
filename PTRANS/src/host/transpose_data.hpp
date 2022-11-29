@@ -159,8 +159,11 @@ public:
      * @param block_size size of the quadratic blocks that are stored within this object
      * @param y_size number of blocks that are stored within this object per replication
      */
-    TransposeData(TContext context, uint block_size, uint y_size): context(context),
-                                                                   numBlocks(y_size), blockSize(block_size) {
+    TransposeData(TContext &context, uint block_size, uint y_size): 
+#ifdef USE_SVM
+    context(context),
+#endif                                                                   
+    numBlocks(y_size), blockSize(block_size) {
         if (numBlocks * blockSize > 0) {
 #ifdef USE_SVM
             A = reinterpret_cast<HOST_DATA_TYPE*>(

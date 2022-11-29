@@ -68,10 +68,10 @@ namespace accl_stream_pq {
  */
 static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings,
-                                       xrt::device, bool, xrt::uuid> &config,
-    transpose::TransposeData<bool> &data,
+                                       xrt::device, fpga_setup::ACCLContext, xrt::uuid> &config,
+    transpose::TransposeData<fpga_setup::ACCLContext> &data,
     transpose::data_handler::DistributedPQTransposeDataHandler<
-        xrt::device, bool, xrt::uuid> &handler) {
+        xrt::device, fpga_setup::ACCLContext, xrt::uuid> &handler) {
   int err;
 
   if (config.programSettings->dataHandlerIdentifier !=
@@ -269,7 +269,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
       }
     }
     // Exchange A data via ACCL
-    config.accl->stream_put(ACCL::dataType::float32, data.blockSize * data.blockSize * data.numBlocks,
+    config.context->accl->stream_put(ACCL::dataType::float32, data.blockSize * data.blockSize * data.numBlocks,
                    pair_rank, 0);
 #ifndef NDEBUG
     std::cout << "Wait for kernels to complete" << std::endl;
