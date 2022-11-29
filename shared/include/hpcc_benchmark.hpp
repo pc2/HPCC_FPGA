@@ -45,6 +45,7 @@ SOFTWARE.
 #include "cxxopts.hpp"
 #include "parameters.h"
 #include "communication_types.hpp"
+#include "hpcc_settings.hpp"
 
 #define STR_EXPAND(tok) #tok
 #define STR(tok) STR_EXPAND(tok)
@@ -59,211 +60,14 @@ SOFTWARE.
 namespace hpcc_base {
 
 /**
- * @brief This class should be derived and extended for every benchmark.
- *          It is a pure data object containing the benchmark settings that are
- *          used to execute the benchmark kernel.
- *       
- */
-class BaseSettings {
-
-public:
-
-    /**
-     * @brief Number of times the kernel execution will be repeated
-     * 
-     */
-    uint numRepetitions;
-
-    /**
-     * @brief Boolean showing if memory interleaving is used that is 
-     *          triggered from the host side (Intel specific)
-     * 
-     */
-    bool useMemoryInterleaving;
-
-    /**
-     * @brief Boolean showing if the output data of the benchmark kernel
-     *          should be validated or not
-     * 
-     */
-    bool skipValidation;
-
-    /**
-     * @brief The default platform that should be used for execution. 
-     *          A number representing the index in the list of available platforms
-     * 
-     */
-    int defaultPlatform;
-
-    /**
-     * @brief The default device that should be used for execution. 
-     *          A number representing the index in the list of available devices
-     * 
-     */
-    int defaultDevice;
-
-    /**
-     * @brief Path to the kernel file that is used for execution
-     * 
-     */
-    std::string kernelFileName;
-
-    /**
-     * @brief Number of times the kernel is replicated
-     * 
-     */
-    uint kernelReplications;
-
-    /**
-     * @brief Only test the given configuration. Do not execute the benchmarks
-     * 
-     */
-    bool testOnly;
-
-    /**
-     * @brief Type of inter-FPGA communication used
-     * 
-     */
-    CommunicationType communicationType;
-
-#ifdef USE_ACCL
-    /**
-     * @brief Use ACCL emulation constructor instead of hardware execution
-     */
-    bool useAcclEmulation;
-
-    /**
-     * @brief Used ACCL network stack
-     * 
-     */
-    ACCL::networkProtocol acclProtocol;
-#endif
-
-    /**
-     * @brief Construct a new Base Settings object
-     * 
-     * @param results The resulting map from parsing the program input parameters
-     */
-    BaseSettings(cxxopts::ParseResult &results) : numRepetitions(results["n"].as<uint>()),
-#ifdef INTEL_FPGA
-            useMemoryInterleaving(static_cast<bool>(results.count("i"))), 
-#else
-            useMemoryInterleaving(true),
-#endif
-            skipValidation(static_cast<bool>(results.count("skip-validation"))), 
-            defaultPlatform(results["platform"].as<int>()),
-            defaultDevice(results["device"].as<int>()),
-            kernelFileName(results["f"].as<std::string>()),
-#ifdef NUM_REPLICATIONS
-            kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : NUM_REPLICATIONS),
-#else
-            kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : 1),
-#endif
-#ifdef USE_ACCL
-            useAcclEmulation(static_cast<bool>(results.count("accl-emulation"))),
-            acclProtocol(fpga_setup::acclProtocolStringToEnum(results["accl-protocol"].as<std::string>())),
-#endif
-#ifdef COMMUNICATION_TYPE_SUPPORT_ENABLED
-            communicationType(retrieveCommunicationType(results["comm-type"].as<std::string>(), results["f"].as<std::string>())),
-#else
-            communicationType(retrieveCommunicationType("UNSUPPORTED", results["f"].as<std::string>())),
-#endif
-            testOnly(static_cast<bool>(results.count("test"))) {}
-
-    /**
-     * @brief Get a map of the settings. This map will be used to print the final configuration.
-     *          Derived classes should override it to add additional configuration options
-     * 
-     * @return std::map<std::string,std::string> 
-     */
-    virtual std::map<std::string,std::string> getSettingsMap() {
-    int mpi_size = 0;
-#ifdef _USE_MPI_
-     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-#endif
-    std::string str_mpi_ranks = "None";
-    if (mpi_size > 0) {
-        str_mpi_ranks = std::to_string(mpi_size);
-    }
-        return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel Replications", std::to_string(kernelReplications)}, 
-                {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}, {"Test Mode", testOnly ? "Yes" : "No"},
-                {"Communication Type", commToString(communicationType)}};
-    }
-
-};
-
-/**
- * @brief Settings class that is containing the program settings together with
- *          additional information about the OpenCL runtime
- * 
- * @tparam TSettings The program settings class that should be used (Must derive from BaseSettings)
- */
-template <class TSettings, class TDevice, class TContext, class TProgram>
-class ExecutionSettings {
-public:
-
-    /**
-     * @brief Pointer to the additional program settings
-     * 
-     */
-    std::unique_ptr<TSettings> programSettings;
-
-    /**
-     * @brief The OpenCL device that should be used for execution
-     * 
-     */
-    std::unique_ptr<TDevice> device;
-
-    /**
-     * @brief The OpenCL context that should be used for execution
-     * 
-     */
-    std::unique_ptr<TContext> context;
-
-    /**
-     * @brief The OpenCL program that contains the benchmark kernel
-     * 
-     */
-    std::unique_ptr<TProgram> program;
-
-    /**
-     * @brief Construct a new Execution Settings object
-     * 
-     * @param programSettings_ Pointer to an existing program settings object that is derived from BaseSettings
-     * @param device_ Used OpenCL device
-     * @param context_ Used OpenCL context
-     * @param program_ Used OpenCL program
-     */
-    ExecutionSettings(std::unique_ptr<TSettings> programSettings_, std::unique_ptr<TDevice> device_, 
-                        std::unique_ptr<TContext> context_, std::unique_ptr<TProgram> program_
-                        
-                        ): 
-                                    programSettings(std::move(programSettings_)), device(std::move(device_)), 
-                                    context(std::move(context_)), program(std::move(program_))                                    
-                                             {}
-
-    /**
-     * @brief Destroy the Execution Settings object. Used to specify the order the contained objects are destroyed 
-     *         to prevent segmentation faults during exit.
-     * 
-     */
-    ~ExecutionSettings() {
-        program = nullptr;
-        context = nullptr;
-        device = nullptr;
-        programSettings = nullptr;
-    }
-
-};
-
-/**
  * @brief Base benchmark class. Every benchmark should be derived from this class and implement its abstract methods.
  * 
  * @tparam TSettings Class used to represent the program settings of the benchmark
  * @tparam TData Class used to represent the benchmark input and output data
  * @tparam TOutput Class representing the measurements like timings etc
  */
-template <class TSettings, class TDevice, class TContext, class TProgram, class TData, class TOutput>
+template <typename TSettings, class TDevice, class TContext, class TProgram, class TData, class TOutput, typename =
+typename std::enable_if<std::is_base_of<BaseSettings, TSettings>::value>::type>
 class HpccFpgaBenchmark {
 
 private:
@@ -400,7 +204,11 @@ public:
 #ifdef USE_ACCL
                 ("accl-emulation", "Use the accl emulation instead of hardware execution")
                 ("accl-protocol", "Specify the network protocol that should be used with ACCL.",
-                cxxopts::value<std::string>()->default_value("UDP"))
+                cxxopts::value<std::string>()->default_value(ACCL_STACK_TYPE))
+                ("accl-buffer-size", "Specify the size of the ACCL buffers in KB",
+                cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ACCL_BUFFER_SIZE)))
+                ("accl-buffer-count", "Specify the number of ACCL buffers used within the benchmark",
+                cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ACCL_BUFFER_COUNT)))
 #endif
                 ("skip-validation", "Skip the validation of the output data. This will speed up execution and helps when working with special data types.")
                 ("device", "Index of the device that has to be used. If not given you "\
@@ -525,8 +333,8 @@ public:
 #endif
 #ifdef USE_ACCL
                 if (programSettings->communicationType == CommunicationType::accl) {
-                    context = std::unique_ptr<fpga_setup::ACCLContext>(new fpga_setup::ACCLContext(fpga_setup::fpgaSetupACCL(*usedDevice, *program, programSettings->useAcclEmulation,
-                    programSettings->acclProtocol)));
+                    context = std::unique_ptr<fpga_setup::ACCLContext>(new fpga_setup::ACCLContext(
+                                    fpga_setup::fpgaSetupACCL(*usedDevice, *program, *programSettings)));
                 }
                 else {
                     context = std::unique_ptr<fpga_setup::ACCLContext>(new fpga_setup::ACCLContext());

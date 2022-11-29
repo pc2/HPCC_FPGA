@@ -33,6 +33,7 @@ SOFTWARE.
 /* External libraries */
 #include "accl.hpp"
 #include "xrt/xrt_device.h"
+#include "hpcc_settings.hpp"
 
 namespace fpga_setup {
 
@@ -64,12 +65,11 @@ Sets up the given FPGA with the kernel in the provided file.
 
 @param device The device used for the program
 @param program The program used to find the ACCL kernels for hardware execution
-@param useAcclEmulation Construct an ACCL emulation instance instead of hardware execution
+@param programSettings Pass current program settings to configure ACCL according to user specification
 @return The ACCL instance used for communication
 */
 ACCLContext fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
-                                          bool useAcclEmulation,
-                                          ACCL::networkProtocol protocol);
+                                          hpcc_base::BaseSettings &programSettings);
 
 } // namespace fpga_setup
 #endif // SRC_HOST_FPGA_SETUP_H_

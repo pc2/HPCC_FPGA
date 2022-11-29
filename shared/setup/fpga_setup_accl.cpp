@@ -82,7 +82,7 @@ void configure_tcp(ACCL::BaseBuffer &tx_buf_network, ACCL::BaseBuffer &rx_buf_ne
 }
 
 ACCLContext fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
-                                          bool useAcclEmulation, ACCL::networkProtocol protocol) {
+                                          hpcc_base::BaseSettings &programSettings) {
   int current_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &current_rank);
 
@@ -92,19 +92,19 @@ ACCLContext fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
   std::vector<ACCL::rank_t> ranks = {};
   for (int i = 0; i < current_size; ++i) {
     // TODO: Replace the ip addresses and ports here for execution of real hardware?
-    ACCL::rank_t new_rank = {"10.10.10." + std::to_string(i), 5500 + i, i, ACCL_BUFFER_SIZE};
+    ACCL::rank_t new_rank = {"10.10.10." + std::to_string(i), 6000 + i, i, programSettings.acclBufferSize};
     ranks.emplace_back(new_rank);
   }
 
   ACCLContext accl;
 
-  if (!useAcclEmulation) {
+  if (!programSettings.useAcclEmulation) {
     std::cout << "Create cclo ip" << std::endl;
     auto cclo_ip = xrt::ip(device, program, "ccl_offload:{ccl_offload_" + std::to_string(0) + "}");
     std::cout << "Create hostctrl" << std::endl;
     auto hostctrl_ip = xrt::kernel(device, program, "hostctrl:{hostctrl_" + std::to_string(0) + "}",
                                    xrt::kernel::cu_access_mode::exclusive);
-    if (protocol == ACCL::networkProtocol::UDP) {
+    if (programSettings.acclProtocol == ACCL::networkProtocol::UDP) {
       std::cout << "Create CMAC" << std::endl;
       auto cmac = CMAC(xrt::ip(device, program, "cmac_0:{cmac_0}"));
       std::cout << "Create Network Layer" << std::endl;
@@ -113,7 +113,7 @@ ACCLContext fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
       std::cout << "Configure VNX" << std::endl;
       configure_vnx(cmac, network_layer, ranks, current_rank);
     }
-    if (protocol == ACCL::networkProtocol::TCP) {
+    if (programSettings.acclProtocol == ACCL::networkProtocol::TCP) {
       auto network_krnl = xrt::kernel(device, program, "network_krnl:{network_krnl_0}",
                       xrt::kernel::cu_access_mode::exclusive);
       accl.tx_buf_network = std::unique_ptr<ACCL::BaseBuffer>(new ACCL::FPGABuffer<int8_t>(
@@ -125,14 +125,14 @@ ACCLContext fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
     std::vector<int> mem(1, 0);
     std::cout << "Create ACCL" << std::endl;
     accl.accl = std::unique_ptr<ACCL::ACCL>(
-        new ACCL::ACCL(ranks, current_rank, device, cclo_ip, hostctrl_ip, 0, mem, protocol, 16, ACCL_BUFFER_SIZE));
+        new ACCL::ACCL(ranks, current_rank, device, cclo_ip, hostctrl_ip, 0, mem, programSettings.acclProtocol, programSettings.acclBufferCount, programSettings.acclBufferSize));
   } else {
     // TODO: Add start port here. Currenty hardcoded!
     accl.accl = std::unique_ptr<ACCL::ACCL>(
-        new ACCL::ACCL(ranks, current_rank, 6000, device, protocol, 16, ACCL_BUFFER_SIZE));
+        new ACCL::ACCL(ranks, current_rank, 6000, device, programSettings.acclProtocol, programSettings.acclBufferCount, programSettings.acclBufferSize));
   }
 
-  if (protocol == ACCL::networkProtocol::TCP) {
+  if (programSettings.acclProtocol == ACCL::networkProtocol::TCP) {
     MPI_Barrier(MPI_COMM_WORLD);
     accl.accl->open_port();
     MPI_Barrier(MPI_COMM_WORLD);

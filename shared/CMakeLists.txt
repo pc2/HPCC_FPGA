@@ -12,7 +12,7 @@ endif()
 if (USE_XRT_HOST)
     list(APPEND HPCC_BASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup_xrt.cpp)
 endif()
-list(APPEND HPCC_BASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup.cpp)
+list(APPEND HPCC_BASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup.cpp ${CMAKE_CURRENT_SOURCE_DIR}/hpcc_settings.cpp)
 add_library(hpcc_fpga_base STATIC ${HPCC_BASE_SOURCES})
 if (USE_ACCL)
     add_subdirectory(${extern_accl_SOURCE_DIR}/test/hardware/xup_vitis_network_example/xrt_host_api
