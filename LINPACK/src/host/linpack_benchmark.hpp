@@ -48,7 +48,7 @@ namespace linpack {
  * 
  */
 template<class TDevice, class TContext, class TProgram>
-class LinpackBenchmark : public hpcc_base::HpccFpgaBenchmark<LinpackProgramSettings, TDevice, TContext, TProgram, LinpackData, LinpackExecutionTimings> {
+class LinpackBenchmark : public hpcc_base::HpccFpgaBenchmark<LinpackProgramSettings, TDevice, TContext, TProgram, LinpackData<TContext>, LinpackExecutionTimings> {
 
 protected:
 
@@ -77,7 +77,7 @@ protected:
      * @param data The local data. b will contain the solution for the unknows that were handeled by this rank
      */
     void 
-    distributed_gesl_nopvt_ref(linpack::LinpackData& data) {
+    distributed_gesl_nopvt_ref(linpack::LinpackData<TContext>& data) {
     uint global_matrix_size = this->executionSettings->programSettings->matrixSize;
     uint matrix_width = data.matrix_width;
     uint matrix_height = data.matrix_height;
@@ -209,7 +209,7 @@ public:
      * 
      * @return std::unique_ptr<LinpackData> The input and output data of the benchmark
      */
-    std::unique_ptr<LinpackData>
+    std::unique_ptr<LinpackData<TContext>>
     generateInputData() override {
     int local_matrix_width = this->executionSettings->programSettings->matrixSize / this->executionSettings->programSettings->torus_width;
     int local_matrix_height = this->executionSettings->programSettings->matrixSize / this->executionSettings->programSettings->torus_height;
@@ -219,7 +219,7 @@ public:
             throw std::runtime_error("Global matrix size must be multiple of LCM of PQ grid!");
     }
 
-    auto d = std::unique_ptr<linpack::LinpackData>(new linpack::LinpackData(*this->executionSettings->context ,local_matrix_width, local_matrix_height));
+    auto d = std::unique_ptr<linpack::LinpackData<TContext>>(new linpack::LinpackData<TContext>(*this->executionSettings->context ,local_matrix_width, local_matrix_height));
     std::mt19937 gen(this->mpi_comm_rank);
     std::uniform_real_distribution<> dis(0.0, 1.0);
     d->norma = 0.0;
@@ -305,7 +305,7 @@ public:
      * @return std::unique_ptr<LinpackExecutionTimings> Measured runtimes of the kernel execution
      */
     std::unique_ptr<LinpackExecutionTimings>
-    executeKernel(LinpackData &data) override {
+    executeKernel(LinpackData<TContext> &data) override {
     std::unique_ptr<linpack::LinpackExecutionTimings> timings;
     switch (this->executionSettings->programSettings->communicationType) {
 #ifdef USE_OCL_HOST
@@ -335,7 +335,7 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(LinpackData &data) override {
+    validateOutputAndPrintError(LinpackData<TContext> &data) override {
     uint n= this->executionSettings->programSettings->matrixSize;
     uint matrix_width = data.matrix_width;
     uint matrix_height = data.matrix_height;
@@ -577,7 +577,7 @@ public:
      * @param argc the number of program input parameters
      * @param argv the program input parameters as array of strings
      */
-    LinpackBenchmark(int argc, char* argv[]) : hpcc_base::HpccFpgaBenchmark<linpack::LinpackProgramSettings, TDevice, TContext, TProgram, linpack::LinpackData, linpack::LinpackExecutionTimings>(argc, argv) {
+    LinpackBenchmark(int argc, char* argv[]) : hpcc_base::HpccFpgaBenchmark<linpack::LinpackProgramSettings, TDevice, TContext, TProgram, linpack::LinpackData<TContext>, linpack::LinpackExecutionTimings>(argc, argv) {
         this->setupBenchmark(argc, argv);
     }
 

@@ -62,37 +62,6 @@ linpack::LinpackProgramSettings::getSettingsMap() {
         return map;
 }
 
-linpack::LinpackData::LinpackData(cl::Context context, size_t width, size_t height) : norma(0.0), context(context),
-    matrix_width(width), matrix_height(height) {
-#ifdef USE_SVM
-    A = reinterpret_cast<HOST_DATA_TYPE*>(
-                        clSVMAlloc(context(), 0 ,
-                        size * size * sizeof(HOST_DATA_TYPE), 1024));
-    b = reinterpret_cast<HOST_DATA_TYPE*>(
-                        clSVMAlloc(context(), 0 ,
-                        size  * sizeof(HOST_DATA_TYPE), 1024));
-    ipvt = reinterpret_cast<cl_int*>(
-                        clSVMAlloc(context(), 0 ,
-                        size * sizeof(cl_int), 1024));
-#else
-    posix_memalign(reinterpret_cast<void**>(&A), 4096, width * height * sizeof(HOST_DATA_TYPE));
-    posix_memalign(reinterpret_cast<void**>(&b), 4096, width * sizeof(HOST_DATA_TYPE));
-    posix_memalign(reinterpret_cast<void**>(&ipvt), 4096, height * sizeof(cl_int));
-#endif
-    }
-
-linpack::LinpackData::~LinpackData() {
-#ifdef USE_SVM
-    clSVMFree(context(), reinterpret_cast<void*>(A));
-    clSVMFree(context(), reinterpret_cast<void*>(b));
-    clSVMFree(context(), reinterpret_cast<void*>(ipvt));
-#else
-    free(A);
-    free(b);
-    free(ipvt);
-#endif
-}
-
 /**
 Standard LU factorization on a block with fixed size
 

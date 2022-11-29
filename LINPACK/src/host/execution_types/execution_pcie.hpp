@@ -52,7 +52,7 @@ namespace pcie {
 */
 std::unique_ptr<linpack::LinpackExecutionTimings>
 calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings, cl::Device, cl::Context, cl::Program>&config,
-          linpack::LinpackData& data) {
+          linpack::LinpackData<cl::Context>& data) {
 
     cl_int err;
 

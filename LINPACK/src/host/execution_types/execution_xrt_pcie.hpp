@@ -47,10 +47,11 @@ namespace xrt_pcie {
 
  @copydoc bm_execution::calculate()
 */
+template<class TContext>
 std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
     const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings,
-                                       xrt::device, bool, xrt::uuid> &config,
-    linpack::LinpackData &data) {
+                                       xrt::device, TContext, xrt::uuid> &config,
+    linpack::LinpackData<TContext> &data) {
 
   cl_int err;
 

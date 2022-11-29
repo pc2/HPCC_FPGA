@@ -49,8 +49,8 @@ namespace accl_buffers {
 */
 std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
     const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings,
-                                       xrt::device, bool, xrt::uuid> &config,
-    linpack::LinpackData &data) {
+                                       xrt::device, fpga_setup::ACCLContext, xrt::uuid> &config,
+    linpack::LinpackData<fpga_setup::ACCLContext> &data) {
 
   cl_int err;
 
@@ -67,7 +67,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
 
   // Get group of global communicator
   std::vector<ACCL::rank_t> all_accl_ranks =
-      config.accl->get_comm_group(ACCL::GLOBAL_COMM);
+      config.context->accl->get_comm_group(ACCL::GLOBAL_COMM);
 
   std::vector<ACCL::rank_t> row_ranks;
   std::vector<ACCL::rank_t> col_ranks;
@@ -86,9 +86,9 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
   }
 
   // Create communicators from sub-groups
-  ACCL::communicatorId row_comm = config.accl->create_communicator(
+  ACCL::communicatorId row_comm = config.context->accl->create_communicator(
       row_ranks, config.programSettings->torus_col);
-  ACCL::communicatorId col_comm = config.accl->create_communicator(
+  ACCL::communicatorId col_comm = config.context->accl->create_communicator(
       col_ranks, config.programSettings->torus_row);
 
   // Create global memory buffers
@@ -120,7 +120,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                            (config.programSettings->blockSize) *
                            (config.programSettings->blockSize),
                        lu_tmp_kernel.group_id(1));
-  auto Buffer_lu1 = config.accl->create_buffer<HOST_DATA_TYPE>(
+  auto Buffer_lu1 = config.context->accl->create_buffer<HOST_DATA_TYPE>(
       tmp_bos.back(),
       (config.programSettings->blockSize) * (config.programSettings->blockSize),
       ACCL::dataType::float32);
@@ -129,7 +129,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                            (config.programSettings->blockSize) *
                            (config.programSettings->blockSize),
                        lu_tmp_kernel.group_id(2));
-  auto Buffer_lu2 = config.accl->create_buffer<HOST_DATA_TYPE>(
+  auto Buffer_lu2 = config.context->accl->create_buffer<HOST_DATA_TYPE>(
       tmp_bos.back(),
       (config.programSettings->blockSize) * (config.programSettings->blockSize),
       ACCL::dataType::float32);
@@ -151,7 +151,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                                (config.programSettings->blockSize),
                            lu_tmp_kernel.group_id(1));
       Buffer_top_list.back().push_back(
-          config.accl->create_buffer<HOST_DATA_TYPE>(
+          config.context->accl->create_buffer<HOST_DATA_TYPE>(
               tmp_bos.back(),
               (config.programSettings->blockSize) *
                   (config.programSettings->blockSize),
@@ -166,7 +166,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                                (config.programSettings->blockSize),
                            lu_tmp_kernel.group_id(2));
       Buffer_left_list.back().push_back(
-          config.accl->create_buffer<HOST_DATA_TYPE>(
+          config.context->accl->create_buffer<HOST_DATA_TYPE>(
               tmp_bos.back(),
               (config.programSettings->blockSize) *
                   (config.programSettings->blockSize),
@@ -291,12 +291,12 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
           // FPGAs
 
           // Broadcast LU block in column to update all left blocks
-          config.accl->bcast(*Buffer_lu2,
+          config.context->accl->bcast(*Buffer_lu2,
                              config.programSettings->blockSize *
                                  config.programSettings->blockSize,
                              local_block_row_remainder, col_comm, true, true);
           // Broadcast LU block in row to update all top blocks
-          config.accl->bcast(*Buffer_lu1,
+          config.context->accl->bcast(*Buffer_lu1,
                              config.programSettings->blockSize *
                                  config.programSettings->blockSize,
                              local_block_col_remainder, row_comm, true, true);
@@ -352,7 +352,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                lbi <
                std::max(static_cast<int>(blocks_per_col - local_block_col), 0);
                lbi++) {
-            config.accl->bcast(*Buffer_left_list[block_row % 2][lbi],
+            config.context->accl->bcast(*Buffer_left_list[block_row % 2][lbi],
                                config.programSettings->blockSize *
                                    config.programSettings->blockSize,
                                local_block_col_remainder, row_comm, true, true);
@@ -361,7 +361,7 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
                tbi <
                std::max(static_cast<int>(blocks_per_row - local_block_row), 0);
                tbi++) {
-            config.accl->bcast(*Buffer_top_list[block_row % 2][tbi],
+            config.context->accl->bcast(*Buffer_top_list[block_row % 2][tbi],
                                config.programSettings->blockSize *
                                    config.programSettings->blockSize,
                                local_block_row_remainder, col_comm, true, true);
