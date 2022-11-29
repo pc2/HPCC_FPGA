@@ -9,10 +9,6 @@ else()
         set(VPP_FLAGS "-O3")
 endif()
 
-if (USE_ACCL)
-   include(${CMAKE_SOURCE_DIR}/../cmake/accl.cmake)
-endif()
-
 set(file_endings "cl" "cpp" )
 
 ##

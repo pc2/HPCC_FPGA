@@ -50,6 +50,11 @@ endif()
 # Download build dependencies
 add_subdirectory(${CMAKE_SOURCE_DIR}/../extern ${CMAKE_BINARY_DIR}/extern)
 
+# Enable ACCL if required
+if (USE_ACCL)
+   include(${CMAKE_SOURCE_DIR}/../cmake/accl.cmake)
+endif()
+
 # Set the used data type
 if (NOT DATA_TYPE)
     set(DATA_TYPE float CACHE STRING "Data type used for calculation")
