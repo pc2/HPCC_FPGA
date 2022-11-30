@@ -117,13 +117,13 @@ function(generate_kernel_targets_xilinx)
                 set(kernel_name_flag -k ${CMAKE_MATCH_1})
             endif()
             add_custom_command(OUTPUT ${kernel}
-                    COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} ${VPP_FLAGS} -DKERNEL_${CMAKE_MATCH_1} -DEMULATE -t sw_emu ${kernel_name_flag} ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_COMPILE_FLAGS} -f ${FPGA_BOARD_NAME} -g -c ${XILINX_COMPILE_FLAGS} -o ${kernel} ${source_f}
+                    COMMAND ${Vitis_COMPILER} ${local_CLFLAGS} ${VPP_FLAGS} -DKERNEL_${CMAKE_MATCH_1} -DEMULATE -t sw_emu ${kernel_name_flag} ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_COMPILE_FLAGS} -f ${FPGA_BOARD_NAME} -c ${XILINX_COMPILE_FLAGS} -o ${kernel} ${source_f}
                     MAIN_DEPENDENCY ${source_f}
                     DEPENDS ${XILINX_COMPILE_SETTINGS_FILE}
                     )
         endforeach()
         add_custom_command(OUTPUT ${bitstream_emulate_f}
-            COMMAND ${Vitis_COMPILER} ${local_CL_FLAGS} ${VPP_FLAGS} -DEMULATE -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} -f ${FPGA_BOARD_NAME} -g -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
+            COMMAND ${Vitis_COMPILER} ${local_CL_FLAGS} ${VPP_FLAGS} -DEMULATE -t sw_emu ${COMPILER_INCLUDES} ${XILINX_ADDITIONAL_LINK_FLAGS} -f ${FPGA_BOARD_NAME} -l --config ${xilinx_link_settings} ${XILINX_COMPILE_FLAGS} -o ${bitstream_emulate_f} ${bitstream_compile_emulate}
                 DEPENDS ${bitstream_compile_emulate}
                 DEPENDS ${xilinx_link_settings}
                 )
