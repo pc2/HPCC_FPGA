@@ -413,11 +413,13 @@ std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
         for (auto &run : outer_mms) {
           run.wait();
         }
+
+#ifndef NDEBUG
+        // Wait for iiner MMs in this communication round to keep
+        // sync with prints
         for (auto &run : inner_mms) {
           run.wait();
         }
-
-#ifndef NDEBUG
         MPI_Barrier(MPI_COMM_WORLD);
         if (is_calulating_lu_block)
           std::cout << "---------------" << std::endl;
