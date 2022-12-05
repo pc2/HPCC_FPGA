@@ -296,6 +296,40 @@ TEST_P(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
     EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
 }
 
+TEST_P(NetworkKernelTest, JsonDump) {
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(8,4));
+    bm->executeKernel(*data);
+    bm->collectResults();
+    bm->dumpConfigurationAndResults("b_eff.json");
+    std::FILE *f = std::fopen("b_eff.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        json j = json::parse(f);
+        EXPECT_TRUE(j.contains("timings"));
+        if (j.contains("timings")) {
+            EXPECT_TRUE(j["timings"].size() > 0);
+            if (j["timings"].size() > 0) {
+                for (const auto& timing: j["timings"].items()) {
+                    EXPECT_TRUE(timing.value().contains("maxCalcBW"));
+                    EXPECT_TRUE(timing.value().contains("maxMinCalculationTime"));
+                    EXPECT_TRUE(timing.value().contains("timings"));
+                    if (timing.value().contains("timings")) {
+                        for (const auto& timing: timing.value()["timings"]) {
+                            EXPECT_TRUE(timing.contains("looplength"));
+                            EXPECT_TRUE(timing.contains("messageSize"));
+                            EXPECT_TRUE(timing.contains("timings"));
+                        }
+                    }
+                }
+            }
+        }
+        EXPECT_TRUE(j.contains("results"));
+        if (j.contains("results")) {
+            EXPECT_TRUE(j["results"].contains("b_eff"));
+        }
+    }
+}
 
 
 INSTANTIATE_TEST_CASE_P(

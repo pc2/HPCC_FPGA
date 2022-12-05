@@ -5,6 +5,7 @@
 #include "parameters.h"
 #include "test_program_settings.h"
 #include "linpack_benchmark.hpp"
+#include "nlohmann/json.hpp"
 
 #ifdef _LAPACK_
 #ifdef _DP
@@ -93,6 +94,36 @@ TEST_P(LinpackKernelTest, DISABLED_ValidationWorksForMKL) {
 
 
 #endif
+
+using json = nlohmann::json;
+
+TEST_P(LinpackKernelTest, JsonDump) {
+    bm->executeKernel(*data);
+    bm->collectResults();
+    bm->dumpConfigurationAndResults("linpack.json");
+    std::FILE *f = std::fopen("linpack.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        json j = json::parse(f);
+        EXPECT_TRUE(j.contains("timings"));
+        if (j.contains("timings")) {
+            EXPECT_TRUE(j["timings"].contains("gefa"));
+            EXPECT_TRUE(j["timings"].contains("gesl"));
+        }
+        EXPECT_TRUE(j.contains("results"));
+        if (j.contains("results")) {
+            EXPECT_TRUE(j["results"].contains("gflops"));
+            EXPECT_TRUE(j["results"].contains("gflops_lu"));
+            EXPECT_TRUE(j["results"].contains("gflops_sl"));
+            EXPECT_TRUE(j["results"].contains("t_mean"));
+            EXPECT_TRUE(j["results"].contains("t_min"));
+            EXPECT_TRUE(j["results"].contains("tlu_mean"));
+            EXPECT_TRUE(j["results"].contains("tlu_min"));
+            EXPECT_TRUE(j["results"].contains("tsl_mean"));
+            EXPECT_TRUE(j["results"].contains("tsl_min"));
+        }
+    }
+}
 
 INSTANTIATE_TEST_CASE_P(
         LinpackKernelParametrizedTests,

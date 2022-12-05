@@ -6,6 +6,7 @@
 #include "fft_benchmark.hpp"
 #include "parameters.h"
 #include "test_program_settings.h"
+#include "nlohmann/json.hpp"
 
 
 struct FFTHostTest : testing::Test {
@@ -118,5 +119,29 @@ TEST_F(FFTHostTest, FFTandiFFTProduceResultCloseToSource) {
 
     for (int i=1; i < (1 << LOG_FFT_SIZE); i++) {
         EXPECT_NEAR(std::abs(data->data[i]), std::abs(verify_data->data[i]), 0.001);
+    }
+}
+
+using json = nlohmann::json;
+
+TEST_F(FFTHostTest, JsonDump) {
+    bm->executeKernel(*data);
+    bm->collectResults();
+    bm->dumpConfigurationAndResults("fft.json");
+    std::FILE *f = std::fopen("fft.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        json j = json::parse(f);
+        EXPECT_TRUE(j.contains("timings"));
+        if (j.contains("timings")) {
+            EXPECT_TRUE(j["timings"].contains("calculation"));
+        }
+        EXPECT_TRUE(j.contains("results"));
+        if (j.contains("results")) {
+            EXPECT_TRUE(j["results"].contains("gflops_avg"));
+            EXPECT_TRUE(j["results"].contains("gflops_min"));
+            EXPECT_TRUE(j["results"].contains("t_avg"));
+            EXPECT_TRUE(j["results"].contains("t_min"));
+        }
     }
 }

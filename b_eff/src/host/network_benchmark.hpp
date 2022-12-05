@@ -247,7 +247,7 @@ public:
                     json j;
                     j["unit"] = "s";
                     j["value"] = timing;
-                    calculation_timings.push_back(timing);
+                    calculation_timings.push_back(j);
                 }
                 single_timing_json["timings"] = calculation_timings;
                 timings_json.push_back(single_timing_json);

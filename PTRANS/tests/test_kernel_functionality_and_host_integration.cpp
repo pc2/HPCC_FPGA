@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 #include "parameters.h"
 #include "test_program_settings.h"
-
+#include "nlohmann/json.hpp"
 
 struct TransposeKernelTest : testing::Test {
     std::shared_ptr<transpose::TransposeData> data;
@@ -204,3 +204,35 @@ TEST_F(TransposeKernelTest, FPGATimingsMeasuredForEveryIteration) {
     }
 }
 
+using json = nlohmann::json;
+
+TEST_F(TransposeKernelTest, JsonDump) {
+    bm->executeKernel(*data);
+    bm->collectResults();
+    bm->dumpConfigurationAndResults("ptrans.json");
+    std::FILE *f = std::fopen("ptrans.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        json j = json::parse(f);
+        EXPECT_TRUE(j.contains("timings"));
+        if (j.contains("timings")) {
+            EXPECT_TRUE(j["timings"].contains("calculation"));
+            EXPECT_TRUE(j["timings"].contains("transfer"));
+        }
+        EXPECT_TRUE(j.contains("timings"));
+        if (j.contains("results")) {
+            EXPECT_TRUE(j["results"].contains("avg_calc_flops"));
+            EXPECT_TRUE(j["results"].contains("avg_calc_t"));
+            EXPECT_TRUE(j["results"].contains("avg_mem_bandwidth"));
+            EXPECT_TRUE(j["results"].contains("avg_t"));
+            EXPECT_TRUE(j["results"].contains("avg_transfer_bandwidth"));
+            EXPECT_TRUE(j["results"].contains("avg_transfer_t"));
+            EXPECT_TRUE(j["results"].contains("max_calc_flops"));
+            EXPECT_TRUE(j["results"].contains("max_mem_bandwidth"));
+            EXPECT_TRUE(j["results"].contains("max_transfer_bandwidth"));
+            EXPECT_TRUE(j["results"].contains("min_calc_t"));
+            EXPECT_TRUE(j["results"].contains("min_t"));
+            EXPECT_TRUE(j["results"].contains("min_transfer_t"));
+        }
+    }
+}

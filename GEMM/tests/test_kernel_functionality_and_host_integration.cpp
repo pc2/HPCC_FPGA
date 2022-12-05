@@ -7,6 +7,7 @@
 #include "gemm_benchmark.hpp"
 #include "parameters.h"
 #include "test_program_settings.h"
+#include "nlohmann/json.hpp"
 
 void
 ref_matmul(HOST_DATA_TYPE* A, HOST_DATA_TYPE* B, HOST_DATA_TYPE* C, int size) {
@@ -175,6 +176,29 @@ TEST_P(GEMMKernelTest, FPGACorrectbetaCplusalphaAB) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             EXPECT_NEAR(data->C_out[i * matrix_size + j], c_ref_out[i * matrix_size + j], std::numeric_limits<HOST_DATA_TYPE>::epsilon() * matrix_size * matrix_size);
+        }
+    }
+}
+
+using json = nlohmann::json;
+
+TEST_P(GEMMKernelTest, JsonDump) {
+    bm->executeKernel(*data);
+    bm->collectResults();
+    bm->dumpConfigurationAndResults("gemm.json");
+    std::FILE *f = std::fopen("gemm.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        json j = json::parse(f);
+        EXPECT_TRUE(j.contains("timings"));
+        if (j.contains("timings")) {
+            EXPECT_TRUE(j["timings"].contains("execution"));
+        }
+        EXPECT_TRUE(j.contains("results"));
+        if (j.contains("results")) {
+            EXPECT_TRUE(j["results"].contains("gflops"));
+            EXPECT_TRUE(j["results"].contains("t_mean"));
+            EXPECT_TRUE(j["results"].contains("t_min"));
         }
     }
 }
