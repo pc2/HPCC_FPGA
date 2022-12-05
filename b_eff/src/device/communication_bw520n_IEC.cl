@@ -52,7 +52,7 @@ typedef struct {
 {% for i in range(num_replications) %}
 channel message_part ch_out_{{ 2*i + 1 }} __attribute((io("kernel_output_ch{{ i % 4 }}")));
 channel message_part ch_out_{{ 2*i + 2 }} __attribute((io("kernel_output_ch{{ (i + 2) % 4 }}")));
-channel message_part ch_in_{{ 2*i + 1 }} __attribute((io("kernel_input_ch{{ i % 4 }} ")));
+channel message_part ch_in_{{ 2*i + 1 }} __attribute((io("kernel_input_ch{{ i % 4 }}")));
 channel message_part ch_in_{{ 2*i + 2 }}  __attribute((io("kernel_input_ch{{ (i + 2) % 4 }}")));
 channel message_part ch_exchange{{ 2*i + 1 }};
 channel message_part ch_exchange{{ 2*i + 2 }};
