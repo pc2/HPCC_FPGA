@@ -31,6 +31,33 @@ SOFTWARE.
 #include "hpcc_benchmark.hpp"
 #include "parameters.h"
 
+#ifdef XILINX_FPGA
+template <typename T>
+struct aligned_allocator {
+
+   //    typedefs
+          typedef T value_type;
+          typedef value_type* pointer;
+          typedef const value_type* const_pointer;
+
+	   pointer allocate(size_t pCount, const_pointer = 0){ 
+	    	T* mem = 0;
+	    	if (posix_memalign(reinterpret_cast<void**>(&mem), 4096, sizeof(T) * pCount) != 0) {
+	    		throw std::bad_alloc();
+	        }
+		return mem; 
+	   }
+
+	   void deallocate(pointer pPtr, size_t pCount) { 
+	       free(pPtr);
+	   }
+};
+	   
+namespace cl {
+    template <class T> using vector = std::vector<T,aligned_allocator<T>>; 
+}
+#endif
+
 /**
  * @brief Contains all classes and methods needed by the Network benchmark
  * 
@@ -127,6 +154,34 @@ public:
      * 
      */
     uint llDecrease;
+
+    /**
+     * @brief his is automatically set to true if one of pcie_reverse_write_pcie, pcie_reverse_read_pcie, 
+     * or pcie_reverse_execute_kernel is set to true. The reverse PCIe experiment will be executed in that case.
+     * 
+     */
+    bool pcie_reverse;
+
+    /**
+     * @brief If true, the benchmark will execute the reverse PCIe benchmark instead. It will write data to the FPGA. 
+     * The other pcie_reverse flags can be set to do additional operations within the measurement.
+     * 
+     */
+    bool pcie_reverse_write_pcie;
+
+    /**
+     * @brief If true, the benchmark will execute the reverse PCIe benchmark instead. It will execute an empty kernel. 
+     * The other pcie_reverse flags can be set to do additional operations within the measurement.
+     * 
+     */
+    bool pcie_reverse_execute_kernel;
+
+    /**
+     * @brief If true, the benchmark will execute the reverse PCIe benchmark instead. It will read data from the FPGA. 
+     * The other pcie_reverse flags can be set to do additional operations within the measurement.
+     * 
+     */
+    bool pcie_reverse_read_pcie;
 
     /**
      * @brief Construct a new Network Program Settings object

@@ -22,4 +22,7 @@ SOFTWARE.
 
 #include "execution_types/execution_cpu.hpp"
 #include "execution_types/execution_pcie.hpp"
+#include "execution_types/execution_pcie_reverse.hpp"
+#if INTEL_FPGA
 #include "execution_types/execution_iec.hpp"
+#endif
