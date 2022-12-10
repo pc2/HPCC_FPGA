@@ -75,36 +75,43 @@ For execution of the benchmark run:
 For more information on available input parameters run
 
     ./GEMM_intel -h
-    
+
     Implementation of the GEMM benchmark proposed in the HPCC benchmark adapted for FPGA
+    Version: 1.3
+
+    MPI Version:  3.1
+    Config. Time: Thu Dec 08 10:39:51 UTC 2022
+    Git Commit:   86e0064-dirty
+
     Usage:
-    ./GEMM_intel [OPTION...]
+      ./bin/GEMM_intel [OPTION...]
 
-Implementation of the GEMM benchmark proposed in the HPCC benchmark adapted for FPGA
-Version: 1.0
+      -f, --file arg          Kernel file name
+      -n, arg                 Number of repetitions (default: 10)
+      -i,                     Use memory Interleaving
+          --skip-validation   Skip the validation of the output data. This will
+                              speed up execution and helps when working with
+                              special data types.
+          --device arg        Index of the device that has to be used. If not
+                              given you will be asked which device to use if there
+                              are multiple devices available. (default: 0)
+          --platform arg      Index of the platform that has to be used. If not
+                              given you will be asked which platform to use if
+                              there are multiple platforms available. (default: 0)
+          --platform_str arg  Name of the platform that has to be used (default:
+                              )
+      -r, arg                 Number of used kernel replications (default: 4)
+          --dump-json arg     dump benchmark configuration and results to this
+                              file in json format (default: )
+          --test              Only test given configuration and skip execution
+                              and validation
+      -h, --help              Print this help
+      -m, arg                 Matrix size in number of blocks in a single
+                              dimension (default: 8)
+      -b, arg                 Block size in number of values in one dimension
+                              (default: 32)
+          --replicate-inputs  Also replicates the input buffer for each kernel
 
-Usage:
-  bin/GEMM_intel [OPTION...]
-
-    -f, --file arg         Kernel file name
-    -n, arg                Number of repetitions (default: 10)
-    -i,                    Use memory Interleaving
-        --skip-validation  Skip the validation of the output data. This will
-                            speed up execution and helps when working with special
-                            data types.
-        --device arg       Index of the device that has to be used. If not
-                            given you will be asked which device to use if there are
-                            multiple devices available. (default: -1)
-        --platform arg     Index of the platform that has to be used. If not
-                            given you will be asked which platform to use if there
-                            are multiple platforms available. (default: -1)
-    -h, --help             Print this help
-    -m, arg                Matrix size in number of blocks in a single
-                            dimension (default: 8)
-    -b, arg                Block size in number of values in one dimension
-                            (default: 256)
-    -r, arg                Number of used kernel replications (default: 4)
-    
 To execute the unit and integration tests run
 
     ./GEMM_test_intel -f KERNEL_FILE_NAME
@@ -116,16 +123,17 @@ It will run an emulation of the kernel and execute some functionality tests.
 
 An example output from an emulation is given below:
 
-    norm. resid        resid       machep
-    1.45417e-05  4.76837e-05  1.19209e-07
-           best         mean       GFLOPS
-    6.89168e-03  6.89168e-03  1.03868e+02
+     norm. residual      res. error          mach. eps          
+     8.08345e-05         7.62939e-06         1.19209e-07        
+
+     best                mean                GFLOPS             
+     6.50672e-03 s       1.06789e-02 s       5.15689e+00 GFLOP/s
 
 The first two rows give information about the calculation error.
 
-- `norm. resid`: The normalized residual error based on the used matrix size and used values
-- `resid`: The maximum residual error of the calculation
-- `machep`: The machine epsilon
+- `norm. residual`: The normalized residual error based on the used matrix size and used values
+- `res. error`: The maximum residual error of the calculation
+- `mach. epsilon`: The machine epsilon
 
 The last two columns contain the time measurements and based on that the achieved FLOPS
 of the calculation.
@@ -133,3 +141,106 @@ of the calculation.
 - `best`: The shortest execution time in all runs
 - `mean`: Arithmetic mean of all execution times
 - `GFLOPS`: GFLOPS calculated from the shortest execution time
+
+The json output looks like the following.
+
+```json
+
+{
+  "config_time": "Thu Dec 08 10:39:51 UTC 2022",
+  "device": "Intel(R) FPGA Emulation Device",
+  "environment": {
+    "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
+  },
+  "errors": {
+    "epsilon": {
+      "unit": "",
+      "value": 1.1920928955078125e-07
+    },
+    "residual": {
+      "unit": "",
+      "value": 7.62939453125e-06
+    },
+    "residual_norm": {
+      "unit": "",
+      "value": 8.08345175162664e-05
+    }
+  },
+  "git_commit": "86e0064-dirty",
+  "mpi": {
+    "subversion": 1,
+    "version": 3
+  },
+  "name": "GEMM",
+  "results": {
+    "gflops": {
+      "unit": "GFLOP/s",
+      "value": 5.347517549652832
+    },
+    "t_mean": {
+      "unit": "s",
+      "value": 0.009541589199999999
+    },
+    "t_min": {
+      "unit": "s",
+      "value": 0.006274768
+    }
+  },
+  "settings": {
+    "Communication Type": "UNSUPPORTED",
+    "Kernel File": "./bin/gemm_base_emulate.aocx",
+    "Kernel Replications": 4,
+    "MPI Ranks": 1,
+    "Matrix Size": 256,
+    "Repetitions": 10,
+    "Replicate Inputs": false,
+    "Test Mode": "No"
+  },
+  "timings": {
+    "execution": [
+      {
+        "unit": "s",
+        "value": 0.012631986
+      },
+      {
+        "unit": "s",
+        "value": 0.012796959
+      },
+      {
+        "unit": "s",
+        "value": 0.012527344
+      },
+      {
+        "unit": "s",
+        "value": 0.012579805
+      },
+      {
+        "unit": "s",
+        "value": 0.0064457
+      },
+      {
+        "unit": "s",
+        "value": 0.006274768
+      },
+      {
+        "unit": "s",
+        "value": 0.00642924
+      },
+      {
+        "unit": "s",
+        "value": 0.012808459
+      },
+      {
+        "unit": "s",
+        "value": 0.006587663
+      },
+      {
+        "unit": "s",
+        "value": 0.006333968
+      }
+    ]
+  },
+  "version": "1.3"
+}
+
+```

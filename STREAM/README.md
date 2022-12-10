@@ -73,24 +73,40 @@ For execution of the benchmark run:
 For more information on available input parameters run
 
     $./STREAM_FPGA_intel -h
+
     Implementation of the STREAM benchmark proposed in the HPCC benchmark suite for FPGA.
+    Version: 2.6
+
+    MPI Version:  3.1
+    Config. Time: Thu Dec 08 10:43:26 UTC 2022
+    Git Commit:   86e0064-dirty
+
     Usage:
-    ./STREAM_FPGA_xilinx [OPTION...]
+      ./bin/STREAM_FPGA_intel [OPTION...]
 
-    -f, --file arg       Kernel file name
-    -n, arg              Number of repetitions (default: 10)
-    -s, arg              Size of the data arrays (default: 134217728)
-    -r, arg              Number of kernel replications used (default: 1)
-        --multi-kernel  Use the legacy multi-kernel implementation
-        --device arg     Index of the device that has to be used. If not given
-                        you will be asked which device to use if there are
-                        multiple devices available. (default: -1)
-        --platform arg   Index of the platform that has to be used. If not
-                        given you will be asked which platform to use if there are
-                        multiple platforms available. (default: -1)
-    -h, --help           Print this help
+      -f, --file arg          Kernel file name
+      -n, arg                 Number of repetitions (default: 10)
+      -i,                     Use memory Interleaving
+          --skip-validation   Skip the validation of the output data. This will
+                              speed up execution and helps when working with
+                              special data types.
+          --device arg        Index of the device that has to be used. If not
+                              given you will be asked which device to use if there
+                              are multiple devices available. (default: 0)
+          --platform arg      Index of the platform that has to be used. If not
+                              given you will be asked which platform to use if
+                              there are multiple platforms available. (default: 0)
+          --platform_str arg  Name of the platform that has to be used (default:
+                              )
+      -r, arg                 Number of used kernel replications (default: 4)
+          --dump-json arg     dump benchmark configuration and results to this
+                              file in json format (default: )
+          --test              Only test given configuration and skip execution
+                              and validation
+      -h, --help              Print this help
+      -s, arg                 Size of the data arrays (default: 134217728)
+          --multi-kernel      Use the legacy multi kernel implementation
 
-    
 To execute the unit and integration tests for Intel devices run
 
     CL_CONTEXT_EMULATOR_DEVICE=1 ./STREAM_FPGA_test_intel -f KERNEL_FILE_NAME
@@ -102,13 +118,13 @@ It will run an emulation of the kernel and execute some functionality tests.
 
 The output of the host application is similar to the original STREAM benchmark:
 
-	Function    Best Rate MB/s  Avg time     Min time     Max time
-	Copy:           30875.9     0.025914     0.025910     0.025919
-	Scale:          30885.6     0.025905     0.025902     0.025911
-	Add:            46289.2     0.025928     0.025924     0.025935
-	Triad:          45613.4     0.026310     0.026308     0.026312
-	PCI Write:       6324.0     0.189800     0.189753     0.189862
-	PCI Read:        5587.3     0.214869     0.214773     0.214943
+    Function            Best Rate           Avg time            Min time            Max time
+    PCI_write           2.68152e+04 MB/s    6.36535e-02 s       6.00633e-02 s       8.45139e-02 s
+    PCI_read            2.47220e+04 MB/s    6.72553e-02 s       6.51490e-02 s       6.82519e-02 s
+    Copy                4.75583e+04 MB/s    2.32275e-02 s       2.25774e-02 s       2.55071e-02 s
+    Scale               5.35745e+04 MB/s    2.13423e-02 s       2.00420e-02 s       2.42722e-02 s
+    Add                 5.36221e+04 MB/s    3.33479e-02 s       3.00364e-02 s       3.68116e-02 s
+    Triad               4.84564e+04 MB/s    3.46477e-02 s       3.32384e-02 s       3.70085e-02 s
 
 In addition it also measures the bandwidth of the connection between host and
 device. It is distinguished between writing to and reading from the devices
@@ -144,3 +160,427 @@ The raw data of these runs can be found in the folder `csv_result_export`.
 
 ##### Double Precision
 ![Double precision results](csv_result_export/dp_global_ring_plot.jpeg)
+
+```json
+
+{
+  "config_time": "Thu Dec 08 10:43:26 UTC 2022",
+  "device": "Intel(R) FPGA Emulation Device",
+  "environment": {
+    "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
+  },
+  "errors": {
+    "a_average_error": {
+      "unit": "",
+      "value": 0
+    },
+    "a_average_relative_error": {
+      "unit": "",
+      "value": 0
+    },
+    "a_expected_value": {
+      "unit": "",
+      "value": 1153300692992
+    },
+    "b_average_error": {
+      "unit": "",
+      "value": 0
+    },
+    "b_average_relative_error": {
+      "unit": "",
+      "value": 0
+    },
+    "b_expected_value": {
+      "unit": "",
+      "value": 230660145152
+    },
+    "c_average_error": {
+      "unit": "",
+      "value": 0
+    },
+    "c_average_relative_error": {
+      "unit": "",
+      "value": 0
+    },
+    "c_expected_value": {
+      "unit": "",
+      "value": 307546849280
+    },
+    "epsilon": {
+      "unit": "",
+      "value": 1.1920928955078125e-07
+    }
+  },
+  "git_commit": "86e0064-dirty",
+  "mpi": {
+    "subversion": 1,
+    "version": 3
+  },
+  "name": "STREAM",
+  "results": {
+    "Add_avg_t": {
+      "unit": "s",
+      "value": 0.033347886300000004
+    },
+    "Add_best_rate": {
+      "unit": "MB/s",
+      "value": 53622.07621998581
+    },
+    "Add_max_t": {
+      "unit": "s",
+      "value": 0.03681156
+    },
+    "Add_min_t": {
+      "unit": "s",
+      "value": 0.030036374
+    },
+    "Copy_avg_t": {
+      "unit": "s",
+      "value": 0.0232275248
+    },
+    "Copy_best_rate": {
+      "unit": "MB/s",
+      "value": 47558.26475478994
+    },
+    "Copy_max_t": {
+      "unit": "s",
+      "value": 0.025507117
+    },
+    "Copy_min_t": {
+      "unit": "s",
+      "value": 0.022577397
+    },
+    "PCI_read_avg_t": {
+      "unit": "s",
+      "value": 0.0672552576
+    },
+    "PCI_read_best_rate": {
+      "unit": "MB/s",
+      "value": 24721.98479896992
+    },
+    "PCI_read_max_t": {
+      "unit": "s",
+      "value": 0.06825187
+    },
+    "PCI_read_min_t": {
+      "unit": "s",
+      "value": 0.065149006
+    },
+    "PCI_write_avg_t": {
+      "unit": "s",
+      "value": 0.0636534559
+    },
+    "PCI_write_best_rate": {
+      "unit": "MB/s",
+      "value": 26815.238093906166
+    },
+    "PCI_write_max_t": {
+      "unit": "s",
+      "value": 0.084513938
+    },
+    "PCI_write_min_t": {
+      "unit": "s",
+      "value": 0.060063339
+    },
+    "Scale_avg_t": {
+      "unit": "s",
+      "value": 0.021342261699999997
+    },
+    "Scale_best_rate": {
+      "unit": "MB/s",
+      "value": 53574.52309080775
+    },
+    "Scale_max_t": {
+      "unit": "s",
+      "value": 0.024272246
+    },
+    "Scale_min_t": {
+      "unit": "s",
+      "value": 0.020042023
+    },
+    "Triad_avg_t": {
+      "unit": "s",
+      "value": 0.0346477169
+    },
+    "Triad_best_rate": {
+      "unit": "MB/s",
+      "value": 48456.4004453886
+    },
+    "Triad_max_t": {
+      "unit": "s",
+      "value": 0.037008534
+    },
+    "Triad_min_t": {
+      "unit": "s",
+      "value": 0.03323839
+    }
+  },
+  "settings": {
+    "Array Size": 134217728,
+    "Communication Type": "UNSUPPORTED",
+    "Data Type": "cl_float",
+    "Kernel File": "./bin/stream_kernels_single_emulate.aocx",
+    "Kernel Replications": 4,
+    "Kernel Type": "Single",
+    "MPI Ranks": 1,
+    "Repetitions": 10,
+    "Test Mode": "No"
+  },
+  "timings": {
+    "Add": [
+      {
+        "unit": "s",
+        "value": 0.03681156
+      },
+      {
+        "unit": "s",
+        "value": 0.030148826
+      },
+      {
+        "unit": "s",
+        "value": 0.034179315
+      },
+      {
+        "unit": "s",
+        "value": 0.03443528
+      },
+      {
+        "unit": "s",
+        "value": 0.030036374
+      },
+      {
+        "unit": "s",
+        "value": 0.03498338
+      },
+      {
+        "unit": "s",
+        "value": 0.033383682
+      },
+      {
+        "unit": "s",
+        "value": 0.03149675
+      },
+      {
+        "unit": "s",
+        "value": 0.035128302
+      },
+      {
+        "unit": "s",
+        "value": 0.032875394
+      }
+    ],
+    "Copy": [
+      {
+        "unit": "s",
+        "value": 0.023277928
+      },
+      {
+        "unit": "s",
+        "value": 0.023061445
+      },
+      {
+        "unit": "s",
+        "value": 0.022577397
+      },
+      {
+        "unit": "s",
+        "value": 0.025507117
+      },
+      {
+        "unit": "s",
+        "value": 0.022904103
+      },
+      {
+        "unit": "s",
+        "value": 0.023076385
+      },
+      {
+        "unit": "s",
+        "value": 0.022585516
+      },
+      {
+        "unit": "s",
+        "value": 0.023018084
+      },
+      {
+        "unit": "s",
+        "value": 0.023126956
+      },
+      {
+        "unit": "s",
+        "value": 0.023140317
+      }
+    ],
+    "PCI_read": [
+      {
+        "unit": "s",
+        "value": 0.066263925
+      },
+      {
+        "unit": "s",
+        "value": 0.065149006
+      },
+      {
+        "unit": "s",
+        "value": 0.06823823
+      },
+      {
+        "unit": "s",
+        "value": 0.067614649
+      },
+      {
+        "unit": "s",
+        "value": 0.068157828
+      },
+      {
+        "unit": "s",
+        "value": 0.06825187
+      },
+      {
+        "unit": "s",
+        "value": 0.068159038
+      },
+      {
+        "unit": "s",
+        "value": 0.066694763
+      },
+      {
+        "unit": "s",
+        "value": 0.067605659
+      },
+      {
+        "unit": "s",
+        "value": 0.066417608
+      }
+    ],
+    "PCI_write": [
+      {
+        "unit": "s",
+        "value": 0.084513938
+      },
+      {
+        "unit": "s",
+        "value": 0.060253183
+      },
+      {
+        "unit": "s",
+        "value": 0.060325944
+      },
+      {
+        "unit": "s",
+        "value": 0.064254031
+      },
+      {
+        "unit": "s",
+        "value": 0.060529077
+      },
+      {
+        "unit": "s",
+        "value": 0.063792623
+      },
+      {
+        "unit": "s",
+        "value": 0.060357565
+      },
+      {
+        "unit": "s",
+        "value": 0.060063339
+      },
+      {
+        "unit": "s",
+        "value": 0.060287283
+      },
+      {
+        "unit": "s",
+        "value": 0.062157576
+      }
+    ],
+    "Scale": [
+      {
+        "unit": "s",
+        "value": 0.021235864
+      },
+      {
+        "unit": "s",
+        "value": 0.020608554
+      },
+      {
+        "unit": "s",
+        "value": 0.020822067
+      },
+      {
+        "unit": "s",
+        "value": 0.020042023
+      },
+      {
+        "unit": "s",
+        "value": 0.021288745
+      },
+      {
+        "unit": "s",
+        "value": 0.020088374
+      },
+      {
+        "unit": "s",
+        "value": 0.021096531
+      },
+      {
+        "unit": "s",
+        "value": 0.021525769
+      },
+      {
+        "unit": "s",
+        "value": 0.024272246
+      },
+      {
+        "unit": "s",
+        "value": 0.022442444
+      }
+    ],
+    "Triad": [
+      {
+        "unit": "s",
+        "value": 0.037008534
+      },
+      {
+        "unit": "s",
+        "value": 0.036020228
+      },
+      {
+        "unit": "s",
+        "value": 0.033424273
+      },
+      {
+        "unit": "s",
+        "value": 0.033462613
+      },
+      {
+        "unit": "s",
+        "value": 0.033843901
+      },
+      {
+        "unit": "s",
+        "value": 0.033447893
+      },
+      {
+        "unit": "s",
+        "value": 0.03323839
+      },
+      {
+        "unit": "s",
+        "value": 0.036342203
+      },
+      {
+        "unit": "s",
+        "value": 0.03446487
+      },
+      {
+        "unit": "s",
+        "value": 0.035224264
+      }
+    ]
+  },
+  "version": "2.6"
+}
+
+```

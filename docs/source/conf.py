@@ -43,6 +43,7 @@ extensions = [
     'sphinx.ext.githubpages',
  #   'breathe',
     'sphinx_rtd_theme',
+    'myst_parser'
 ]
 
 # Enable Figure numbering and referencing

@@ -127,14 +127,13 @@ It will run an emulation of the kernel and execute some functionality tests.
 The host code will print the results of the execution to the standard output.
 The result  summary looks similar to this:
 
-    norm. resid        resid       machep   
-        3.25054e-08    5.88298e-05    1.19209e-07
-    Validation Time: 4.55059e+01 s
-            Method           best           mean         GFLOPS
-            total    5.87510e+01    5.87510e+01    2.10546e+04
-            GEFA    5.87510e+01    5.87510e+01    2.10541e+04
-            GESL    4.70000e-08    4.70000e-08    6.42532e+08
-    Validation: SUCCESS!
+     norm. residual      res. error          mach. eps
+    4.35451e-03         5.96046e-07         1.19209e-07
+
+     Method              best                mean                GFLOPS             
+     total              1.12152e-01 s       1.16113e-01 s       2.13045e-04 GFLOP/s 
+     GEFA               1.12152e-01 s       1.16113e-01 s       1.94784e-04 GFLOP/s 
+     GESL               2.00000e-08 s       3.97000e-08 s       1.02400e+02 GFLOP/s 
 
 The first row contains data from the correctness check that is done once when
 executing the benchmark:
@@ -155,3 +154,178 @@ The columns of the table contain the following information:
 The last row of the output will always contain `Validation: SUCCESS!`, if the norm. residual is below 1.
 This will be interpreted as successful validation.
 In this case, the executable will return 0 as exit code, 1 otherwise.
+
+The json output looks like the following.
+
+```json
+
+{
+  "config_time": "Thu Dec 08 10:41:13 UTC 2022",
+  "device": "Intel(R) FPGA Emulation Device",
+  "environment": {
+    "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
+  },
+  "errors": {
+    "epsilon": {
+      "unit": "",
+      "value": 1.1920928955078125e-07
+    },
+    "residual": {
+      "unit": "",
+      "value": 5.960464477539062e-07
+    },
+    "residual_norm": {
+      "unit": "",
+      "value": 0.004354506590071576
+    }
+  },
+  "git_commit": "86e0064-dirty",
+  "mpi": {
+    "subversion": 1,
+    "version": 3
+  },
+  "name": "LINPACK",
+  "results": {
+    "gflops": {
+      "unit": "GFLOP/s",
+      "value": 0.000213044786995575
+    },
+    "gflops_lu": {
+      "unit": "GFLOP/s",
+      "value": 0.00019478383998887983
+    },
+    "gflops_sl": {
+      "unit": "GFLOP/s",
+      "value": 102.4
+    },
+    "t_mean": {
+      "unit": "s",
+      "value": 0.1161132923
+    },
+    "t_min": {
+      "unit": "s",
+      "value": 0.112151692
+    },
+    "tlu_mean": {
+      "unit": "s",
+      "value": 0.11611325259999998
+    },
+    "tlu_min": {
+      "unit": "s",
+      "value": 0.112151672
+    },
+    "tsl_mean": {
+      "unit": "s",
+      "value": 3.97e-08
+    },
+    "tsl_min": {
+      "unit": "s",
+      "value": 2e-08
+    }
+  },
+  "settings": {
+    "Block Size": 16,
+    "Communication Type": "IEC",
+    "Data Type": "cl_float",
+    "Emulate": false,
+    "FPGA Torus": {
+      "P": 1,
+      "Q": 1
+    },
+    "Kernel File": "./bin/hpl_torus_IEC_emulate.aocx",
+    "Kernel Replications": 3,
+    "MPI Ranks": 1,
+    "Matrix Size": 32,
+    "Repetitions": 10,
+    "Test Mode": "No"
+  },
+  "timings": {
+    "gefa": [
+      {
+        "unit": "s",
+        "value": 0.112151672
+      },
+      {
+        "unit": "s",
+        "value": 0.112186842
+      },
+      {
+        "unit": "s",
+        "value": 0.114559183
+      },
+      {
+        "unit": "s",
+        "value": 0.114920089
+      },
+      {
+        "unit": "s",
+        "value": 0.113395783
+      },
+      {
+        "unit": "s",
+        "value": 0.113512676
+      },
+      {
+        "unit": "s",
+        "value": 0.118974459
+      },
+      {
+        "unit": "s",
+        "value": 0.11378015
+      },
+      {
+        "unit": "s",
+        "value": 0.131815478
+      },
+      {
+        "unit": "s",
+        "value": 0.115836194
+      }
+    ],
+    "gesl": [
+      {
+        "unit": "s",
+        "value": 2e-08
+      },
+      {
+        "unit": "s",
+        "value": 3e-08
+      },
+      {
+        "unit": "s",
+        "value": 3e-08
+      },
+      {
+        "unit": "s",
+        "value": 2.9e-08
+      },
+      {
+        "unit": "s",
+        "value": 1.5e-07
+      },
+      {
+        "unit": "s",
+        "value": 3e-08
+      },
+      {
+        "unit": "s",
+        "value": 2e-08
+      },
+      {
+        "unit": "s",
+        "value": 2.9e-08
+      },
+      {
+        "unit": "s",
+        "value": 2.9e-08
+      },
+      {
+        "unit": "s",
+        "value": 3e-08
+      }
+    ]
+  },
+  "version": "2.6"
+}
+
+```

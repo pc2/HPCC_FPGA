@@ -59,31 +59,36 @@ For execution of the benchmark run:
     
 For more information on available input parameters run
 
-    $./FFT_intel -h
+    ./FFT_intel -h
     
     Implementation of the FFT benchmark proposed in the HPCC benchmark suite for FPGA.
-    Version: 1.2
+    Version: 1.4
     Usage:
       ./FFT_intel [OPTION...]
     
-        -f, --file arg         Kernel file name
-        -n, arg                Number of repetitions (default: 10)
-        -i,                    Use memory Interleaving
-            --skip-validation  Skip the validation of the output data. This will
-                                speed up execution and helps when working with special
-                                data types.
-            --device arg       Index of the device that has to be used. If not
-                                given you will be asked which device to use if there are
-                                multiple devices available. (default: -1)
-            --platform arg     Index of the platform that has to be used. If not
-                                given you will be asked which platform to use if there
-                                are multiple platforms available. (default: -1)
-        -h, --help             Print this help
-        -b, arg                Number of batched FFT calculations (iterations)
-                                (default: 100)
-            --inverse          If set, the inverse FFT is calculated instead
-        -r, arg                Number of kernel replications used for calculation
-                                (default: 1)
+      -f, --file arg          Kernel file name
+      -n, arg                 Number of repetitions (default: 10)
+      -i,                     Use memory Interleaving
+          --skip-validation   Skip the validation of the output data. This will
+                              speed up execution and helps when working with
+                              special data types.
+          --device arg        Index of the device that has to be used. If not
+                              given you will be asked which device to use if there
+                              are multiple devices available. (default: 0)
+          --platform arg      Index of the platform that has to be used. If not
+                              given you will be asked which platform to use if
+                              there are multiple platforms available. (default: 0)
+          --platform_str arg  Name of the platform that has to be used (default:
+                              )
+      -r, arg                 Number of used kernel replications (default: 1)
+          --dump-json arg     dump benchmark configuration and results to this
+                              file in json format (default: )
+          --test              Only test given configuration and skip execution
+                              and validation
+      -h, --help              Print this help
+      -b, arg                 Number of batched FFT calculations (iterations)
+                              (default: 100)
+          --inverse           If set, the inverse FFT is calculated instead
     
 To execute the unit and integration tests run
 
@@ -96,12 +101,13 @@ It will run an emulation of the kernel and execute some functionality tests.
 
 The benchmark will print the following two tables to standard output after execution:
 
-       res. error    mach. eps
-      2.67000e-01  1.19209e-07
-    
-                           avg         best
-       Time in s:  7.56801e-03  7.07241e-03
-          GFLOPS:  3.24735e-02  3.47491e-02
+     res. error          mach. eps
+     2.63523e-01         1.19209e-07
+
+                     avg                 best
+          Time in s: 8.93261e-04 s       8.73572e-04 s
+             GFLOPS: 2.75127e-01 GFLOP/s 2.81328e-01 GFLOP/s
+
           
 The first table contains the maximum residual error of the calculation and the
 machine epsilon that was used to calculate the residual error.
@@ -118,3 +124,102 @@ In the second table the measured execution times and calculated FLOPs are given.
 It gives the average and bast for both.
 The time gives the averaged execution time for a single FFT in case of a batched execution (an execution with more than one iteration).
 They are also used to calculate the FLOPs.
+
+The json output looks like the following.
+
+```json
+
+{
+  "config_time": "Thu Dec 08 10:39:10 UTC 2022",
+  "device": "Intel(R) FPGA Emulation Device",
+  "environment": {
+    "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
+  },
+  "errors": {
+    "epsilon": {
+      "unit": "",
+      "value": 1.1920928955078125e-07
+    },
+    "residual": {
+      "unit": "",
+      "value": 0.2635231415430705
+    }
+  },
+  "git_commit": "86e0064-dirty",
+  "name": "FFT",
+  "results": {
+    "gflops_avg": {
+      "unit": "GFLOP/s",
+      "value": 0.2751268094908118
+    },
+    "gflops_min": {
+      "unit": "GFLOP/s",
+      "value": 0.2813275822966743
+    },
+    "t_avg": {
+      "unit": "s",
+      "value": 0.0008932608220000002
+    },
+    "t_min": {
+      "unit": "s",
+      "value": 0.0008735723600000001
+    }
+  },
+  "settings": {
+    "Batch Size": 100,
+    "Communication Type": "UNSUPPORTED",
+    "FFT Size": 4096,
+    "Kernel File": "./bin/fft1d_float_8_emulate.aocx",
+    "Kernel Replications": 1,
+    "MPI Ranks": "None",
+    "Repetitions": 10,
+    "Test Mode": "No"
+  },
+  "timings": {
+    "calculation": [
+      {
+        "unit": "s",
+        "value": 0.090378907
+      },
+      {
+        "unit": "s",
+        "value": 0.089294969
+      },
+      {
+        "unit": "s",
+        "value": 0.08941156
+      },
+      {
+        "unit": "s",
+        "value": 0.089993811
+      },
+      {
+        "unit": "s",
+        "value": 0.087884474
+      },
+      {
+        "unit": "s",
+        "value": 0.087357236
+      },
+      {
+        "unit": "s",
+        "value": 0.089228888
+      },
+      {
+        "unit": "s",
+        "value": 0.089401591
+      },
+      {
+        "unit": "s",
+        "value": 0.089537203
+      },
+      {
+        "unit": "s",
+        "value": 0.090772183
+      }
+    ]
+  },
+  "version": "1.4"
+}
+
+```

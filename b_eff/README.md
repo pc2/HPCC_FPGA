@@ -71,38 +71,51 @@ For execution of the benchmark run:
     
 For more information on available input parameters run
 
-    $./Network_intel -h
+    ./Network_intel -h
     
     Implementation of the effective bandwidth benchmark proposed in the HPCC benchmark suite for FPGA.
     Version: 1.3
 
+    MPI Version:  3.1
+    Config. Time: Thu Dec 08 10:38:28 UTC 2022
+    Git Commit:   86e0064-dirty
+
     Usage:
-    bin/Network_intel [OPTION...]
+      ./bin/Network_intel [OPTION...]
 
-    -f, --file arg         Kernel file name
-    -n, arg                Number of repetitions (default: 10)
-    -i,                    Use memory Interleaving
-        --skip-validation  Skip the validation of the output data. This will
-                            speed up execution and helps when working with special
-                            data types.
-        --device arg       Index of the device that has to be used. If not
-                            given you will be asked which device to use if there are
-                            multiple devices available. (default: -1)
-        --platform arg     Index of the platform that has to be used. If not
-                            given you will be asked which platform to use if there
-                            are multiple platforms available. (default: -1)
-    -h, --help             Print this help
-    -u, --upper arg        Maximum number of repetitions per data size
-                            (default: 32768)
-    -l, --lower arg        Minimum number of repetitions per data size
-                            (default: 1)
-        --min-size arg     Minimum Message Size (default: 0)
-    -m, arg                Maximum message size (default: 20)
-    -o, arg                Offset used before reducing repetitions (default: 1)
-    -d, arg                Number os steps the repetitions are decreased to its
-                            minimum (default: 5)
+      -f, --file arg          Kernel file name
+      -n, arg                 Number of repetitions (default: 10)
+      -i,                     Use memory Interleaving
+          --skip-validation   Skip the validation of the output data. This will
+                              speed up execution and helps when working with
+                              special data types.
+          --device arg        Index of the device that has to be used. If not
+                              given you will be asked which device to use if there
+                              are multiple devices available. (default: 0)
+          --platform arg      Index of the platform that has to be used. If not
+                              given you will be asked which platform to use if
+                              there are multiple platforms available. (default: 0)
+          --platform_str arg  Name of the platform that has to be used (default:
+                              )
+      -r, arg                 Number of used kernel replications (default: 2)
+          --comm-type arg     Used communication type for inter-FPGA
+                              communication (default: AUTO)
+          --dump-json arg     dump benchmark configuration and results to this
+                              file in json format (default: )
+          --test              Only test given configuration and skip execution
+                              and validation
+      -h, --help              Print this help
+      -u, --upper arg         Maximum number of repetitions per data size
+                              (default: 65536)
+      -l, --lower arg         Minimum number of repetitions per data size
+                              (default: 256)
+          --min-size arg      Minimum Message Size (default: 0)
+      -m, arg                 Maximum message size (default: 20)
+      -o, arg                 Offset used before reducing repetitions (default:
+                              11)
+      -d, arg                 Number os steps the repetitions are decreased to
+                              its minimum (default: 7)
 
-    
 To execute the unit and integration tests run
 
     ./Network_test_intel -f KERNEL_FILE_NAME
@@ -140,30 +153,12 @@ This might still lead to inaccuracies in the time measurements depending on the 
 The benchmark will output a result table to the standard output after execution.
 This is an example output using a single rank in emulation:
 
-            MSize      looplength            time            B/s
-                1           16384     5.46779e-02     5.99292e+05
-                2            8192     5.19651e-02     6.30578e+05
-                4            4096     2.58565e-02     1.26730e+06
-                8            2048     7.51376e-03     4.36107e+06
-               16            1024     3.01288e-03     1.08760e+07
-               32             512     1.66958e-03     1.96265e+07
-               64             256     4.60622e-03     7.11386e+06
-              128             128     1.86568e-03     1.75636e+07
-              256              64     3.75094e-03     8.73594e+06
-              512              32     3.81549e-03     8.58814e+06
-             1024              16     3.44074e-03     9.52354e+06
-             2048               8     3.83420e-03     8.54624e+06
-             4096               4     3.34786e-03     9.78775e+06
-            16384               2     7.84717e-03     8.35154e+06
-            32768               1     7.42386e-03     8.82775e+06
-            65536               1     1.40822e-02     9.30761e+06
-           131072               1     1.28135e-02     2.04585e+07
-           262144               1     5.52680e-02     9.48628e+06
-           524288               1     9.99676e-02     1.04892e+07
-          1048576               1     1.21861e-01     1.72094e+07
-          2097152               1     4.20120e-01     9.98360e+06
-    
-    b_eff = 9.58731e+06 B/s
+               MSize             looplength               transfer                    B/s
+                  64                      5            4.38310e-05            1.46015e+07
+                 128                      5            7.07010e-05            1.81044e+07
+                 256                      5            7.73410e-05            3.31002e+07
+
+    b_eff = 2.19354e+07 B/s
 
 The table contains the measurements for all tested message sizes.
 It is split into the following four columns:
@@ -178,3 +173,199 @@ In this case, the best measured time will be used to calculate the bandwidth.
 
 Under the table the calculated effective bandwidth is printed.
 It is the mean of the achieved bandwidths for all used message sizes.
+
+The json output looks like the following.
+
+```json
+
+{
+  "config_time": "Thu Dec 08 10:38:28 UTC 2022",
+  "device": "Intel(R) FPGA Emulation Device",
+  "environment": {
+    "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
+  },
+  "errors": {},
+  "git_commit": "86e0064-dirty",
+  "mpi": {
+    "subversion": 1,
+    "version": 3
+  },
+  "name": "effective bandwidth",
+  "results": {
+    "b_eff": {
+      "unit": "B/s",
+      "value": 21935372.01805185
+    }
+  },
+  "settings": {
+    "Communication Type": "IEC",
+    "Kernel File": "./bin/communication_bw520n_IEC_emulate.aocx",
+    "Kernel Replications": 2,
+    "Loop Length": 5,
+    "MPI Ranks": 1,
+    "Message Sizes": 2,
+    "Repetitions": 10,
+    "Test Mode": "No"
+  },
+  "timings": {
+    "6": {
+      "maxCalcBW": 14601537.724441605,
+      "maxMinCalculationTime": 4.3831e-05,
+      "timings": [
+        {
+          "looplength": 5,
+          "messageSize": 6,
+          "timings": [
+            {
+              "unit": "s",
+              "value": 0.013389739
+            },
+            {
+              "unit": "s",
+              "value": 6.2761e-05
+            },
+            {
+              "unit": "s",
+              "value": 4.9321e-05
+            },
+            {
+              "unit": "s",
+              "value": 4.3831e-05
+            },
+            {
+              "unit": "s",
+              "value": 4.951e-05
+            },
+            {
+              "unit": "s",
+              "value": 4.7561e-05
+            },
+            {
+              "unit": "s",
+              "value": 5.2311e-05
+            },
+            {
+              "unit": "s",
+              "value": 5.0441e-05
+            },
+            {
+              "unit": "s",
+              "value": 4.6901e-05
+            },
+            {
+              "unit": "s",
+              "value": 5.4401e-05
+            }
+          ]
+        }
+      ]
+    },
+    "7": {
+      "maxCalcBW": 18104411.535904724,
+      "maxMinCalculationTime": 7.0701e-05,
+      "timings": [
+        {
+          "looplength": 5,
+          "messageSize": 7,
+          "timings": [
+            {
+              "unit": "s",
+              "value": 0.000104852
+            },
+            {
+              "unit": "s",
+              "value": 0.000125222
+            },
+            {
+              "unit": "s",
+              "value": 7.9731e-05
+            },
+            {
+              "unit": "s",
+              "value": 0.000151442
+            },
+            {
+              "unit": "s",
+              "value": 9.3052e-05
+            },
+            {
+              "unit": "s",
+              "value": 0.000193763
+            },
+            {
+              "unit": "s",
+              "value": 8.4472e-05
+            },
+            {
+              "unit": "s",
+              "value": 0.000116562
+            },
+            {
+              "unit": "s",
+              "value": 8.2471e-05
+            },
+            {
+              "unit": "s",
+              "value": 7.0701e-05
+            }
+          ]
+        }
+      ]
+    },
+    "8": {
+      "maxCalcBW": 33100166.79380923,
+      "maxMinCalculationTime": 7.7341e-05,
+      "timings": [
+        {
+          "looplength": 5,
+          "messageSize": 8,
+          "timings": [
+            {
+              "unit": "s",
+              "value": 0.000711343
+            },
+            {
+              "unit": "s",
+              "value": 0.000378606
+            },
+            {
+              "unit": "s",
+              "value": 0.000280195
+            },
+            {
+              "unit": "s",
+              "value": 0.000107392
+            },
+            {
+              "unit": "s",
+              "value": 0.000203963
+            },
+            {
+              "unit": "s",
+              "value": 0.000122193
+            },
+            {
+              "unit": "s",
+              "value": 8.2151e-05
+            },
+            {
+              "unit": "s",
+              "value": 8.6861e-05
+            },
+            {
+              "unit": "s",
+              "value": 0.000167473
+            },
+            {
+              "unit": "s",
+              "value": 7.7341e-05
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "version": "1.3"
+}
+
+```

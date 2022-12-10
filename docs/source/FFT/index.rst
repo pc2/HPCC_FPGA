@@ -13,6 +13,7 @@ It is possible to specify the size of the FFT and the number of kernel replicati
    :glob:
 
    */index
+   ../../../FFT/README.md
 
 ------------------------
 Configuration Parameters
