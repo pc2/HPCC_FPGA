@@ -257,7 +257,14 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(LinpackData &data) override;
+    validateOutput(LinpackData &data) override;
+
+    /**
+     * @brief Linpack specific implementation of the error printing
+     *
+     */
+    void
+    printError() override;
 
     /**
      * @brief Linpack specific implementation of printing the execution results

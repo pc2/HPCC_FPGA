@@ -169,7 +169,14 @@ public:
      * @return false 
      */
     bool
-    validateOutputAndPrintError(StreamData &data) override;
+    validateOutput(StreamData &data) override;
+
+    /**
+     * @brief STREAM specific implementation of the error printing
+     *
+     */
+    void
+    printError() override;
 
     /**
      * @brief Stream specific implementation of printing the execution results

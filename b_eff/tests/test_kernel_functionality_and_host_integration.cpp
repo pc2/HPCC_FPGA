@@ -240,7 +240,8 @@ TEST_P(NetworkKernelTest, ValidationDataSingleItemWrongCheckFails) {
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data;});
     data->items[0].validationBuffer[looplength] = expected_data + 1;
-    EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
+    EXPECT_FALSE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 TEST_P(NetworkKernelTest, ValidationDataWrongCheckFails) {
@@ -250,7 +251,8 @@ TEST_P(NetworkKernelTest, ValidationDataWrongCheckFails) {
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data - 1;});
-    EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
+    EXPECT_FALSE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 TEST_P(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
@@ -260,7 +262,8 @@ TEST_P(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data;});
-    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 TEST_P(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
@@ -269,7 +272,8 @@ TEST_P(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     bm->executeKernel(*data);
-    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 // This test is disabled because it does not work with the current implementation of the
@@ -282,7 +286,8 @@ TEST_P(NetworkKernelTest, DISABLED_ValidationDataCorrectTwoMessageSizesAfterExec
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize + 1,looplength));
     bm->executeKernel(*data);
-    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 TEST_P(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
@@ -293,7 +298,8 @@ TEST_P(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize + 1,looplength));
     bm->executeKernel(*data);
     data->items[1].validationBuffer[0] = static_cast<HOST_DATA_TYPE>(0);
-    EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
+    EXPECT_FALSE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 TEST_P(NetworkKernelTest, JsonDump) {

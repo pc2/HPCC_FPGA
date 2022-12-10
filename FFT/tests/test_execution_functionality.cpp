@@ -35,7 +35,7 @@ TEST_F(FFTKernelTest, CalculateReturnsCorrectExecutionResultFor11False) {
     bm->getExecutionSettings().programSettings->numRepetitions = 1;
     data = bm->generateInputData();
     bm->executeKernel(*data);
-    EXPECT_EQ(1, bm->getTimingsMap().at("calculation").size());
+    EXPECT_EQ(1, bm->getTimingsMap().at("execution").size());
 }
 
 /**
@@ -45,7 +45,7 @@ TEST_F(FFTKernelTest, CalculateReturnsCorrectExecutionResultFor24True) {
     bm->getExecutionSettings().programSettings->numRepetitions = 2;
     data = bm->generateInputData();
     bm->executeKernel(*data);
-    EXPECT_EQ(2, bm->getTimingsMap().at("calculation").size());
+    EXPECT_EQ(2, bm->getTimingsMap().at("execution").size());
 }
 
 /**

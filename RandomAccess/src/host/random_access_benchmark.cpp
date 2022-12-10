@@ -122,9 +122,9 @@ random_access::RandomAccessBenchmark::collectResults() {
 }
 
 void random_access::RandomAccessBenchmark::printResults() {
-        std::cout << std::setw(ENTRY_SPACE)
+        std::cout << std::left << std::setw(ENTRY_SPACE)
                 << "best" << std::setw(ENTRY_SPACE) << "mean"
-                << std::setw(ENTRY_SPACE) << "GUOPS" << std::endl;
+                << std::setw(ENTRY_SPACE) << "GUOPS" << std::right << std::endl;
 
         std::cout << std::setw(ENTRY_SPACE)
                 << results.at("t_min") << std::setw(ENTRY_SPACE) << results.at("t_mean")
@@ -159,7 +159,7 @@ random_access::RandomAccessBenchmark::generateInputData() {
 }
 
 bool  
-random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access::RandomAccessData &data) {
+random_access::RandomAccessBenchmark::validateOutput(random_access::RandomAccessData &data) {
 
     HOST_DATA_TYPE* rawdata;
     if (mpi_comm_size > 1) {
@@ -190,19 +190,18 @@ random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access:
             rawdata[(temp >> 3) & (executionSettings->programSettings->dataSize * mpi_comm_size - 1)] ^= temp;
         }
 
-        double errors = 0;
-#pragma omp parallel for reduction(+:errors)
+        double error_count = 0;
+#pragma omp parallel for reduction(+:error_count)
         for (HOST_DATA_TYPE i=0; i< executionSettings->programSettings->dataSize * mpi_comm_size; i++) {
             if (rawdata[i] != i) {
                 // If the array at index i does not contain i, it differs from the initial value and is counted as an error
-                errors++;
+                error_count++;
             }
         }
 
         // The overall error is calculated in percent of the overall array size
-        double error_ratio = static_cast<double>(errors) / (executionSettings->programSettings->dataSize * mpi_comm_size);
-        std::cout  << "Error: " << error_ratio * 100 
-                    << "%" << std::endl;
+        double error_ratio = static_cast<double>(error_count) / (executionSettings->programSettings->dataSize * mpi_comm_size);
+        errors.emplace("ratio", hpcc_base::HpccResult(error_ratio, ""));
 
 #ifdef _USE_MPI_
         if (mpi_comm_rank == 0 && mpi_comm_size > 1) {
@@ -215,4 +214,9 @@ random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access:
 
     // All other ranks skip validation and always return true
     return true;
+}
+
+void
+random_access::RandomAccessBenchmark::printError() {
+    std::cout  << "Error: " << errors.at("ratio") << std::endl;
 }

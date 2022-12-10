@@ -93,16 +93,26 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(TransposeData &data) override;
+    validateOutput(TransposeData &data) override;
 
     /**
-     * @brief Transpose specific implementation of printing the execution results
+     * @brief Transpose specific impelmentation of the error printing
+     *
+     */
+    void
+    printError() override;
+
+    /**
+     * @brief Transpose specific implementation of collecting the execution results
      * 
-     * @param output Measured runtimes of the kernel execution
      */
     void
     collectResults() override;
     
+    /**
+     * @brief Transpose specific implementation of printing the execution results
+     * 
+     */
     void
     printResults() override;
 

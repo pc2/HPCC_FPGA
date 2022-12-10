@@ -143,18 +143,19 @@ stream::StreamBenchmark::collectResults() {
 
 void
 stream::StreamBenchmark::printResults() {
-    std::cout << std::setw(ENTRY_SPACE) << "Function";
+    std::cout << std::left << std::setw(ENTRY_SPACE) << "Function";
     std::cout << std::setw(ENTRY_SPACE) << "Best Rate";
     std::cout << std::setw(ENTRY_SPACE) << "Avg time";
     std::cout << std::setw(ENTRY_SPACE) << "Min time" ;
-    std::cout << std::setw(ENTRY_SPACE) << "Max time" << std::endl;
+    std::cout << std::setw(ENTRY_SPACE) << "Max time" << std::right << std::endl;
 
     for (auto key : keys) {
-        std::cout << std::setw(ENTRY_SPACE) << key;
-        std::cout << std::setw(ENTRY_SPACE) << results.at(key + "_best_rate")
-                << std::setw(ENTRY_SPACE) << results.at(key + "_avg_t")
-                << std::setw(ENTRY_SPACE) << results.at(key + "_min_t")
-                << std::setw(ENTRY_SPACE) << results.at(key + "_max_t") << std::endl;
+        std::cout << std::left << std::setw(ENTRY_SPACE) << key
+            << results.at(key + "_best_rate")
+            << results.at(key + "_avg_t")
+            << results.at(key + "_min_t")
+            << results.at(key + "_max_t")
+            << std::right << std::endl;
     }
 }
 
@@ -171,7 +172,7 @@ stream::StreamBenchmark::generateInputData() {
 }
 
 bool  
-stream::StreamBenchmark::validateOutputAndPrintError(stream::StreamData &data) {
+stream::StreamBenchmark::validateOutput(stream::StreamData &data) {
     HOST_DATA_TYPE aj,bj,cj,scalar;
     double aSumErr,bSumErr,cSumErr;
     double aAvgErr,bAvgErr,cAvgErr;
@@ -220,54 +221,84 @@ stream::StreamBenchmark::validateOutputAndPrintError(stream::StreamData &data) {
     bAvgErr = totalBAvgErr / mpi_comm_size;
 #endif
 
+    bool success = true;
     if (mpi_comm_rank == 0) {
+        errors.emplace("a_expected_value", hpcc_base::HpccResult(aj, ""));
+        errors.emplace("a_average_error", hpcc_base::HpccResult(aAvgErr, ""));
+        errors.emplace("a_average_relative_error", hpcc_base::HpccResult(abs(aAvgErr)/aj, ""));
+
+        errors.emplace("b_expected_value", hpcc_base::HpccResult(bj, ""));
+        errors.emplace("b_average_error", hpcc_base::HpccResult(bAvgErr, ""));
+        errors.emplace("b_average_relative_error", hpcc_base::HpccResult(abs(bAvgErr)/bj, ""));
+
+        errors.emplace("c_expected_value", hpcc_base::HpccResult(cj, ""));
+        errors.emplace("c_average_error", hpcc_base::HpccResult(cAvgErr, ""));
+        errors.emplace("c_average_relative_error", hpcc_base::HpccResult(abs(cAvgErr)/cj, ""));
 
         epsilon = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+        errors.emplace("epsilon", hpcc_base::HpccResult(epsilon, ""));
 
-        err = 0;
         if (abs(aAvgErr/aj) > epsilon) {
-            err++;
-            printf ("Failed Validation on array a[], AvgRelAbsErr > epsilon (%e)\n",epsilon);
-            printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",aj,aAvgErr,abs(aAvgErr)/aj);
+            success = false;
             ierr = 0;
             for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
                 if (abs(data.A[j]/aj-1.0) > epsilon) {
                     ierr++;
                 }
             }
-            printf("     For array a[], %d errors were found.\n",ierr);
+            errors.emplace("a_error_count", hpcc_base::HpccResult(ierr, ""));
+            ierr = 0;
         }
         if (abs(bAvgErr/bj) > epsilon) {
-            err++;
-            printf ("Failed Validation on array b[], AvgRelAbsErr > epsilon (%e)\n",epsilon);
-            printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",bj,bAvgErr,abs(bAvgErr)/bj);
-            printf ("     AvgRelAbsErr > Epsilon (%e)\n",epsilon);
+            success = false;
             ierr = 0;
             for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
                 if (abs(data.B[j]/bj-1.0) > epsilon) {
                     ierr++;
                 }
             }
-            printf("     For array b[], %d errors were found.\n",ierr);
+            errors.emplace("b_error_count", hpcc_base::HpccResult(ierr, ""));
         }
         if (abs(cAvgErr/cj) > epsilon) {
-            err++;
-            printf ("Failed Validation on array c[], AvgRelAbsErr > epsilon (%e)\n",epsilon);
-            printf ("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n",cj,cAvgErr,abs(cAvgErr)/cj);
-            printf ("     AvgRelAbsErr > Epsilon (%e)\n",epsilon);
+            success = false;
             ierr = 0;
             for (j=0; j<executionSettings->programSettings->streamArraySize; j++) {
                 if (abs(data.C[j]/cj-1.0) > epsilon) {
                     ierr++;
                 }
             }
-            printf("     For array c[], %d errors were found.\n",ierr);
+            errors.emplace("b_error_count", hpcc_base::HpccResult(ierr, ""));
         }
-        if (err == 0) {
-            printf ("Solution Validates: avg error less than %e on all three arrays\n",epsilon);
-            return true;
-        }
-        return false;
     }
-    return true;
+    return success;
+}
+
+void
+stream::StreamBenchmark::printError() {
+    int err = 0;
+    double epsilon = errors.at("epsilon").value;
+    if (errors.at("a_average_relative_error").value > epsilon) {
+        err++;
+        printf("Failed Validation on array a[], AvgRelAbsErr > epsilon (%e)\n", errors.at("epsilon").value);
+        printf("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n", errors.at("a_expected_value").value, errors.at("a_average_error").value, errors.at("a_average_relative_error").value);
+        printf("     For array a[], %d errors were found.\n", errors.at("a_error_count"));
+    }
+
+    if (errors.at("b_average_relative_error").value > epsilon) {
+        err++;
+        printf("Failed Validation on array b[], AvgRelAbsErr > epsilon (%e)\n", errors.at("epsilon").value);
+        printf("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n", errors.at("b_expected_value").value, errors.at("b_average_error").value, errors.at("b_average_relative_error").value);
+        printf("     AvgRelAbsErr > Epsilon (%e)\n", errors.at("epsilon").value);
+        printf("     For array b[], %d errors were found.\n", errors.at("b_error_count").value);
+    }
+    if (errors.at("c_average_relative_error").value > epsilon) {
+        err++;
+        printf("Failed Validation on array c[], AvgRelAbsErr > epsilon (%e)\n", errors.at("epsilon").value);
+        printf("     Expected Value: %e, AvgAbsErr: %e, AvgRelAbsErr: %e\n", errors.at("c_expected_value").value, errors.at("c_average_error").value, errors.at("c_average_relative_error").value);
+        printf("     AvgRelAbsErr > Epsilon (%e)\n", errors.at("epsilon").value);
+        printf("     For array c[], %d errors were found.\n", errors.at("c_error_count").value);
+    }
+    if (err == 0) {
+        printf ("Solution Validates: avg error less than %e on all three arrays\n", errors.at("epsilon").value);
+    }
 }

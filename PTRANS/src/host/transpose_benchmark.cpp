@@ -134,21 +134,30 @@ transpose::TransposeBenchmark::collectResults() {
 
 void
 transpose::TransposeBenchmark::printResults() {
-    std::cout << "       total time     transfer time  calc time      calc FLOPS    Memory Bandwidth     PCIe Bandwidth" << std::endl;
-    std::cout << "avg:   " << results.at("avg_t")
-            << "   " << results.at("avg_transfer_t")
-            << "   " << results.at("avg_calc_t")
-            << "   " << results.at("avg_calc_flops")
-            << "   " << results.at("avg_mem_bandwidth")
-            << "   " << results.at("avg_transfer_bandwidth")
-            << std::endl;
-    std::cout << "best:  " << results.at("min_t")
-            << "   " << results.at("min_transfer_t")
-            << "   " << results.at("min_calc_t")
-            << "   " << results.at("max_calc_flops")
-            << "   " << results.at("max_mem_bandwidth")
-            << "   " << results.at("max_transfer_bandwidth")
-            << std::endl;
+    std::cout << std::setw(ENTRY_SPACE) << " "
+        << std::left << std::setw(ENTRY_SPACE) << "total time"
+        << std::setw(ENTRY_SPACE) << "transfer time"
+        << std::setw(ENTRY_SPACE) << "calc time"
+        << std::setw(ENTRY_SPACE) << "calc FLOPS"
+        << std::setw(ENTRY_SPACE) << "Memory Bandwidth"
+        << std::setw(ENTRY_SPACE) << "PCIe Bandwidth"
+        << std::right << std::endl;
+    std::cout << std::setw(ENTRY_SPACE) << "avg: "
+        << results.at("avg_t")
+        << results.at("avg_transfer_t")
+        << results.at("avg_calc_t")
+        << results.at("avg_calc_flops")
+        << results.at("avg_mem_bandwidth")
+        << results.at("avg_transfer_bandwidth")
+        << std::endl;
+    std::cout << std::setw(ENTRY_SPACE) << "best: " 
+        << results.at("min_t")
+        << results.at("min_transfer_t")
+        << results.at("min_calc_t")
+        << results.at("max_calc_flops")
+        << results.at("max_mem_bandwidth")
+        << results.at("max_transfer_bandwidth")
+        << std::endl;
 }
 
 std::unique_ptr<transpose::TransposeData>
@@ -157,8 +166,7 @@ return dataHandler->generateData(*executionSettings);
 }
 
 bool  
-transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeData &data) {
-
+transpose::TransposeBenchmark::validateOutput(transpose::TransposeData &data) {
     // exchange the data using MPI depending on the chosen distribution scheme
     dataHandler->exchangeData(data);
 
@@ -172,12 +180,17 @@ transpose::TransposeBenchmark::validateOutputAndPrintError(transpose::TransposeD
     double global_max_error = 0;
     MPI_Reduce(&max_error, &global_max_error, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
-    if (mpi_comm_rank == 0) {
-        std::cout << "Maximum error: " << global_max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
-        std::cout << "Mach. Epsilon: " << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl;
-    }
+    errors.emplace("epsilon", hpcc_base::HpccResult(std::numeric_limits<HOST_DATA_TYPE>::epsilon(), ""));
+    errors.emplace("max_error", hpcc_base::HpccResult(global_max_error, ""));
 
     return static_cast<double>(global_max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
+}
+
+void
+transpose::TransposeBenchmark::printError() {
+    std::cout << "Maximum error: " << errors.at("epsilon") << " < " << 100 * errors.at("epsilon").value <<  std::endl;
+    std::cout << "Mach. Epsilon: " << errors.at("epsilon")  << std::endl;
+
 }
 
 void
@@ -187,6 +200,4 @@ transpose::TransposeBenchmark::setTransposeDataHandler(transpose::data_handler::
         case transpose::data_handler::DataHandlerType::pq: dataHandler = std::unique_ptr<transpose::data_handler::TransposeDataHandler>(new transpose::data_handler::DistributedPQTransposeDataHandler(mpi_comm_rank, mpi_comm_size, executionSettings->programSettings->p)); break;
         default: throw std::runtime_error("Could not match selected data handler: " + transpose::data_handler::handlerToString(dataHandlerIdentifier));
     }
-        
-
 }

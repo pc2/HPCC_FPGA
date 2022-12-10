@@ -46,8 +46,8 @@ TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements3Rep) {
  */
 TEST_F(RandomAccessKernelTest, FPGAErrorBelow1Percent) {
     bm->executeKernel(*data);
-    bool success = bm->validateOutputAndPrintError(*data);
-    EXPECT_TRUE(success);
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 using json = nlohmann::json;

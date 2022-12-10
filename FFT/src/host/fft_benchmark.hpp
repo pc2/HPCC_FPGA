@@ -176,7 +176,14 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(FFTData &data) override;
+    validateOutput(FFTData &data) override;
+    
+    /**
+     * @brief FFT specifig implementation of the error printing
+     * 
+     */
+    void
+    printError() override;
 
     /**
      * @brief FFT specific implementation of printing the execution results

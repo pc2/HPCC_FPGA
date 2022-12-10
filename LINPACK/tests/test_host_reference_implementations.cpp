@@ -74,7 +74,8 @@ TEST_F(LinpackHostTest, ReferenceSolveGMRES) {
     for (int i=0; i < array_size; i++) {
         data->b[i] = static_cast<float>(x[i]);
     }
-    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError(); 
 }
 #endif
 
@@ -83,7 +84,8 @@ TEST_F(LinpackHostTest, ReferenceSolveWithPivoting) {
     data = bm->generateInputData();
     linpack::gefa_ref(data->A, array_size, array_size, data->ipvt);
     linpack::gesl_ref(data->A, data->b, data->ipvt, array_size, array_size);
-    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError(); 
 }
 
 
@@ -91,7 +93,8 @@ TEST_F(LinpackHostTest, ReferenceSolveWithoutPivoting) {
     data = bm->generateInputData();
     linpack::gefa_ref_nopvt(data->A, array_size, array_size);
     linpack::gesl_ref_nopvt(data->A, data->b, array_size, array_size);
-    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError(); 
 }
 
 

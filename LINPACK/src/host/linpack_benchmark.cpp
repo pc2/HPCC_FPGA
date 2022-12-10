@@ -185,25 +185,23 @@ linpack::LinpackBenchmark::collectResults() {
 
 void
 linpack::LinpackBenchmark::printResults() {
-    std::cout << std::setw(ENTRY_SPACE)
-              << "Method" << std::setw(ENTRY_SPACE)
-              << "best" << std::setw(ENTRY_SPACE) << "mean"
-              << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
+    std::cout << std::left << std::setw(ENTRY_SPACE) << " Method"
+        << std::setw(ENTRY_SPACE) << " best"
+        << std::setw(ENTRY_SPACE) << " mean"
+        << std::setw(ENTRY_SPACE) << " GFLOPS"
+        << std::endl;
 
-    std::cout << std::setw(ENTRY_SPACE) << "total" << std::setw(ENTRY_SPACE)
-              << results.at("t_min") << std::setw(ENTRY_SPACE) << results.at("t_mean")
-              << std::setw(ENTRY_SPACE) << results.at("gflops")
+    std::cout << std::left << std::setw(ENTRY_SPACE) << " total" 
+              << results.at("t_min") << results.at("t_mean") << results.at("gflops")
               << std::endl;
 
-    std::cout << std::setw(ENTRY_SPACE) << "GEFA" << std::setw(ENTRY_SPACE)
-            << results.at("tlu_min") << std::setw(ENTRY_SPACE) << results.at("tlu_mean")
-            << std::setw(ENTRY_SPACE) << results.at("gflops_lu")
+    std::cout << std::left << std::setw(ENTRY_SPACE) << " GEFA"
+            << results.at("tlu_min") << results.at("tlu_mean") << results.at("gflops_lu")
             << std::endl;
 
-    std::cout << std::setw(ENTRY_SPACE) << "GESL" << std::setw(ENTRY_SPACE)
-              << results.at("tsl_min") << std::setw(ENTRY_SPACE) << results.at("tsl_mean")
-              << std::setw(ENTRY_SPACE) << results.at("gflops_sl")
-              << std::endl;
+    std::cout << std::left << std::setw(ENTRY_SPACE) << " GESL"
+              << results.at("tsl_min") << results.at("tsl_mean") << results.at("gflops_sl")
+              << std::right << std::endl;
 }
 
 std::unique_ptr<linpack::LinpackData>
@@ -295,7 +293,7 @@ linpack::LinpackBenchmark::generateInputData() {
 }
 
 bool  
-linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &data) {
+linpack::LinpackBenchmark::validateOutput(linpack::LinpackData &data) {
     uint n= executionSettings->programSettings->matrixSize;
     uint matrix_width = data.matrix_width;
     uint matrix_height = data.matrix_height;
@@ -420,17 +418,21 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
         }
     #endif
 
+    errors.emplace("epsilon", hpcc_base::HpccResult(eps, ""));
+    errors.emplace("residual", hpcc_base::HpccResult(resid, ""));
+    errors.emplace("residual_norm", hpcc_base::HpccResult(residn, ""));
+
     if (mpi_comm_rank == 0) {
-        //std::cout << resid << ", " << norma << ", " << normx << std::endl;
-        std::cout << "  norm. resid        resid       "\
-                    "machep   " << std::endl;
-        std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
-                << resid << std::setw(ENTRY_SPACE) << eps << std::endl;
         return residn < 1;
-    }
-    else {
+    } else {
         return true;
     }
+}
+
+void
+linpack::LinpackBenchmark::printError() {
+    std::cout << std::left << std::setw(ENTRY_SPACE) << " norm. residual" << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::right << std::endl;
+    std::cout << errors.at("residual_norm") << errors.at("residual") << errors.at("epsilon") << std::endl;
 }
 
 void 

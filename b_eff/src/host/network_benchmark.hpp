@@ -283,16 +283,27 @@ public:
      * @return true always, since no checks are done
      */
     bool
-    validateOutputAndPrintError(NetworkData &data) override;
+    validateOutput(NetworkData &data) override;
 
     /**
-     * @brief Network specific implementation of printing the execution results
+     * @brief Network specific implementation of the error printing
+     *
+     */
+    void
+    printError() override;
+
+    /**
+     * @brief Network specific implementation of collecting the execution results
      * 
      * @param output Measured runtimes of the kernel execution
      */
     void
     collectResults() override;
 
+    /**
+     * @brief Network specifig implementation of the printing the execution results
+     *
+     */
     void
     printResults() override;
 

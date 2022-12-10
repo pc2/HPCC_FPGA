@@ -45,7 +45,9 @@ SOFTWARE.
 #define STR_EXPAND(tok) #tok
 #define STR(tok) STR_EXPAND(tok)
 
-#define ENTRY_SPACE 15
+#define VALUE_SPACE 11
+#define UNIT_SPACE 8
+#define ENTRY_SPACE (VALUE_SPACE + UNIT_SPACE + 1)
 
 using json = nlohmann::json;
 
@@ -64,7 +66,7 @@ public:
     HpccResult(double value, std::string unit): value(value), unit(unit) {}
     
     friend std::ostream &operator<<(std::ostream &os, const HpccResult &result) {
-        os << result.value << " " << result.unit;
+        os << std::setw(VALUE_SPACE) << result.value << " " << std::left << std::setw(UNIT_SPACE) << result.unit << std::right;
         return os;
     }
 
@@ -73,6 +75,7 @@ public:
         oss << *this;
         return oss.str();
     }
+    // TODO: to_json function
 };
 
 /**
@@ -345,7 +348,13 @@ protected:
      *
      */
     std::map<std::string, HpccResult> results;
-
+    
+    /**
+     *
+     * @brief map containing the errors of the benchmark
+     *
+     */
+    std::map<std::string, HpccResult> errors;
 
 public:
 
@@ -374,7 +383,13 @@ public:
      * @return false If the validation failed
      */
     virtual bool
-    validateOutputAndPrintError(TData &data) = 0;
+    validateOutput(TData &data) = 0;
+    
+    /**
+     * @brief Print the error after validating output
+    */
+    virtual void
+    printError() = 0;
 
     /**
      * @brief Collects the measurment results from all MPI ranks and 
@@ -515,18 +530,6 @@ public:
         timings.emplace(key, value);
     }
     
-    std::map<std::string, json> getResultsJson() {
-        // TODO: nested maps, recursive?
-        std::map<std::string, json> results_string;
-        for (auto const &result: results) {
-            json j;
-            j["unit"] = result.second.unit;
-            j["value"] = result.second.value;
-            results_string[result.first] = j;
-        }
-        return results_string;
-    }
-    
     // override for special benchmarks like b_eff
     virtual json getTimingsJson() {
         json j;
@@ -541,6 +544,28 @@ public:
             j[key.first] = timings_list;
         }
         return j;
+    }
+
+    std::map<std::string, json> getResultsJson() {
+        std::map<std::string, json> results_string;
+        for (auto const &result: results) {
+            json j;
+            j["unit"] = result.second.unit;
+            j["value"] = result.second.value;
+            results_string[result.first] = j;
+        }
+        return results_string;
+    }
+
+    std::map<std::string, json> getErrorsJson() {
+        std::map<std::string, json> errors_string; 
+        for (auto const &error: errors) {
+            json j;
+            j["unit"] = error.second.unit;
+            j["value"] = error.second.value;
+            errors_string[error.first] = j;
+        }
+        return errors_string;
     }
     
     std::map<std::string, std::string>
@@ -602,6 +627,7 @@ public:
             dump["settings"] = jsonifySettingsMap(executionSettings->programSettings->getSettingsMap());
             dump["timings"] = getTimingsJson();
             dump["results"] = getResultsJson();
+            dump["errors"] = getErrorsJson();
             dump["environment"] = getEnvironmentMap();
 
             fs << dump;
@@ -738,13 +764,15 @@ public:
 
             if (!executionSettings->programSettings->skipValidation) {
                 auto eval_start = std::chrono::high_resolution_clock::now();
-                validateSuccess = validateOutputAndPrintError(*data);
+                validateSuccess = validateOutput(*data);
+                printError();
                 std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
 
                 if (mpi_comm_rank == 0) {
                     std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
                 }
             }
+            std::cout << HLINE << "Collect results..." << std::endl << HLINE;
             collectResults();
             
             if (mpi_comm_rank == 0) {
@@ -755,10 +783,10 @@ public:
                 printResults();
 
                 if (!validateSuccess) {
-                    std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
+                    std::cerr << HLINE << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
                 }
                 else {
-                    std::cout << "Validation: SUCCESS!" << std::endl;
+                    std::cout << HLINE << "Validation: SUCCESS!" << std::endl;
                 }
             }
 

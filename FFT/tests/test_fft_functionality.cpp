@@ -134,7 +134,7 @@ TEST_F(FFTHostTest, JsonDump) {
         json j = json::parse(f);
         EXPECT_TRUE(j.contains("timings"));
         if (j.contains("timings")) {
-            EXPECT_TRUE(j["timings"].contains("calculation"));
+            EXPECT_TRUE(j["timings"].contains("execution"));
         }
         EXPECT_TRUE(j.contains("results"));
         if (j.contains("results")) {

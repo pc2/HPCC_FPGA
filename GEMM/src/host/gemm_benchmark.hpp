@@ -213,7 +213,14 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(GEMMData &data) override;
+    validateOutput(GEMMData &data) override;
+
+    /**
+     * @brief GEMM specific implementation of the error printing
+     *
+     */
+    void
+    printError() override;
 
     void collectResults() override;
     /**

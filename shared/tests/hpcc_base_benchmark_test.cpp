@@ -40,7 +40,10 @@ public:
     executeKernel(int &data) override { return;}
 
     bool
-    validateOutputAndPrintError(int &data) override { return returnValidate;}
+    validateOutput(int &data) override { return returnValidate;}
+    
+    void
+    printError() override {}
 
     bool
     checkInputParameters() override { return configurationCheckSucceeds;}
@@ -93,9 +96,12 @@ public:
         return;}
 
     bool
-    validateOutputAndPrintError(int &data) override { 
+    validateOutput(int &data) override { 
         validateOutputcalled++;
         return returnValidate;}
+    
+    void
+    printError() override {}
 
     void
     collectResults() override {}

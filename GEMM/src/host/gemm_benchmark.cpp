@@ -140,13 +140,12 @@ gemm::GEMMBenchmark::collectResults() {
 
 void
 gemm::GEMMBenchmark::printResults() {
-    std::cout << std::setw(ENTRY_SPACE)
-            << "best" << std::setw(ENTRY_SPACE) << "mean"
-            << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
+    std::cout << std::left << std::setw(ENTRY_SPACE)
+            << " best" << std::setw(ENTRY_SPACE) << " mean"
+            << std::setw(ENTRY_SPACE) << " GFLOPS" << std::right << std::endl;
 
     std::cout << std::setw(ENTRY_SPACE)
-            << results.at("t_min") << std::setw(ENTRY_SPACE) << results.at("t_mean")
-            << std::setw(ENTRY_SPACE) << results.at("gflops")
+            << results.at("t_min") << results.at("t_mean") << results.at("gflops")
             << std::endl;
 }
 
@@ -170,7 +169,7 @@ gemm::GEMMBenchmark::generateInputData() {
 }
 
 bool  
-gemm::GEMMBenchmark::validateOutputAndPrintError(gemm::GEMMData &data) {
+gemm::GEMMBenchmark::validateOutput(gemm::GEMMData &data) {
     auto ref_data = generateInputData();
 
     gemm_ref(ref_data->A, ref_data->B, ref_data->C, executionSettings->programSettings->matrixSize, OPTIONAL_CAST(0.5), OPTIONAL_CAST(2.0));
@@ -195,17 +194,20 @@ gemm::GEMMBenchmark::validateOutputAndPrintError(gemm::GEMMData &data) {
         double eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
         double residn = resid / (executionSettings->programSettings->matrixSize*executionSettings->programSettings->matrixSize*ref_data->normtotal*normx*eps);
 
-        std::cout << "  norm. resid        resid       "\
-                    "machep" << std::endl;
-        std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
-                << resid << std::setw(ENTRY_SPACE) << eps
-                << std::endl;
+        errors.emplace("epsilon", hpcc_base::HpccResult(eps, ""));
+        errors.emplace("residual", hpcc_base::HpccResult(resid, ""));
+        errors.emplace("residual_norm", hpcc_base::HpccResult(residn, ""));
 
         return residn < 1.0;
     }
-
     // All other ranks are always reporting success of the validation
     return true;
+}
+
+void
+gemm::GEMMBenchmark::printError() {
+    std::cout << std::left << std::setw(ENTRY_SPACE) << " norm. residual" << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::right << std::endl;
+    std::cout << errors.at("residual_norm") << errors.at("residual") << errors.at("epsilon") << std::endl;
 }
 
 void 

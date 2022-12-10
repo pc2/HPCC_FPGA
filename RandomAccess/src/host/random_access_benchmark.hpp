@@ -156,7 +156,14 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(RandomAccessData &data) override;
+    validateOutput(RandomAccessData &data) override;
+
+    /**
+     * @brief RandomAccess specific implementation of the error printing
+     *
+     */
+    void
+    printError() override;
 
     /**
      * @brief RandomAccess specific implementation of printing the execution results

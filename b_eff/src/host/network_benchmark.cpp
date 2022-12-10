@@ -234,29 +234,35 @@ network::NetworkBenchmark::generateInputData() {
 }
 
 bool  
-network::NetworkBenchmark::validateOutputAndPrintError(network::NetworkData &data) {
+network::NetworkBenchmark::validateOutput(network::NetworkData &data) {
     unsigned total_error = 0;
 
     // For every data size in the data set
     for (const auto& item : data.items) {
         // check if the validation buffer contains the expected data
         HOST_DATA_TYPE expected_value = static_cast<HOST_DATA_TYPE>(item.messageSize & 255u);
-        unsigned errors = 0;
+        unsigned error_count = 0;
         HOST_DATA_TYPE failing_entry = 0;
         for (const auto& v: item.validationBuffer) {
             if (v != expected_value) {
-                errors++;
+                error_count++;
                 failing_entry = v;
             }
         }
-        total_error += errors;
-        if (errors > 0) {
-            std::cerr << "Validation data invalid for message size " << (1 << item.messageSize) << " in " << errors << " cases! Expected: " 
-                    << static_cast<int>(expected_value) << ", Value: " << static_cast<int>(failing_entry) << std::endl;
+        if (error_count > 0) {
+            errors.emplace(std::to_string(item.messageSize), hpcc_base::HpccResult(error_count, "")); 
         }
+        total_error += error_count;
     }
 
     // success only, if no error occured
     return total_error == 0;
+}
+
+void
+network::NetworkBenchmark::printError() {
+    for (const auto& error: errors) {
+        std::cerr << "Validation data invalid for message size " << (1 << stoi(error.first)) << " in " << int(error.second.value) << " cases!" << std::endl; 
+    }
 }
 

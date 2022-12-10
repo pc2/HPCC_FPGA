@@ -88,8 +88,8 @@ TEST_P(LinpackKernelTest, DISABLED_ValidationWorksForMKL) {
 #else
         dgesv_(&s, &lrhs, data_cpu->A, &s, data_cpu->ipvt, data_cpu->b, &s, &info);
 #endif
-    bool success = bm->validateOutputAndPrintError(*data_cpu);
-    EXPECT_TRUE(success);
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError(); 
 }
 
 

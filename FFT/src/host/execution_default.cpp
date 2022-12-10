@@ -212,7 +212,7 @@ namespace bm_execution {
         }
         std::map<std::string, std::vector<double>> timings;
 
-        timings["calculation"] = calculationTimings;
+        timings["execution"] = calculationTimings;
 
         return timings;
     }

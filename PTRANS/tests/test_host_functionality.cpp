@@ -90,7 +90,8 @@ TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
     std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
     std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
-    bool success = bm->validateOutputAndPrintError(*data);
+    bool success = bm->validateOutput(*data);
+    bm->printError();
 
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);
@@ -128,7 +129,8 @@ TEST_F(TransposeHostTest, ValidationIsSuccess) {
     std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
     std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
-    bool success = bm->validateOutputAndPrintError(*data);
+    bool success = bm->validateOutput(*data);
+    bm->printError();
 
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);
