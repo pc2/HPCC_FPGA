@@ -198,6 +198,7 @@ build:GEMM_HP_REP2:
   dependencies:
     - check:GEMM
   needs: ["check:GEMM"]
+  allow_failure: true
 
 build:GEMM_DP_REP2:
   <<: *build
@@ -279,6 +280,7 @@ test:STREAM_HP:
   dependencies:
     - build:STREAM_HP
   needs: ["build:STREAM_HP"]
+  allow_failure: true
 
 test:STREAM_DP:
   <<: *test
@@ -342,7 +344,7 @@ test:GEMM_HP_REP2:
   dependencies:
     - build:GEMM_HP_REP2
   needs: ["build:GEMM_HP_REP2"]
-  
+  allow_failure: true
 
 test:GEMM_DP_REP2:
   <<: *test
