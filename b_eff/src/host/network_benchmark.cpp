@@ -53,7 +53,7 @@ network::NetworkProgramSettings::getSettingsMap() {
 }
 
 network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize, unsigned int _loopLength) : messageSize(_messageSize), loopLength(_loopLength), 
-                                                                            validationBuffer((1 << _messageSize) * 2 * 2, 0) {
+                                                                            validationBuffer((1 << _messageSize), 0) {
                                                                                 // TODO: fix the validation buffer size to use the variable number of kernel replications and channels
                                                                                 // Validation data buffer should be big enough to fit the data of two channels
                                                                                 // for every repetition. The number of kernel replications is fixed to 2, which 
