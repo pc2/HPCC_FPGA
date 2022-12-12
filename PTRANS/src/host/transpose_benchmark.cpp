@@ -134,30 +134,32 @@ transpose::TransposeBenchmark::collectResults() {
 
 void
 transpose::TransposeBenchmark::printResults() {
-    std::cout << std::setw(ENTRY_SPACE) << " "
-        << std::left << std::setw(ENTRY_SPACE) << "total time"
-        << std::setw(ENTRY_SPACE) << "transfer time"
-        << std::setw(ENTRY_SPACE) << "calc time"
-        << std::setw(ENTRY_SPACE) << "calc FLOPS"
-        << std::setw(ENTRY_SPACE) << "Memory Bandwidth"
-        << std::setw(ENTRY_SPACE) << "PCIe Bandwidth"
-        << std::right << std::endl;
-    std::cout << std::setw(ENTRY_SPACE) << "avg: "
-        << results.at("avg_t")
-        << results.at("avg_transfer_t")
-        << results.at("avg_calc_t")
-        << results.at("avg_calc_flops")
-        << results.at("avg_mem_bandwidth")
-        << results.at("avg_transfer_bandwidth")
-        << std::endl;
-    std::cout << std::setw(ENTRY_SPACE) << "best: " 
-        << results.at("min_t")
-        << results.at("min_transfer_t")
-        << results.at("min_calc_t")
-        << results.at("max_calc_flops")
-        << results.at("max_mem_bandwidth")
-        << results.at("max_transfer_bandwidth")
-        << std::endl;
+    if (mpi_comm_rank == 0) {
+        std::cout << std::setw(ENTRY_SPACE) << " "
+            << std::left << std::setw(ENTRY_SPACE) << "total time"
+            << std::setw(ENTRY_SPACE) << "transfer time"
+            << std::setw(ENTRY_SPACE) << "calc time"
+            << std::setw(ENTRY_SPACE) << "calc FLOPS"
+            << std::setw(ENTRY_SPACE) << "Memory Bandwidth"
+            << std::setw(ENTRY_SPACE) << "PCIe Bandwidth"
+            << std::right << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << "avg: "
+            << results.at("avg_t")
+            << results.at("avg_transfer_t")
+            << results.at("avg_calc_t")
+            << results.at("avg_calc_flops")
+            << results.at("avg_mem_bandwidth")
+            << results.at("avg_transfer_bandwidth")
+            << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << "best: " 
+            << results.at("min_t")
+            << results.at("min_transfer_t")
+            << results.at("min_calc_t")
+            << results.at("max_calc_flops")
+            << results.at("max_mem_bandwidth")
+            << results.at("max_transfer_bandwidth")
+            << std::endl;
+    }
 }
 
 std::unique_ptr<transpose::TransposeData>
@@ -188,9 +190,10 @@ transpose::TransposeBenchmark::validateOutput(transpose::TransposeData &data) {
 
 void
 transpose::TransposeBenchmark::printError() {
-    std::cout << "Maximum error: " << errors.at("epsilon") << " < " << 100 * errors.at("epsilon").value <<  std::endl;
-    std::cout << "Mach. Epsilon: " << errors.at("epsilon")  << std::endl;
-
+    if (mpi_comm_rank == 0) {
+        std::cout << "Maximum error: " << errors.at("epsilon") << " < " << 100 * errors.at("epsilon").value <<  std::endl;
+        std::cout << "Mach. Epsilon: " << errors.at("epsilon")  << std::endl;
+    }
 }
 
 void

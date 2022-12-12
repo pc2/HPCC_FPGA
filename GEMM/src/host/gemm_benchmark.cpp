@@ -140,13 +140,15 @@ gemm::GEMMBenchmark::collectResults() {
 
 void
 gemm::GEMMBenchmark::printResults() {
-    std::cout << std::left << std::setw(ENTRY_SPACE)
-            << " best" << std::setw(ENTRY_SPACE) << " mean"
-            << std::setw(ENTRY_SPACE) << " GFLOPS" << std::right << std::endl;
+    if (mpi_comm_rank == 0) {
+        std::cout << std::left << std::setw(ENTRY_SPACE)
+                << " best" << std::setw(ENTRY_SPACE) << " mean"
+                << std::setw(ENTRY_SPACE) << " GFLOPS" << std::right << std::endl;
 
-    std::cout << std::setw(ENTRY_SPACE)
-            << results.at("t_min") << results.at("t_mean") << results.at("gflops")
-            << std::endl;
+        std::cout << std::setw(ENTRY_SPACE)
+                << results.at("t_min") << results.at("t_mean") << results.at("gflops")
+                << std::endl;
+    }
 }
 
 std::unique_ptr<gemm::GEMMData>
@@ -206,8 +208,10 @@ gemm::GEMMBenchmark::validateOutput(gemm::GEMMData &data) {
 
 void
 gemm::GEMMBenchmark::printError() {
-    std::cout << std::left << std::setw(ENTRY_SPACE) << " norm. residual" << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::right << std::endl;
-    std::cout << errors.at("residual_norm") << errors.at("residual") << errors.at("epsilon") << std::endl;
+    if (mpi_comm_rank == 0) {
+        std::cout << std::left << std::setw(ENTRY_SPACE) << " norm. residual" << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::right << std::endl;
+        std::cout << errors.at("residual_norm") << errors.at("residual") << errors.at("epsilon") << std::endl;
+    }
 }
 
 void 

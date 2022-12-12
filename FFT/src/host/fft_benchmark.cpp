@@ -118,10 +118,12 @@ fft::FFTBenchmark::collectResults() {
 
 void
 fft::FFTBenchmark::printResults() {
+    if (mpi_comm_rank == 0) {
         std::cout << std::setw(ENTRY_SPACE) << " " << std::left << std::setw(ENTRY_SPACE) << " avg"
                 << std::setw(ENTRY_SPACE) << " best" << std::right << std::endl;
-        std::cout << std::setw(ENTRY_SPACE) << "Time in s:" << results.at("t_avg") << results.at("t_min") << std::endl;
-        std::cout << std::setw(ENTRY_SPACE) << "GFLOPS:" << results.at("gflops_avg") << results.at("gflops_min") << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << "Time in s: " << results.at("t_avg") << results.at("t_min") << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << "GFLOPS: " << results.at("gflops_avg") << results.at("gflops_min") << std::endl;
+    }
 }
 
 std::unique_ptr<fft::FFTData>
@@ -168,8 +170,10 @@ fft::FFTBenchmark::validateOutput(fft::FFTData &data) {
 }
 
 void fft::FFTBenchmark::printError() {
-    std::cout << std::left << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::right << std::endl;
-    std::cout << errors.at("residual") << errors.at("epsilon") << std::endl << std::endl;
+    if (mpi_comm_rank == 0) {
+        std::cout << std::left << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::right << std::endl;
+        std::cout << errors.at("residual") << errors.at("epsilon") << std::endl << std::endl;
+    }
 
 }
 

@@ -122,6 +122,7 @@ random_access::RandomAccessBenchmark::collectResults() {
 }
 
 void random_access::RandomAccessBenchmark::printResults() {
+    if (mpi_comm_rank == 0) {
         std::cout << std::left << std::setw(ENTRY_SPACE)
                 << "best" << std::setw(ENTRY_SPACE) << "mean"
                 << std::setw(ENTRY_SPACE) << "GUOPS" << std::right << std::endl;
@@ -130,6 +131,7 @@ void random_access::RandomAccessBenchmark::printResults() {
                 << results.at("t_min") << std::setw(ENTRY_SPACE) << results.at("t_mean")
                 << std::setw(ENTRY_SPACE) << results.at("guops")
                 << std::endl;
+    }
 }
 
 bool
@@ -218,5 +220,7 @@ random_access::RandomAccessBenchmark::validateOutput(random_access::RandomAccess
 
 void
 random_access::RandomAccessBenchmark::printError() {
-    std::cout  << "Error: " << errors.at("ratio") << std::endl;
+    if (mpi_comm_rank == 0) {
+        std::cout  << "Error: " << errors.at("ratio") << std::endl;
+    }
 }

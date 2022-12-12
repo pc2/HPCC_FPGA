@@ -53,6 +53,6 @@ TEST_F(RandomAccessHostCodeTest, ValidDataSizeAreDetected) {
 TEST_F(RandomAccessHostCodeTest, ResultValidationWorksForWrongUpdates) {
     auto data = bm->generateInputData();
     // check correctness of random accesses
-    EXPECT_TRUE(bm->validateOutput(*data));
+    EXPECT_FALSE(bm->validateOutput(*data));
     bm->printError();
 }
