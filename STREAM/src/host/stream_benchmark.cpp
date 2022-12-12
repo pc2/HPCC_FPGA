@@ -36,7 +36,6 @@ SOFTWARE.
 
 stream::StreamProgramSettings::StreamProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     streamArraySize(results["s"].as<uint>()),
-    kernelReplications(results["r"].as<uint>()),
     useSingleKernel(!static_cast<bool>(results.count("multi-kernel"))) {
 
 }
@@ -48,7 +47,6 @@ stream::StreamProgramSettings::getSettingsMap() {
         std::stringstream ss;
         ss << streamArraySize << " (" << static_cast<double>(streamArraySize * sizeof(HOST_DATA_TYPE)) << " Byte )";
         map["Array Size"] = ss.str();
-        map["Kernel Replications"] = std::to_string(kernelReplications);
         map["Kernel Type"] = (useSingleKernel ? "Single" : "Separate");
         return map;
 }

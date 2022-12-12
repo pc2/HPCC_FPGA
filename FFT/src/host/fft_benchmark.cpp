@@ -44,7 +44,7 @@ fft::FFTProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["FFT Size"] = std::to_string(1 << LOG_FFT_SIZE);
         map["Batch Size"] = std::to_string(iterations);
-        map["Kernel Replications"] = std::to_string(kernelReplications);
+        map["Inverse"] = inverse ? "Yes" : "No";
         return map;
 }
 

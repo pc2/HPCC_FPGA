@@ -53,12 +53,6 @@ public:
     uint streamArraySize;
 
     /**
-     * @brief The number of used kernel replications
-     * 
-     */
-    uint kernelReplications;
-
-    /**
      * @brief Indicator if the single kernel or the legacy kernel are used for execution
      * 
      */

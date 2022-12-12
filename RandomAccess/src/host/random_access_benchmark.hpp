@@ -51,12 +51,6 @@ public:
     size_t dataSize;
 
     /**
-     * @brief The number of used kernel replications
-     * 
-     */
-    uint kernelReplications;
-
-    /**
      * @brief Number of random number generators that are used per kernel replication
      * 
      */

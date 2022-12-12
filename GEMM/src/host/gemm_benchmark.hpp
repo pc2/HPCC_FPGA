@@ -72,12 +72,6 @@ public:
     uint blockSize;
 
     /**
-     * @brief Number of times the kernel is replicated
-     * 
-     */
-    uint kernelReplications;
-
-    /**
      * @brief If True, replicate input buffers for each kernel replication
      */
     bool replicateInputBuffers;

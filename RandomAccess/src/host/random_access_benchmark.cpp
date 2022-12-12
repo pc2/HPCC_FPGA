@@ -36,7 +36,6 @@ SOFTWARE.
 
 random_access::RandomAccessProgramSettings::RandomAccessProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     dataSize((1UL << results["d"].as<size_t>())),
-    kernelReplications(results["r"].as<uint>()),
     numRngs((1UL << results["g"].as<uint>())) {
 
 }
@@ -51,7 +50,6 @@ random_access::RandomAccessProgramSettings::getSettingsMap() {
     std::stringstream ss;
     ss << dataSize << " (" << static_cast<double>(dataSize * sizeof(HOST_DATA_TYPE) * mpi_size) << " Byte )";
     map["Array Size"] = ss.str();
-    map["Kernel Replications"] = std::to_string(kernelReplications);
     map["#RNGs"] = std::to_string(numRngs);
     return map;
 }

@@ -200,7 +200,11 @@ public:
     }
         return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel Replications", std::to_string(kernelReplications)}, 
                 {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}, {"Test Mode", testOnly ? "Yes" : "No"},
-                {"Communication Type", commToString(communicationType)}};
+                {"Communication Type", commToString(communicationType)}
+#ifdef INTEL_FPGA
+                ,{"Memory Interleaving", useMemoryInterleaving ? "Yes" : "No"}
+#endif 
+                };
     }
 
 };
@@ -275,6 +279,19 @@ public:
         }
         return device_name;
     }
+    
+    /*
+    std::string
+    getPlatformName() const {
+        std::string platform_name;
+        if (!programSettings->testOnly) {
+            platform->getInfo(CL_PLATFORM_NAME, &platform_name);
+        } else {
+            platform_name = "TEST RUN: Not selected!";
+        }
+        return platform_name;
+    }
+    */
 
 };
 
@@ -585,6 +602,15 @@ public:
         j["Q"] = stoi(q_str.substr(q_str.find("=") + 1, q_str.size()));
         return j;
     }
+    
+    std::string
+    getCurrentTime() {
+        time_t time = std::time(0);
+        const tm *local_time = std::localtime(&time);
+        std::ostringstream oss;
+        oss << std::put_time(local_time, "%a %b %d %T %Z %Y");
+        return oss.str();
+    }
 
     std::map<std::string, json>
     jsonifySettingsMap(std::map<std::string, std::string> settings_map) {
@@ -598,7 +624,7 @@ public:
             } catch (std::invalid_argument const &ex) {
                 if (key == "FPGA Torus") {
                     j[key] = parseFPGATorusString(value);
-                } else if (key == "Emulate" || key == "Replicate Inputs") {
+                } else if (key == "Emulate" || key == "Test Mode" || key == "Memory Interleaving" || key == "Replicate Inputs" || key == "Inverse" || key == "Diagonally Dominant" || "Dist. Buffers") {
                     j[key] = value == "Yes";
                 } else {
                     j[key] = value; 
@@ -621,6 +647,7 @@ public:
             dump["mpi"] ={{"version", MPI_VERSION}, {"subversion", MPI_SUBVERSION}};
 #endif
             dump["config_time"] = CONFIG_TIME;
+            dump["execution_time"] = getCurrentTime();
             dump["git_commit"] = GIT_COMMIT_HASH;
             dump["version"] = VERSION;
             dump["device"] = executionSettings->getDeviceName();
@@ -765,7 +792,9 @@ public:
             if (!executionSettings->programSettings->skipValidation) {
                 auto eval_start = std::chrono::high_resolution_clock::now();
                 validateSuccess = validateOutput(*data);
-                printError();
+                if (mpi_comm_rank == 0) {
+                    printError();
+                }
                 std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
 
                 if (mpi_comm_rank == 0) {

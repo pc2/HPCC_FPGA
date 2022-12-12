@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 gemm::GEMMProgramSettings::GEMMProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()), kernelReplications(results["r"].as<uint>()),
+    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()),
     replicateInputBuffers(results["replicate-inputs"].count() > 0) {
 
 }
@@ -44,7 +44,7 @@ std::map<std::string, std::string>
 gemm::GEMMProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["Matrix Size"] = std::to_string(matrixSize);
-        map["Kernel Replications"] = std::to_string(kernelReplications);
+        map["Block Size"] = std::to_string(blockSize);
         map["Replicate Inputs"] = replicateInputBuffers ? "Yes" : "No";
         return map;
 }
