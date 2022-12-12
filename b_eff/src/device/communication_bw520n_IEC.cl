@@ -49,17 +49,17 @@ typedef struct {
 /**
  * Definition of the external channels
  */
- // PY_CODE_GEN block_start [replace(local_variables=locals()) for r in range(num_replications)]
-channel message_part ch_out_/*PY_CODE_GEN  2*r+1*/ __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str(r % 4) + "\""*/)));
-channel message_part ch_out_/*PY_CODE_GEN  2*r+2*/  __attribute((io(/*PY_CODE_GEN "\"kernel_output_ch" + str((r + 2) % 4) + "\""*/)));
-channel message_part ch_in_/*PY_CODE_GEN  2*r+1*/ __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str(r % 4) + "\""*/)));
-channel message_part ch_in_/*PY_CODE_GEN  2*r+2*/  __attribute((io(/*PY_CODE_GEN "\"kernel_input_ch" + str((r + 2) % 4) + "\""*/)));
-channel message_part ch_exchange/*PY_CODE_GEN 2*r+1*/;
-channel message_part ch_exchange/*PY_CODE_GEN 2*r+2*/;
-// PY_CODE_GEN block_end
+{% for i in range(num_replications) %}
+channel message_part ch_out_{{ 2*i + 1 }} __attribute((io("kernel_output_ch{{ i % 4 }}")));
+channel message_part ch_out_{{ 2*i + 2 }} __attribute((io("kernel_output_ch{{ (i + 2) % 4 }}")));
+channel message_part ch_in_{{ 2*i + 1 }} __attribute((io("kernel_input_ch{{ i % 4 }}")));
+channel message_part ch_in_{{ 2*i + 2 }}  __attribute((io("kernel_input_ch{{ (i + 2) % 4 }}")));
+channel message_part ch_exchange{{ 2*i + 1 }};
+channel message_part ch_exchange{{ 2*i + 2 }};
+{% endfor %}
 
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for r in range(num_replications)]
+{% for i in range(num_replications) %}
 /**
  * Send kernel that will send messages through two channels
  *
@@ -68,7 +68,7 @@ channel message_part ch_exchange/*PY_CODE_GEN 2*r+2*/;
  */
 __kernel
 __attribute__ ((max_global_work_dim(0)))
-void send/*PY_CODE_GEN  r*/(const unsigned data_size,
+void send{{ i }}(const unsigned data_size,
         const unsigned repetitions) {
     const unsigned send_iterations = ((1 << data_size) +  2 * ITEMS_PER_CHANNEL - 1) / (2 * ITEMS_PER_CHANNEL);
     message_part send_part1;
@@ -85,13 +85,13 @@ void send/*PY_CODE_GEN  r*/(const unsigned data_size,
     for (unsigned i=0; i < repetitions; i++) {
         // Send a single message sent over two channels split into multiple chunks
         for (unsigned k=0; k < send_iterations; k++) {
-            write_channel_intel(ch_out_/*PY_CODE_GEN  2*r+1*/, send_part1);
-            write_channel_intel(ch_out_/*PY_CODE_GEN  2*r+2*/, send_part2);
+            write_channel_intel(ch_out_{{ 2*i+1 }}, send_part1);
+            write_channel_intel(ch_out_{{ 2*i+2 }}, send_part2);
         }
 #ifndef EMULATE
         // Introduce data dependency between loop iterations to prevent coalescing of loop
-        send_part1 = read_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+1*/);
-        send_part2 = read_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+2*/);
+        send_part1 = read_channel_intel(ch_exchange{{ 2*i+1 }});
+        send_part2 = read_channel_intel(ch_exchange{{ 2*i+2 }});
 #endif
     }
 }
@@ -106,7 +106,7 @@ void send/*PY_CODE_GEN  r*/(const unsigned data_size,
  */
 __kernel
 __attribute__ ((max_global_work_dim(0)))
-void recv/*PY_CODE_GEN  r*/(__global DEVICE_DATA_TYPE* validation_buffer,
+void recv{{ i }}(__global DEVICE_DATA_TYPE* validation_buffer,
             const unsigned data_size,
             const unsigned repetitions) {
     const unsigned send_iterations = ((1 << data_size) +  2 * ITEMS_PER_CHANNEL - 1) / (2 * ITEMS_PER_CHANNEL);
@@ -117,14 +117,14 @@ void recv/*PY_CODE_GEN  r*/(__global DEVICE_DATA_TYPE* validation_buffer,
     for (unsigned i=0; i < repetitions; i++) {
         // Receive a single message sent over two channels split into multiple chunks
         for (unsigned k=0; k < send_iterations; k++) {
-            recv_part1 = read_channel_intel(ch_in_/*PY_CODE_GEN  2*r+1*/);
-            recv_part2 = read_channel_intel(ch_in_/*PY_CODE_GEN  2*r+2*/);
+            recv_part1 = read_channel_intel(ch_in_{{ 2*i+1 }});
+            recv_part2 = read_channel_intel(ch_in_{{ 2*i+2 }});
         }
 #ifndef EMULATE
         // Introduce data dependency between loop iterations to prevent coalescing of loop
         // by sending the data to the send kernel
-        write_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+1*/, recv_part1);
-        write_channel_intel(ch_exchange/*PY_CODE_GEN 2*r+2*/, recv_part2);
+        write_channel_intel(ch_exchange{{ 2*i+1 }}, recv_part1);
+        write_channel_intel(ch_exchange{{ 2*i+2 }}, recv_part2);
 #endif
     }
 
@@ -139,4 +139,4 @@ void recv/*PY_CODE_GEN  r*/(__global DEVICE_DATA_TYPE* validation_buffer,
     }
 }
 
-//PY_CODE_GEN block_end
+{% endfor %}

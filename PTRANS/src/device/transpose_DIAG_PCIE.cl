@@ -127,7 +127,7 @@ store_a(__global DEVICE_DATA_TYPE *restrict A_out,
     }
 }
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+{% for i in range(num_replications) %}
 
 /**
  * Read blocks of matrix A and transpose them in memory.
@@ -144,7 +144,7 @@ store_a(__global DEVICE_DATA_TYPE *restrict A_out,
  */
 __attribute__((max_global_work_dim(0)))
 __kernel
-void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
+void transpose{{ i }}(__global DEVICE_DATA_TYPE *restrict A,
                                 __global DEVICE_DATA_TYPE *restrict B,
                                 __global DEVICE_DATA_TYPE *restrict A_out,
             const uint number_of_blocks) {
@@ -172,4 +172,4 @@ void transpose/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE *restrict A,
     }
 }
 
-// PY_CODE_GEN block_end
+{% endfor %}

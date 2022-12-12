@@ -10,13 +10,31 @@ default:
     - jacamar
   before_script:
     - module load fpga/intel/opencl_sdk/21.2.0 fpga/bittware/520n/20.4.0_max toolchain/foss/2021a devel/CMake/3.20.1-GCCcore-10.3.0 lang/Python/3.9.5-GCCcore-10.3.0
-    - python -m pip install pandas
+    - python -m pip install -r scripts/evaluation/requirements.txt
+    - python -m pip install -r scripts/code_generator/requirements.txt
 
 ###
 #
 # Build all benchmarks
 #
 ###
+
+build:docs:
+  stage: build
+  script:
+    - python -m pip install -r docs/requirements.txt
+    - module load devel/Doxygen/1.9.1-GCCcore-10.3.0
+    - cd docs
+    - make html
+    - doxygen doxy.config
+  only:
+    changes:
+      - docs/**/*
+      - .gitlab-ci.yml
+  artifacts:
+    paths:
+      - docs/build
+      - docs/xml
 
 build:STREAM:
   stage: build
@@ -174,6 +192,7 @@ build:LINPACK_DP:
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
+      - .gitlab-ci.yml
 
 build:GEMM:
   stage: build
