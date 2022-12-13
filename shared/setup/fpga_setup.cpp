@@ -245,20 +245,23 @@ choose a device.
 
         // Choose the target platform
         long unsigned int chosenPlatformId = 0;
-        if (defaultPlatform >= 0) {
-            if (platformString.size() > 0) {
-                bool found = false;
-                for (int i = 0; i < platformList.size(); i++) {
-                    if (platformList[i].getInfo<CL_PLATFORM_NAME>() == platformString) {
-                        chosenPlatformId = i;
-                        found = true;
-                        break;
-                    }
+        if (platformString.size() > 0) {
+            // Platform string has highest priority
+            bool found = false;
+            for (int i = 0; i < platformList.size(); i++) {
+                if (platformList[i].getInfo<CL_PLATFORM_NAME>() == platformString) {
+                    chosenPlatformId = i;
+                    found = true;
+                    break;
                 }
-                if (!found) {
-                    throw FpgaSetupException("Invalid platform string specified: " + platformString);
-                }
-            } else if (defaultPlatform < static_cast<int>(platformList.size())) {
+            }
+            if (!found) {
+                throw FpgaSetupException("Invalid platform string specified: " + platformString);
+            }
+        } 
+        else if (defaultPlatform >= 0) {
+            // Otherwise, select platform by index
+            if (defaultPlatform < static_cast<int>(platformList.size())) {
                 chosenPlatformId = defaultPlatform;
             } else {
                 std::cerr << "Default platform " << defaultPlatform
