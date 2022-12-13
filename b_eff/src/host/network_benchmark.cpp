@@ -38,7 +38,8 @@ network::NetworkProgramSettings::NetworkProgramSettings(cxxopts::ParseResult &re
     maxLoopLength(results["u"].as<uint>()), minLoopLength(results["l"].as<uint>()), maxMessageSize(results["m"].as<uint>()), 
     minMessageSize(results["min-size"].as<uint>()), llOffset(results["o"].as<uint>()), llDecrease(results["d"].as<uint>()),
     pcie_reverse_write_pcie(results["pcie-read"].count()), pcie_reverse_read_pcie(results["pcie-write"].count()),
-    pcie_reverse_execute_kernel(results["kernel-latency"].count()) {
+    pcie_reverse_execute_kernel(results["kernel-latency"].count()),
+    pcie_reverse_batch(results["pcie-batch"].count()) {
 
     pcie_reverse = pcie_reverse_execute_kernel | pcie_reverse_read_pcie | pcie_reverse_write_pcie;
 
@@ -93,7 +94,8 @@ network::NetworkBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_DECREASE)))
         ("pcie-read", "Use reverse PCIe experiment and measure PCIe read performance from device")
         ("pcie-write", "Use reverse PCIe experiment and measure PCIe write performance from device")
-        ("kernel-latency", "Use reverse PCIe experiment and measure kernel execution latency");
+        ("kernel-latency", "Use reverse PCIe experiment and measure kernel execution latency")
+        ("pcie-batch", "Execute the reverse PCIe experiments in batch mode to make use of the queues of the schedulers");
 }
 
 void

@@ -184,6 +184,12 @@ public:
     bool pcie_reverse_read_pcie;
 
     /**
+     * @brief If true, the reverse experiments are executed in batch mode per looplength to make use of the scheduling queues
+     * 
+     */
+    bool pcie_reverse_batch;
+
+    /**
      * @brief Construct a new Network Program Settings object
      * 
      * @param results the result map from parsing the program input parameters

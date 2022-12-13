@@ -96,15 +96,26 @@ namespace network::execution_types::pcie_reverse {
                 for (int l = 0; l < looplength; l++) {
                     if (config.programSettings->pcie_reverse_write_pcie) {
                         sendQueues[i].enqueueWriteBuffer(dummyBuffers[i], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents[i].data());
+                        if (!config.programSettings->pcie_reverse_batch) {
+                            sendQueues[i].finish();
+                        }
                     }
                     if (config.programSettings->pcie_reverse_execute_kernel) {
                         sendQueues[i].enqueueNDRangeKernel(dummyKernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
+                        if (!config.programSettings->pcie_reverse_batch) {
+                            sendQueues[i].finish();
+                        }
                     }
                     if (config.programSettings->pcie_reverse_read_pcie) {
                         sendQueues[i].enqueueReadBuffer(dummyBuffers[i], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents[i].data());
+                        if (!config.programSettings->pcie_reverse_batch) {
+                            sendQueues[i].finish();
+                        }
                     }
                 }
-                sendQueues[i].finish();
+                if (config.programSettings->pcie_reverse_batch) {
+                    sendQueues[i].finish();
+                }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
                 #ifndef NDEBUG
