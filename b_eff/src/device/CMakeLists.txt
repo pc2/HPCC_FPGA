@@ -23,4 +23,8 @@ if (Vitis_FOUND)
                 WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
         add_test(NAME test_output_parsing_xilinx COMMAND ${CMAKE_SOURCE_DIR}/../scripts/evaluation/execute_and_parse.sh ./Network_xilinx -f communication_PCIE_emulate.xclbin -l 1 -u 1 -m 20 -n 1
                 WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+        add_test(NAME test_emulation_pcie_reverse_xilinx COMMAND ${CMAKE_SOURCE_DIR}/scripts/clean_emulation_output_files.sh ${CMAKE_BINARY_DIR} ./Network_xilinx -f communication_PCIE_emulate.xclbin -l 1 -u 10 -m 0 -n 1 --kernel-latency --pcie-write --pcie-read
+                WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+        add_test(NAME test_emulation_pcie_reverse_batch_xilinx COMMAND ${CMAKE_SOURCE_DIR}/scripts/clean_emulation_output_files.sh ${CMAKE_BINARY_DIR} ./Network_xilinx -f communication_PCIE_emulate.xclbin -l 1 -u 10 -m 0 -n 1 --kernel-latency --pcie-write --pcie-read --pcie-batch
+                WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 endif()

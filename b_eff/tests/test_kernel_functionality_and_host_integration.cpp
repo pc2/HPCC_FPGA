@@ -10,7 +10,7 @@
 #include "test_program_settings.h"
 #include <fstream>
 
-struct NetworkKernelTest : testing::TestWithParam<hpcc_base::CommunicationType> {
+struct NetworkKernelTest : testing::Test {
     std::unique_ptr<network::NetworkBenchmark> bm;
     std::unique_ptr<network::NetworkData> data;
     unsigned numberOfChannels = 4;
@@ -22,7 +22,6 @@ struct NetworkKernelTest : testing::TestWithParam<hpcc_base::CommunicationType> 
     void SetUp() override {
         bm = std::unique_ptr<network::NetworkBenchmark>(new network::NetworkBenchmark(global_argc, global_argv));
         bm->getExecutionSettings().programSettings->numRepetitions = 1;
-        bm->getExecutionSettings().programSettings->communicationType = GetParam();
         data = bm->generateInputData();
         createChannelFilesAndSymbolicLinks();
     }
@@ -48,9 +47,9 @@ struct NetworkKernelTest : testing::TestWithParam<hpcc_base::CommunicationType> 
 /**
  * Tests if calculate returns the correct execution results
  */
-TEST_P(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
+TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(1,1));
+    data->items.push_back(network::NetworkData::NetworkDataItem(1,1, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     EXPECT_NE(bm->collected_timings.end(), bm->collected_timings.find(1));
     EXPECT_EQ(1, bm->collected_timings.find(1)->second.execution_timings.at(0).looplength);
@@ -60,10 +59,10 @@ TEST_P(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
 /**
  * Tests if calculate returns the correct execution results for multiple repetitions
  */
-TEST_P(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
+TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
     bm->getExecutionSettings().programSettings->numRepetitions = 2;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(8,4));
+    data->items.push_back(network::NetworkData::NetworkDataItem(8,4, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     EXPECT_NE(bm->collected_timings.end(), bm->collected_timings.find(8));
     EXPECT_EQ(4, bm->collected_timings.find(8)->second.execution_timings.at(0).looplength);
@@ -73,7 +72,7 @@ TEST_P(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
 /**
  * Tests if data is written to the channels for small message sizes
  */
-TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) {
+TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel) {
     if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
         // Skip this test if no IEC are used, because they are specific to the IEC emulation based on files
         GTEST_SKIP();
@@ -81,7 +80,7 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel)
     const unsigned messageSize = std::log2(CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[(1 << messageSize) * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
@@ -101,7 +100,7 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel)
 /**
  * Tests if data is written to the channels for small message sizes filling two channels
  */
-TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels) {
+TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels) {
     if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
         // Skip this test if no IEC are used, because they are specific to the IEC emulation based on files
         GTEST_SKIP();
@@ -109,7 +108,7 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize, looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize, looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[(1 << messageSize) * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
@@ -126,7 +125,7 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels
 /**
  * Tests if data is written to the channels for message sizes filling more than two channels
  */
-TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoChannels) {
+TEST_F(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwoChannels) {
     if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
         // Skip this test if no IEC are used, because they are specific to the IEC emulation based on files
         GTEST_SKIP();
@@ -134,7 +133,7 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwo
     const unsigned messageSize = std::log2(8 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 1;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[(1 << messageSize) * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
@@ -151,7 +150,7 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwo
 /**
  * Tests if correct data is written to the channels
  */
-TEST_P(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
+TEST_F(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
     if (bm->getExecutionSettings().programSettings->communicationType != hpcc_base::CommunicationType::intel_external_channels) {
         // Skip this test if no IEC are used, because they are specific to the IEC emulation based on files
         GTEST_SKIP();
@@ -159,7 +158,7 @@ TEST_P(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[messageSize * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
@@ -175,11 +174,11 @@ TEST_P(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
     delete [] buffer;
 }
 
-TEST_P(NetworkKernelTest, ValidationDataIsStoredCorrectlyForTwoChannels) {
+TEST_F(NetworkKernelTest, ValidationDataIsStoredCorrectlyForTwoChannels) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     HOST_DATA_TYPE cvalue = static_cast<HOST_DATA_TYPE>(messageSize & 255);
     EXPECT_EQ(cvalue, data->items[0].validationBuffer[0]);
@@ -190,11 +189,11 @@ TEST_P(NetworkKernelTest, ValidationDataIsStoredCorrectlyForTwoChannels) {
     EXPECT_TRUE(all_same);
 }
 
-TEST_P(NetworkKernelTest, ValidationDataIsStoredCorrectlyForSmallMessageSize) {
+TEST_F(NetworkKernelTest, ValidationDataIsStoredCorrectlyForSmallMessageSize) {
     const unsigned messageSize = 0;
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     HOST_DATA_TYPE cvalue = static_cast<HOST_DATA_TYPE>(messageSize & 255);
     EXPECT_EQ(cvalue, data->items[0].validationBuffer[0]);
@@ -205,72 +204,86 @@ TEST_P(NetworkKernelTest, ValidationDataIsStoredCorrectlyForSmallMessageSize) {
     EXPECT_TRUE(all_same);
 }
 
-TEST_P(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength4) {
+TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength4) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
+    bm->getExecutionSettings().programSettings->kernelReplications = 1;
     const unsigned looplength = 4;
+    const unsigned replications = 1;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    bm->executeKernel(*data);
-    EXPECT_EQ(CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, 1));
+    auto result = bm->executeKernel(*data);
+    EXPECT_EQ((1 << messageSize), data->items[0].validationBuffer.size());
 }
 
-TEST_P(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength1) {
+TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength1) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
+    bm->getExecutionSettings().programSettings->kernelReplications = 1;
     const unsigned looplength = 1;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    bm->executeKernel(*data);
-    EXPECT_EQ(CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, 1));
+    auto result = bm->executeKernel(*data);
+    EXPECT_EQ((1 << messageSize), data->items[0].validationBuffer.size());
 }
 
-TEST_P(NetworkKernelTest, ValidationDataHasCorrectSizeForDifferentMessageSize) {
+TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForDifferentMessageSize) {
     const unsigned messageSize = 0;
+    bm->getExecutionSettings().programSettings->kernelReplications = 1;
     const unsigned looplength = 1;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    bm->executeKernel(*data);
-    EXPECT_EQ(looplength * CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, 1));
+    auto result = bm->executeKernel(*data);
+    EXPECT_EQ((1 << messageSize), data->items[0].validationBuffer.size());
 }
 
-TEST_P(NetworkKernelTest, ValidationDataSingleItemWrongCheckFails) {
-    const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
+TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForReplication2) {
+    const unsigned messageSize = 4;
+    const unsigned looplength = 2;
+    bm->getExecutionSettings().programSettings->kernelReplications = 2;
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, 2));
+    auto result = bm->executeKernel(*data);
+    EXPECT_EQ((1 << messageSize) * 2, data->items[0].validationBuffer.size());
+}
+
+TEST_F(NetworkKernelTest, ValidationDataSingleItemWrongCheckFails) {
+    const unsigned messageSize = 4;
     const HOST_DATA_TYPE expected_data = static_cast<HOST_DATA_TYPE>(messageSize & 255);
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data;});
     data->items[0].validationBuffer[looplength] = expected_data + 1;
     EXPECT_FALSE(bm->validateOutput(*data));
     bm->printError();
 }
 
-TEST_P(NetworkKernelTest, ValidationDataWrongCheckFails) {
+TEST_F(NetworkKernelTest, ValidationDataWrongCheckFails) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const HOST_DATA_TYPE expected_data = static_cast<HOST_DATA_TYPE>(messageSize & 255);
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data - 1;});
     EXPECT_FALSE(bm->validateOutput(*data));
     bm->printError();
 }
 
-TEST_P(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
+TEST_F(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const HOST_DATA_TYPE expected_data = static_cast<HOST_DATA_TYPE>(messageSize & 255);
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data;});
     EXPECT_TRUE(bm->validateOutput(*data));
     bm->printError();
 }
 
-TEST_P(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
+TEST_F(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     EXPECT_TRUE(bm->validateOutput(*data));
     bm->printError();
@@ -279,32 +292,32 @@ TEST_P(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
 // This test is disabled because it does not work with the current implementation of the
 // external channels in software emulation. The different kernel executions will read 
 // the old data from the channel file, which will lead to a failing validation!
-TEST_P(NetworkKernelTest, DISABLED_ValidationDataCorrectTwoMessageSizesAfterExecution) {
+TEST_F(NetworkKernelTest, DISABLED_ValidationDataCorrectTwoMessageSizesAfterExecution) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize + 1,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize + 1,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     EXPECT_TRUE(bm->validateOutput(*data));
     bm->printError();
 }
 
-TEST_P(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
+TEST_F(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize + 1,looplength));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize + 1,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     data->items[1].validationBuffer[0] = static_cast<HOST_DATA_TYPE>(0);
     EXPECT_FALSE(bm->validateOutput(*data));
     bm->printError();
 }
 
-TEST_P(NetworkKernelTest, JsonDump) {
+TEST_F(NetworkKernelTest, JsonDump) {
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(8,4));
+    data->items.push_back(network::NetworkData::NetworkDataItem(8,4, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
     bm->collectResults();
     bm->dumpConfigurationAndResults("b_eff.json");
@@ -336,9 +349,3 @@ TEST_P(NetworkKernelTest, JsonDump) {
         }
     }
 }
-
-
-INSTANTIATE_TEST_CASE_P(
-        NetworkKernelParametrizedTests,
-        NetworkKernelTest,
-        ::testing::Values(hpcc_base::CommunicationType::intel_external_channels,hpcc_base::CommunicationType::cpu_only, hpcc_base::CommunicationType::pcie_mpi));
