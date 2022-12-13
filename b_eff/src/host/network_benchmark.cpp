@@ -52,8 +52,8 @@ network::NetworkProgramSettings::getSettingsMap() {
         return map;
 }
 
-network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize, unsigned int _loopLength) : messageSize(_messageSize), loopLength(_loopLength), 
-                                                                            validationBuffer((1 << _messageSize), 0) {
+network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize, unsigned int _loopLength, unsigned int replications) : messageSize(_messageSize), loopLength(_loopLength), 
+                                                                            validationBuffer((1 << _messageSize) * replications, 0) {
                                                                                 // TODO: fix the validation buffer size to use the variable number of kernel replications and channels
                                                                                 // Validation data buffer should be big enough to fit the data of two channels
                                                                                 // for every repetition. The number of kernel replications is fixed to 2, which 
@@ -61,13 +61,13 @@ network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize
                                                                             }
 
 network::NetworkData::NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int min_messagesize, unsigned int max_messagesize, 
-                                unsigned int offset, unsigned int decrease) {
+                                unsigned int offset, unsigned int decrease, unsigned int replications) {
     uint decreasePerStep = (max_looplength - min_looplength) / decrease;
     for (uint i = min_messagesize; i <= max_messagesize; i++) {
         uint messageSizeDivOffset = (i > offset) ? i - offset : 0u;
         uint newLooplength = (max_looplength > messageSizeDivOffset * decreasePerStep) ? max_looplength - messageSizeDivOffset * decreasePerStep : 0u;
         uint looplength = std::max(newLooplength, min_looplength);
-        this->items.push_back(NetworkDataItem(i, looplength));
+        this->items.push_back(NetworkDataItem(i, looplength, replications));
     }
 }
 
@@ -244,7 +244,8 @@ network::NetworkBenchmark::generateInputData() {
                                                                             executionSettings->programSettings->minMessageSize,
                                                                             executionSettings->programSettings->maxMessageSize,
                                                                             executionSettings->programSettings->llOffset,
-                                                                            executionSettings->programSettings->llDecrease));
+                                                                            executionSettings->programSettings->llDecrease,
+                                                                            executionSettings->programSettings->kernelReplications));
     return d;
 }
 

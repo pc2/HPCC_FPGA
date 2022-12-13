@@ -239,8 +239,9 @@ public:
          * 
          * @param messageSize The message size in bytes
          * @param loopLength The number of repetitions in the kernel
+         * @param replications The number of kernel replications
          */
-        NetworkDataItem(unsigned int messageSize, unsigned int loopLength);
+        NetworkDataItem(unsigned int messageSize, unsigned int loopLength, unsigned int replications);
     };
 
 
@@ -259,8 +260,10 @@ public:
      * @param max_messagesize The maximum message size
      * @param offset The used offset to scale the loop length. The higher the offset, the later the loop lenght will be decreased
      * @param decrease Number of steps the looplength will be decreased to the minimum
+     * @param replications The number of kernel replications
      */
-    NetworkData(unsigned int max_looplength, unsigned int min_looplength,  unsigned int min_messagesize, unsigned int max_messagesize, unsigned int offset, unsigned int decrease);
+    NetworkData(unsigned int max_looplength, unsigned int min_looplength,  unsigned int min_messagesize, unsigned int max_messagesize,
+                unsigned int offset, unsigned int decrease, unsigned int replications);
 
 };
 

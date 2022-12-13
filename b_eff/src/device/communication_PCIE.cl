@@ -27,11 +27,14 @@ SOFTWARE.
  *   Minimal kernel only used to measure the startup latency of a kernel and to provide a 
  *      memory buffe for Xilinx FPGAs to measure PCIe read and write performance
  *
- * @param input Dummy input
+ * @param output Output buffer that will be used to write the verification data into
+ * @param verification Verification value that will be written to the buffer
+ * @param messageSize size of the output buffer
  */
 __kernel
 __attribute__ ((max_global_work_dim(0)))
-void dummyKernel(__global char *input) {
-    // Minimal kernel only used to measure the startup latency of a kernel and to provide a 
-    // memory buffe for Xilinx FPGAs to measure PCIe read and write performance
+void dummyKernel(__global DEVICE_DATA_TYPE *output, DEVICE_DATA_TYPE verification, int messageSize) {
+    for (int m=0; m < messageSize; m++) {
+        output[m] = verification;
+    }
 }

@@ -47,7 +47,7 @@ namespace network::execution_types::pcie {
         std::vector<cl::Buffer> dummyBuffers;
         std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferContents;
 
-        cl_uint size_in_bytes = std::max(static_cast<int>(validationData.size()), (1 << messageSize));
+        cl_uint size_in_bytes = (1 << messageSize);
 
         int current_rank;
         MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
@@ -108,7 +108,7 @@ namespace network::execution_types::pcie {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-            err = sendQueues[r].enqueueReadBuffer(dummyBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * validationData.size() / config.programSettings->kernelReplications, &validationData.data()[r * validationData.size() / config.programSettings->kernelReplications]);
+            err = sendQueues[r].enqueueReadBuffer(dummyBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, &validationData.data()[r * size_in_bytes]);
             ASSERT_CL(err);
         }
         return network::ExecutionTimings{

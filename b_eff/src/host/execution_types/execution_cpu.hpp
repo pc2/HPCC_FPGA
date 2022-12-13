@@ -46,7 +46,7 @@ namespace network::execution_types::cpu {
         std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferReadContents;
         std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferWriteContents;
 
-        cl_uint size_in_bytes = std::max(static_cast<int>(validationData.size()), (1 << messageSize));
+        cl_uint size_in_bytes = (1 << messageSize);
 
         int current_rank;
         MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
@@ -89,8 +89,8 @@ namespace network::execution_types::cpu {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-            std::copy(dummyBufferWriteContents[r].begin(),dummyBufferWriteContents[r].begin() + dummyBufferWriteContents[r].size() / config.programSettings->kernelReplications,
-                        &validationData.data()[r * validationData.size() / config.programSettings->kernelReplications]);
+            std::copy(dummyBufferWriteContents[r].begin(),dummyBufferWriteContents[r].end(),
+                        &validationData.data()[r * size_in_bytes]);
         }
         return network::ExecutionTimings{
                 looplength,
