@@ -613,9 +613,9 @@ public:
     std::string
     getCurrentTime() {
         time_t time = std::time(0);
-        const tm *local_time = std::localtime(&time);
+        const tm *utc_time = std::gmtime(&time);
         std::ostringstream oss;
-        oss << std::put_time(local_time, "%a %b %d %T %Z %Y");
+        oss << std::put_time(utc_time, "%a %b %d %T UTC %Y");
         return oss.str();
     }
 
