@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 fft::FFTProgramSettings::FFTProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    iterations(results["b"].as<uint>()), inverse(results.count("inverse")), kernelReplications(results["r"].as<uint>()) {
+    iterations(results["b"].as<uint>()), inverse(results.count("inverse")) {
 
 }
 
