@@ -373,6 +373,13 @@ protected:
      */
     std::map<std::string, HpccResult> errors;
 
+    /**
+     * @brief This flag indicates whether the validation was successful
+     *
+     */
+    bool validated = false;
+
+
 public:
 
     /**
@@ -655,6 +662,7 @@ public:
             dump["timings"] = getTimingsJson();
             dump["results"] = getResultsJson();
             dump["errors"] = getErrorsJson();
+            dump["validated"] = validated;
             dump["environment"] = getEnvironmentMap();
 
             fs << dump;
@@ -773,7 +781,6 @@ public:
                         << HLINE;
             }
 
-            bool validateSuccess = false;
             auto exe_start = std::chrono::high_resolution_clock::now();
             executeKernel(*data);
 
@@ -791,7 +798,7 @@ public:
 
             if (!executionSettings->programSettings->skipValidation) {
                 auto eval_start = std::chrono::high_resolution_clock::now();
-                validateSuccess = validateOutput(*data);
+                validated = validateOutput(*data);
                 if (mpi_comm_rank == 0) {
                     printError();
                 }
@@ -811,7 +818,7 @@ public:
             
                 printResults();
 
-                if (!validateSuccess) {
+                if (!validated) {
                     std::cerr << HLINE << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
                 }
                 else {
@@ -819,7 +826,7 @@ public:
                 }
             }
 
-            return validateSuccess;
+            return validated;
        }
        catch (const std::exception& e) {
             std::cerr << "An error occured while executing the benchmark: " << std::endl;
