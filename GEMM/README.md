@@ -147,26 +147,18 @@ The json output looks like the following.
 ```json
 
 {
-  "config_time": "Thu Dec 08 10:39:51 UTC 2022",
+  "config_time": "Wed Dec 14 08:40:52 UTC 2022",
   "device": "Intel(R) FPGA Emulation Device",
   "environment": {
     "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
   },
   "errors": {
-    "epsilon": {
-      "unit": "",
-      "value": 1.1920928955078125e-07
-    },
-    "residual": {
-      "unit": "",
-      "value": 7.62939453125e-06
-    },
-    "residual_norm": {
-      "unit": "",
-      "value": 8.08345175162664e-05
-    }
+    "epsilon": 1.1920928955078125e-07,
+    "residual": 7.62939453125e-06,
+    "residual_norm": 8.08345175162664e-05
   },
-  "git_commit": "86e0064-dirty",
+  "execution_time": "Wed Dec 14 09:14:09 UTC 2022",
+  "git_commit": "be1a4e9-dirty",
   "mpi": {
     "subversion": 1,
     "version": 3
@@ -175,71 +167,73 @@ The json output looks like the following.
   "results": {
     "gflops": {
       "unit": "GFLOP/s",
-      "value": 5.347517549652832
+      "value": 5.297554068962992
     },
     "t_mean": {
       "unit": "s",
-      "value": 0.009541589199999999
+      "value": 0.010202154299999999
     },
     "t_min": {
       "unit": "s",
-      "value": 0.006274768
+      "value": 0.006333948
     }
   },
   "settings": {
-    "Communication Type": "UNSUPPORTED",
-    "Kernel File": "./bin/gemm_base_emulate.aocx",
+    "Block Size": 32,
+    "Communication Type": false,
+    "Kernel File": false,
     "Kernel Replications": 4,
     "MPI Ranks": 1,
     "Matrix Size": 256,
     "Repetitions": 10,
     "Replicate Inputs": false,
-    "Test Mode": "No"
+    "Test Mode": false
   },
   "timings": {
     "execution": [
       {
         "unit": "s",
-        "value": 0.012631986
+        "value": 0.012732567
       },
       {
         "unit": "s",
-        "value": 0.012796959
+        "value": 0.006511861
       },
       {
         "unit": "s",
-        "value": 0.012527344
+        "value": 0.006333948
       },
       {
         "unit": "s",
-        "value": 0.012579805
+        "value": 0.012710817
       },
       {
         "unit": "s",
-        "value": 0.0064457
+        "value": 0.006552662
       },
       {
         "unit": "s",
-        "value": 0.006274768
+        "value": 0.006600733
       },
       {
         "unit": "s",
-        "value": 0.00642924
+        "value": 0.012673167
       },
       {
         "unit": "s",
-        "value": 0.012808459
+        "value": 0.012720237
       },
       {
         "unit": "s",
-        "value": 0.006587663
+        "value": 0.012608296
       },
       {
         "unit": "s",
-        "value": 0.006333968
+        "value": 0.012577255
       }
     ]
   },
+  "validated": true,
   "version": "1.3"
 }
 

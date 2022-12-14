@@ -172,22 +172,17 @@ The json output looks like the following.
 ```json
 
 {
-  "config_time": "Thu Dec 08 10:41:51 UTC 2022",
+  "config_time": "Wed Dec 14 08:42:29 UTC 2022",
   "device": "Intel(R) FPGA Emulation Device",
   "environment": {
-    "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
+    "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
   },
   "errors": {
-    "epsilon": {
-      "unit": "",
-      "value": 1.1920928955078125e-07
-    },
-    "max_error": {
-      "unit": "",
-      "value": 7.62939453125e-06
-    }
+    "epsilon": 1.1920928955078125e-07,
+    "max_error": 199.96849060058594
   },
-  "git_commit": "86e0064-dirty",
+  "execution_time": "Wed Dec 14 09:57:30 UTC 2022",
+  "git_commit": "be1a4e9-dirty",
   "mpi": {
     "subversion": 1,
     "version": 3
@@ -196,151 +191,84 @@ The json output looks like the following.
   "results": {
     "avg_calc_flops": {
       "unit": "GFLOP/s",
-      "value": 0.36102157111728794
+      "value": 0.011002914958427963
     },
     "avg_calc_t": {
       "unit": "s",
-      "value": 0.0464715057
+      "value": 1.524797389
     },
     "avg_mem_bandwidth": {
       "unit": "GB/s",
-      "value": 4.332258853407454
+      "value": 0.13203497950113555
     },
     "avg_t": {
       "unit": "s",
-      "value": 0.061001096899999996
+      "value": 1.5332141689999998
     },
     "avg_transfer_bandwidth": {
       "unit": "GB/s",
-      "value": 13.856314966383914
+      "value": 23.919669042080226
     },
     "avg_transfer_t": {
       "unit": "s",
-      "value": 0.0145295912
+      "value": 0.00841678
     },
     "max_calc_flops": {
       "unit": "GFLOP/s",
-      "value": 0.4431353845559759
+      "value": 0.011002914958427963
     },
     "max_mem_bandwidth": {
       "unit": "GB/s",
-      "value": 5.31762461467171
+      "value": 0.13203497950113555
     },
     "max_transfer_bandwidth": {
       "unit": "GB/s",
-      "value": 17.8236830498358
+      "value": 23.919669042080226
     },
     "min_calc_t": {
       "unit": "s",
-      "value": 0.037860249
+      "value": 1.524797389
     },
     "min_t": {
       "unit": "s",
-      "value": 0.049155702999999995
+      "value": 1.5332141689999998
     },
     "min_transfer_t": {
       "unit": "s",
-      "value": 0.011295454
+      "value": 0.00841678
     }
   },
   "settings": {
     "Block Size": 512,
-    "Communication Type": "PCIE",
-    "Data Handler": "PQ",
-    "Dist. Buffers": "No",
-    "Kernel File": "./bin/transpose_PQ_PCIE_emulate.aocx",
+    "Communication Type": false,
+    "Data Handler": false,
+    "Dist. Buffers": false,
+    "FPGA Torus": {
+      "P": 1,
+      "Q": 3
+    },
+    "Kernel File": false,
     "Kernel Replications": 2,
-    "MPI Ranks": 1,
+    "MPI Ranks": 3,
     "Matrix Size": 4096,
-    "Repetitions": 10,
-    "Test Mode": "No"
+    "Repetitions": 1,
+    "Test Mode": false
   },
   "timings": {
     "calculation": [
       {
         "unit": "s",
-        "value": 0.054139988
-      },
-      {
-        "unit": "s",
-        "value": 0.05014593
-      },
-      {
-        "unit": "s",
-        "value": 0.037867809
-      },
-      {
-        "unit": "s",
-        "value": 0.037973641
-      },
-      {
-        "unit": "s",
-        "value": 0.046004999
-      },
-      {
-        "unit": "s",
-        "value": 0.037860249
-      },
-      {
-        "unit": "s",
-        "value": 0.056381497
-      },
-      {
-        "unit": "s",
-        "value": 0.050036547
-      },
-      {
-        "unit": "s",
-        "value": 0.048048414
-      },
-      {
-        "unit": "s",
-        "value": 0.046255983
+        "value": 1.523696949
       }
     ],
     "transfer": [
       {
         "unit": "s",
-        "value": 0.025985196
-      },
-      {
-        "unit": "s",
-        "value": 0.012733798000000001
-      },
-      {
-        "unit": "s",
-        "value": 0.012989071999999999
-      },
-      {
-        "unit": "s",
-        "value": 0.011295454
-      },
-      {
-        "unit": "s",
-        "value": 0.013326449
-      },
-      {
-        "unit": "s",
-        "value": 0.012952722
-      },
-      {
-        "unit": "s",
-        "value": 0.014228134
-      },
-      {
-        "unit": "s",
-        "value": 0.013149265
-      },
-      {
-        "unit": "s",
-        "value": 0.014597321
-      },
-      {
-        "unit": "s",
-        "value": 0.014038500999999998
+        "value": 0.008189295
       }
     ]
   },
+  "validated": false,
   "version": "1.7"
 }
 

@@ -164,54 +164,25 @@ The raw data of these runs can be found in the folder `csv_result_export`.
 ```json
 
 {
-  "config_time": "Thu Dec 08 10:43:26 UTC 2022",
+  "config_time": "Wed Dec 14 08:43:42 UTC 2022",
   "device": "Intel(R) FPGA Emulation Device",
   "environment": {
     "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
   },
   "errors": {
-    "a_average_error": {
-      "unit": "",
-      "value": 0
-    },
-    "a_average_relative_error": {
-      "unit": "",
-      "value": 0
-    },
-    "a_expected_value": {
-      "unit": "",
-      "value": 1153300692992
-    },
-    "b_average_error": {
-      "unit": "",
-      "value": 0
-    },
-    "b_average_relative_error": {
-      "unit": "",
-      "value": 0
-    },
-    "b_expected_value": {
-      "unit": "",
-      "value": 230660145152
-    },
-    "c_average_error": {
-      "unit": "",
-      "value": 0
-    },
-    "c_average_relative_error": {
-      "unit": "",
-      "value": 0
-    },
-    "c_expected_value": {
-      "unit": "",
-      "value": 307546849280
-    },
-    "epsilon": {
-      "unit": "",
-      "value": 1.1920928955078125e-07
-    }
+    "a_average_error": 0,
+    "a_average_relative_error": 0,
+    "a_expected": 1153300692992,
+    "b_average_error": 0,
+    "b_average_relative_error": 0,
+    "b_expected": 230660145152,
+    "c_average_error": 0,
+    "c_average_relative_error": 0,
+    "c_expected": 307546849280,
+    "epsilon": 1.1920928955078125e-07
   },
-  "git_commit": "86e0064-dirty",
+  "execution_time": "Wed Dec 14 09:29:17 UTC 2022",
+  "git_commit": "be1a4e9-dirty",
   "mpi": {
     "subversion": 1,
     "version": 3
@@ -220,366 +191,367 @@ The raw data of these runs can be found in the folder `csv_result_export`.
   "results": {
     "Add_avg_t": {
       "unit": "s",
-      "value": 0.033347886300000004
+      "value": 0.0530118015
     },
     "Add_best_rate": {
       "unit": "MB/s",
-      "value": 53622.07621998581
+      "value": 30506.44534004568
     },
     "Add_max_t": {
       "unit": "s",
-      "value": 0.03681156
+      "value": 0.053374228
     },
     "Add_min_t": {
       "unit": "s",
-      "value": 0.030036374
+      "value": 0.052795818
     },
     "Copy_avg_t": {
       "unit": "s",
-      "value": 0.0232275248
+      "value": 0.0389517071
     },
     "Copy_best_rate": {
       "unit": "MB/s",
-      "value": 47558.26475478994
+      "value": 27731.67753145461
     },
     "Copy_max_t": {
       "unit": "s",
-      "value": 0.025507117
+      "value": 0.040187928
     },
     "Copy_min_t": {
       "unit": "s",
-      "value": 0.022577397
+      "value": 0.038718964
     },
     "PCI_read_avg_t": {
       "unit": "s",
-      "value": 0.0672552576
+      "value": 0.0597715322
     },
     "PCI_read_best_rate": {
       "unit": "MB/s",
-      "value": 24721.98479896992
+      "value": 27479.82304062059
     },
     "PCI_read_max_t": {
       "unit": "s",
-      "value": 0.06825187
+      "value": 0.063351971
     },
     "PCI_read_min_t": {
       "unit": "s",
-      "value": 0.065149006
+      "value": 0.058610739
     },
     "PCI_write_avg_t": {
       "unit": "s",
-      "value": 0.0636534559
+      "value": 0.0685080558
     },
     "PCI_write_best_rate": {
       "unit": "MB/s",
-      "value": 26815.238093906166
+      "value": 25765.843668891466
     },
     "PCI_write_max_t": {
       "unit": "s",
-      "value": 0.084513938
+      "value": 0.120777629
     },
     "PCI_write_min_t": {
       "unit": "s",
-      "value": 0.060063339
+      "value": 0.062509606
     },
     "Scale_avg_t": {
       "unit": "s",
-      "value": 0.021342261699999997
+      "value": 0.03978323250000001
     },
     "Scale_best_rate": {
       "unit": "MB/s",
-      "value": 53574.52309080775
+      "value": 27084.469403573872
     },
     "Scale_max_t": {
       "unit": "s",
-      "value": 0.024272246
+      "value": 0.039983335
     },
     "Scale_min_t": {
       "unit": "s",
-      "value": 0.020042023
+      "value": 0.039644189
     },
     "Triad_avg_t": {
       "unit": "s",
-      "value": 0.0346477169
+      "value": 0.052600337100000005
     },
     "Triad_best_rate": {
       "unit": "MB/s",
-      "value": 48456.4004453886
+      "value": 30701.997665172144
     },
     "Triad_max_t": {
       "unit": "s",
-      "value": 0.037008534
+      "value": 0.052735936
     },
     "Triad_min_t": {
       "unit": "s",
-      "value": 0.03323839
+      "value": 0.052459542
     }
   },
   "settings": {
     "Array Size": 134217728,
-    "Communication Type": "UNSUPPORTED",
-    "Data Type": "cl_float",
-    "Kernel File": "./bin/stream_kernels_single_emulate.aocx",
+    "Communication Type": false,
+    "Data Type": false,
+    "Kernel File": false,
     "Kernel Replications": 4,
-    "Kernel Type": "Single",
+    "Kernel Type": false,
     "MPI Ranks": 1,
     "Repetitions": 10,
-    "Test Mode": "No"
+    "Test Mode": false
   },
   "timings": {
     "Add": [
       {
         "unit": "s",
-        "value": 0.03681156
+        "value": 0.052848008
       },
       {
         "unit": "s",
-        "value": 0.030148826
+        "value": 0.052795818
       },
       {
         "unit": "s",
-        "value": 0.034179315
+        "value": 0.053294617
       },
       {
         "unit": "s",
-        "value": 0.03443528
+        "value": 0.053374228
       },
       {
         "unit": "s",
-        "value": 0.030036374
+        "value": 0.052812528
       },
       {
         "unit": "s",
-        "value": 0.03498338
+        "value": 0.053091652
       },
       {
         "unit": "s",
-        "value": 0.033383682
+        "value": 0.052962381
       },
       {
         "unit": "s",
-        "value": 0.03149675
+        "value": 0.052992892
       },
       {
         "unit": "s",
-        "value": 0.035128302
+        "value": 0.052880469
       },
       {
         "unit": "s",
-        "value": 0.032875394
+        "value": 0.053065422
       }
     ],
     "Copy": [
       {
         "unit": "s",
-        "value": 0.023277928
+        "value": 0.040187928
       },
       {
         "unit": "s",
-        "value": 0.023061445
+        "value": 0.038718964
       },
       {
         "unit": "s",
-        "value": 0.022577397
+        "value": 0.038728084
       },
       {
         "unit": "s",
-        "value": 0.025507117
+        "value": 0.038760534
       },
       {
         "unit": "s",
-        "value": 0.022904103
+        "value": 0.038793734
       },
       {
         "unit": "s",
-        "value": 0.023076385
+        "value": 0.039005018
       },
       {
         "unit": "s",
-        "value": 0.022585516
+        "value": 0.038862845
       },
       {
         "unit": "s",
-        "value": 0.023018084
+        "value": 0.038731043
       },
       {
         "unit": "s",
-        "value": 0.023126956
+        "value": 0.038891176
       },
       {
         "unit": "s",
-        "value": 0.023140317
+        "value": 0.038837745
       }
     ],
     "PCI_read": [
       {
         "unit": "s",
-        "value": 0.066263925
+        "value": 0.058610739
       },
       {
         "unit": "s",
-        "value": 0.065149006
+        "value": 0.059211539
       },
       {
         "unit": "s",
-        "value": 0.06823823
+        "value": 0.059094178
       },
       {
         "unit": "s",
-        "value": 0.067614649
+        "value": 0.063351971
       },
       {
         "unit": "s",
-        "value": 0.068157828
+        "value": 0.059738369
       },
       {
         "unit": "s",
-        "value": 0.06825187
+        "value": 0.059645487
       },
       {
         "unit": "s",
-        "value": 0.068159038
+        "value": 0.059697218
       },
       {
         "unit": "s",
-        "value": 0.066694763
+        "value": 0.059381852
       },
       {
         "unit": "s",
-        "value": 0.067605659
+        "value": 0.059468254
       },
       {
         "unit": "s",
-        "value": 0.066417608
+        "value": 0.059515715
       }
     ],
     "PCI_write": [
       {
         "unit": "s",
-        "value": 0.084513938
+        "value": 0.120777629
       },
       {
         "unit": "s",
-        "value": 0.060253183
+        "value": 0.062600188
       },
       {
         "unit": "s",
-        "value": 0.060325944
+        "value": 0.062606179
       },
       {
         "unit": "s",
-        "value": 0.064254031
+        "value": 0.062711891
       },
       {
         "unit": "s",
-        "value": 0.060529077
+        "value": 0.062509606
       },
       {
         "unit": "s",
-        "value": 0.063792623
+        "value": 0.062803592
       },
       {
         "unit": "s",
-        "value": 0.060357565
+        "value": 0.062787151
       },
       {
         "unit": "s",
-        "value": 0.060063339
+        "value": 0.062679419
       },
       {
         "unit": "s",
-        "value": 0.060287283
+        "value": 0.06271488
       },
       {
         "unit": "s",
-        "value": 0.062157576
+        "value": 0.062890023
       }
     ],
     "Scale": [
       {
         "unit": "s",
-        "value": 0.021235864
+        "value": 0.039983335
       },
       {
         "unit": "s",
-        "value": 0.020608554
+        "value": 0.039644189
       },
       {
         "unit": "s",
-        "value": 0.020822067
+        "value": 0.039831532
       },
       {
         "unit": "s",
-        "value": 0.020042023
+        "value": 0.039766591
       },
       {
         "unit": "s",
-        "value": 0.021288745
+        "value": 0.039660679
       },
       {
         "unit": "s",
-        "value": 0.020088374
+        "value": 0.039933614
       },
       {
         "unit": "s",
-        "value": 0.021096531
+        "value": 0.039789862
       },
       {
         "unit": "s",
-        "value": 0.021525769
+        "value": 0.03967413
       },
       {
         "unit": "s",
-        "value": 0.024272246
+        "value": 0.039722601
       },
       {
         "unit": "s",
-        "value": 0.022442444
+        "value": 0.039825792
       }
     ],
     "Triad": [
       {
         "unit": "s",
-        "value": 0.037008534
+        "value": 0.052583184
       },
       {
         "unit": "s",
-        "value": 0.036020228
+        "value": 0.052564403
       },
       {
         "unit": "s",
-        "value": 0.033424273
+        "value": 0.052735936
       },
       {
         "unit": "s",
-        "value": 0.033462613
+        "value": 0.052644865
       },
       {
         "unit": "s",
-        "value": 0.033843901
+        "value": 0.052699956
       },
       {
         "unit": "s",
-        "value": 0.033447893
+        "value": 0.052459542
       },
       {
         "unit": "s",
-        "value": 0.03323839
+        "value": 0.052657585
       },
       {
         "unit": "s",
-        "value": 0.036342203
+        "value": 0.052493212
       },
       {
         "unit": "s",
-        "value": 0.03446487
+        "value": 0.052600984
       },
       {
         "unit": "s",
-        "value": 0.035224264
+        "value": 0.052563704
       }
     ]
   },
+  "validated": true,
   "version": "2.6"
 }
 

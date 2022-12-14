@@ -179,13 +179,14 @@ The json output looks like the following.
 ```json
 
 {
-  "config_time": "Thu Dec 08 10:38:28 UTC 2022",
+  "config_time": "Wed Dec 14 08:39:42 UTC 2022",
   "device": "Intel(R) FPGA Emulation Device",
   "environment": {
     "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
   },
   "errors": {},
-  "git_commit": "86e0064-dirty",
+  "execution_time": "Wed Dec 14 09:56:29 UTC 2022",
+  "git_commit": "be1a4e9-dirty",
   "mpi": {
     "subversion": 1,
     "version": 3
@@ -194,23 +195,23 @@ The json output looks like the following.
   "results": {
     "b_eff": {
       "unit": "B/s",
-      "value": 21935372.01805185
+      "value": 22061624.19637537
     }
   },
   "settings": {
-    "Communication Type": "IEC",
-    "Kernel File": "./bin/communication_bw520n_IEC_emulate.aocx",
+    "Communication Type": false,
+    "Kernel File": false,
     "Kernel Replications": 2,
     "Loop Length": 5,
     "MPI Ranks": 1,
     "Message Sizes": 2,
     "Repetitions": 10,
-    "Test Mode": "No"
+    "Test Mode": false
   },
   "timings": {
     "6": {
-      "maxCalcBW": 14601537.724441605,
-      "maxMinCalculationTime": 4.3831e-05,
+      "maxCalcBW": 9880812.696844315,
+      "maxMinCalculationTime": 6.4772e-05,
       "timings": [
         {
           "looplength": 5,
@@ -218,51 +219,51 @@ The json output looks like the following.
           "timings": [
             {
               "unit": "s",
-              "value": 0.013389739
+              "value": 0.010991125
             },
             {
               "unit": "s",
-              "value": 6.2761e-05
+              "value": 8.8202e-05
             },
             {
               "unit": "s",
-              "value": 4.9321e-05
+              "value": 0.000133323
             },
             {
               "unit": "s",
-              "value": 4.3831e-05
+              "value": 8.5442e-05
             },
             {
               "unit": "s",
-              "value": 4.951e-05
+              "value": 0.000272905
             },
             {
               "unit": "s",
-              "value": 4.7561e-05
+              "value": 0.000168784
             },
             {
               "unit": "s",
-              "value": 5.2311e-05
+              "value": 6.4772e-05
             },
             {
               "unit": "s",
-              "value": 5.0441e-05
+              "value": 0.000171733
             },
             {
               "unit": "s",
-              "value": 4.6901e-05
+              "value": 0.000163393
             },
             {
               "unit": "s",
-              "value": 5.4401e-05
+              "value": 8.0391e-05
             }
           ]
         }
       ]
     },
     "7": {
-      "maxCalcBW": 18104411.535904724,
-      "maxMinCalculationTime": 7.0701e-05,
+      "maxCalcBW": 19143908.348538782,
+      "maxMinCalculationTime": 6.6862e-05,
       "timings": [
         {
           "looplength": 5,
@@ -270,51 +271,51 @@ The json output looks like the following.
           "timings": [
             {
               "unit": "s",
-              "value": 0.000104852
+              "value": 0.000135662
             },
             {
               "unit": "s",
-              "value": 0.000125222
+              "value": 0.000119343
             },
             {
               "unit": "s",
-              "value": 7.9731e-05
+              "value": 0.000178914
             },
             {
               "unit": "s",
-              "value": 0.000151442
+              "value": 7.7691e-05
             },
             {
               "unit": "s",
-              "value": 9.3052e-05
+              "value": 9.1922e-05
             },
             {
               "unit": "s",
-              "value": 0.000193763
+              "value": 0.000259545
             },
             {
               "unit": "s",
-              "value": 8.4472e-05
+              "value": 0.000143233
             },
             {
               "unit": "s",
-              "value": 0.000116562
+              "value": 0.000149763
             },
             {
               "unit": "s",
-              "value": 8.2471e-05
+              "value": 6.6862e-05
             },
             {
               "unit": "s",
-              "value": 7.0701e-05
+              "value": 7.2351e-05
             }
           ]
         }
       ]
     },
     "8": {
-      "maxCalcBW": 33100166.79380923,
-      "maxMinCalculationTime": 7.7341e-05,
+      "maxCalcBW": 37160151.543743014,
+      "maxMinCalculationTime": 6.8891e-05,
       "timings": [
         {
           "looplength": 5,
@@ -322,49 +323,50 @@ The json output looks like the following.
           "timings": [
             {
               "unit": "s",
-              "value": 0.000711343
+              "value": 0.000159723
             },
             {
               "unit": "s",
-              "value": 0.000378606
+              "value": 0.000104432
             },
             {
               "unit": "s",
-              "value": 0.000280195
+              "value": 0.000166953
             },
             {
               "unit": "s",
-              "value": 0.000107392
+              "value": 7.7492e-05
             },
             {
               "unit": "s",
-              "value": 0.000203963
+              "value": 7.8241e-05
             },
             {
               "unit": "s",
-              "value": 0.000122193
+              "value": 9.5762e-05
             },
             {
               "unit": "s",
-              "value": 8.2151e-05
+              "value": 0.000235084
             },
             {
               "unit": "s",
-              "value": 8.6861e-05
+              "value": 0.000280265
             },
             {
               "unit": "s",
-              "value": 0.000167473
+              "value": 0.000130013
             },
             {
               "unit": "s",
-              "value": 7.7341e-05
+              "value": 6.8891e-05
             }
           ]
         }
       ]
     }
   },
+  "validated": true,
   "version": "1.3"
 }
 
