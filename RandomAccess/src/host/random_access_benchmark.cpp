@@ -201,7 +201,7 @@ random_access::RandomAccessBenchmark::validateOutput(random_access::RandomAccess
 
         // The overall error is calculated in percent of the overall array size
         double error_ratio = static_cast<double>(error_count) / (executionSettings->programSettings->dataSize * mpi_comm_size);
-        errors.emplace("ratio", hpcc_base::HpccResult(error_ratio, ""));
+        errors.emplace("ratio", error_ratio);
 
 #ifdef _USE_MPI_
         if (mpi_comm_rank == 0 && mpi_comm_size > 1) {
@@ -219,6 +219,6 @@ random_access::RandomAccessBenchmark::validateOutput(random_access::RandomAccess
 void
 random_access::RandomAccessBenchmark::printError() {
     if (mpi_comm_rank == 0) {
-        std::cout  << "Error: " << errors.at("ratio") << std::endl;
+        std::cout  << "Error: " << errors.at("ratio") * 100 << " %" << std::endl;
     }
 }

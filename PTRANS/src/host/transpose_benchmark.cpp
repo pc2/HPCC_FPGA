@@ -182,8 +182,8 @@ transpose::TransposeBenchmark::validateOutput(transpose::TransposeData &data) {
     double global_max_error = 0;
     MPI_Reduce(&max_error, &global_max_error, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
-    errors.emplace("epsilon", hpcc_base::HpccResult(std::numeric_limits<HOST_DATA_TYPE>::epsilon(), ""));
-    errors.emplace("max_error", hpcc_base::HpccResult(global_max_error, ""));
+    errors.emplace("epsilon", std::numeric_limits<HOST_DATA_TYPE>::epsilon());
+    errors.emplace("max_error", global_max_error);
 
     return static_cast<double>(global_max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
 }
@@ -191,7 +191,7 @@ transpose::TransposeBenchmark::validateOutput(transpose::TransposeData &data) {
 void
 transpose::TransposeBenchmark::printError() {
     if (mpi_comm_rank == 0) {
-        std::cout << "Maximum error: " << errors.at("epsilon") << " < " << 100 * errors.at("epsilon").value <<  std::endl;
+        std::cout << "Maximum error: " << errors.at("epsilon") << " < " << 100 * errors.at("epsilon") <<  std::endl;
         std::cout << "Mach. Epsilon: " << errors.at("epsilon")  << std::endl;
     }
 }

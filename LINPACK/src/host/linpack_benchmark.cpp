@@ -421,9 +421,9 @@ linpack::LinpackBenchmark::validateOutput(linpack::LinpackData &data) {
         }
     #endif
 
-    errors.emplace("epsilon", hpcc_base::HpccResult(eps, ""));
-    errors.emplace("residual", hpcc_base::HpccResult(resid, ""));
-    errors.emplace("residual_norm", hpcc_base::HpccResult(residn, ""));
+    errors.emplace("epsilon", eps);
+    errors.emplace("residual", resid);
+    errors.emplace("residual_norm", residn);
 
     if (mpi_comm_rank == 0) {
         return residn < 1;
@@ -435,8 +435,8 @@ linpack::LinpackBenchmark::validateOutput(linpack::LinpackData &data) {
 void
 linpack::LinpackBenchmark::printError() {
     if (mpi_comm_rank == 0) {
-        std::cout << std::left << std::setw(ENTRY_SPACE) << " norm. residual" << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::right << std::endl;
-        std::cout << errors.at("residual_norm") << errors.at("residual") << errors.at("epsilon") << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << " norm. residual" << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << errors.at("residual_norm") << std::setw(ENTRY_SPACE) << errors.at("residual") << std::setw(ENTRY_SPACE) << errors.at("epsilon") << std::endl;
     }
 }
 

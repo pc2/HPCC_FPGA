@@ -371,7 +371,7 @@ protected:
      * @brief map containing the errors of the benchmark
      *
      */
-    std::map<std::string, HpccResult> errors;
+    std::map<std::string, double> errors;
 
     /**
      * @brief This flag indicates whether the validation was successful
@@ -581,17 +581,6 @@ public:
         return results_string;
     }
 
-    std::map<std::string, json> getErrorsJson() {
-        std::map<std::string, json> errors_string; 
-        for (auto const &error: errors) {
-            json j;
-            j["unit"] = error.second.unit;
-            j["value"] = error.second.value;
-            errors_string[error.first] = j;
-        }
-        return errors_string;
-    }
-    
     std::map<std::string, std::string>
     getEnvironmentMap() {
         std::map<std::string, std::string> env; 
@@ -661,7 +650,7 @@ public:
             dump["settings"] = jsonifySettingsMap(executionSettings->programSettings->getSettingsMap());
             dump["timings"] = getTimingsJson();
             dump["results"] = getResultsJson();
-            dump["errors"] = getErrorsJson();
+            dump["errors"] = errors;
             dump["validated"] = validated;
             dump["environment"] = getEnvironmentMap();
 

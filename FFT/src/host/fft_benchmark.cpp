@@ -163,16 +163,16 @@ fft::FFTBenchmark::validateOutput(fft::FFTData &data) {
     double error = residual_max /
                    (std::numeric_limits<HOST_DATA_TYPE>::epsilon() * LOG_FFT_SIZE);
     
-    errors.emplace("residual", hpcc_base::HpccResult(error, ""));
-    errors.emplace("epsilon", hpcc_base::HpccResult(std::numeric_limits<HOST_DATA_TYPE>::epsilon(), ""));
+    errors.emplace("residual", error);
+    errors.emplace("epsilon", std::numeric_limits<HOST_DATA_TYPE>::epsilon());
 
     return error < 1.0;
 }
 
 void fft::FFTBenchmark::printError() {
     if (mpi_comm_rank == 0) {
-        std::cout << std::left << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::right << std::endl;
-        std::cout << errors.at("residual") << errors.at("epsilon") << std::endl << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << "res. error" << std::setw(ENTRY_SPACE) << "mach. eps" << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << errors.at("residual") << std::setw(ENTRY_SPACE) << errors.at("epsilon") << std::endl << std::endl;
     }
 
 }

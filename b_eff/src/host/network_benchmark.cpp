@@ -250,7 +250,7 @@ network::NetworkBenchmark::validateOutput(network::NetworkData &data) {
             }
         }
         if (error_count > 0) {
-            errors.emplace(std::to_string(item.messageSize), hpcc_base::HpccResult(error_count, "")); 
+            errors.emplace(std::to_string(item.messageSize), error_count); 
         }
         total_error += error_count;
     }
@@ -262,7 +262,7 @@ network::NetworkBenchmark::validateOutput(network::NetworkData &data) {
 void
 network::NetworkBenchmark::printError() {
     for (const auto& error: errors) {
-        std::cerr << "Validation data invalid for message size " << (1 << stoi(error.first)) << " in " << int(error.second.value) << " cases!" << std::endl; 
+        std::cerr << "Validation data invalid for message size " << (1 << stoi(error.first)) << " in " << int(error.second) << " cases!" << std::endl; 
     }
 }
 
