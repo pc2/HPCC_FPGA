@@ -76,7 +76,7 @@ namespace network::execution_types::pcie_reverse {
                 ASSERT_CL(err);
                 err = dummyKernels[r].setArg(1, (HOST_DATA_TYPE)(messageSize & 255));
                 ASSERT_CL(err);
-                err = dummyKernels[r].setArg(2, (1 << messageSize));
+                err = dummyKernels[r].setArg(2, 1); 
                 ASSERT_CL(err);
 
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));

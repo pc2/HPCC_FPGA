@@ -45,6 +45,7 @@ namespace network::execution_types::pcie {
         int err;
         std::vector<cl::CommandQueue> sendQueues;
         std::vector<cl::Buffer> dummyBuffers;
+        std::vector<cl::Kernel> dummyKernels;
         std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferContents;
 
         cl_uint size_in_bytes = (1 << messageSize);
@@ -66,6 +67,16 @@ namespace network::execution_types::pcie {
                 dummyBuffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE) * size_in_bytes,0,&err));
                 ASSERT_CL(err)
 
+                dummyKernels.push_back(cl::Kernel(*config.program,
+                                                    "dummyKernel", &err));
+
+                err = dummyKernels[r].setArg(0, dummyBuffers[r]);
+                ASSERT_CL(err);
+                err = dummyKernels[r].setArg(1, (HOST_DATA_TYPE)(messageSize & 255));
+                ASSERT_CL(err);
+                err = dummyKernels[r].setArg(2, 1); 
+                ASSERT_CL(err);
+
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
 
                 cl::CommandQueue sendQueue(*config.context, *config.device, 0, &err);
@@ -81,14 +92,16 @@ namespace network::execution_types::pcie {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 for (int l = 0; l < looplength; l++) {
-
+                        sendQueues[i].enqueueNDRangeKernel(dummyKernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
                         sendQueues[i].enqueueReadBuffer(dummyBuffers[i], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents[i].data());
+                        sendQueues[i].finish();
 
                         MPI_Sendrecv(dummyBufferContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0, 
                                         dummyBufferContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2)  + current_size) % current_size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
                         sendQueues[i].enqueueWriteBuffer(dummyBuffers[i], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents[i].data());
-
+                        sendQueues[i].enqueueNDRangeKernel(dummyKernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
+                        sendQueues[i].finish();
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
