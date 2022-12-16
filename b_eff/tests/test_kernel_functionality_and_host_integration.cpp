@@ -218,7 +218,6 @@ TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength4) {
     const unsigned replications = 1;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, 1));
-    auto result = bm->executeKernel(*data);
     EXPECT_EQ((1 << messageSize), data->items[0].validationBuffer.size());
 }
 
@@ -228,7 +227,6 @@ TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength1) {
     const unsigned looplength = 1;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, 1));
-    auto result = bm->executeKernel(*data);
     EXPECT_EQ((1 << messageSize), data->items[0].validationBuffer.size());
 }
 
@@ -237,8 +235,7 @@ TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForDifferentMessageSize) {
     bm->getExecutionSettings().programSettings->kernelReplications = 1;
     const unsigned looplength = 1;
     data->items.clear();
-    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, 1));
-    auto result = bm->executeKernel(*data);
+    data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, bm->getExecutionSettings().programSettings->kernelReplications));
     EXPECT_EQ((1 << messageSize), data->items[0].validationBuffer.size());
 }
 
@@ -248,7 +245,6 @@ TEST_F(NetworkKernelTest, ValidationDataHasCorrectSizeForReplication2) {
     bm->getExecutionSettings().programSettings->kernelReplications = 2;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength, 2));
-    auto result = bm->executeKernel(*data);
     EXPECT_EQ((1 << messageSize) * 2, data->items[0].validationBuffer.size());
 }
 
@@ -299,7 +295,7 @@ TEST_F(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
 // This test is disabled because it does not work with the current implementation of the
 // external channels in software emulation. The different kernel executions will read 
 // the old data from the channel file, which will lead to a failing validation!
-TEST_F(NetworkKernelTest, DISABLED_ValidationDataCorrectTwoMessageSizesAfterExecution) {
+TEST_F(NetworkKernelTest, ValidationDataCorrectTwoMessageSizesAfterExecution) {
     const unsigned messageSize = std::log2(2 * CHANNEL_WIDTH / sizeof(HOST_DATA_TYPE));
     const unsigned looplength = 4;
     data->items.clear();
