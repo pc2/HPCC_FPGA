@@ -119,6 +119,21 @@ void recv{{ i }}(__global DEVICE_DATA_TYPE* validation_buffer,
         for (unsigned k=0; k < send_iterations; k++) {
             recv_part1 = read_channel_intel(ch_in_{{ 2*i+1 }});
             recv_part2 = read_channel_intel(ch_in_{{ 2*i+2 }});
+
+            DEVICE_DATA_TYPE mem_buffer[2 * ITEMS_PER_CHANNEL];
+            // Store the last received data chunks in global memory for later validation
+            __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
+            for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
+                mem_buffer[d] = recv_part1.values[d];
+            }
+            __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
+            for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
+                mem_buffer[ITEMS_PER_CHANNEL + d] = recv_part2.values[d];
+            }
+            __attribute__((opencl_unroll_hint(2*ITEMS_PER_CHANNEL)))
+            for (DEVICE_DATA_TYPE d = 0; d < 2*ITEMS_PER_CHANNEL; d++) {
+                validation_buffer[k * (2 * ITEMS_PER_CHANNEL) + d] = mem_buffer[d];
+            }
         }
 #ifndef EMULATE
         // Introduce data dependency between loop iterations to prevent coalescing of loop
@@ -126,16 +141,6 @@ void recv{{ i }}(__global DEVICE_DATA_TYPE* validation_buffer,
         write_channel_intel(ch_exchange{{ 2*i+1 }}, recv_part1);
         write_channel_intel(ch_exchange{{ 2*i+2 }}, recv_part2);
 #endif
-    }
-
-    // Store the last received data chunks in global memory for later validation
-    __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
-    for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
-        validation_buffer[d] = recv_part1.values[d];
-    }
-    __attribute__((opencl_unroll_hint(ITEMS_PER_CHANNEL)))
-    for (DEVICE_DATA_TYPE d = 0; d < ITEMS_PER_CHANNEL; d++) {
-        validation_buffer[ITEMS_PER_CHANNEL + d] = recv_part2.values[d];
     }
 }
 
