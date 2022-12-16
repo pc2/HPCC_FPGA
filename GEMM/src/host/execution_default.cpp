@@ -42,7 +42,7 @@ namespace bm_execution {
 
  @copydoc bm_execution::calculate()
 */
-std::unique_ptr<gemm::GEMMExecutionTimings>
+std::map<std::string, std::vector<double>>
 calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config, HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c, HOST_DATA_TYPE* c_out,
         HOST_DATA_TYPE alpha, HOST_DATA_TYPE beta) {
 
@@ -257,10 +257,10 @@ calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config,
     }
 #endif
 
-
-    std::unique_ptr<gemm::GEMMExecutionTimings> results(
-                    new gemm::GEMMExecutionTimings{executionTimes});
-    return results;
+    std::map<std::string, std::vector<double>> timings;
+    
+    timings["execution"] = executionTimes;
+    return timings;
 }
 
 }  // namespace bm_execution

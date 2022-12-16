@@ -89,7 +89,7 @@ network::NetworkBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_DECREASE)));
 }
 
-std::unique_ptr<network::NetworkExecutionTimings>
+void
 network::NetworkBenchmark::executeKernel(NetworkData &data) {
     // Get the number of processes
     int world_size;
@@ -99,13 +99,13 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-    std::vector<std::shared_ptr<network::ExecutionTimings>> timing_results;
+    std::vector<network::ExecutionTimings> timing_results;
 
     for (auto& run : data.items) {
         if (world_rank == 0) {
             std::cout << "Measure for " << (1 << run.messageSize) << " Byte" << std::endl;
         }
-        std::shared_ptr<network::ExecutionTimings> timing;
+        network::ExecutionTimings timing;
         switch (executionSettings->programSettings->communicationType) {
             case hpcc_base::CommunicationType::cpu_only: timing = execution_types::cpu::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
             case hpcc_base::CommunicationType::pcie_mpi: timing = execution_types::pcie::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
@@ -115,16 +115,15 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
         timing_results.push_back(timing);
     }
 
-    std::unique_ptr<network::NetworkExecutionTimings> collected_results = std::unique_ptr<network::NetworkExecutionTimings> (new network::NetworkExecutionTimings());
     if (world_rank > 0) {
         for (const auto& t : timing_results) {
-            MPI_Send(&(t->messageSize),
+            MPI_Send(&(t.messageSize),
                      1,
                      MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD);
-            MPI_Send(&(t->looplength),
+            MPI_Send(&(t.looplength),
                      1,
                      MPI_UNSIGNED, 0, 1, MPI_COMM_WORLD);
-            MPI_Send(&(t->calculationTimings.front()),
+            MPI_Send(&(t.calculationTimings.front()),
                      executionSettings->programSettings->numRepetitions,
                      MPI_DOUBLE, 0,  2, MPI_COMM_WORLD);
         }
@@ -132,84 +131,86 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
         std::cout << "Collect results over MPI.";
         int k = 0;
         for (auto& run : data.items) {
-            std::vector<std::shared_ptr<network::ExecutionTimings>> tmp_timings;
+            std::vector<network::ExecutionTimings> tmp_timings;
             std::cout << ".";
             for (int i=1; i < world_size; i++) {
-                auto execution_result = std::shared_ptr<network::ExecutionTimings>( new network::ExecutionTimings {
+                auto execution_result = network::ExecutionTimings{
                     0,0,std::vector<double>(executionSettings->programSettings->numRepetitions)
-                });
+                };
                 MPI_Status status;
-                MPI_Recv(&(execution_result->messageSize),
+                MPI_Recv(&(execution_result.messageSize),
                          1,
                          MPI_UNSIGNED, i, 0, MPI_COMM_WORLD, &status);
-                MPI_Recv(&(execution_result->looplength),
+                MPI_Recv(&(execution_result.looplength),
                          1,
                          MPI_UNSIGNED, i, 1, MPI_COMM_WORLD, &status);
-                MPI_Recv(&(execution_result->calculationTimings.front()),
+                MPI_Recv(&(execution_result.calculationTimings.front()),
                          executionSettings->programSettings->numRepetitions,
                          MPI_DOUBLE, i, 2, MPI_COMM_WORLD, &status);
                 tmp_timings.push_back(execution_result);
-                if (execution_result->messageSize != run.messageSize) {
-                    std::cerr << "Wrong message size: " << execution_result->messageSize << " != " << run.messageSize << " from rank " << i << std::endl;
+                if (execution_result.messageSize != run.messageSize) {
+                    std::cerr << "Wrong message size: " << execution_result.messageSize << " != " << run.messageSize << " from rank " << i << std::endl;
                     throw std::runtime_error("Wrong message size received! Something went wrong in the MPI communication");
                 }
             }
             tmp_timings.push_back(timing_results[k]);
             k++;
-            collected_results->timings.emplace(run.messageSize, std::make_shared<std::vector<std::shared_ptr<network::ExecutionTimings>>>(tmp_timings));
+            collected_timings.emplace(run.messageSize, network::ExecutionResult{tmp_timings, 0.0, 0.0});
         }
         std::cout << " done!" << std::endl;
     }
-
-        return collected_results;
+    return;
 }
 
 void
-network::NetworkBenchmark::collectAndPrintResults(const network::NetworkExecutionTimings &output) {
+network::NetworkBenchmark::collectResults() {
     std::vector<double> maxBandwidths;
 
     if (mpi_comm_rank == 0) {
-        std::cout << std::setw(ENTRY_SPACE) << "MSize" << "   "
-                << std::setw(ENTRY_SPACE) << "looplength" << "   "
-                << std::setw(ENTRY_SPACE) << "transfer" << "   "
-                << std::setw(ENTRY_SPACE) << "B/s" << std::endl;
-        std::vector<double> totalMaxMinCalculationTime;
-        for (long unsigned int i =0; i < output.timings.size(); i++) {
-            totalMaxMinCalculationTime.push_back(0.0);
-        }
         int i = 0;
-        for (const auto& msgSizeResults : output.timings) {
-            for (const auto& r : *msgSizeResults.second) {
-                double localMinCalculationTime = *min_element(r->calculationTimings.begin(), r->calculationTimings.end());
-                totalMaxMinCalculationTime[i] = std::max(totalMaxMinCalculationTime[i], localMinCalculationTime);
+        for (auto& timing : collected_timings) {
+            for (auto& r : timing.second.execution_timings) {
+                double localMinCalculationTime = *min_element(r.calculationTimings.begin(), r.calculationTimings.end());
+                timing.second.maxMinCalculationTime = std::max(timing.second.maxMinCalculationTime, localMinCalculationTime);
             }
             i++;
         }
         i = 0;
-        for (const auto& msgSizeResults : output.timings) {
-            int looplength = msgSizeResults.second->at(0)->looplength;
+        for (auto& timing : collected_timings) {
+            int looplength = timing.second.execution_timings.at(0).looplength;
+            int messageSize = timing.first;
+            int num_timings = timing.second.execution_timings.size();
             // The total sent data in bytes will be:
             // #Nodes * message_size * looplength * 2
             // the * 2 is because we have two kernels per bitstream that will send and receive simultaneously.
             // This will be divided by half of the maximum of the minimum measured runtime over all ranks.
-            double maxCalcBW = static_cast<double>(msgSizeResults.second->size() * 2 * (1 << msgSizeResults.first) * looplength)
-                                                                / (totalMaxMinCalculationTime[i]);
+            timing.second.maxCalcBW = static_cast<double>(num_timings * 2 * (1 << messageSize) * looplength)
+                                                                / timing.second.maxMinCalculationTime;
 
-            maxBandwidths.push_back(maxCalcBW);
+            maxBandwidths.push_back(timing.second.maxCalcBW);
 
-            std::cout << std::setw(ENTRY_SPACE) << (1 << msgSizeResults.first) << "   "
-                    << std::setw(ENTRY_SPACE) << looplength << "   "
-                    << std::setw(ENTRY_SPACE) << totalMaxMinCalculationTime[i] << "   "
-                    << std::setw(ENTRY_SPACE)  << maxCalcBW
-                    << std::endl;
             i++;
         }
 
-
-        double b_eff = accumulate(maxBandwidths.begin(), maxBandwidths.end(), 0.0) / static_cast<double>(maxBandwidths.size());
-
-        std::cout << std::endl << "b_eff = " << b_eff << " B/s" << std::endl;
+        results.emplace("b_eff", hpcc_base::HpccResult(accumulate(maxBandwidths.begin(), maxBandwidths.end(), 0.0) / static_cast<double>(maxBandwidths.size()), "B/s"));
     }
+}
+
+void network::NetworkBenchmark::printResults() {
+    std::cout << std::setw(ENTRY_SPACE) << "MSize" << "   "
+            << std::setw(ENTRY_SPACE) << "looplength" << "   "
+            << std::setw(ENTRY_SPACE) << "transfer" << "   "
+            << std::setw(ENTRY_SPACE) << "B/s" << std::endl;
+
+    for (const auto& timing : collected_timings) {
+        std::cout << std::setw(ENTRY_SPACE) << (1 << timing.first) << "   "
+                << std::setw(ENTRY_SPACE) << timing.second.execution_timings.at(0).looplength << "   "
+                << std::setw(ENTRY_SPACE) << timing.second.maxMinCalculationTime << "   "
+                << std::setw(ENTRY_SPACE)  << timing.second.maxCalcBW
+                << std::endl;
+    }
+
+    std::cout << std::endl << "b_eff = " << results.at("b_eff") << std::endl;
 }
 
 std::unique_ptr<network::NetworkData>
@@ -233,29 +234,35 @@ network::NetworkBenchmark::generateInputData() {
 }
 
 bool  
-network::NetworkBenchmark::validateOutputAndPrintError(network::NetworkData &data) {
+network::NetworkBenchmark::validateOutput(network::NetworkData &data) {
     unsigned total_error = 0;
 
     // For every data size in the data set
     for (const auto& item : data.items) {
         // check if the validation buffer contains the expected data
         HOST_DATA_TYPE expected_value = static_cast<HOST_DATA_TYPE>(item.messageSize & 255u);
-        unsigned errors = 0;
+        unsigned error_count = 0;
         HOST_DATA_TYPE failing_entry = 0;
         for (const auto& v: item.validationBuffer) {
             if (v != expected_value) {
-                errors++;
+                error_count++;
                 failing_entry = v;
             }
         }
-        total_error += errors;
-        if (errors > 0) {
-            std::cerr << "Validation data invalid for message size " << (1 << item.messageSize) << " in " << errors << " cases! Expected: " 
-                    << static_cast<int>(expected_value) << ", Value: " << static_cast<int>(failing_entry) << std::endl;
+        if (error_count > 0) {
+            errors.emplace(std::to_string(item.messageSize), error_count); 
         }
+        total_error += error_count;
     }
 
     // success only, if no error occured
     return total_error == 0;
+}
+
+void
+network::NetworkBenchmark::printError() {
+    for (const auto& error: errors) {
+        std::cerr << "Validation data invalid for message size " << (1 << stoi(error.first)) << " in " << int(error.second) << " cases!" << std::endl; 
+    }
 }
 

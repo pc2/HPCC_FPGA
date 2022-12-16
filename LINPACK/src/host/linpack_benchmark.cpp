@@ -58,6 +58,7 @@ linpack::LinpackProgramSettings::getSettingsMap() {
         map["Matrix Size"] = std::to_string(matrixSize);
         map["Block Size"] = std::to_string(blockSize);
         map["Emulate"] = (isEmulationKernel) ? "Yes" : "No";
+        map["Diagonally Dominant"] = isDiagonallyDominant ? "Yes" : "No";
         map["Data Type"] = STR(HOST_DATA_TYPE);
         map["FPGA Torus"] = "P=" + std::to_string(torus_width) + ", Q=" + std::to_string(torus_height);
         return map;
@@ -111,9 +112,8 @@ linpack::LinpackBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
         ("emulation", "Use kernel arguments for emulation. This may be necessary to simulate persistent local memory on the FPGA");
 }
 
-std::unique_ptr<linpack::LinpackExecutionTimings>
+void
 linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
-    std::unique_ptr<linpack::LinpackExecutionTimings> timings;
     switch (executionSettings->programSettings->communicationType) {
         case hpcc_base::CommunicationType::pcie_mpi : timings = execution::pcie::calculate(*executionSettings, data); break;
         case hpcc_base::CommunicationType::intel_external_channels: timings = execution::iec::calculate(*executionSettings, data); break;
@@ -122,15 +122,14 @@ linpack::LinpackBenchmark::executeKernel(LinpackData &data) {
 #ifdef DISTRIBUTED_VALIDATION
     distributed_gesl_nopvt_ref(data);
 #endif
-    return timings;
 }
 
 void
-linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutionTimings &output) {
+linpack::LinpackBenchmark::collectResults() {
     // Calculate performance for kernel execution plus data transfer
-    double tmean = 0;
-    double tlumean = 0;
-    double tslmean = 0;
+    double t = 0;
+    double tlu = 0;
+    double tsl = 0;
     double tmin = std::numeric_limits<double>::max();
     double lu_min = std::numeric_limits<double>::max();
     double sl_min = std::numeric_limits<double>::max();
@@ -139,10 +138,10 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
     std::cout << "Rank " << mpi_comm_rank << ": Result collection started" << std::endl;
 #endif
 
-    std::vector<double> global_lu_times(output.gefaTimings.size());
-    MPI_Reduce(output.gefaTimings.data(), global_lu_times.data(), output.gefaTimings.size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    std::vector<double> global_sl_times(output.geslTimings.size());
-    MPI_Reduce(output.geslTimings.data(), global_sl_times.data(), output.geslTimings.size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    std::vector<double> global_lu_times(timings["gefa"].size());
+    MPI_Reduce(timings["gefa"].data(), global_lu_times.data(), timings["gefa"].size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    std::vector<double> global_sl_times(timings["gesl"].size());
+    MPI_Reduce(timings["gesl"].data(), global_sl_times.data(), timings["gesl"].size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 #ifndef NDEBUG
     std::cout << "Rank " << mpi_comm_rank << ": Result collection done" << std::endl;
 #endif
@@ -154,13 +153,13 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
     }
 
     double total_matrix_size = static_cast<double>(executionSettings->programSettings->matrixSize);
-    double gflops_lu = ((2.0e0*total_matrix_size * total_matrix_size * total_matrix_size)/ 3.0) / 1.0e9; 
-    double gflops_sl = (2.0*(total_matrix_size * total_matrix_size))/1.0e9;
+    double gflop_lu = ((2.0e0*total_matrix_size * total_matrix_size * total_matrix_size)/ 3.0) / 1.0e9; 
+    double gflop_sl = (2.0*(total_matrix_size * total_matrix_size))/1.0e9;
     for (int i =0; i < global_lu_times.size(); i++) {
         double currentTime = global_lu_times[i] + global_sl_times[i];
-        tmean +=  currentTime;
-        tlumean +=  global_lu_times[i];
-        tslmean += global_sl_times[i];
+        t +=  currentTime;
+        tlu +=  global_lu_times[i];
+        tsl += global_sl_times[i];
         if (currentTime < tmin) {
             tmin = currentTime;
         }
@@ -171,29 +170,41 @@ linpack::LinpackBenchmark::collectAndPrintResults(const linpack::LinpackExecutio
             sl_min = global_sl_times[i];
         }
     }
-    tmean = tmean / global_lu_times.size();
-    tlumean = tlumean / global_lu_times.size();
-    tslmean = tslmean / global_sl_times.size();
+    
+    results.emplace("t_mean", hpcc_base::HpccResult(t / global_lu_times.size(), "s"));
+    results.emplace("t_min", hpcc_base::HpccResult(tmin, "s"));
+    results.emplace("tlu_mean", hpcc_base::HpccResult(tlu / global_lu_times.size(), "s"));
+    results.emplace("tlu_min", hpcc_base::HpccResult(lu_min, "s"));
+    results.emplace("tsl_mean", hpcc_base::HpccResult(tsl / global_sl_times.size(), "s"));
+    results.emplace("tsl_min", hpcc_base::HpccResult(sl_min, "s"));
+    results.emplace("gflops", hpcc_base::HpccResult((gflop_lu + gflop_sl) / tmin, "GFLOP/s"));
+    results.emplace("gflops_lu", hpcc_base::HpccResult(gflop_lu / lu_min, "GFLOP/s"));
+    results.emplace("gflops_sl", hpcc_base::HpccResult(gflop_sl / sl_min, "GFLOP/s"));
+    
+    return;
+}
 
-     std::cout << std::setw(ENTRY_SPACE)
-              << "Method" << std::setw(ENTRY_SPACE)
-              << "best" << std::setw(ENTRY_SPACE) << "mean"
-              << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
-
-    std::cout << std::setw(ENTRY_SPACE) << "total" << std::setw(ENTRY_SPACE)
-              << tmin << std::setw(ENTRY_SPACE) << tmean
-              << std::setw(ENTRY_SPACE) << ((gflops_lu + gflops_sl) / tmin)
-              << std::endl;
-
-    std::cout << std::setw(ENTRY_SPACE) << "GEFA" << std::setw(ENTRY_SPACE)
-            << lu_min << std::setw(ENTRY_SPACE) << tlumean
-            << std::setw(ENTRY_SPACE) << ((gflops_lu) / lu_min)
+void
+linpack::LinpackBenchmark::printResults() {
+    if (mpi_comm_rank == 0) {
+        std::cout << std::left << std::setw(ENTRY_SPACE) << " Method"
+            << std::setw(ENTRY_SPACE) << " best"
+            << std::setw(ENTRY_SPACE) << " mean"
+            << std::setw(ENTRY_SPACE) << " GFLOPS"
             << std::endl;
 
-    std::cout << std::setw(ENTRY_SPACE) << "GESL" << std::setw(ENTRY_SPACE)
-              << sl_min << std::setw(ENTRY_SPACE) << tslmean
-              << std::setw(ENTRY_SPACE) << (gflops_sl / sl_min)
-              << std::endl;
+        std::cout << std::left << std::setw(ENTRY_SPACE) << " total" 
+                  << results.at("t_min") << results.at("t_mean") << results.at("gflops")
+                  << std::endl;
+
+        std::cout << std::left << std::setw(ENTRY_SPACE) << " GEFA"
+                << results.at("tlu_min") << results.at("tlu_mean") << results.at("gflops_lu")
+                << std::endl;
+
+        std::cout << std::left << std::setw(ENTRY_SPACE) << " GESL"
+                  << results.at("tsl_min") << results.at("tsl_mean") << results.at("gflops_sl")
+                  << std::right << std::endl;
+    }
 }
 
 std::unique_ptr<linpack::LinpackData>
@@ -285,7 +296,7 @@ linpack::LinpackBenchmark::generateInputData() {
 }
 
 bool  
-linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &data) {
+linpack::LinpackBenchmark::validateOutput(linpack::LinpackData &data) {
     uint n= executionSettings->programSettings->matrixSize;
     uint matrix_width = data.matrix_width;
     uint matrix_height = data.matrix_height;
@@ -410,16 +421,22 @@ linpack::LinpackBenchmark::validateOutputAndPrintError(linpack::LinpackData &dat
         }
     #endif
 
+    errors.emplace("epsilon", eps);
+    errors.emplace("residual", resid);
+    errors.emplace("residual_norm", residn);
+
     if (mpi_comm_rank == 0) {
-        //std::cout << resid << ", " << norma << ", " << normx << std::endl;
-        std::cout << "  norm. resid        resid       "\
-                    "machep   " << std::endl;
-        std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
-                << resid << std::setw(ENTRY_SPACE) << eps << std::endl;
         return residn < 1;
-    }
-    else {
+    } else {
         return true;
+    }
+}
+
+void
+linpack::LinpackBenchmark::printError() {
+    if (mpi_comm_rank == 0) {
+        std::cout << std::setw(ENTRY_SPACE) << " norm. residual" << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << errors.at("residual_norm") << std::setw(ENTRY_SPACE) << errors.at("residual") << std::setw(ENTRY_SPACE) << errors.at("epsilon") << std::endl;
     }
 }
 

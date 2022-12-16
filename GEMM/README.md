@@ -1,14 +1,27 @@
-# FFT Benchmark for FPGA
+# GEMM Benchmark for FPGA
 
-This repository contains the FFT Benchmark for FPGA and its OpenCL kernels.
+This repository contains the GEMM Benchmark for FPGA and its OpenCL kernels.
 Currently only the  Intel FPGA SDK for OpenCL utility is supported.
 
-It is based on the FFT benchmark of the [HPC Challenge Benchmark](https://icl.utk.edu/hpcc/) suite.
-The FFT1D reference implementation is used for the kernel code.
+It is a modified implementation of the
+[GEMM Benchmark](http://www.netlib.org/parkbench/html/matrix-kernels.html)
+provided in the [HPC Challenge Benchmark](https://icl.utk.edu/hpcc/) suite.
+The implementation follows the Python reference implementation given in  
+_Introduction to the HPCChallenge Benchmark Suite_ available
+[here](http://icl.cs.utk.edu/news_pub/submissions/hpcc-challenge-intro.pdf).
 
 ## Additional Dependencies
 
-The benchmark needs no additional dependencies than the ones given in the main [README](../README.md).
+The benchmark *optionally* depends on a library implementing the BLAS linear-algebra interface like:
+
+- OpenBLAS
+- Intel MKL
+
+If available, the benchmark will use `sgemm_` to validate the calculation instead of a slow reference implementation.
+For matrix sizes above 1000x1000 we recommend using such a library to speed up the benchmark execution. 
+Using such a library will not change the performance result of the benchmark but might affect the reported error of the calculation.
+
+For half precision support, the IEEE 754-based half-precision floating-point library by Christian Rau is used and a copy is provided with this code. 
 
 ## Build
 
@@ -18,25 +31,23 @@ The targets below can be used to build the benchmark and its kernels, where `VEN
 
  |  Target  | Description                                    |
  | -------- | ---------------------------------------------- |
- | FFT_`VENDOR`     | Builds the host application                    |
- | FFT_test_`VENDOR`    | Compile the tests and its dependencies  |
+ | GEMM_`VENDOR`   | Builds the host application                    |
+ | GEMM_test_`VENDOR`    | Compile the tests and its dependencies  |
  
  More over the are additional targets to generate kernel reports and bitstreams.
- The provided kernel is optimized for Stratix 10 with 512bit LSUs.
- The kernel targets are:
+ They are generated for every kernel code in the `src/device` folder:
  
   |  Target  | Description                                    |
   | -------- | ---------------------------------------------- |
-  | fft1d_float_8_`VENDOR`         | Synthesizes the kernel (takes several hours!)  |
-  | fft1d_float_8_report_`VENDOR`   | Create a report for the kernel    |
-  | fft1d_float_8_emulate_`VENDOR`  | Create a n emulation kernel             |
-  
+  | gemm_cannon_`VENDOR`         | Synthesizes the kernel (takes several hours!)  |
+  | gemm_cannon_report_`VENDOR`  | Just compile kernel and create reports    |
+  | gemm_cannon_emulate_`VENDOR`  | Create a n emulation kernel             |
  
  You can build for example the host application by running
  
     mkdir build && cd build
     cmake ..
-    make FFT_intel
+    make GEMM_intel
 
 You will find all executables and kernel files in the `bin`
 folder of your build directory.
@@ -44,9 +55,13 @@ Next to the common configuration options given in the [README](../README.md) of 
 
 Name             | Default     | Description                          |
 ---------------- |-------------|--------------------------------------|
-`DEFAULT_ITERATIONS`| 100          | Default number of iterations that is done with a single kernel execution|
-`LOG_FFT_SIZE`   | 12          | Log2 of the FFT Size that has to be used i.e. 3 leads to a FFT Size of 2^3=8|
-`NUM_REPLICATIONS` | 1         | Number of kernel replications. The whole FFT batch will be divided by the number of compute kernels. |
+ `DATA_TYPE`     | float (also supported: half, double)      | Data type used for calculation. *Note: Currently, half-precision does not work on Intel FPGAs because they can not be passed as kernel argument per value.*  |
+`DEFAULT_MATRIX_SIZE` | 8      | The default size of the quadratic matrices in blocks |
+`BLOCK_SIZE`    | 512          | Block size used by the kernel for calculation |
+`GEMM_SIZE`    | 8             | Block size of the fully unrolled matrix multiplication in registers |
+`GLOBAL_MEM_UNROLL`| 16        | Unrolling factor for the global memory access |
+`INTEL_MUL_SHIFT_REG`| 0       | Size of the shift register that can be optionally used by the Intel implementation to relax data dependencies (defaults to 0, which means that no shift register is used) |
+`NUM_REPLICATIONS` | 4         | Number of kernel replications. Every kernel will calculate a part of the output matrix |
 
 Moreover the environment variable `INTELFPGAOCLSDKROOT` has to be set to the root
 of the Intel FPGA SDK installation.
@@ -55,17 +70,22 @@ of the Intel FPGA SDK installation.
 
 For execution of the benchmark run:
 
-    ./FFT_intel -f path_to_kernel.aocx
+    ./GEMM_intel -f path_to_kernel.aocx
     
 For more information on available input parameters run
 
-    ./FFT_intel -h
-    
-    Implementation of the FFT benchmark proposed in the HPCC benchmark suite for FPGA.
-    Version: 1.4
+    ./GEMM_intel -h
+
+    Implementation of the GEMM benchmark proposed in the HPCC benchmark adapted for FPGA
+    Version: 1.3
+
+    MPI Version:  3.1
+    Config. Time: Thu Dec 08 10:39:51 UTC 2022
+    Git Commit:   86e0064-dirty
+
     Usage:
-      ./FFT_intel [OPTION...]
-    
+      ./bin/GEMM_intel [OPTION...]
+
       -f, --file arg          Kernel file name
       -n, arg                 Number of repetitions (default: 10)
       -i,                     Use memory Interleaving
@@ -80,143 +100,141 @@ For more information on available input parameters run
                               there are multiple platforms available. (default: 0)
           --platform_str arg  Name of the platform that has to be used (default:
                               )
-      -r, arg                 Number of used kernel replications (default: 1)
+      -r, arg                 Number of used kernel replications (default: 4)
           --dump-json arg     dump benchmark configuration and results to this
                               file in json format (default: )
           --test              Only test given configuration and skip execution
                               and validation
       -h, --help              Print this help
-      -b, arg                 Number of batched FFT calculations (iterations)
-                              (default: 100)
-          --inverse           If set, the inverse FFT is calculated instead
-    
+      -m, arg                 Matrix size in number of blocks in a single
+                              dimension (default: 8)
+      -b, arg                 Block size in number of values in one dimension
+                              (default: 32)
+          --replicate-inputs  Also replicates the input buffer for each kernel
+
 To execute the unit and integration tests run
 
-    ./FFT_test_intel -f KERNEL_FILE_NAME
+    ./GEMM_test_intel -f KERNEL_FILE_NAME
     
 in the `bin` folder within the build directory.
 It will run an emulation of the kernel and execute some functionality tests.
 
 ## Output Interpretation
 
-The benchmark will print the following two tables to standard output after execution:
+An example output from an emulation is given below:
 
-     res. error          mach. eps
-     2.63523e-01         1.19209e-07
+     norm. residual      res. error          mach. eps          
+     8.08345e-05         7.62939e-06         1.19209e-07        
 
-                     avg                 best
-          Time in s: 8.93261e-04 s       8.73572e-04 s
-             GFLOPS: 2.75127e-01 GFLOP/s 2.81328e-01 GFLOP/s
+     best                mean                GFLOPS             
+     6.50672e-03 s       1.06789e-02 s       5.15689e+00 GFLOP/s
 
-          
-The first table contains the maximum residual error of the calculation and the
-machine epsilon that was used to calculate the residual error.
-The benchmark will perform a FFT with the FPGA kernel on random input data.
-In a second step the resulting data will be used as input for an iFFT using a CPU
-reference implementation in double precision.
-The residual error is then calculated with:
+The first two rows give information about the calculation error.
 
-![res=\frac{||x-x'||}{\epsilon*ld(n)}](https://latex.codecogs.com/gif.latex?res=\frac{||x-x'||}{\epsilon*ld(n)})
+- `norm. residual`: The normalized residual error based on the used matrix size and used values
+- `res. error`: The maximum residual error of the calculation
+- `mach. epsilon`: The machine epsilon
 
-where `x` is the input data of the FFT, `x'` the resulting data from the iFFT, epsilon the machine epsilon and `n` the FFT size.
+The last two columns contain the time measurements and based on that the achieved FLOPS
+of the calculation.
 
-In the second table the measured execution times and calculated FLOPs are given.
-It gives the average and bast for both.
-The time gives the averaged execution time for a single FFT in case of a batched execution (an execution with more than one iteration).
-They are also used to calculate the FLOPs.
+- `best`: The shortest execution time in all runs
+- `mean`: Arithmetic mean of all execution times
+- `GFLOPS`: GFLOPS calculated from the shortest execution time
 
 The json output looks like the following.
 
 ```json
 
 {
-  "config_time": "Wed Dec 14 08:40:17 UTC 2022",
+  "config_time": "Wed Dec 14 08:40:52 UTC 2022",
   "device": "Intel(R) FPGA Emulation Device",
   "environment": {
     "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
   },
   "errors": {
     "epsilon": 1.1920928955078125e-07,
-    "residual": 0.2635231415430705
+    "residual": 7.62939453125e-06,
+    "residual_norm": 8.08345175162664e-05
   },
-  "execution_time": "Wed Dec 14 08:55:51 GMT 2022",
+  "execution_time": "Wed Dec 14 09:14:09 UTC 2022",
   "git_commit": "be1a4e9-dirty",
-  "name": "FFT",
+  "mpi": {
+    "subversion": 1,
+    "version": 3
+  },
+  "name": "GEMM",
   "results": {
-    "gflops_avg": {
+    "gflops": {
       "unit": "GFLOP/s",
-      "value": 0.2573525536079919
+      "value": 5.297554068962992
     },
-    "gflops_min": {
-      "unit": "GFLOP/s",
-      "value": 0.2842073122577159
-    },
-    "t_avg": {
+    "t_mean": {
       "unit": "s",
-      "value": 0.0009549545810000001
+      "value": 0.010202154299999999
     },
     "t_min": {
       "unit": "s",
-      "value": 0.00086472089
+      "value": 0.006333948
     }
   },
   "settings": {
-    "Batch Size": 100,
+    "Block Size": 32,
     "Communication Type": false,
-    "FFT Size": 4096,
-    "Inverse": false,
     "Kernel File": false,
-    "Kernel Replications": 1,
-    "MPI Ranks": false,
+    "Kernel Replications": 4,
+    "MPI Ranks": 1,
+    "Matrix Size": 256,
     "Repetitions": 10,
+    "Replicate Inputs": false,
     "Test Mode": false
   },
   "timings": {
     "execution": [
       {
         "unit": "s",
-        "value": 0.151814849
+        "value": 0.012732567
       },
       {
         "unit": "s",
-        "value": 0.086472089
+        "value": 0.006511861
       },
       {
         "unit": "s",
-        "value": 0.089654183
+        "value": 0.006333948
       },
       {
         "unit": "s",
-        "value": 0.09003793
+        "value": 0.012710817
       },
       {
         "unit": "s",
-        "value": 0.089870966
+        "value": 0.006552662
       },
       {
         "unit": "s",
-        "value": 0.089802216
+        "value": 0.006600733
       },
       {
         "unit": "s",
-        "value": 0.089816195
+        "value": 0.012673167
       },
       {
         "unit": "s",
-        "value": 0.089979618
+        "value": 0.012720237
       },
       {
         "unit": "s",
-        "value": 0.090762352
+        "value": 0.012608296
       },
       {
         "unit": "s",
-        "value": 0.086744183
+        "value": 0.012577255
       }
     ]
   },
   "validated": true,
-  "version": "1.4"
+  "version": "1.3"
 }
 
 ```

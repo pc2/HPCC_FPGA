@@ -920,7 +920,8 @@ TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalResultisSameAsRef) {
 
 TEST_F(LinpackKernelCommunicationTestLU, LUBlockExternalResultisCorrect) {
     linpack::gesl_ref_nopvt(data->A, data->b, bm->getExecutionSettings().programSettings->matrixSize,bm->getExecutionSettings().programSettings->matrixSize);
-    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError(); 
 
 }
 

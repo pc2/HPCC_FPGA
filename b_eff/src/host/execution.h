@@ -44,7 +44,7 @@ simple exchange of the different calculation methods.
 
 @return The resulting matrix
 */
-    std::shared_ptr<network::ExecutionTimings>
+    network::ExecutionTimings
     calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength, cl::vector<HOST_DATA_TYPE> &validationData);
 
 }  // namespace bm_execution

@@ -51,10 +51,10 @@ struct NetworkKernelTest : testing::TestWithParam<hpcc_base::CommunicationType> 
 TEST_P(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(1,1));
-    auto result = bm->executeKernel(*data);
-    EXPECT_NE(result->timings.end(), result->timings.find(1));
-    EXPECT_EQ(1, result->timings.find(1)->second->at(0)->looplength);
-    EXPECT_EQ(1, result->timings.find(1)->second->at(0)->calculationTimings.size());
+    bm->executeKernel(*data);
+    EXPECT_NE(bm->collected_timings.end(), bm->collected_timings.find(1));
+    EXPECT_EQ(1, bm->collected_timings.find(1)->second.execution_timings.at(0).looplength);
+    EXPECT_EQ(1, bm->collected_timings.find(1)->second.execution_timings.at(0).calculationTimings.size());
 }
 
 /**
@@ -64,10 +64,10 @@ TEST_P(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor842) {
     bm->getExecutionSettings().programSettings->numRepetitions = 2;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(8,4));
-    auto result = bm->executeKernel(*data);
-    EXPECT_NE(result->timings.end(), result->timings.find(8));
-    EXPECT_EQ(4, result->timings.find(8)->second->at(0)->looplength);
-    EXPECT_EQ(2, result->timings.find(8)->second->at(0)->calculationTimings.size());
+    bm->executeKernel(*data);
+    EXPECT_NE(bm->collected_timings.end(), bm->collected_timings.find(8));
+    EXPECT_EQ(4, bm->collected_timings.find(8)->second.execution_timings.at(0).looplength);
+    EXPECT_EQ(2, bm->collected_timings.find(8)->second.execution_timings.at(0).calculationTimings.size());
 }
 
 /**
@@ -82,7 +82,7 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingOneChannel)
     const unsigned looplength = 4;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[(1 << messageSize) * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
         std::string ifname = channelOutName + std::to_string(i);
@@ -110,7 +110,7 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingTwoChannels
     const unsigned looplength = 4;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize, looplength));
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[(1 << messageSize) * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
         std::string ifname = channelOutName + std::to_string(i);
@@ -135,7 +135,7 @@ TEST_P(NetworkKernelTest, DataIsWrittenToChannelForMessageSizeFillingMoreThanTwo
     const unsigned looplength = 1;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[(1 << messageSize) * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
         std::string ifname = channelOutName + std::to_string(i);
@@ -160,7 +160,7 @@ TEST_P(NetworkKernelTest, CorrectDataIsWrittenToChannel) {
     const unsigned looplength = 4;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     HOST_DATA_TYPE* buffer = new HOST_DATA_TYPE[messageSize * looplength * 2];
     for (int i=0; i < numberOfChannels; i++) {
         std::string ifname = channelOutName + std::to_string(i);
@@ -180,7 +180,7 @@ TEST_P(NetworkKernelTest, ValidationDataIsStoredCorrectlyForTwoChannels) {
     const unsigned looplength = 4;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     HOST_DATA_TYPE cvalue = static_cast<HOST_DATA_TYPE>(messageSize & 255);
     EXPECT_EQ(cvalue, data->items[0].validationBuffer[0]);
     bool all_same = true;
@@ -195,7 +195,7 @@ TEST_P(NetworkKernelTest, ValidationDataIsStoredCorrectlyForSmallMessageSize) {
     const unsigned looplength = 4;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     HOST_DATA_TYPE cvalue = static_cast<HOST_DATA_TYPE>(messageSize & 255);
     EXPECT_EQ(cvalue, data->items[0].validationBuffer[0]);
     bool all_same = true;
@@ -210,7 +210,7 @@ TEST_P(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength4) {
     const unsigned looplength = 4;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     EXPECT_EQ(CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
 }
 
@@ -219,7 +219,7 @@ TEST_P(NetworkKernelTest, ValidationDataHasCorrectSizeForLoopLength1) {
     const unsigned looplength = 1;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     EXPECT_EQ(CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
 }
 
@@ -228,7 +228,7 @@ TEST_P(NetworkKernelTest, ValidationDataHasCorrectSizeForDifferentMessageSize) {
     const unsigned looplength = 1;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     EXPECT_EQ(looplength * CHANNEL_WIDTH * 2 * 2, data->items[0].validationBuffer.size());
 }
 
@@ -240,7 +240,8 @@ TEST_P(NetworkKernelTest, ValidationDataSingleItemWrongCheckFails) {
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data;});
     data->items[0].validationBuffer[looplength] = expected_data + 1;
-    EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
+    EXPECT_FALSE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 TEST_P(NetworkKernelTest, ValidationDataWrongCheckFails) {
@@ -250,7 +251,8 @@ TEST_P(NetworkKernelTest, ValidationDataWrongCheckFails) {
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data - 1;});
-    EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
+    EXPECT_FALSE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 TEST_P(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
@@ -260,7 +262,8 @@ TEST_P(NetworkKernelTest, ValidationDataCorrectCheckSuccessful) {
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     std::for_each(data->items[0].validationBuffer.begin(), data->items[0].validationBuffer.end(), [expected_data](HOST_DATA_TYPE& d){d = expected_data;});
-    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 TEST_P(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
@@ -268,8 +271,9 @@ TEST_P(NetworkKernelTest, ValidationDataCorrectOneMessageSizeAfterExecution) {
     const unsigned looplength = 4;
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
-    auto result = bm->executeKernel(*data);
-    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+    bm->executeKernel(*data);
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 // This test is disabled because it does not work with the current implementation of the
@@ -281,8 +285,9 @@ TEST_P(NetworkKernelTest, DISABLED_ValidationDataCorrectTwoMessageSizesAfterExec
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize + 1,looplength));
-    auto result = bm->executeKernel(*data);
-    EXPECT_TRUE(bm->validateOutputAndPrintError(*data));
+    bm->executeKernel(*data);
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 TEST_P(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
@@ -291,11 +296,46 @@ TEST_P(NetworkKernelTest, ValidationDataWrongTwoMessageSizesAfterExecution) {
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize,looplength));
     data->items.push_back(network::NetworkData::NetworkDataItem(messageSize + 1,looplength));
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     data->items[1].validationBuffer[0] = static_cast<HOST_DATA_TYPE>(0);
-    EXPECT_FALSE(bm->validateOutputAndPrintError(*data));
+    EXPECT_FALSE(bm->validateOutput(*data));
+    bm->printError();
 }
 
+TEST_P(NetworkKernelTest, JsonDump) {
+    data->items.clear();
+    data->items.push_back(network::NetworkData::NetworkDataItem(8,4));
+    bm->executeKernel(*data);
+    bm->collectResults();
+    bm->dumpConfigurationAndResults("b_eff.json");
+    std::FILE *f = std::fopen("b_eff.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        json j = json::parse(f);
+        EXPECT_TRUE(j.contains("timings"));
+        if (j.contains("timings")) {
+            EXPECT_TRUE(j["timings"].size() > 0);
+            if (j["timings"].size() > 0) {
+                for (const auto& timing: j["timings"].items()) {
+                    EXPECT_TRUE(timing.value().contains("maxCalcBW"));
+                    EXPECT_TRUE(timing.value().contains("maxMinCalculationTime"));
+                    EXPECT_TRUE(timing.value().contains("timings"));
+                    if (timing.value().contains("timings")) {
+                        for (const auto& timing: timing.value()["timings"]) {
+                            EXPECT_TRUE(timing.contains("looplength"));
+                            EXPECT_TRUE(timing.contains("messageSize"));
+                            EXPECT_TRUE(timing.contains("timings"));
+                        }
+                    }
+                }
+            }
+        }
+        EXPECT_TRUE(j.contains("results"));
+        if (j.contains("results")) {
+            EXPECT_TRUE(j["results"].contains("b_eff"));
+        }
+    }
+}
 
 
 INSTANTIATE_TEST_CASE_P(

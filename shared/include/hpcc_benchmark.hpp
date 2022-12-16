@@ -23,6 +23,7 @@ SOFTWARE.
 #define SHARED_HPCC_BENCHMARK_HPP_
 
 #include <memory>
+#include <iostream>
 
 /* External library headers */
 #ifdef USE_DEPRECATED_HPP_HEADER
@@ -37,13 +38,18 @@ SOFTWARE.
 /* Project's headers */
 #include "setup/fpga_setup.hpp"
 #include "cxxopts.hpp"
+#include "nlohmann/json.hpp"
 #include "parameters.h"
 #include "communication_types.hpp"
 
 #define STR_EXPAND(tok) #tok
 #define STR(tok) STR_EXPAND(tok)
 
-#define ENTRY_SPACE 15
+#define VALUE_SPACE 11
+#define UNIT_SPACE 8
+#define ENTRY_SPACE (VALUE_SPACE + UNIT_SPACE + 1)
+
+using json = nlohmann::json;
 
 /**
  * @brief Contains all classes and functions that are used as basis
@@ -51,6 +57,26 @@ SOFTWARE.
  * 
  */
 namespace hpcc_base {
+
+class HpccResult {
+public:
+    double value;
+    std::string unit;
+
+    HpccResult(double value, std::string unit): value(value), unit(unit) {}
+    
+    friend std::ostream &operator<<(std::ostream &os, const HpccResult &result) {
+        os << std::setw(VALUE_SPACE) << result.value << " " << std::left << std::setw(UNIT_SPACE) << result.unit << std::right;
+        return os;
+    }
+
+    std::string to_string() const {
+        std::ostringstream oss;
+        oss << *this;
+        return oss.str();
+    }
+    // TODO: to_json function
+};
 
 /**
  * @brief This class should be derived and extended for every benchmark.
@@ -119,6 +145,8 @@ public:
      * 
      */
     bool testOnly;
+    
+    std::string dumpfilePath;
 
     /**
      * @brief Type of inter-FPGA communication used
@@ -152,6 +180,7 @@ public:
 #else
             communicationType(retrieveCommunicationType("UNSUPPORTED", results["f"].as<std::string>())),
 #endif
+            dumpfilePath(results["dump-json"].as<std::string>()),
             testOnly(static_cast<bool>(results.count("test"))) {}
 
     /**
@@ -171,7 +200,11 @@ public:
     }
         return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel Replications", std::to_string(kernelReplications)}, 
                 {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}, {"Test Mode", testOnly ? "Yes" : "No"},
-                {"Communication Type", commToString(communicationType)}};
+                {"Communication Type", commToString(communicationType)}
+#ifdef INTEL_FPGA
+                ,{"Memory Interleaving", useMemoryInterleaving ? "Yes" : "No"}
+#endif 
+                };
     }
 
 };
@@ -236,6 +269,30 @@ public:
         programSettings = nullptr;
     }
 
+    std::string
+    getDeviceName() const {
+        std::string device_name;
+        if (!programSettings->testOnly) {
+            device->getInfo(CL_DEVICE_NAME, &device_name);
+        } else {
+            device_name = "TEST RUN: Not selected!";
+        }
+        return device_name;
+    }
+    
+    /*
+    std::string
+    getPlatformName() const {
+        std::string platform_name;
+        if (!programSettings->testOnly) {
+            platform->getInfo(CL_PLATFORM_NAME, &platform_name);
+        } else {
+            platform_name = "TEST RUN: Not selected!";
+        }
+        return platform_name;
+    }
+    */
+
 };
 
 /**
@@ -245,7 +302,7 @@ public:
  * @tparam TData Class used to represent the benchmark input and output data
  * @tparam TOutput Class representing the measurements like timings etc
  */
-template <class TSettings, class TData, class TOutput>
+template <class TSettings, class TData>
 class HpccFpgaBenchmark {
 
 private:
@@ -294,6 +351,34 @@ protected:
      * 
      */
     bool mpi_external_init = true;
+    
+    /**
+     *
+     * @brief map containing the benchmark timings
+     *
+     */
+    std::map<std::string, std::vector<double>> timings;
+
+    /**
+     *
+     * @brief map containing the benchmark results
+     *
+     */
+    std::map<std::string, HpccResult> results;
+    
+    /**
+     *
+     * @brief map containing the errors of the benchmark
+     *
+     */
+    std::map<std::string, double> errors;
+
+    /**
+     * @brief This flag indicates whether the validation was successful
+     *
+     */
+    bool validated = false;
+
 
 public:
 
@@ -311,7 +396,7 @@ public:
      * @param data The initialized data for the kernel. It will be replaced by the kernel output for validation
      * @return std::unique_ptr<TOutput> A data class containing the measurement results of the execution
      */
-    virtual std::unique_ptr<TOutput>
+    virtual void
     executeKernel(TData &data) = 0;
 
     /**
@@ -322,7 +407,13 @@ public:
      * @return false If the validation failed
      */
     virtual bool
-    validateOutputAndPrintError(TData &data) = 0;
+    validateOutput(TData &data) = 0;
+    
+    /**
+     * @brief Print the error after validating output
+    */
+    virtual void
+    printError() = 0;
 
     /**
      * @brief Collects the measurment results from all MPI ranks and 
@@ -331,7 +422,10 @@ public:
      * @param output  The measurement data of the kernel execution
      */
     virtual void
-    collectAndPrintResults(const TOutput &output) = 0;
+    collectResults() = 0;
+    
+    virtual void
+    printResults() = 0;
 
     /**
      * @brief Method that can be overwritten by inheriting classes to check the validity of input parameters.
@@ -396,6 +490,7 @@ public:
                 ("comm-type", "Used communication type for inter-FPGA communication",
                 cxxopts::value<std::string>()->default_value(DEFAULT_COMM_TYPE))
 #endif
+                ("dump-json", "dump benchmark configuration and results to this file in json format", cxxopts::value<std::string>()->default_value(std::string("")))
                 ("test", "Only test given configuration and skip execution and validation")
                 ("h,help", "Print this help");
 
@@ -447,6 +542,120 @@ public:
         std::cout << std::endl;
         std::cout << "Summary:" << std::endl;
         std::cout << *executionSettings << std::endl;
+    }
+    
+    std::map<std::string, std::vector<double>>
+    getTimingsMap() {
+        return timings;
+    }
+    
+    void
+    addTimings(std::string key, std::vector<double> value) {
+        timings.emplace(key, value);
+    }
+    
+    // override for special benchmarks like b_eff
+    virtual json getTimingsJson() {
+        json j;
+        for (auto const &key: timings) {
+            std::vector<json> timings_list;
+            for (auto const &timing: key.second) {
+                json j;
+                j["unit"] = "s";
+                j["value"] = timing;
+                timings_list.push_back(j);
+            }
+            j[key.first] = timings_list;
+        }
+        return j;
+    }
+
+    std::map<std::string, json> getResultsJson() {
+        std::map<std::string, json> results_string;
+        for (auto const &result: results) {
+            json j;
+            j["unit"] = result.second.unit;
+            j["value"] = result.second.value;
+            results_string[result.first] = j;
+        }
+        return results_string;
+    }
+
+    std::map<std::string, std::string>
+    getEnvironmentMap() {
+        std::map<std::string, std::string> env; 
+        env["LD_LIBRARY_PATH"] = std::string(std::getenv("LD_LIBRARY_PATH"));
+        return env;
+    }
+
+    json
+    parseFPGATorusString(std::string str) {
+        json j; 
+        size_t space = str.find(" "); 
+        std::string p_str = str.substr(0, space);
+        std::string q_str = str.substr(space, str.size());
+        j["P"] = stoi(p_str.substr(p_str.find("=") + 1, p_str.find(",")));
+        j["Q"] = stoi(q_str.substr(q_str.find("=") + 1, q_str.size()));
+        return j;
+    }
+    
+    std::string
+    getCurrentTime() {
+        time_t time = std::time(0);
+        const tm *utc_time = std::gmtime(&time);
+        std::ostringstream oss;
+        oss << std::put_time(utc_time, "%a %b %d %T UTC %Y");
+        return oss.str();
+    }
+
+    std::map<std::string, json>
+    jsonifySettingsMap(std::map<std::string, std::string> settings_map) {
+        json j;
+        for (const auto& item: settings_map) {
+            std::string key = item.first;
+            std::string value = item.second;
+            try {
+                int value_int = stoi(value); 
+                j[key] = value_int;
+            } catch (std::invalid_argument const &ex) {
+                if (key == "FPGA Torus") {
+                    j[key] = parseFPGATorusString(value);
+                } else if (key == "Emulate" || key == "Test Mode" || key == "Memory Interleaving" || key == "Replicate Inputs" || key == "Inverse" || key == "Diagonally Dominant" || "Dist. Buffers") {
+                    j[key] = value == "Yes";
+                } else {
+                    j[key] = value; 
+                }
+            }     
+        }
+        return j;
+    }
+    
+    void
+    dumpConfigurationAndResults(std::string file_path) {
+        std::fstream fs;
+        fs.open(file_path, std::ios_base::out);
+        if (!fs.is_open()) {
+            std::cout << "Unable to open file for dumping configuration and results" << std::endl;
+        } else {
+            json dump;
+            dump["name"] = PROGRAM_NAME;
+#ifdef _USE_MPI_
+            dump["mpi"] ={{"version", MPI_VERSION}, {"subversion", MPI_SUBVERSION}};
+#endif
+            dump["config_time"] = CONFIG_TIME;
+            dump["execution_time"] = getCurrentTime();
+            dump["git_commit"] = GIT_COMMIT_HASH;
+            dump["version"] = VERSION;
+            dump["device"] = executionSettings->getDeviceName();
+            dump["settings"] = jsonifySettingsMap(executionSettings->programSettings->getSettingsMap());
+            dump["timings"] = getTimingsJson();
+            dump["results"] = getResultsJson();
+            dump["errors"] = errors;
+            dump["validated"] = validated;
+            dump["environment"] = getEnvironmentMap();
+
+            fs << dump;
+        }
     }
 
     /**
@@ -561,9 +770,8 @@ public:
                         << HLINE;
             }
 
-            bool validateSuccess = false;
             auto exe_start = std::chrono::high_resolution_clock::now();
-            std::unique_ptr<TOutput> output =  executeKernel(*data);
+            executeKernel(*data);
 
 #ifdef _USE_MPI_
         MPI_Barrier(MPI_COMM_WORLD);
@@ -579,25 +787,35 @@ public:
 
             if (!executionSettings->programSettings->skipValidation) {
                 auto eval_start = std::chrono::high_resolution_clock::now();
-                validateSuccess = validateOutputAndPrintError(*data);
+                validated = validateOutput(*data);
+                if (mpi_comm_rank == 0) {
+                    printError();
+                }
                 std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
 
                 if (mpi_comm_rank == 0) {
                     std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
                 }
             }
-            collectAndPrintResults(*output);
-
+            std::cout << HLINE << "Collect results..." << std::endl << HLINE;
+            collectResults();
+            
             if (mpi_comm_rank == 0) {
-                if (!validateSuccess) {
-                    std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
+                if (executionSettings->programSettings->dumpfilePath.size() > 0) {
+                    dumpConfigurationAndResults(executionSettings->programSettings->dumpfilePath);
+                }
+            
+                printResults();
+
+                if (!validated) {
+                    std::cerr << HLINE << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
                 }
                 else {
-                    std::cout << "Validation: SUCCESS!" << std::endl;
+                    std::cout << HLINE << "Validation: SUCCESS!" << std::endl;
                 }
             }
 
-            return validateSuccess;
+            return validated;
        }
        catch (const std::exception& e) {
             std::cerr << "An error occured while executing the benchmark: " << std::endl;
@@ -658,6 +876,7 @@ public:
 
 };
 
+
 /**
  * @brief Prints the execution settings to an output stream
  * 
@@ -668,14 +887,8 @@ public:
  */
 template <class TSettings>
 std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings){
-        std::string device_name;
+        std::string device_name = printedExecutionSettings.getDeviceName();
         os << std::left;
-        if (!printedExecutionSettings.programSettings->testOnly) {
-        printedExecutionSettings.device->getInfo(CL_DEVICE_NAME, &device_name);
-        }
-        else {
-            device_name = "TEST RUN: Not selected!";
-        }
         for (auto k : printedExecutionSettings.programSettings->getSettingsMap()) {
             os   << std::setw(2 * ENTRY_SPACE) << k.first << k.second << std::endl;
         }

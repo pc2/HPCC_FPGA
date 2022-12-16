@@ -24,10 +24,10 @@ struct RandomAccessHostCodeTest : testing::Test {
 TEST_F(RandomAccessHostCodeTest, ResultValidationWorksForCorrectUpdates) {
     auto data = bm->generateInputData();
     // do random accesses
-    bm->validateOutputAndPrintError(*data);
+    bm->validateOutput(*data);
     // check correctness of random accesses
-    bool success = bm->validateOutputAndPrintError(*data);
-    EXPECT_TRUE(success);
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError();
 }
 
 /**
@@ -53,6 +53,6 @@ TEST_F(RandomAccessHostCodeTest, ValidDataSizeAreDetected) {
 TEST_F(RandomAccessHostCodeTest, ResultValidationWorksForWrongUpdates) {
     auto data = bm->generateInputData();
     // check correctness of random accesses
-    bool success = bm->validateOutputAndPrintError( *data);
-    EXPECT_FALSE(success);
+    EXPECT_FALSE(bm->validateOutput(*data));
+    bm->printError();
 }

@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 gemm::GEMMProgramSettings::GEMMProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()), kernelReplications(results["r"].as<uint>()),
+    matrixSize(results["b"].as<uint>() * results["m"].as<uint>()), blockSize(results["b"].as<uint>()),
     replicateInputBuffers(results["replicate-inputs"].count() > 0) {
 
 }
@@ -44,7 +44,7 @@ std::map<std::string, std::string>
 gemm::GEMMProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["Matrix Size"] = std::to_string(matrixSize);
-        map["Kernel Replications"] = std::to_string(kernelReplications);
+        map["Block Size"] = std::to_string(blockSize);
         map["Replicate Inputs"] = replicateInputBuffers ? "Yes" : "No";
         return map;
 }
@@ -99,29 +99,25 @@ gemm::GEMMBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
             ("replicate-inputs", "Also replicates the input buffer for each kernel");
 }
 
-std::unique_ptr<gemm::GEMMExecutionTimings>
+void
 gemm::GEMMBenchmark::executeKernel(GEMMData &data) {
-    return bm_execution::calculate(*executionSettings, data.A, data.B, data.C, data.C_out, data.alpha, data.beta);
+    timings = bm_execution::calculate(*executionSettings, data.A, data.B, data.C, data.C_out, data.alpha, data.beta);
 }
 
 void
-gemm::GEMMBenchmark::collectAndPrintResults(const gemm::GEMMExecutionTimings &output) {
+gemm::GEMMBenchmark::collectResults() {
 
-    uint number_measurements = output.timings.size();
+    uint number_measurements = timings.at("execution").size();
     std::vector<double> avg_measures(number_measurements);
 #ifdef _USE_MPI_
     // Copy the object variable to a local variable to make it accessible to the lambda function
     int mpi_size = mpi_comm_size;
-    MPI_Reduce(output.timings.data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(timings.at("execution").data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     std::for_each(avg_measures.begin(),avg_measures.end(), [mpi_size](double& x) {x /= mpi_size;});
 #else
-    std::copy(output.timings.begin(), output.timings.end(), avg_measures.begin());
+    std::copy(timings.at("execution").begin(), timings.at("execution").end(), avg_measures.begin());
 #endif
     if (mpi_comm_rank == 0) {
-        std::cout << std::setw(ENTRY_SPACE)
-                << "best" << std::setw(ENTRY_SPACE) << "mean"
-                << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
-
         // Calculate performance for kernel execution
         double tmean = 0;
         double tmin = std::numeric_limits<double>::max();
@@ -136,10 +132,21 @@ gemm::GEMMBenchmark::collectAndPrintResults(const gemm::GEMMExecutionTimings &ou
             }
         }
         tmean = tmean / avg_measures.size();
+        results.emplace("t_mean", hpcc_base::HpccResult(tmean, "s"));
+        results.emplace("t_min", hpcc_base::HpccResult(tmin, "s"));
+        results.emplace("gflops", hpcc_base::HpccResult(gflops / tmin, "GFLOP/s"));
+    }
+}
+
+void
+gemm::GEMMBenchmark::printResults() {
+    if (mpi_comm_rank == 0) {
+        std::cout << std::left << std::setw(ENTRY_SPACE)
+                << " best" << std::setw(ENTRY_SPACE) << " mean"
+                << std::setw(ENTRY_SPACE) << " GFLOPS" << std::right << std::endl;
 
         std::cout << std::setw(ENTRY_SPACE)
-                << tmin << std::setw(ENTRY_SPACE) << tmean
-                << std::setw(ENTRY_SPACE) << gflops / tmin
+                << results.at("t_min") << results.at("t_mean") << results.at("gflops")
                 << std::endl;
     }
 }
@@ -164,7 +171,7 @@ gemm::GEMMBenchmark::generateInputData() {
 }
 
 bool  
-gemm::GEMMBenchmark::validateOutputAndPrintError(gemm::GEMMData &data) {
+gemm::GEMMBenchmark::validateOutput(gemm::GEMMData &data) {
     auto ref_data = generateInputData();
 
     gemm_ref(ref_data->A, ref_data->B, ref_data->C, executionSettings->programSettings->matrixSize, OPTIONAL_CAST(0.5), OPTIONAL_CAST(2.0));
@@ -189,17 +196,22 @@ gemm::GEMMBenchmark::validateOutputAndPrintError(gemm::GEMMData &data) {
         double eps = std::numeric_limits<HOST_DATA_TYPE>::epsilon();
         double residn = resid / (executionSettings->programSettings->matrixSize*executionSettings->programSettings->matrixSize*ref_data->normtotal*normx*eps);
 
-        std::cout << "  norm. resid        resid       "\
-                    "machep" << std::endl;
-        std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
-                << resid << std::setw(ENTRY_SPACE) << eps
-                << std::endl;
+        errors.emplace("epsilon", eps);
+        errors.emplace("residual", resid);
+        errors.emplace("residual_norm", residn);
 
         return residn < 1.0;
     }
-
     // All other ranks are always reporting success of the validation
     return true;
+}
+
+void
+gemm::GEMMBenchmark::printError() {
+    if (mpi_comm_rank == 0) {
+        std::cout << std::setw(ENTRY_SPACE) << " norm. residual" << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << errors.at("residual_norm") << std::setw(ENTRY_SPACE) << errors.at("residual") << std::setw(ENTRY_SPACE) << errors.at("epsilon") << std::endl;
+    }
 }
 
 void 

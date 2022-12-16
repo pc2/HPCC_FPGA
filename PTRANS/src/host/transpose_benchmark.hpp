@@ -46,7 +46,7 @@ namespace transpose {
  * @brief Implementation of the transpose benchmark
  * 
  */
-class TransposeBenchmark : public hpcc_base::HpccFpgaBenchmark<TransposeProgramSettings, TransposeData, TransposeExecutionTimings> {
+class TransposeBenchmark : public hpcc_base::HpccFpgaBenchmark<TransposeProgramSettings, TransposeData> {
 
 protected:
 
@@ -81,9 +81,8 @@ public:
      * @brief Transpose specific implementation of the kernel execution
      * 
      * @param data The input and output data of the benchmark
-     * @return std::unique_ptr<TransposeExecutionTimings> Measured runtimes of the kernel execution
      */
-    std::unique_ptr<TransposeExecutionTimings>
+    void
     executeKernel(TransposeData &data) override;
 
     /**
@@ -94,15 +93,28 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(TransposeData &data) override;
+    validateOutput(TransposeData &data) override;
 
+    /**
+     * @brief Transpose specific impelmentation of the error printing
+     *
+     */
+    void
+    printError() override;
+
+    /**
+     * @brief Transpose specific implementation of collecting the execution results
+     * 
+     */
+    void
+    collectResults() override;
+    
     /**
      * @brief Transpose specific implementation of printing the execution results
      * 
-     * @param output Measured runtimes of the kernel execution
      */
     void
-    collectAndPrintResults(const TransposeExecutionTimings &output) override;
+    printResults() override;
 
     /**
      * @brief Construct a new Transpose Benchmark object

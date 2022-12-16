@@ -8,6 +8,7 @@
 #include "test_program_settings.h"
 #include "gmock/gmock.h"
 #include "hpcc_benchmark.hpp"
+#include "nlohmann/json.hpp"
 
 
 // Dirty GoogleTest and static library hack
@@ -16,7 +17,7 @@
 // and enable the included tests
 void use_hpcc_base_lib() {}
 
-class MinimalBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int, int> {
+class MinimalBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int> {
 
 protected:
 
@@ -35,24 +36,30 @@ public:
     std::unique_ptr<int>
     generateInputData() override { return returnInputData ? std::unique_ptr<int>(new int) : std::unique_ptr<int>(nullptr);}
 
-    std::unique_ptr<int>
-    executeKernel(int &data) override { return returnExecuteKernel ? std::unique_ptr<int>(new int) : std::unique_ptr<int>(nullptr);}
+    void
+    executeKernel(int &data) override { return;}
 
     bool
-    validateOutputAndPrintError(int &data) override { return returnValidate;}
+    validateOutput(int &data) override { return returnValidate;}
+    
+    void
+    printError() override {}
 
     bool
     checkInputParameters() override { return configurationCheckSucceeds;}
 
     void
-    collectAndPrintResults(const int &output) override {}
+    collectResults() override {}
+
+    void
+    printResults() override {}
 
     MinimalBenchmark() : HpccFpgaBenchmark(0, { nullptr}) {}
 
 };
 
 
-class SuccessBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int, int> {
+class SuccessBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int> {
 
 protected:
 
@@ -80,21 +87,27 @@ public:
         generateInputDatacalled++;
         return std::unique_ptr<int>(new int);}
 
-    std::unique_ptr<int>
+    void
     executeKernel(int &data) override { 
         if (!returnExecuteKernel) {
             throw fpga_setup::FpgaSetupException("Test execute kernel failed");
         }
         executeKernelcalled++;
-        return std::unique_ptr<int>(new int);}
+        return;}
 
     bool
-    validateOutputAndPrintError(int &data) override { 
+    validateOutput(int &data) override { 
         validateOutputcalled++;
         return returnValidate;}
+    
+    void
+    printError() override {}
 
     void
-    collectAndPrintResults(const int &output) override {}
+    collectResults() override {}
+
+    void
+    printResults() override {}
 
     bool
     checkInputParameters() override {
@@ -102,7 +115,7 @@ public:
             return false;
         }
         else {
-            return hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int, int>::checkInputParameters();
+            return hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int>::checkInputParameters();
         }
     }
 
@@ -257,4 +270,32 @@ TEST(SetupTest, BenchmarkSetupFails) {
     EXPECT_FALSE(bm->setupBenchmark(1, tmp_argv));
     delete [] tmp_argv;
     delete [] name_str;
+}
+
+using json = nlohmann::json;
+
+/**
+ *
+ * Check if dump-json flag produces valid json output
+ */
+TEST(SetupTest, BenchmarkJsonDump) {
+    std::unique_ptr<MinimalBenchmark> bm = std::unique_ptr<MinimalBenchmark>(new MinimalBenchmark());
+    bm->setupBenchmark(global_argc, global_argv);
+    bm->getExecutionSettings().programSettings->dumpfilePath = "out.json";
+    bm->executeBenchmark();
+    std::FILE *f = std::fopen("out.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        // json::parse will panic if f is nullptr
+        json j = json::parse(f);
+        // check if the expected keys are there
+        EXPECT_TRUE(j.contains("config_time"));
+        EXPECT_TRUE(j.contains("device"));
+        EXPECT_TRUE(j.contains("environment"));
+        EXPECT_TRUE(j.contains("git_commit"));
+        EXPECT_TRUE(j.contains("results"));
+        EXPECT_TRUE(j.contains("settings"));
+        EXPECT_TRUE(j.contains("timings"));
+        EXPECT_TRUE(j.contains("version"));
+    }
 }

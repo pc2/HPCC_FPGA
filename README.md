@@ -48,6 +48,7 @@ Moreover, additional libraries are fetched by the build system during configurat
 - [cxxopts](https://github.com/jarro2783/cxxopts) for option parsing
 - [hlslib](https://github.com/definelicht/hlslib) for CMake FindPackages
 - [Googletest](https://github.com/google/googletest) for unit testing
+- [json](https://github.com/nlohmann/json) for json output
 
 These dependencies will be downloaded automatically when configuring a benchmark for the first time.
 The exact version that are used can be found in the `CMakeLists.txt`located in the `extern` directory where all extern dependencies are defined.

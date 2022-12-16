@@ -64,6 +64,13 @@ Further optimized implementations that use such device-specific communication ap
    :glob:
 
    */results/index
+   
+.. toctree::
+   :maxdepth: 1
+   :caption: Benchmark Results:
+   :glob:
+   
+   ../../../*/README.md
 
    
 ----------
