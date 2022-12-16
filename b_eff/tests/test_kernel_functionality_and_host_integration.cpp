@@ -48,6 +48,10 @@ struct NetworkKernelTest : testing::Test {
  * Tests if calculate returns the correct execution results
  */
 TEST_F(NetworkKernelTest, CalculateReturnsCorrectExecutionResultFor111) {
+    if (bm->getExecutionSettings().programSettings->communicationType == hpcc_base::CommunicationType::intel_external_channels) {
+        // Skip this test if no IEC are used, because they are specific to the IEC emulation based on files
+        GTEST_SKIP() << "Intel external channel needs at least message size of 64 byte to fill channel!";
+    }
     data->items.clear();
     data->items.push_back(network::NetworkData::NetworkDataItem(1,1, bm->getExecutionSettings().programSettings->kernelReplications));
     bm->executeKernel(*data);
@@ -190,6 +194,9 @@ TEST_F(NetworkKernelTest, ValidationDataIsStoredCorrectlyForTwoChannels) {
 }
 
 TEST_F(NetworkKernelTest, ValidationDataIsStoredCorrectlyForSmallMessageSize) {
+    if (bm->getExecutionSettings().programSettings->communicationType == hpcc_base::CommunicationType::intel_external_channels) {
+        GTEST_SKIP() << "Intel external channel needs at least message size of 64 byte to fill channel!";
+    }
     const unsigned messageSize = 0;
     const unsigned looplength = 4;
     data->items.clear();
