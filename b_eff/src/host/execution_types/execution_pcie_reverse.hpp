@@ -19,8 +19,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef SRC_HOST_EXECUTION_TYPES_EXECUTION_CPU_HPP
-#define SRC_HOST_EXECUTION_TYPES_EXECUTION_CPU_HPP
+#ifndef SRC_HOST_EXECUTION_TYPES_EXECUTION_PCIE_REVERSE_HPP
+#define SRC_HOST_EXECUTION_TYPES_EXECUTION_PCIE_REVERSE_HPP
 
 /* C++ standard library headers */
 #include <memory>
@@ -32,7 +32,7 @@ SOFTWARE.
 
 /* Project's headers */
 
-namespace network::execution_types::cpu {
+namespace network::execution_types::pcie_reverse {
 
     /*
     Implementation for the single kernel.
@@ -43,8 +43,10 @@ namespace network::execution_types::cpu {
                 cl::vector<HOST_DATA_TYPE> &validationData) {
 
         int err;
-        std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferReadContents;
-        std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferWriteContents;
+        std::vector<cl::CommandQueue> sendQueues;
+        std::vector<cl::Buffer> dummyBuffers;
+        std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferContents;
+        std::vector<cl::Kernel> dummyKernels;
 
         cl_uint size_in_bytes = (1 << messageSize);
 
@@ -56,20 +58,63 @@ namespace network::execution_types::cpu {
 
         std::vector<double> calculationTimings;
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
-            dummyBufferReadContents.clear();
-            dummyBufferWriteContents.clear();
+            sendQueues.clear();
+            dummyBuffers.clear();
+            dummyBufferContents.clear();
+            dummyKernels.clear();
+
             // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-                dummyBufferReadContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
-                dummyBufferWriteContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
+
+                dummyBuffers.push_back(cl::Buffer(*config.context, CL_MEM_READ_WRITE, sizeof(HOST_DATA_TYPE) * size_in_bytes,0,&err));
+                ASSERT_CL(err)
+
+                dummyKernels.push_back(cl::Kernel(*config.program,
+                                                    "dummyKernel", &err));
+
+                err = dummyKernels[r].setArg(0, dummyBuffers[r]);
+                ASSERT_CL(err);
+                err = dummyKernels[r].setArg(1, (HOST_DATA_TYPE)(messageSize & 255));
+                ASSERT_CL(err);
+                err = dummyKernels[r].setArg(2, 1); 
+                ASSERT_CL(err);
+
+                dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
+
+                cl::CommandQueue sendQueue(*config.context, *config.device, 0, &err);
+                ASSERT_CL(err)
+
+                sendQueue.enqueueWriteBuffer(dummyBuffers.back(), CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents.back().data());
+
+                sendQueues.push_back(sendQueue);
+
             }
             double calculationTime = 0.0;
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 for (int l = 0; l < looplength; l++) {
-                        MPI_Sendrecv(dummyBufferReadContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0, 
-                                        dummyBufferWriteContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2)  + current_size) % current_size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    if (config.programSettings->pcie_reverse_write_pcie) {
+                        sendQueues[i].enqueueWriteBuffer(dummyBuffers[i], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents[i].data());
+                        if (!config.programSettings->pcie_reverse_batch) {
+                            sendQueues[i].finish();
+                        }
+                    }
+                    if (config.programSettings->pcie_reverse_execute_kernel) {
+                        sendQueues[i].enqueueNDRangeKernel(dummyKernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
+                        if (!config.programSettings->pcie_reverse_batch) {
+                            sendQueues[i].finish();
+                        }
+                    }
+                    if (config.programSettings->pcie_reverse_read_pcie) {
+                        sendQueues[i].enqueueReadBuffer(dummyBuffers[i], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents[i].data());
+                        if (!config.programSettings->pcie_reverse_batch) {
+                            sendQueues[i].finish();
+                        }
+                    }
+                }
+                if (config.programSettings->pcie_reverse_batch) {
+                    sendQueues[i].finish();
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
@@ -89,8 +134,12 @@ namespace network::execution_types::cpu {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-            std::copy(dummyBufferWriteContents[r].begin(),dummyBufferWriteContents[r].end(),
-                        &validationData.data()[r * size_in_bytes]);
+            if (!config.programSettings->pcie_reverse_read_pcie) {
+                err = sendQueues[r].enqueueReadBuffer(dummyBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents[r].data());
+                err = sendQueues[r].finish();
+                ASSERT_CL(err)
+            }
+            std::copy(dummyBufferContents[r].begin(), dummyBufferContents[r].end(), &validationData.data()[r * size_in_bytes]);
         }
         return network::ExecutionTimings{
                 looplength,

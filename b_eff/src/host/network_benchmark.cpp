@@ -36,7 +36,12 @@ SOFTWARE.
 
 network::NetworkProgramSettings::NetworkProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     maxLoopLength(results["u"].as<uint>()), minLoopLength(results["l"].as<uint>()), maxMessageSize(results["m"].as<uint>()), 
-    minMessageSize(results["min-size"].as<uint>()), llOffset(results["o"].as<uint>()), llDecrease(results["d"].as<uint>()) {
+    minMessageSize(results["min-size"].as<uint>()), llOffset(results["o"].as<uint>()), llDecrease(results["d"].as<uint>()),
+    pcie_reverse_write_pcie(results["pcie-read"].count()), pcie_reverse_read_pcie(results["pcie-write"].count()),
+    pcie_reverse_execute_kernel(results["kernel-latency"].count()),
+    pcie_reverse_batch(results["pcie-batch"].count()) {
+
+    pcie_reverse = pcie_reverse_execute_kernel | pcie_reverse_read_pcie | pcie_reverse_write_pcie;
 
 }
 
@@ -48,8 +53,8 @@ network::NetworkProgramSettings::getSettingsMap() {
         return map;
 }
 
-network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize, unsigned int _loopLength) : messageSize(_messageSize), loopLength(_loopLength), 
-                                                                            validationBuffer(CHANNEL_WIDTH * 2 * 2, 0) {
+network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize, unsigned int _loopLength, unsigned int replications) : messageSize(_messageSize), loopLength(_loopLength), 
+                                                                            validationBuffer((1 << _messageSize) * replications, 0) {
                                                                                 // TODO: fix the validation buffer size to use the variable number of kernel replications and channels
                                                                                 // Validation data buffer should be big enough to fit the data of two channels
                                                                                 // for every repetition. The number of kernel replications is fixed to 2, which 
@@ -57,13 +62,13 @@ network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize
                                                                             }
 
 network::NetworkData::NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int min_messagesize, unsigned int max_messagesize, 
-                                unsigned int offset, unsigned int decrease) {
+                                unsigned int offset, unsigned int decrease, unsigned int replications) {
     uint decreasePerStep = (max_looplength - min_looplength) / decrease;
     for (uint i = min_messagesize; i <= max_messagesize; i++) {
         uint messageSizeDivOffset = (i > offset) ? i - offset : 0u;
         uint newLooplength = (max_looplength > messageSizeDivOffset * decreasePerStep) ? max_looplength - messageSizeDivOffset * decreasePerStep : 0u;
         uint looplength = std::max(newLooplength, min_looplength);
-        this->items.push_back(NetworkDataItem(i, looplength));
+        this->items.push_back(NetworkDataItem(i, looplength, replications));
     }
 }
 
@@ -86,7 +91,11 @@ network::NetworkBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
         ("o", "Offset used before reducing repetitions",
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_OFFSET)))
         ("d", "Number os steps the repetitions are decreased to its minimum",
-            cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_DECREASE)));
+            cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_DECREASE)))
+        ("pcie-read", "Use reverse PCIe experiment and measure PCIe read performance from device")
+        ("pcie-write", "Use reverse PCIe experiment and measure PCIe write performance from device")
+        ("kernel-latency", "Use reverse PCIe experiment and measure kernel execution latency")
+        ("pcie-batch", "Execute the reverse PCIe experiments in batch mode to make use of the queues of the schedulers");
 }
 
 void
@@ -108,8 +117,16 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
         network::ExecutionTimings timing;
         switch (executionSettings->programSettings->communicationType) {
             case hpcc_base::CommunicationType::cpu_only: timing = execution_types::cpu::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
-            case hpcc_base::CommunicationType::pcie_mpi: timing = execution_types::pcie::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
+            case hpcc_base::CommunicationType::pcie_mpi: 
+            if (executionSettings->programSettings->pcie_reverse) {
+                timing = execution_types::pcie_reverse::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
+            } else {
+                timing = execution_types::pcie::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); 
+            }
+            break;
+#if INTEL_FPGA
             case hpcc_base::CommunicationType::intel_external_channels: timing = execution_types::iec::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
+#endif
             default: throw std::runtime_error("Selected Communication type not supported: " + hpcc_base::commToString(executionSettings->programSettings->communicationType));
         }
         timing_results.push_back(timing);
@@ -229,7 +246,8 @@ network::NetworkBenchmark::generateInputData() {
                                                                             executionSettings->programSettings->minMessageSize,
                                                                             executionSettings->programSettings->maxMessageSize,
                                                                             executionSettings->programSettings->llOffset,
-                                                                            executionSettings->programSettings->llDecrease));
+                                                                            executionSettings->programSettings->llDecrease,
+                                                                            executionSettings->programSettings->kernelReplications));
     return d;
 }
 

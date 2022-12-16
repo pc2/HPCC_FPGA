@@ -161,7 +161,7 @@ namespace network::execution_types::iec {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-            err = recvQueues[r].enqueueReadBuffer(validationBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * validationData.size() / config.programSettings->kernelReplications, &validationData.data()[r * validationData.size() / config.programSettings->kernelReplications]);
+            err = recvQueues[r].enqueueReadBuffer(validationBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * (1 << messageSize), &validationData.data()[r * (1 << messageSize)]);
             ASSERT_CL(err);
         }
         return network::ExecutionTimings{
