@@ -38,7 +38,7 @@ namespace network::execution_types::pcie_reverse {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<network::ExecutionTimings>
+    network::ExecutionTimings
     calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength,
                 cl::vector<HOST_DATA_TYPE> &validationData) {
 
@@ -141,12 +141,11 @@ namespace network::execution_types::pcie_reverse {
             }
             std::copy(dummyBufferContents[r].begin(), dummyBufferContents[r].end(), &validationData.data()[r * size_in_bytes]);
         }
-        std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
+        return network::ExecutionTimings{
                 looplength,
                 messageSize,
                 calculationTimings
-        });
-        return result;
+        };
     }
 
 }  // namespace bm_execution
