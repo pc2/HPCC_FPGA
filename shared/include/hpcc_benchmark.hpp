@@ -544,17 +544,33 @@ public:
         std::cout << *executionSettings << std::endl;
     }
     
+    /*
+     * @brief Returns the map of the timings
+     *
+     * @return The timings map
+     */
     std::map<std::string, std::vector<double>>
     getTimingsMap() {
         return timings;
     }
     
+    /*
+     * @brief adds a timing to the timings map
+     *
+     * @param key The key
+     */
     void
     addTimings(std::string key, std::vector<double> value) {
         timings.emplace(key, value);
     }
     
-    // override for special benchmarks like b_eff
+    /*
+     * @brief Returns the timings map as json
+     *
+     * @return The json object
+     *
+     * It should be overwritten for benchmarks with special timings format, like b_eff
+     */
     virtual json getTimingsJson() {
         json j;
         for (auto const &key: timings) {
@@ -570,6 +586,12 @@ public:
         return j;
     }
 
+    /**
+     * @brief Returns the results map as json
+     *
+     * @return The return object
+     *
+     */
     std::map<std::string, json> getResultsJson() {
         std::map<std::string, json> results_string;
         for (auto const &result: results) {
@@ -581,13 +603,27 @@ public:
         return results_string;
     }
 
+    /**
+     * @brief Returns the map of the dumped environment variables
+     *
+     * @param The environment map
+     *
+     * Can be extended as needed
+     */
     std::map<std::string, std::string>
     getEnvironmentMap() {
         std::map<std::string, std::string> env; 
         env["LD_LIBRARY_PATH"] = std::string(std::getenv("LD_LIBRARY_PATH"));
         return env;
     }
-
+    /**
+     * @brief Format the FPGA Torus setting string
+     *
+     * @param The setting string
+     *
+     * @return The parsed json object
+     *
+     */
     json
     parseFPGATorusString(std::string str) {
         json j; 
@@ -599,6 +635,13 @@ public:
         return j;
     }
     
+    /**
+     * @brief Get current time as string
+     *
+     * @return The time string
+     *
+     * Has the same format as CONFIG_TIME
+     */
     std::string
     getCurrentTime() {
         time_t time = std::time(0);
@@ -608,6 +651,15 @@ public:
         return oss.str();
     }
 
+    /**
+     * @brief Convert the settings map to json
+     *
+     * @param settings_map The settings map
+     *
+     * @return the json object
+     *
+     * This function checks for settings which are not strings and converts them
+     */
     std::map<std::string, json>
     jsonifySettingsMap(std::map<std::string, std::string> settings_map) {
         json j;
@@ -629,7 +681,13 @@ public:
         }
         return j;
     }
-    
+
+    /**
+     * @brief Dumps the benchmark configuration and results to a json file
+     *
+     * @param file_path Path where the json will be saved
+     *
+     */
     void
     dumpConfigurationAndResults(std::string file_path) {
         std::fstream fs;
