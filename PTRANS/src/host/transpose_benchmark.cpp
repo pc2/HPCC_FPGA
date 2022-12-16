@@ -191,7 +191,7 @@ transpose::TransposeBenchmark::validateOutput(transpose::TransposeData &data) {
 void
 transpose::TransposeBenchmark::printError() {
     if (mpi_comm_rank == 0) {
-        std::cout << "Maximum error: " << errors.at("epsilon") << " < " << 100 * errors.at("epsilon") <<  std::endl;
+        std::cout << "Maximum error: " << errors.at("max_error") << " < " << 100 * errors.at("epsilon") <<  std::endl;
         std::cout << "Mach. Epsilon: " << errors.at("epsilon")  << std::endl;
     }
 }
