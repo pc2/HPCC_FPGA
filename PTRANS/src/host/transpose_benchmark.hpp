@@ -64,7 +64,7 @@ namespace transpose {
  */
 template<class TDevice, class TContext, class TProgram> 
 class TransposeBenchmark : 
-public hpcc_base::HpccFpgaBenchmark<TransposeProgramSettings,TDevice, TContext, TProgram, TransposeData<TContext>, TransposeExecutionTimings> {
+public hpcc_base::HpccFpgaBenchmark<TransposeProgramSettings,TDevice, TContext, TProgram, TransposeData<TContext>> {
 protected:
 
     /**
@@ -119,30 +119,29 @@ public:
      * @brief Transpose specific implementation of the kernel execution
      * 
      * @param data The input and output data of the benchmark
-     * @return std::unique_ptr<TransposeExecutionTimings> Measured runtimes of the kernel execution
      */
-    std::unique_ptr<TransposeExecutionTimings>
+    void
     executeKernel(TransposeData<TContext> &data) override {
         switch (this->executionSettings->programSettings->communicationType) {
 #ifdef USE_OCL_HOST
             case hpcc_base::CommunicationType::intel_external_channels: 
                                     if (this->executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
-                                        return transpose::fpga_execution::intel::calculate(*(this->executionSettings), data);
+                                        this->timings = transpose::fpga_execution::intel::calculate(*(this->executionSettings), data);
                                     }
                                     else {
-                                        return transpose::fpga_execution::intel_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
+                                        this->timings = transpose::fpga_execution::intel_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
                                     } break;
             case hpcc_base::CommunicationType::pcie_mpi :                                 
                                     if (this->executionSettings->programSettings->dataHandlerIdentifier == transpose::data_handler::DataHandlerType::diagonal) {
-                                        return transpose::fpga_execution::pcie::calculate(*(this->executionSettings), data, *dataHandler);
+                                        this->timings = transpose::fpga_execution::pcie::calculate(*(this->executionSettings), data, *dataHandler);
                                     }
                                     else {
-                                        return transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
+                                        this->timings = transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
                                     } break;
 #endif
 #ifdef USE_XRT_HOST
             case hpcc_base::CommunicationType::pcie_mpi:
-                                    return transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
+                                    this->timings = transpose::fpga_execution::pcie_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
 #ifdef USE_ACCL
             // case hpcc_base::CommunicationType::accl:
             //                         return transpose::fpga_execution::accl_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler)); break;
@@ -150,18 +149,18 @@ public:
                                     if (this->executionSettings->programSettings->useAcclStreams) {
                                         auto h = reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler);
                                         if (!h.getP() == h.getQ()) {
-                                            return transpose::fpga_execution::accl_stream_sendrecv_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
+                                            this->timings = transpose::fpga_execution::accl_stream_sendrecv_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
                                         }
                                         else {
-                                            return transpose::fpga_execution::accl_stream_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
+                                            this->timings = transpose::fpga_execution::accl_stream_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
                                         }
                                     } else {
-                                        return transpose::fpga_execution::accl_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
+                                        this->timings = transpose::fpga_execution::accl_pq::calculate(*(this->executionSettings), data, reinterpret_cast<transpose::data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>&>(*this->dataHandler));
                                     } break;
 #endif
 #endif
 #ifdef MKL_FOUND
-            case hpcc_base::CommunicationType::cpu_only : return transpose::fpga_execution::cpu::calculate(*(this->executionSettings), data, *dataHandler); break;
+            case hpcc_base::CommunicationType::cpu_only : this->timings = transpose::fpga_execution::cpu::calculate(*(this->executionSettings), data, *dataHandler); break;
 #endif
             default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(this->executionSettings->programSettings->communicationType));
         }
@@ -175,7 +174,7 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(TransposeData<TContext> &data) override {
+    validateOutput(TransposeData<TContext> &data) override {
 
         // exchange the data using MPI depending on the chosen distribution scheme
         this->dataHandler->exchangeData(data);
@@ -235,69 +234,102 @@ public:
         MPI_Reduce(&max_error, &global_max_error, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         MPI_Reduce(&error_count, &global_error_count, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-        if (this->mpi_comm_rank == 0) {
-            std::cout << "Erronous entries: " << global_error_count << std::endl;
-            std::cout << "Maximum error:    " << global_max_error << " < " << 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon() <<  std::endl;
-            std::cout << "Mach. Epsilon:    " << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl;
-        }
+        this->errors.emplace("epsilon", std::numeric_limits<HOST_DATA_TYPE>::epsilon());
+        this->errors.emplace("max_error", global_max_error);
 
         return static_cast<double>(global_max_error) < 100 * std::numeric_limits<HOST_DATA_TYPE>::epsilon();
     }
 
     /**
-     * @brief Transpose specific implementation of printing the execution results
-     * 
-     * @param output Measured runtimes of the kernel execution
+     * @brief Transpose specific impelmentation of the error printing
+     *
      */
     void
-    collectAndPrintResults(const TransposeExecutionTimings &output) override {
+    printError() override {
+        if (this->mpi_comm_rank == 0) {
+            std::cout << "Maximum error: " << this->errors.at("max_error") << " < " << 100 * this->errors.at("epsilon") <<  std::endl;
+            std::cout << "Mach. Epsilon: " << this->errors.at("epsilon")  << std::endl;
+        }
+    }
+
+    /**
+     * @brief Transpose specific implementation of collecting the execution results
+     * 
+     */
+    void
+    collectResults() override {
         double flops = static_cast<double>(this->executionSettings->programSettings->matrixSize) * this->executionSettings->programSettings->matrixSize;
 
         // Number of experiment repetitions
-        uint number_measurements = output.calculationTimings.size();
+        uint number_measurements = this->timings.at("calculation").size();
         std::vector<double> max_measures(number_measurements);
         std::vector<double> max_transfers(number_measurements);
 #ifdef _USE_MPI_
             // Copy the object variable to a local variable to make it accessible to the lambda function
             int mpi_size = this->mpi_comm_size;
-            MPI_Reduce(output.calculationTimings.data(), max_measures.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-            MPI_Reduce(output.transferTimings.data(), max_transfers.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            MPI_Reduce(this->timings.at("calculation").data(), max_measures.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            MPI_Reduce(this->timings.at("transfer").data(), max_transfers.data(), number_measurements, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 #else
-            std::copy(output.calculationTimings.begin(), output.calculationTimings.end(), max_measures.begin());
-            std::copy(output.transferTimings.begin(), output.transferTimings.end(), max_transfers.begin());
+            std::copy(this->timings.at("calculation").begin(), this->timings.at("calculation").end(), max_measures.begin());
+            std::copy(this->timings.at("transfer").begin(), this->timings.at("transfer").end(), max_transfers.begin());
 #endif
 
         double avgCalculationTime = accumulate(max_measures.begin(), max_measures.end(), 0.0)
                                     / max_measures.size();
+        this->results.emplace("avg_calc_t", hpcc_base::HpccResult(avgCalculationTime, "s"));
+
         double minCalculationTime = *min_element(max_measures.begin(), max_measures.end());
+        this->results.emplace("min_calc_t", hpcc_base::HpccResult(minCalculationTime, "s"));
 
         double avgTransferTime = accumulate(max_transfers.begin(), max_transfers.end(), 0.0)
                                     / max_transfers.size();
+        this->results.emplace("avg_transfer_t", hpcc_base::HpccResult(avgTransferTime, "s"));
+
         double minTransferTime = *min_element(max_transfers.begin(), max_transfers.end());
+        this->results.emplace("min_transfer_t", hpcc_base::HpccResult(minTransferTime, "s"));
+        
+        this->results.emplace("avg_t", hpcc_base::HpccResult(avgCalculationTime + avgTransferTime, "s"));
+        this->results.emplace("min_t", hpcc_base::HpccResult(minCalculationTime + minTransferTime, "s"));
 
-        double avgCalcFLOPS = flops / avgCalculationTime;
-        double maxCalcFLOPS = flops / minCalculationTime;
-        double avgMemBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / avgCalculationTime;
-        double maxMemBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / minCalculationTime;
-        double avgTransferBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime;
-        double maxTransferBandwidth = flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime;
-
+        this->results.emplace("avg_calc_flops", hpcc_base::HpccResult(flops / avgCalculationTime * 1.0e-9, "GFLOP/s"));
+        this->results.emplace("max_calc_flops", hpcc_base::HpccResult(flops / minCalculationTime * 1.0e-9, "GFLOP/s"));
+        this->results.emplace("avg_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgCalculationTime * 1.0e-9, "GB/s"));
+        this->results.emplace("max_mem_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minCalculationTime * 1.0e-9, "GB/s"));
+        this->results.emplace("avg_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / avgTransferTime * 1.0e-9, "GB/s"));
+        this->results.emplace("max_transfer_bandwidth", hpcc_base::HpccResult(flops * sizeof(HOST_DATA_TYPE) * 3 / minTransferTime * 1.0e-9, "GB/s"));
+    }
+    
+    /**
+     * @brief Transpose specific implementation of printing the execution results
+     * 
+     */
+    void
+    printResults() override {
         if (this->mpi_comm_rank == 0) {
-            std::cout << "       total [s]     transfer [s]  calc [s]      calc FLOPS    Mem [B/s]     PCIe [B/s]" << std::endl;
-            std::cout << "avg:   " << (avgTransferTime + avgCalculationTime)
-                    << "   " << avgTransferTime
-                    << "   " << avgCalculationTime
-                    << "   " << avgCalcFLOPS
-                    << "   " << avgMemBandwidth
-                    << "   " << avgTransferBandwidth
-                    << std::endl;
-            std::cout << "best:  " << (minTransferTime + minCalculationTime)
-                    << "   " << minTransferTime
-                    << "   " << minCalculationTime
-                    << "   " << maxCalcFLOPS
-                    << "   " << maxMemBandwidth
-                    << "   " << maxTransferBandwidth
-                    << std::endl;
+            std::cout << std::setw(ENTRY_SPACE) << " "
+                << std::left << std::setw(ENTRY_SPACE) << "total time"
+                << std::setw(ENTRY_SPACE) << "transfer time"
+                << std::setw(ENTRY_SPACE) << "calc time"
+                << std::setw(ENTRY_SPACE) << "calc FLOPS"
+                << std::setw(ENTRY_SPACE) << "Memory Bandwidth"
+                << std::setw(ENTRY_SPACE) << "PCIe Bandwidth"
+                << std::right << std::endl;
+            std::cout << std::setw(ENTRY_SPACE) << "avg: "
+                << this->results.at("avg_t")
+                << this->results.at("avg_transfer_t")
+                << this->results.at("avg_calc_t")
+                << this->results.at("avg_calc_flops")
+                << this->results.at("avg_mem_bandwidth")
+                << this->results.at("avg_transfer_bandwidth")
+                << std::endl;
+            std::cout << std::setw(ENTRY_SPACE) << "best: " 
+                << this->results.at("min_t")
+                << this->results.at("min_transfer_t")
+                << this->results.at("min_calc_t")
+                << this->results.at("max_calc_flops")
+                << this->results.at("max_mem_bandwidth")
+                << this->results.at("max_transfer_bandwidth")
+                << std::endl;
         }
     }
 
@@ -307,7 +339,7 @@ public:
      * @param argc the number of program input parameters
      * @param argv the program input parameters as array of strings
      */
-    TransposeBenchmark(int argc, char* argv[]) : hpcc_base::HpccFpgaBenchmark<transpose::TransposeProgramSettings,TDevice, TContext, TProgram, transpose::TransposeData<TContext>, transpose::TransposeExecutionTimings>(argc, argv) {
+    TransposeBenchmark(int argc, char* argv[]) : hpcc_base::HpccFpgaBenchmark<transpose::TransposeProgramSettings,TDevice, TContext, TProgram, transpose::TransposeData<TContext>>(argc, argv) {
         if (this->setupBenchmark(argc, argv)) {
             this->setTransposeDataHandler(this->executionSettings->programSettings->dataHandlerIdentifier);
         }
@@ -316,7 +348,7 @@ public:
     /**
      * @brief Construct a new Transpose Benchmark object
      */
-    TransposeBenchmark() : hpcc_base::HpccFpgaBenchmark<transpose::TransposeProgramSettings,TDevice, TContext, TProgram, transpose::TransposeData<TContext>, transpose::TransposeExecutionTimings>() {}
+    TransposeBenchmark() : hpcc_base::HpccFpgaBenchmark<transpose::TransposeProgramSettings,TDevice, TContext, TProgram, transpose::TransposeData<TContext>>() {}
 
 };
 

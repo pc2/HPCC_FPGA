@@ -69,58 +69,58 @@ For the execution of the benchmark run:
     
 For more information on available input parameters run
 
-    $./Transpose_xilinx -h
-    -------------------------------------------------------------
-    General setup:
-    C++ high resolution clock is used.
-    The clock precision seems to be 1.00000e+01ns
-    -------------------------------------------------------------
+    ./Transpose_xilinx -h
+
     Implementation of the matrix transposition benchmark proposed in the HPCC benchmark suite for FPGA.
     Version: 1.7
 
     MPI Version:  3.1
-    Config. Time: Fri Mar 04 10:31:13 UTC 2022
-    Git Commit:   caebda4-dirty
+    Config. Time: Thu Dec 08 10:41:51 UTC 2022
+    Git Commit:   86e0064-dirty
 
     Usage:
-    bin/Transpose_intel [OPTION...]
+      ./bin/Transpose_intel [OPTION...]
 
-    -f, --file arg            Kernel file name
-    -n, arg                   Number of repetitions (default: 10)
-    -i,                       Use memory Interleaving
-        --skip-validation     Skip the validation of the output data. This will
+      -f, --file arg            Kernel file name
+      -n, arg                   Number of repetitions (default: 10)
+      -i,                       Use memory Interleaving
+          --skip-validation     Skip the validation of the output data. This will
                                 speed up execution and helps when working with
                                 special data types.
-        --device arg          Index of the device that has to be used. If not
+          --device arg          Index of the device that has to be used. If not
                                 given you will be asked which device to use if
-                                there are multiple devices available. (default: -1)
-        --platform arg        Index of the platform that has to be used. If not
+                                there are multiple devices available. (default: 0)
+          --platform arg        Index of the platform that has to be used. If not
                                 given you will be asked which platform to use if
                                 there are multiple platforms available. (default:
-                                -1)
-    -r, arg                   Number of used kernel replications (default: 2)
-        --comm-type arg       Used communication type for inter-FPGA
+                                0)
+          --platform_str arg    Name of the platform that has to be used
+                                (default: )
+      -r, arg                   Number of used kernel replications (default: 2)
+          --comm-type arg       Used communication type for inter-FPGA
                                 communication (default: AUTO)
-        --test                Only test given configuration and skip execution
+          --dump-json arg       dump benchmark configuration and results to this
+                                file in json format (default: )
+          --test                Only test given configuration and skip execution
                                 and validation
-    -h, --help                Print this help
-    -m, arg                   Matrix size in number of blocks in one dimension
+      -h, --help                Print this help
+      -m, arg                   Matrix size in number of blocks in one dimension
                                 (default: 8)
-    -b, arg                   Block size in number of values in one dimension
-                                (default: 8)
-    -p, arg                   Value of P that equals the width of the PQ grid
+      -b, arg                   Block size in number of values in one dimension
+                                (default: 512)
+      -p, arg                   Value of P that equals the width of the PQ grid
                                 of FPGAs. Q is determined by the world size.
                                 (default: 1)
-        --distribute-buffers  Distribute buffers over memory banks. This will
+          --distribute-buffers  Distribute buffers over memory banks. This will
                                 use three memory banks instead of one for a single
                                 kernel replication, but kernel replications may
                                 interfere. This is an Intel only attribute, since
                                 buffer placement is decided at compile time for
                                 Xilinx FPGAs.
-        --handler arg         Specify the used data handler that distributes
+          --handler arg         Specify the used data handler that distributes
                                 the data over devices and memory banks (default:
                                 AUTO)
-    
+
 Available options for `--comm-type`:
 
 - `CPU`: CPU only execution. MKL required.
@@ -142,16 +142,12 @@ It will run an emulation of the kernel and execute some functionality tests.
 
 An example output from an emulation is given below:
 
-    -------------------------------------------------------------
-    Validate output...
-    -------------------------------------------------------------
-    Maximum error: 7.62939e-06 < 1.19209e-05
+    Maximum error: 1.19209e-07          < 1.19209e-05
     Mach. Epsilon: 1.19209e-07
-    Validation Time: 4.66312e+00 s
-           total [s]     transfer [s]  calc [s]      calc FLOPS    Mem [B/s]     PCIe [B/s]
-    avg:   1.15886e+00   1.04112e+00   1.17743e-01   9.11940e+09   1.09433e+11   1.23760e+10
-    best:  1.13323e+00   1.02481e+00   1.08424e-01   9.90319e+09   1.18838e+11   1.25730e+10
-    Validation: SUCCESS!
+
+                    total time          transfer time       calc time           calc FLOPS          Memory Bandwidth    PCIe Bandwidth      
+               avg: 6.05723e-02 s       1.30980e-02 s       4.74743e-02 s       3.53396e-01 GFLOP/s 4.24075e+00 GB/s    1.53708e+01 GB/s    
+              best: 4.69977e-02 s       1.05343e-02 s       3.64633e-02 s       4.60112e-01 GFLOP/s 5.52134e+00 GB/s    1.91115e+01 GB/s    
 
 The output gives the average and best calculation time for the transposition and important derived metrics based on these times.
 For the average and best timings, we have the following columns:
@@ -171,3 +167,109 @@ The machine epsilon is given in the row below with `Mach. Epsilon`.
 Moreover, the total time that was needed for the validation of the result is given, which is just a debug information.
 The very last column summarizes the result: The last row will show `Validation: SUCCESS!` if the validation succeeded and the error is below the tolerated threshold.
 
+The json output looks like the following.
+
+```json
+
+{
+  "config_time": "Wed Dec 14 08:42:29 UTC 2022",
+  "device": "Intel(R) FPGA Emulation Device",
+  "environment": {
+    "LD_LIBRARY_PATH": "/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/Python/3.9.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libffi/3.3-GCCcore-10.3.0/lib64:/opt/software/pc2/EB-SW/software/GMP/6.2.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/SQLite/3.35.4-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/Tcl/8.6.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libreadline/8.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libarchive/3.5.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/cURL/7.76.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ncurses/6.2-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/ScaLAPACK/2.1.0-gompi-2021a-fb/lib:/opt/software/pc2/EB-SW/software/FFTW/3.3.9-gompi-2021a/lib:/opt/software/pc2/EB-SW/software/FlexiBLAS/3.0.4-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenBLAS/0.3.15-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenMPI/4.1.1-GCC-10.3.0/lib:/opt/software/pc2/EB-SW/software/PMIx/3.2.3-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libfabric/1.12.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/UCX/1.10.0-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libevent/2.1.12-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/OpenSSL/1.1/lib:/opt/software/pc2/EB-SW/software/hwloc/2.4.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libpciaccess/0.16-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/libxml2/2.9.10-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/XZ/5.2.5-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/numactl/2.0.14-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/binutils/2.36.1-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/zlib/1.2.11-GCCcore-10.3.0/lib:/opt/software/pc2/EB-SW/software/GCCcore/10.3.0/lib64:/opt/software/slurm/21.08.6/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/21.2.0/hld/host/linux64/lib:/opt/software/FPGA/IntelFPGA/opencl_sdk/20.4.0/hld/board/bittware_pcie/s10/linux64/lib"
+  },
+  "errors": {
+    "epsilon": 1.1920928955078125e-07,
+    "max_error": 199.96849060058594
+  },
+  "execution_time": "Wed Dec 14 09:57:30 UTC 2022",
+  "git_commit": "be1a4e9-dirty",
+  "mpi": {
+    "subversion": 1,
+    "version": 3
+  },
+  "name": "matrix transposition",
+  "results": {
+    "avg_calc_flops": {
+      "unit": "GFLOP/s",
+      "value": 0.011002914958427963
+    },
+    "avg_calc_t": {
+      "unit": "s",
+      "value": 1.524797389
+    },
+    "avg_mem_bandwidth": {
+      "unit": "GB/s",
+      "value": 0.13203497950113555
+    },
+    "avg_t": {
+      "unit": "s",
+      "value": 1.5332141689999998
+    },
+    "avg_transfer_bandwidth": {
+      "unit": "GB/s",
+      "value": 23.919669042080226
+    },
+    "avg_transfer_t": {
+      "unit": "s",
+      "value": 0.00841678
+    },
+    "max_calc_flops": {
+      "unit": "GFLOP/s",
+      "value": 0.011002914958427963
+    },
+    "max_mem_bandwidth": {
+      "unit": "GB/s",
+      "value": 0.13203497950113555
+    },
+    "max_transfer_bandwidth": {
+      "unit": "GB/s",
+      "value": 23.919669042080226
+    },
+    "min_calc_t": {
+      "unit": "s",
+      "value": 1.524797389
+    },
+    "min_t": {
+      "unit": "s",
+      "value": 1.5332141689999998
+    },
+    "min_transfer_t": {
+      "unit": "s",
+      "value": 0.00841678
+    }
+  },
+  "settings": {
+    "Block Size": 512,
+    "Communication Type": false,
+    "Data Handler": false,
+    "Dist. Buffers": false,
+    "FPGA Torus": {
+      "P": 1,
+      "Q": 3
+    },
+    "Kernel File": false,
+    "Kernel Replications": 2,
+    "MPI Ranks": 3,
+    "Matrix Size": 4096,
+    "Repetitions": 1,
+    "Test Mode": false
+  },
+  "timings": {
+    "calculation": [
+      {
+        "unit": "s",
+        "value": 1.523696949
+      }
+    ],
+    "transfer": [
+      {
+        "unit": "s",
+        "value": 0.008189295
+      }
+    ]
+  },
+  "validated": false,
+  "version": "1.7"
+}
+
+```

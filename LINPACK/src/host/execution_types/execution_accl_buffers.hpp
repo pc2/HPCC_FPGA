@@ -47,7 +47,7 @@ namespace accl_buffers {
 
  @copydoc bm_execution::calculate()
 */
-std::unique_ptr<linpack::LinpackExecutionTimings> calculate(
+std::unique_ptr<linpack::LinpackExecutionTimings> inline calculate(
     const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings,
                                        xrt::device, fpga_setup::ACCLContext, xrt::uuid> &config,
     linpack::LinpackData<fpga_setup::ACCLContext> &data) {

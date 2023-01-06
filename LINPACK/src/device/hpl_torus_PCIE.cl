@@ -708,7 +708,7 @@ void left_update(__global DEVICE_DATA_TYPE* restrict a,
 	}
 }
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+{% for i in range(num_replications) %}
 
 /**
 Update the inner blocks using the left and right column and rows
@@ -716,7 +716,7 @@ Update the inner blocks using the left and right column and rows
  */
  __attribute__((uses_global_work_offset(0)))
 __kernel
-void inner_update_mm/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE* restrict a, 
+void inner_update_mm{{ i }}(__global DEVICE_DATA_TYPE* restrict a, 
 				__global DEVICE_DATA_TYPE* restrict left_global_buffer,
 				__global DEVICE_DATA_TYPE* restrict top_global_buffer,
 				const uint block_col,
@@ -862,4 +862,4 @@ void inner_update_mm/*PY_CODE_GEN i*/(__global DEVICE_DATA_TYPE* restrict a,
 	}
 }
 
-// PY_CODE_GEN block_end
+{% endfor %}

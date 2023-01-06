@@ -213,26 +213,6 @@ public:
 
 };
 
-/**
- * @brief Measured execution timing from the kernel execution
- * 
- */
-class TransposeExecutionTimings {
-public:
-    /**
-     * @brief A vector containing the timings for all repetitions for the data transfer
-     * 
-     */
-    std::vector<double> transferTimings;
-
-    /**
-     * @brief A vector containing the timings for all repetitions for the calculation
-     * 
-     */
-    std::vector<double> calculationTimings;
-
-};
-
 }
 
 #endif

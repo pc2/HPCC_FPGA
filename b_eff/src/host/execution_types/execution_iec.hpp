@@ -39,7 +39,7 @@ namespace network::execution_types::iec {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::shared_ptr<network::ExecutionTimings>
+    network::ExecutionTimings
     calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength,
                 cl::vector<HOST_DATA_TYPE> &validationData) {
 
@@ -161,15 +161,14 @@ namespace network::execution_types::iec {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-            err = recvQueues[r].enqueueReadBuffer(validationBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * validationData.size() / config.programSettings->kernelReplications, &validationData.data()[r * validationData.size() / config.programSettings->kernelReplications]);
+            err = recvQueues[r].enqueueReadBuffer(validationBuffers[r], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * (1 << messageSize), &validationData.data()[r * (1 << messageSize)]);
             ASSERT_CL(err);
         }
-        std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
+        return network::ExecutionTimings{
                 looplength,
                 messageSize,
                 calculationTimings
-        });
-        return result;
+        };
     }
 
 }  // namespace bm_execution

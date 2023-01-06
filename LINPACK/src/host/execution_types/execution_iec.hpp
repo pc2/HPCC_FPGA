@@ -44,7 +44,7 @@ namespace iec {
 /*
  Prepare kernels and execute benchmark for a bitstream that makes use of intel external channels
 */
-std::unique_ptr<linpack::LinpackExecutionTimings>
+std::map<std::string, std::vector<double>> inline
 calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings, cl::Device, cl::Context, cl::Program>&config,
           linpack::LinpackData<cl::Context>& data) {
 
@@ -722,13 +722,14 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings, cl
     }
     buffer_queue.finish();
 #endif
+    
+    std::map<std::string, std::vector<double>> timings;
 
-    std::unique_ptr<linpack::LinpackExecutionTimings> results(
-                    new linpack::LinpackExecutionTimings{gefaExecutionTimes, geslExecutionTimes});
+    timings["gefa"] = gefaExecutionTimes;
+    timings["gesl"] = geslExecutionTimes;
     
     MPI_Barrier(MPI_COMM_WORLD);
-
-    return results;
+    return timings;
 }
 
 }   // namespace iec

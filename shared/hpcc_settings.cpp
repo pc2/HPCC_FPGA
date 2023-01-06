@@ -37,6 +37,7 @@ hpcc_base::BaseSettings::BaseSettings(cxxopts::ParseResult &results) : numRepeti
 #endif
             testOnly(static_cast<bool>(results.count("test"))) {}
 
+
 /**
  * @brief Get a map of the settings. This map will be used to print the final configuration.
  *          Derived classes should override it to add additional configuration options

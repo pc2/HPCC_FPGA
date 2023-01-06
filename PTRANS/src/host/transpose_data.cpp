@@ -27,14 +27,17 @@ transpose::TransposeProgramSettings::TransposeProgramSettings(cxxopts::ParseResu
 std::map<std::string, std::string>
 transpose::TransposeProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
-        int mpi_size;
-#ifdef _USE_MPI_
-        MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-#endif
+        int mpi_comm_size;
+        MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
+        // calculate the row and column of the MPI rank in the torus 
+        if (mpi_comm_size % p != 0) {
+            throw std::runtime_error("MPI Comm size not dividable by P=" + std::to_string(p) + "!");
+        } 
         map["Matrix Size"] = std::to_string(matrixSize);
         map["Block Size"] = std::to_string(blockSize);
         map["Dist. Buffers"] = distributeBuffers ? "Yes" : "No";
         map["Data Handler"] = transpose::data_handler::handlerToString(dataHandlerIdentifier);
+        map["FPGA Torus"] = "P=" + std::to_string(p) + " ,Q=" + std::to_string(mpi_comm_size / p);
         return map;
 }
 

@@ -48,7 +48,7 @@ namespace transpose
  * @param handler data handler instance that should be used to exchange data between hosts
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
-            static std::unique_ptr<transpose::TransposeExecutionTimings>
+            static std::map<std::string, std::vector<double>>
             calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, cl::Device, cl::Context, cl::Program> &config, transpose::TransposeData<cl::Context> &data, transpose::data_handler::TransposeDataHandler<cl::Device, cl::Context, cl::Program> &handler)
             {
                 int err;
@@ -227,10 +227,10 @@ namespace transpose
                     transferTimings.push_back(transferTime.count());
                 }
 
-                std::unique_ptr<transpose::TransposeExecutionTimings> result(new transpose::TransposeExecutionTimings{
-                    transferTimings,
-                    calculationTimings});
-                return result;
+                std::map<std::string, std::vector<double>> timings;
+                timings["transfer"] = transferTimings;
+                timings["calculation"] = calculationTimings;
+                return timings;
             }
 
         } // namespace bm_execution

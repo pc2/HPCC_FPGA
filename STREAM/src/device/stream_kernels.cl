@@ -6,11 +6,11 @@ KERNEL_NUMBER will be replaced by the build script with the ID of the current re
 */
 #include "parameters.h"
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+{% for i in range(num_replications) %}
 
 __kernel
 __attribute__((uses_global_work_offset(0)))
-void copy_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
+void copy_{{ i }}(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
           __global DEVICE_ARRAY_DATA_TYPE * restrict out,
           const uint array_size) {
     uint number_elements = array_size / VECTOR_COUNT;
@@ -22,7 +22,7 @@ void copy_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
 
 __kernel
 __attribute__((uses_global_work_offset(0)))
-void add_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
+void add_{{ i }}(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
           __global const DEVICE_ARRAY_DATA_TYPE * restrict in2,
           __global DEVICE_ARRAY_DATA_TYPE * restrict out,
           const uint array_size) {
@@ -35,7 +35,7 @@ void add_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
 
 __kernel
 __attribute__((uses_global_work_offset(0)))
-void scale_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
+void scale_{{ i }}(__global const DEVICE_ARRAY_DATA_TYPE * restrict in,
           __global DEVICE_ARRAY_DATA_TYPE * restrict out,
           const DEVICE_SCALAR_DATA_TYPE scalar,
           const uint array_size) {
@@ -48,7 +48,7 @@ void scale_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in
 
 __kernel
 __attribute__((uses_global_work_offset(0)))
-void triad_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
+void triad_{{ i }}(__global const DEVICE_ARRAY_DATA_TYPE * restrict in1,
           __global const DEVICE_ARRAY_DATA_TYPE * restrict in2,
           __global DEVICE_ARRAY_DATA_TYPE * restrict out,
           const DEVICE_SCALAR_DATA_TYPE scalar,
@@ -60,4 +60,4 @@ void triad_/*PY_CODE_GEN i*/(__global const DEVICE_ARRAY_DATA_TYPE * restrict in
     }
 }
 
-// PY_CODE_GEN block_end
+{% endfor %}

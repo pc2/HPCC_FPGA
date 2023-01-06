@@ -36,7 +36,6 @@ SOFTWARE.
 
 random_access::RandomAccessProgramSettings::RandomAccessProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     dataSize((1UL << results["d"].as<size_t>())),
-    kernelReplications(results["r"].as<uint>()),
     numRngs((1UL << results["g"].as<uint>())) {
 
 }
@@ -51,7 +50,6 @@ random_access::RandomAccessProgramSettings::getSettingsMap() {
     std::stringstream ss;
     ss << dataSize << " (" << static_cast<double>(dataSize * sizeof(HOST_DATA_TYPE) * mpi_size) << " Byte )";
     map["Array Size"] = ss.str();
-    map["Kernel Replications"] = std::to_string(kernelReplications);
     map["#RNGs"] = std::to_string(numRngs);
     return map;
 }
@@ -87,43 +85,49 @@ random_access::RandomAccessBenchmark::addAdditionalParseOptions(cxxopts::Options
             cxxopts::value<uint>()->default_value(std::to_string(HPCC_FPGA_RA_RNG_COUNT_LOG)));
 }
 
-std::unique_ptr<random_access::RandomAccessExecutionTimings>
+void
 random_access::RandomAccessBenchmark::executeKernel(RandomAccessData &data) {
-    return bm_execution::calculate(*executionSettings, data.data, mpi_comm_rank, mpi_comm_size);
+    timings = bm_execution::calculate(*executionSettings, data.data, mpi_comm_rank, mpi_comm_size);
 }
 
 void
-random_access::RandomAccessBenchmark::collectAndPrintResults(const random_access::RandomAccessExecutionTimings &output) {
+random_access::RandomAccessBenchmark::collectResults() {
 
-    std::vector<double> avgTimings(output.times.size());
+    std::vector<double> avgTimings(timings.at("execution").size());
 #ifdef _USE_MPI_
     // Copy the object variable to a local variable to make it accessible to the lambda function
     int mpi_size = mpi_comm_size;
-    MPI_Reduce(output.times.data(),avgTimings.data(),output.times.size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    std::for_each(avgTimings.begin(),avgTimings.end(), [mpi_size](double& x) {x /= mpi_size;});
+    MPI_Reduce(timings.at("execution").data(), avgTimings.data(),timings.at("execution").size(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    std::for_each(avgTimings.begin(), avgTimings.end(), [mpi_size](double& x) {x /= mpi_size;});
 #else
-    std::copy(output.times.begin(), output.times.end(), avgTimings.begin());
+    std::copy(timings.at("execution").begin(), timings.at("execution").end(), avgTimings.begin());
 #endif
-    if (mpi_comm_rank == 0) {
-        std::cout << std::setw(ENTRY_SPACE)
-                << "best" << std::setw(ENTRY_SPACE) << "mean"
-                << std::setw(ENTRY_SPACE) << "GUOPS" << std::endl;
-
-        // Calculate performance for kernel execution
-        double tmean = 0;
-        double tmin = std::numeric_limits<double>::max();
-        double gups = static_cast<double>(4 * executionSettings->programSettings->dataSize * mpi_comm_size) / 1000000000;
-        for (double currentTime : avgTimings) {
-            tmean +=  currentTime;
-            if (currentTime < tmin) {
-                tmin = currentTime;
-            }
+    // Calculate performance for kernel execution
+    double tmean = 0;
+    double tmin = std::numeric_limits<double>::max();
+    double gups = static_cast<double>(4 * executionSettings->programSettings->dataSize * mpi_comm_size) / 1000000000;
+    for (double currentTime : avgTimings) {
+        tmean +=  currentTime;
+        if (currentTime < tmin) {
+            tmin = currentTime;
         }
-        tmean = tmean / output.times.size();
+    }
+    tmean = tmean / timings.at("execution").size();
+
+    results.emplace("t_min", hpcc_base::HpccResult(tmin, "s"));
+    results.emplace("t_mean", hpcc_base::HpccResult(tmean, "s"));
+    results.emplace("guops", hpcc_base::HpccResult(gups / tmin, "GUOP/s"));
+}
+
+void random_access::RandomAccessBenchmark::printResults() {
+    if (mpi_comm_rank == 0) {
+        std::cout << std::left << std::setw(ENTRY_SPACE)
+                << "best" << std::setw(ENTRY_SPACE) << "mean"
+                << std::setw(ENTRY_SPACE) << "GUOPS" << std::right << std::endl;
 
         std::cout << std::setw(ENTRY_SPACE)
-                << tmin << std::setw(ENTRY_SPACE) << tmean
-                << std::setw(ENTRY_SPACE) << gups / tmin
+                << results.at("t_min") << std::setw(ENTRY_SPACE) << results.at("t_mean")
+                << std::setw(ENTRY_SPACE) << results.at("guops")
                 << std::endl;
     }
 }
@@ -155,7 +159,7 @@ random_access::RandomAccessBenchmark::generateInputData() {
 }
 
 bool  
-random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access::RandomAccessData &data) {
+random_access::RandomAccessBenchmark::validateOutput(random_access::RandomAccessData &data) {
 
     HOST_DATA_TYPE* rawdata;
     if (mpi_comm_size > 1) {
@@ -186,19 +190,18 @@ random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access:
             rawdata[(temp >> 3) & (executionSettings->programSettings->dataSize * mpi_comm_size - 1)] ^= temp;
         }
 
-        double errors = 0;
-#pragma omp parallel for reduction(+:errors)
+        double error_count = 0;
+#pragma omp parallel for reduction(+:error_count)
         for (HOST_DATA_TYPE i=0; i< executionSettings->programSettings->dataSize * mpi_comm_size; i++) {
             if (rawdata[i] != i) {
                 // If the array at index i does not contain i, it differs from the initial value and is counted as an error
-                errors++;
+                error_count++;
             }
         }
 
         // The overall error is calculated in percent of the overall array size
-        double error_ratio = static_cast<double>(errors) / (executionSettings->programSettings->dataSize * mpi_comm_size);
-        std::cout  << "Error: " << error_ratio * 100 
-                    << "%" << std::endl;
+        double error_ratio = static_cast<double>(error_count) / (executionSettings->programSettings->dataSize * mpi_comm_size);
+        errors.emplace("ratio", error_ratio);
 
 #ifdef _USE_MPI_
         if (mpi_comm_rank == 0 && mpi_comm_size > 1) {
@@ -211,4 +214,11 @@ random_access::RandomAccessBenchmark::validateOutputAndPrintError(random_access:
 
     // All other ranks skip validation and always return true
     return true;
+}
+
+void
+random_access::RandomAccessBenchmark::printError() {
+    if (mpi_comm_rank == 0) {
+        std::cout  << "Error: " << errors.at("ratio") * 100 << " %" << std::endl;
+    }
 }

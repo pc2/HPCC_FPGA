@@ -35,12 +35,14 @@ SOFTWARE.
 #include "half.hpp"
 
 // Map keys for execution timings
-#define PCIE_WRITE_KEY "PCI write"
-#define PCIE_READ_KEY "PCI read"
+#define PCIE_WRITE_KEY "PCI_write"
+#define PCIE_READ_KEY "PCI_read"
 #define COPY_KEY "Copy"
 #define SCALE_KEY "Scale"
 #define ADD_KEY "Add"
 #define TRIAD_KEY "Triad"
+
+const std::string keys[] = {PCIE_WRITE_KEY, PCIE_READ_KEY, COPY_KEY, SCALE_KEY, ADD_KEY, TRIAD_KEY};
 
 namespace bm_execution {
 
@@ -62,7 +64,7 @@ namespace bm_execution {
      * @param C The array C of the stream benchmark
      * @return std::unique_ptr<stream::StreamExecutionTimings> The measured timings for all stream operations
      */
-    std::unique_ptr<stream::StreamExecutionTimings>
+    std::map<std::string, std::vector<double>>
     calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings>& config,
               HOST_DATA_TYPE* A,
               HOST_DATA_TYPE* B,

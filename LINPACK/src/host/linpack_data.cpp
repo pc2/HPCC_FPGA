@@ -53,13 +53,15 @@ linpack::LinpackProgramSettings::LinpackProgramSettings(cxxopts::ParseResult &re
 
 std::map<std::string, std::string>
 linpack::LinpackProgramSettings::getSettingsMap() {
-        auto map = hpcc_base::BaseSettings::getSettingsMap();
-        map["Matrix Size"] = std::to_string(matrixSize);
-        map["Block Size"] = std::to_string(blockSize);
-        map["Emulate"] = (isEmulationKernel) ? "Yes" : "No";
-        map["Data Type"] = STR(HOST_DATA_TYPE);
-        map["FPGA Torus"] = "P=" + std::to_string(torus_width) + ", Q=" + std::to_string(torus_height);
-        return map;
+    auto map = hpcc_base::BaseSettings::getSettingsMap();
+    map["Matrix Size"] = std::to_string(matrixSize);
+    map["Block Size"] = std::to_string(blockSize);
+    map["Emulate"] = (isEmulationKernel) ? "Yes" : "No";
+    map["Diagonally Dominant"] = isDiagonallyDominant ? "Yes" : "No";
+    map["Data Type"] = STR(HOST_DATA_TYPE);
+    map["FPGA Torus"] = "P=" + std::to_string(torus_width) +
+                        ", Q=" + std::to_string(torus_height);
+    return map;
 }
 
 /**

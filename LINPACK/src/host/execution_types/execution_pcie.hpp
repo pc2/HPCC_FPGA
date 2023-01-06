@@ -50,7 +50,7 @@ namespace pcie {
 
  @copydoc bm_execution::calculate()
 */
-std::unique_ptr<linpack::LinpackExecutionTimings>
+std::map<std::string, std::vector<double>> inline
 calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings, cl::Device, cl::Context, cl::Program>&config,
           linpack::LinpackData<cl::Context>& data) {
 
@@ -717,12 +717,14 @@ calculate(const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings, cl
     MPI_Comm_free(&row_communicator);
     MPI_Comm_free(&col_communicator);
 
-    std::unique_ptr<linpack::LinpackExecutionTimings> results(
-                    new linpack::LinpackExecutionTimings{gefaExecutionTimes, geslExecutionTimes});
+    std::map<std::string, std::vector<double>> timings;
+    
+    timings["gefa"] = gefaExecutionTimes;
+    timings["gesl"] = geslExecutionTimes;
     
     MPI_Barrier(MPI_COMM_WORLD);
 
-    return results;
+    return timings;
 }
 
 }   // namespace pcie

@@ -48,7 +48,7 @@ namespace linpack {
  * 
  */
 template<class TDevice, class TContext, class TProgram>
-class LinpackBenchmark : public hpcc_base::HpccFpgaBenchmark<LinpackProgramSettings, TDevice, TContext, TProgram, LinpackData<TContext>, LinpackExecutionTimings> {
+class LinpackBenchmark : public hpcc_base::HpccFpgaBenchmark<LinpackProgramSettings, TDevice, TContext, TProgram, LinpackData<TContext>> {
 
 protected:
 
@@ -68,8 +68,7 @@ protected:
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_P_VALUE)))
         ("uniform", "Generate a uniform matrix instead of a diagonally dominant. This has to be supported by the FPGA kernel!")
         ("emulation", "Use kernel arguments for emulation. This may be necessary to simulate persistent local memory on the FPGA");
-}
-
+    }
 
     /**
      * @brief Distributed solving of l*y=b and u*x = y 
@@ -304,18 +303,17 @@ public:
      * @param data The input and output data of the benchmark
      * @return std::unique_ptr<LinpackExecutionTimings> Measured runtimes of the kernel execution
      */
-    std::unique_ptr<LinpackExecutionTimings>
+    void
     executeKernel(LinpackData<TContext> &data) override {
-    std::unique_ptr<linpack::LinpackExecutionTimings> timings;
     switch (this->executionSettings->programSettings->communicationType) {
 #ifdef USE_OCL_HOST
-        case hpcc_base::CommunicationType::pcie_mpi : timings = execution::pcie::calculate(*this->executionSettings, data); break;
-        case hpcc_base::CommunicationType::intel_external_channels: timings = execution::iec::calculate(*this->executionSettings, data); break;
+        case hpcc_base::CommunicationType::pcie_mpi : this->timings = execution::pcie::calculate(*this->executionSettings, data); break;
+        case hpcc_base::CommunicationType::intel_external_channels: this->timings = execution::iec::calculate(*this->executionSettings, data); break;
 #endif
 #ifdef USE_XRT_HOST
-        case hpcc_base::CommunicationType::pcie_mpi : timings = execution::xrt_pcie::calculate(*this->executionSettings, data); break;
+        case hpcc_base::CommunicationType::pcie_mpi : this->timings = execution::xrt_pcie::calculate(*this->executionSettings, data); break;
 #ifdef USE_ACCL
-        case hpcc_base::CommunicationType::accl : timings = execution::accl_buffers::calculate(*this->executionSettings, data); break;
+        case hpcc_base::CommunicationType::accl : this->timings = execution::accl_buffers::calculate(*this->executionSettings, data); break;
 #endif
 #endif
         default: throw std::runtime_error("No calculate method implemented for communication type " + commToString(this->executionSettings->programSettings->communicationType));
@@ -323,7 +321,6 @@ public:
 #ifdef DISTRIBUTED_VALIDATION
     distributed_gesl_nopvt_ref(data);
 #endif
-    return timings;
 }
 
 
@@ -335,20 +332,18 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(LinpackData<TContext> &data) override {
-    uint n= this->executionSettings->programSettings->matrixSize;
+    validateOutput(LinpackData<TContext> &data) override {
+        uint n= this->executionSettings->programSettings->matrixSize;
     uint matrix_width = data.matrix_width;
     uint matrix_height = data.matrix_height;
     double residn;
     double resid = 0.0;
     double normx = 0.0;
 #ifndef DISTRIBUTED_VALIDATION
-    auto base_data = this->generateInputData();
     if (this->mpi_comm_rank > 0) {
         for (int j = 0; j < matrix_height; j++) {
             for (int i = 0; i < matrix_width; i+= this->executionSettings->programSettings->blockSize) {
                 MPI_Send(&data.A[matrix_width * j + i], this->executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
-                MPI_Send(&base_data->A[matrix_width * j + i], this->executionSettings->programSettings->blockSize, MPI_DATA_TYPE, 0, 1, MPI_COMM_WORLD);
             }
         }
         if (this->executionSettings->programSettings->torus_row == 0) {
@@ -364,7 +359,6 @@ public:
         std::vector<HOST_DATA_TYPE> total_b_original(n);
         std::vector<HOST_DATA_TYPE> total_b(n);
         std::vector<HOST_DATA_TYPE> total_a(n*n);
-        std::vector<HOST_DATA_TYPE> total_a_old(n*n);
         for (int j = 0; j < n; j++) {
             for (int i = 0; i < n; i+= this->executionSettings->programSettings->blockSize) {
                 int recvcol= (i / this->executionSettings->programSettings->blockSize) % this->executionSettings->programSettings->torus_width;
@@ -372,12 +366,10 @@ public:
                 int recvrank = this->executionSettings->programSettings->torus_width * recvrow + recvcol;
                 if (recvrank > 0) {
                     MPI_Recv(&total_a[j * n + i], this->executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvrank, 0, MPI_COMM_WORLD,  &status);
-                    MPI_Recv(&total_a_old[j * n + i], this->executionSettings->programSettings->blockSize, MPI_DATA_TYPE, recvrank, 1, MPI_COMM_WORLD,  &status);
                 }
                 else {
                     for (int k=0; k < this->executionSettings->programSettings->blockSize; k++) {
                         total_a[j * n + i + k] = data.A[current_offset + k];
-                        total_a_old[j * n + i + k] = base_data->A[current_offset + k];
                     }
                     current_offset += this->executionSettings->programSettings->blockSize;
                 }
@@ -404,22 +396,6 @@ public:
             resid = (resid > std::abs(total_b[i] - 1)) ? resid : std::abs(total_b[i] - 1);
             normx = (normx > std::abs(total_b_original[i])) ? normx : std::abs(total_b_original[i]);
         }
-
-#ifndef NDEBUG 
-        double residn = resid / (static_cast<double>(n)*normx*eps);
-        if (residn > 1.0) {
-            gefa_ref_nopvt(total_a_old.data(), n, n);
-
-            for (int i=0; i < n; i++) {
-                for (int j=0; j < n; j++) {
-                    double error = std::abs(total_a[i * n + j] - total_a_old[i * n + j]);
-                    std::cout << ((error > 1.0e-6) ? error : 0.0) << ",";
-                }
-                std::cout << std::endl;
-            }
-            std::cout << std::endl;
-        }
-#endif
     }
 #else
     double local_resid = 0;
@@ -481,31 +457,32 @@ public:
         }
     #endif
 
+    this->errors.emplace("epsilon", eps);
+    this->errors.emplace("residual", resid);
+    this->errors.emplace("residual_norm", residn);
+
     if (this->mpi_comm_rank == 0) {
-        //std::cout << resid << ", " << norma << ", " << normx << std::endl;
-        std::cout << "  norm. resid        resid       "\
-                    "machep   " << std::endl;
-        std::cout << std::setw(ENTRY_SPACE) << residn << std::setw(ENTRY_SPACE)
-                << resid << std::setw(ENTRY_SPACE) << eps << std::endl;
         return residn < 1;
-    }
-    else {
+    } else {
         return true;
     }
 }
 
+void
+printError() override {
+    if (this->mpi_comm_rank == 0) {
+        std::cout << std::setw(ENTRY_SPACE) << " norm. residual" << std::setw(ENTRY_SPACE) << " res. error" << std::setw(ENTRY_SPACE) << " mach. eps" << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << this->errors.at("residual_norm") << std::setw(ENTRY_SPACE) << this->errors.at("residual") << std::setw(ENTRY_SPACE) << this->errors.at("epsilon") << std::endl;
+    }
+}
 
-    /**
-     * @brief Linpack specific implementation of printing the execution results
-     * 
-     * @param output Measured runtimes of the kernel execution
-     */
-    void
-    collectAndPrintResults(const LinpackExecutionTimings &output) override {
+
+void
+collectResults() {
     // Calculate performance for kernel execution plus data transfer
-    double tmean = 0;
-    double tlumean = 0;
-    double tslmean = 0;
+    double t = 0;
+    double tlu = 0;
+    double tsl = 0;
     double tmin = std::numeric_limits<double>::max();
     double lu_min = std::numeric_limits<double>::max();
     double sl_min = std::numeric_limits<double>::max();
@@ -514,10 +491,10 @@ public:
     std::cout << "Rank " << this->mpi_comm_rank << ": Result collection started" << std::endl;
 #endif
 
-    std::vector<double> global_lu_times(output.gefaTimings.size());
-    MPI_Reduce(output.gefaTimings.data(), global_lu_times.data(), output.gefaTimings.size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    std::vector<double> global_sl_times(output.geslTimings.size());
-    MPI_Reduce(output.geslTimings.data(), global_sl_times.data(), output.geslTimings.size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    std::vector<double> global_lu_times(this->timings["gefa"].size());
+    MPI_Reduce(this->timings["gefa"].data(), global_lu_times.data(), this->timings["gefa"].size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    std::vector<double> global_sl_times(this->timings["gesl"].size());
+    MPI_Reduce(this->timings["gesl"].data(), global_sl_times.data(), this->timings["gesl"].size(), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 #ifndef NDEBUG
     std::cout << "Rank " << this->mpi_comm_rank << ": Result collection done" << std::endl;
 #endif
@@ -529,13 +506,13 @@ public:
     }
 
     double total_matrix_size = static_cast<double>(this->executionSettings->programSettings->matrixSize);
-    double gflops_lu = ((2.0e0*total_matrix_size * total_matrix_size * total_matrix_size)/ 3.0) / 1.0e9; 
-    double gflops_sl = (2.0*(total_matrix_size * total_matrix_size))/1.0e9;
+    double gflop_lu = ((2.0e0*total_matrix_size * total_matrix_size * total_matrix_size)/ 3.0) / 1.0e9; 
+    double gflop_sl = (2.0*(total_matrix_size * total_matrix_size))/1.0e9;
     for (int i =0; i < global_lu_times.size(); i++) {
         double currentTime = global_lu_times[i] + global_sl_times[i];
-        tmean +=  currentTime;
-        tlumean +=  global_lu_times[i];
-        tslmean += global_sl_times[i];
+        t +=  currentTime;
+        tlu +=  global_lu_times[i];
+        tsl += global_sl_times[i];
         if (currentTime < tmin) {
             tmin = currentTime;
         }
@@ -546,29 +523,41 @@ public:
             sl_min = global_sl_times[i];
         }
     }
-    tmean = tmean / global_lu_times.size();
-    tlumean = tlumean / global_lu_times.size();
-    tslmean = tslmean / global_sl_times.size();
+    
+    this->results.emplace("t_mean", hpcc_base::HpccResult(t / global_lu_times.size(), "s"));
+    this->results.emplace("t_min", hpcc_base::HpccResult(tmin, "s"));
+    this->results.emplace("tlu_mean", hpcc_base::HpccResult(tlu / global_lu_times.size(), "s"));
+    this->results.emplace("tlu_min", hpcc_base::HpccResult(lu_min, "s"));
+    this->results.emplace("tsl_mean", hpcc_base::HpccResult(tsl / global_sl_times.size(), "s"));
+    this->results.emplace("tsl_min", hpcc_base::HpccResult(sl_min, "s"));
+    this->results.emplace("gflops", hpcc_base::HpccResult((gflop_lu + gflop_sl) / tmin, "GFLOP/s"));
+    this->results.emplace("gflops_lu", hpcc_base::HpccResult(gflop_lu / lu_min, "GFLOP/s"));
+    this->results.emplace("gflops_sl", hpcc_base::HpccResult(gflop_sl / sl_min, "GFLOP/s"));
+    
+    return;
+}
 
-     std::cout << std::setw(ENTRY_SPACE)
-              << "Method" << std::setw(ENTRY_SPACE)
-              << "best" << std::setw(ENTRY_SPACE) << "mean"
-              << std::setw(ENTRY_SPACE) << "GFLOPS" << std::endl;
-
-    std::cout << std::setw(ENTRY_SPACE) << "total" << std::setw(ENTRY_SPACE)
-              << tmin << std::setw(ENTRY_SPACE) << tmean
-              << std::setw(ENTRY_SPACE) << ((gflops_lu + gflops_sl) / tmin)
-              << std::endl;
-
-    std::cout << std::setw(ENTRY_SPACE) << "GEFA" << std::setw(ENTRY_SPACE)
-            << lu_min << std::setw(ENTRY_SPACE) << tlumean
-            << std::setw(ENTRY_SPACE) << ((gflops_lu) / lu_min)
+void
+printResults() {
+    if (this->mpi_comm_rank == 0) {
+        std::cout << std::left << std::setw(ENTRY_SPACE) << " Method"
+            << std::setw(ENTRY_SPACE) << " best"
+            << std::setw(ENTRY_SPACE) << " mean"
+            << std::setw(ENTRY_SPACE) << " GFLOPS"
             << std::endl;
 
-    std::cout << std::setw(ENTRY_SPACE) << "GESL" << std::setw(ENTRY_SPACE)
-              << sl_min << std::setw(ENTRY_SPACE) << tslmean
-              << std::setw(ENTRY_SPACE) << (gflops_sl / sl_min)
-              << std::endl;
+        std::cout << std::left << std::setw(ENTRY_SPACE) << " total" 
+                  << this->results.at("t_min") << this->results.at("t_mean") << this->results.at("gflops")
+                  << std::endl;
+
+        std::cout << std::left << std::setw(ENTRY_SPACE) << " GEFA"
+                << this->results.at("tlu_min") << this->results.at("tlu_mean") << this->results.at("gflops_lu")
+                << std::endl;
+
+        std::cout << std::left << std::setw(ENTRY_SPACE) << " GESL"
+                  << this->results.at("tsl_min") << this->results.at("tsl_mean") << this->results.at("gflops_sl")
+                  << std::right << std::endl;
+    }
 }
 
     /**
@@ -577,7 +566,7 @@ public:
      * @param argc the number of program input parameters
      * @param argv the program input parameters as array of strings
      */
-    LinpackBenchmark(int argc, char* argv[]) : hpcc_base::HpccFpgaBenchmark<linpack::LinpackProgramSettings, TDevice, TContext, TProgram, linpack::LinpackData<TContext>, linpack::LinpackExecutionTimings>(argc, argv) {
+    LinpackBenchmark(int argc, char* argv[]) : hpcc_base::HpccFpgaBenchmark<linpack::LinpackProgramSettings, TDevice, TContext, TProgram, linpack::LinpackData<TContext>>(argc, argv) {
         this->setupBenchmark(argc, argv);
     }
 

@@ -1,6 +1,11 @@
 #ifndef HPCC_BASE_SETTINGS_H_
 #define HPCC_BASE_SETTINGS_H_
 
+#ifdef USE_DEPRECATED_HPP_HEADER
+#include "CL/cl.hpp"
+#else
+#include OPENCL_HPP_HEADER
+#endif
 #include "cxxopts.hpp"
 #include "parameters.h"
 #include "communication_types.hpp"
@@ -57,6 +62,8 @@ public:
      */
     int defaultPlatform;
 
+    std::string platformString;
+
     /**
      * @brief The default device that should be used for execution. 
      *          A number representing the index in the list of available devices
@@ -81,6 +88,8 @@ public:
      * 
      */
     bool testOnly;
+
+    std::string dumpfilePath;
 
     /**
      * @brief Type of inter-FPGA communication used
@@ -164,6 +173,22 @@ public:
      * 
      */
     std::unique_ptr<TProgram> program;
+
+    std::string
+    getDeviceName() const {
+        std::string device_name;
+        if (!programSettings->testOnly) {
+#ifdef USE_OCL_HOST
+            device->getInfo(CL_DEVICE_NAME, &device_name);
+#endif
+#ifdef USE_XRT_HOST
+            device_name = device->template get_info<xrt::info::device::name>();
+#endif
+        } else {
+            device_name = "TEST RUN: Not selected!";
+        }
+        return device_name;
+    }
 
     /**
      * @brief Construct a new Execution Settings object

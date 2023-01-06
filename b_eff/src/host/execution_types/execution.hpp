@@ -23,6 +23,7 @@ SOFTWARE.
 #include "execution_types/execution_cpu.hpp"
 #ifndef USE_ACCL
 #include "execution_types/execution_pcie.hpp"
+#include "execution_types/execution_pcie_reverse.hpp"
 #ifdef INTEL_FPGA
 #include "execution_types/execution_iec.hpp"
 #endif

@@ -38,15 +38,16 @@ namespace network::execution_types::cpu {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-	template<class TDevice, class TContext, class TProgram>
-    std::shared_ptr<network::ExecutionTimings>
+    template<class TDevice, class TContext, class TProgram>
+    network::ExecutionTimings
     calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings, TDevice, TContext, TProgram> const& config, cl_uint messageSize, cl_uint looplength,
                 cl::vector<HOST_DATA_TYPE> &validationData) {
 
         int err;
-        std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferContents;
+        std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferReadContents;
+        std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferWriteContents;
 
-        cl_uint size_in_bytes = std::max(static_cast<int>(validationData.size()), (1 << messageSize));
+        cl_uint size_in_bytes = (1 << messageSize);
 
         int current_rank;
         MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
@@ -56,18 +57,20 @@ namespace network::execution_types::cpu {
 
         std::vector<double> calculationTimings;
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
-            dummyBufferContents.clear();
+            dummyBufferReadContents.clear();
+            dummyBufferWriteContents.clear();
             // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-                dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
+                dummyBufferReadContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
+                dummyBufferWriteContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
             }
             double calculationTime = 0.0;
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 for (int l = 0; l < looplength; l++) {
-                        MPI_Sendrecv(dummyBufferContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0, 
-                                        dummyBufferContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2)  + current_size) % current_size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_Sendrecv(dummyBufferReadContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size, 0, 
+                                        dummyBufferWriteContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2)  + current_size) % current_size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
@@ -87,14 +90,14 @@ namespace network::execution_types::cpu {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-		std::copy(dummyBufferContents[r].begin(), dummyBufferContents[r].end(),validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
+            std::copy(dummyBufferWriteContents[r].begin(),dummyBufferWriteContents[r].end(),
+                        &validationData.data()[r * size_in_bytes]);
         }
-        std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
+        return network::ExecutionTimings{
                 looplength,
                 messageSize,
                 calculationTimings
-        });
-        return result;
+        };
     }
 
 }  // namespace bm_execution

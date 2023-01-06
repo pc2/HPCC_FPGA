@@ -47,12 +47,6 @@ typedef enum _CommunicationType {
     pcie_mpi,
 
     /**
-     * @brief Communcation using the Streaming Message Interface
-     * 
-     */
-    smi,
-
-    /**
      * @brief Communication using ACCL 
      */ 
     accl,
@@ -80,13 +74,11 @@ typedef enum _CommunicationType {
 static const std::map<const std::string, CommunicationType> comm_to_str_map{ 
     {"IEC", CommunicationType::intel_external_channels}, 
     {"PCIE", CommunicationType::pcie_mpi},
-    {"SMI", CommunicationType::smi},
     {"ACCL", CommunicationType::accl},
     {"CPU", CommunicationType::cpu_only},
-    {"UNSUPPORTED", CommunicationType::unsupported},
     {"AUTO", CommunicationType::automatic}
     };
-
+    
 /**
  * @brief Serializes a enum of type CommunicationType into a string. The resulting string can be used with the function retrieveCommunicationType to get back the enum.
  * 

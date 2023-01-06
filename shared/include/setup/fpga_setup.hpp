@@ -152,7 +152,7 @@ choose a device.
 @return A list containing a single selected device
 */
     std::unique_ptr<cl::Device>
-    selectFPGADevice(int defaultPlatform, int defaultDevice);
+    selectFPGADevice(int defaultPlatform, int defaultDevice, std::string platformString);
 
 
 #endif

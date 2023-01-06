@@ -28,4 +28,3 @@ set(DATA_TYPE char)
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
 unset(DATA_TYPE CACHE)
 find_package(MPI REQUIRED)
-

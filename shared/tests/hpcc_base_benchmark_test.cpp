@@ -8,6 +8,7 @@
 #include "test_program_settings.h"
 #include "gmock/gmock.h"
 #include "hpcc_benchmark.hpp"
+#include "nlohmann/json.hpp"
 
 
 // Dirty GoogleTest and static library hack
@@ -17,7 +18,7 @@
 void use_hpcc_base_lib() {}
 
 template<class T>
-class MinimalBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, typename std::tuple_element<0, T>::type, typename std::tuple_element<1, T>::type, typename std::tuple_element<2, T>::type, int, int> {
+class MinimalBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, typename std::tuple_element<0, T>::type, typename std::tuple_element<1, T>::type, typename std::tuple_element<2, T>::type, int> {
 
 protected:
 
@@ -36,24 +37,30 @@ public:
     std::unique_ptr<int>
     generateInputData() override { return returnInputData ? std::unique_ptr<int>(new int) : std::unique_ptr<int>(nullptr);}
 
-    std::unique_ptr<int>
-    executeKernel(int &data) override { return returnExecuteKernel ? std::unique_ptr<int>(new int) : std::unique_ptr<int>(nullptr);}
+    void
+    executeKernel(int &data) override { return;}
 
     bool
-    validateOutputAndPrintError(int &data) override { return returnValidate;}
+    validateOutput(int &data) override { return returnValidate;}
+    
+    void
+    printError() override {}
 
     bool
     checkInputParameters() override { return configurationCheckSucceeds;}
 
     void
-    collectAndPrintResults(const int &output) override {}
+    collectResults() override {}
 
-    MinimalBenchmark() : hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, typename std::tuple_element<0, T>::type, typename std::tuple_element<1, T>::type, typename std::tuple_element<2, T>::type, int, int>(0, { nullptr}) {}
+    void
+    printResults() override {}
+
+    MinimalBenchmark() : hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, typename std::tuple_element<0, T>::type, typename std::tuple_element<1, T>::type, typename std::tuple_element<2, T>::type, int>(0, { nullptr}) {}
 
 };
 
 template<class TDevice, class TContext, class TProgram>
-class SuccessBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, TDevice, TContext, TProgram, int, int> {
+class SuccessBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, TDevice, TContext, TProgram, int> {
 
 protected:
 
@@ -81,21 +88,27 @@ public:
         generateInputDatacalled++;
         return std::unique_ptr<int>(new int);}
 
-    std::unique_ptr<int>
+    void
     executeKernel(int &data) override { 
         if (!returnExecuteKernel) {
             throw fpga_setup::FpgaSetupException("Test execute kernel failed");
         }
         executeKernelcalled++;
-        return std::unique_ptr<int>(new int);}
+        return;}
 
     bool
-    validateOutputAndPrintError(int &data) override { 
+    validateOutput(int &data) override { 
         validateOutputcalled++;
         return returnValidate;}
+    
+    void
+    printError() override {}
 
     void
-    collectAndPrintResults(const int &output) override {}
+    collectResults() override {}
+
+    void
+    printResults() override {}
 
     bool
     checkInputParameters() override {
@@ -103,11 +116,11 @@ public:
             return false;
         }
         else {
-            return hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, TDevice, TContext, TProgram, int, int>::checkInputParameters();
+            return hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, TDevice, TContext, TProgram, int>::checkInputParameters();
         }
     }
 
-    SuccessBenchmark() : hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, TDevice, TContext, TProgram, int, int>(0, { nullptr}) {}
+    SuccessBenchmark() : hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, TDevice, TContext, TProgram, int>(0, { nullptr}) {}
 
 };
 
@@ -209,7 +222,7 @@ TYPED_TEST(BaseHpccBenchmarkTest, ExecutionSuccessWhenTestOnlyAndSetupSuccess) {
  */
 TYPED_TEST(BaseHpccBenchmarkTest, FindNonExistingDevice) {
 #ifdef USE_OCL_HOST
-    ASSERT_THROW(fpga_setup::selectFPGADevice(this->bm->getExecutionSettings().programSettings->defaultPlatform, 100).get(), fpga_setup::FpgaSetupException);
+    ASSERT_THROW(fpga_setup::selectFPGADevice(this->bm->getExecutionSettings().programSettings->defaultPlatform, 100, this->bm->getExecutionSettings().programSettings->platformString).get(), fpga_setup::FpgaSetupException);
 #else
     ASSERT_THROW(fpga_setup::selectFPGADevice(100).get(), fpga_setup::FpgaSetupException);
 #endif
@@ -220,7 +233,7 @@ TYPED_TEST(BaseHpccBenchmarkTest, FindNonExistingDevice) {
  */
 TYPED_TEST(BaseHpccBenchmarkTest, SuccessUseDefaultPlatformandDevice) {
 #ifdef USE_OCL_HOST
-    EXPECT_NE(fpga_setup::selectFPGADevice(this->bm->getExecutionSettings().programSettings->defaultPlatform, this->bm->getExecutionSettings().programSettings->defaultDevice).get(), nullptr);
+    EXPECT_NE(fpga_setup::selectFPGADevice(this->bm->getExecutionSettings().programSettings->defaultPlatform, this->bm->getExecutionSettings().programSettings->defaultDevice, this->bm->getExecutionSettings().programSettings->platformString).get(), nullptr);
 #else
     EXPECT_NE(fpga_setup::selectFPGADevice(this->bm->getExecutionSettings().programSettings->defaultDevice).get(), nullptr);
 #endif
@@ -231,7 +244,14 @@ TYPED_TEST(BaseHpccBenchmarkTest, SuccessUseDefaultPlatformandDevice) {
  * Checks if non existing platform leads to an error
  */
 TYPED_TEST(BaseHpccBenchmarkTest, FindNonExistingPlatform) {
-    ASSERT_THROW(fpga_setup::selectFPGADevice(100, this->bm->getExecutionSettings().programSettings->defaultDevice).get(), fpga_setup::FpgaSetupException);
+    ASSERT_THROW(fpga_setup::selectFPGADevice(100, this->bm->getExecutionSettings().programSettings->defaultDevice, this->bm->getExecutionSettings().programSettings->platformString).get(), fpga_setup::FpgaSetupException);
+}
+
+/*
+ * Check if wrong platform string leads to an error
+ */
+TYPED_TEST(BaseHpccBenchmarkTest, FindNonExistingPlatformString) {
+    ASSERT_THROW(fpga_setup::selectFPGADevice(this->bm->getExecutionSettings().programSettings->defaultPlatform, this->bm->getExecutionSettings().programSettings->defaultDevice, "This is not a platform").get(), fpga_setup::FpgaSetupException);
 }
 
 #endif
@@ -300,3 +320,32 @@ TYPED_TEST(SetupTest, BenchmarkSetupFails) {
     delete [] tmp_argv;
     delete [] name_str;
 }
+
+using json = nlohmann::json;
+
+/**
+ *
+ * Check if dump-json flag produces valid json output
+ */
+TYPED_TEST(SetupTest, BenchmarkJsonDump) {
+    std::unique_ptr<MinimalBenchmark<TypeParam>> bm = std::unique_ptr<MinimalBenchmark<TypeParam>>(new MinimalBenchmark<TypeParam>());
+    bm->setupBenchmark(global_argc, global_argv);
+    bm->getExecutionSettings().programSettings->dumpfilePath = "out.json";
+    bm->executeBenchmark();
+    std::FILE *f = std::fopen("out.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        // json::parse will panic if f is nullptr
+        json j = json::parse(f);
+        // check if the expected keys are there
+        EXPECT_TRUE(j.contains("config_time"));
+        EXPECT_TRUE(j.contains("device"));
+        EXPECT_TRUE(j.contains("environment"));
+        EXPECT_TRUE(j.contains("git_commit"));
+        EXPECT_TRUE(j.contains("results"));
+        EXPECT_TRUE(j.contains("settings"));
+        EXPECT_TRUE(j.contains("timings"));
+        EXPECT_TRUE(j.contains("version"));
+    }
+}
+

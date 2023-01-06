@@ -1,3 +1,4 @@
+.. _execution:
 ========================
 Execution of a Benchmark
 ========================
@@ -42,6 +43,12 @@ Input parameters (or options) can be appended to the host execution call like th
     In some cases, it may not be necessary to validate the result of the benchmark. For example, if different input parameters are tested, the input data is huge and validation takes a lot of time.
     Please note, that the benchmark will always fail with this option since it assumes the validation failed, so it will return a non-zero exit code! For reported measurements, the validation has to be enabled and the host should return
     with an exit code 0.
+
+``--comm-type COMM``:
+    This parameter chooses the communication strategy which will be used. Current Options are "IEC" for using the Intel External Channel, "PCIE" for using the host-to-host communicationa and "CPU" for calculating on the CPU.
+
+``--dump-json PATH``:
+    This parameters enables the dumping of the benchmark configuration, settings, timings and results in machine-readable json-format. The parameter describes the path of the json file, where the dump will go. If no parameter is given no dump will be created.
 
 ``--test``:
     This option will also skip the execution of the benchmark. It can be used to test different data generation schemes or the benchmark summary before the actual execution. Please note, that the 

@@ -44,7 +44,7 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::unique_ptr<fft::FFTExecutionTimings>
+    std::map<std::string, std::vector<double>>
     calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const&  config,
             std::complex<HOST_DATA_TYPE>* data,
             std::complex<HOST_DATA_TYPE>* data_out,
@@ -210,10 +210,11 @@ namespace bm_execution {
                 ASSERT_CL(err)
 #endif
         }
-        std::unique_ptr<fft::FFTExecutionTimings> result(new fft::FFTExecutionTimings{
-                calculationTimings
-        });
-        return result;
+        std::map<std::string, std::vector<double>> timings;
+
+        timings["execution"] = calculationTimings;
+
+        return timings;
     }
 
 }  // namespace bm_execution

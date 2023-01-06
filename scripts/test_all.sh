@@ -21,8 +21,8 @@ TEST_DIR=${PROJECT_ROOT}/build/test
 BUILD_LOG_FILE=${TEST_DIR}/lastbuild.log
 TEST_LOG_FILE=${TEST_DIR}/lasttests.log
 
-BENCHMARKS=("b_eff" "FFT" "GEMM" "LINPACK" "PTRANS" "RandomAccess" "STREAM")
-
+BENCHMARKS=("b_eff" "LINPACK" "PTRANS")
+#BENCHMARKS=("b_eff" "FFT" "GEMM" "LINPACK" "PTRANS" "RandomAccess" "STREAM")
 if [ "$1" != "inc" ]; then
     echo "Clean build directory, use option 'inc' to prevent this!"
     rm -rf ${TEST_DIR}
@@ -49,7 +49,7 @@ for bm in ${BENCHMARKS[@]}; do
     mkdir -p $bm
     ret=0
     cd $bm
-    cmake ${PROJECT_ROOT}/$bm -DDEFAULT_DEVICE=0 -DDEFAULT_PLATFORM=0 -DBLOCK_SIZE=32 &>> $BUILD_LOG_FILE
+    cmake ${PROJECT_ROOT}/$bm -DUSE_OCL_HOST=Yes -DUSE_DEPRECATED_HPP_HEADER=Yes -DDEFAULT_DEVICE=0 -DDEFAULT_PLATFORM=0 -DBLOCK_SIZE=32 &>> $BUILD_LOG_FILE
     ret=$(($ret + $?))
     make -j 40 VERBOSE=1 all &>> $BUILD_LOG_FILE
     ret=$(($ret + $?))

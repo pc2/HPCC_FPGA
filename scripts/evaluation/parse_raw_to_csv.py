@@ -9,13 +9,65 @@ import io
 import sys
 
 # Regular expressions for the raw output of all 
-fft_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Batch\\sSize\\s+(?P<batch_size>\d+)\n(.*\n)FFT\\sSize\\s+(?P<size>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s+res\.\\serror\\s+mach\.\\seps\n\\s+(?P<error>(\d|\.|\+|-|e)+)\\s+(?P<epsilon>(\d|\.|\+|-|e)+)(.*\n)+\\s+avg\\s+best\n\\s+Time\\s+in\\s+s:\\s+(?P<avg_time>(\d|\.|\+|-|e)+)\\s+(?P<best_time>(\d|\.|\+|-|e)+)\n\\s+GFLOPS:\\s+(?P<avg_flops>(\d|\.|\+|-|e)+)\\s+(?P<best_flops>(\d|\.|\+|-|e)+)"
-gemm_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s+norm\.\\sresid\\s+resid\\s+machep\n\\s+(?P<error>(\d|\.|\+|-|e)+)\\s+(?P<resid>(\d|\.|\+|-|e)+)\\s+(?P<epsilon>(\d|\.|\+|-|e)+)(.*\n)+\\s+best\\s+mean\\s+GFLOPS\n\\s+(?P<best_time>(\d|\.|\+|-|e)+)\\s+(?P<avg_time>(\d|\.|\+|-|e)+)\\s+(?P<gflops>(\d|\.|\+|-|e)+)"
-ra_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Array\\sSize\\s+(?P<size>(\d|\.|\+|-|e)+)(.*\n)+Kernel\\sReplications\\s+(?P<replications>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+Error:\\s+(?P<error>(\d|\.|\+|-|e)+)(.*\n)+\\s+best\\s+mean\\s+GUOPS\n\\s+(?P<best_time>(\d|\.|\+|-|e)+)\\s+(?P<avg_time>(\d|\.|\+|-|e)+)\\s+(?P<gops>(\d|\.|\+|-|e)+)"
-trans_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s*Maximum\\serror:\\s+(?P<error>(\d|\.|\+|-|e)+)(.*\n)+\\s+total\\s\\[s\\]\\s+transfer\\s\\[s\\]\\s+calc\\s\\[s\\]\\s+calc\\s+FLOPS\\s+Mem\\s+\\[B/s\\]\\s+PCIe\\s+\\[B/s\\]\n\\s*avg:\\s+(?P<avg_total_time>(\d|\.|\+|-|e)+)\\s+(?P<avg_transfer_time>(\d|\.|\+|-|e)+)\\s+(?P<avg_calc_time>(\d|\.|\+|-|e)+)\\s+(?P<avg_calc_flops>(\d|\.|\+|-|e)+)\\s+(?P<avg_mem_bw>(\d|\.|\+|-|e)+)\\s+(?P<avg_trans_bw>(\d|\.|\+|-|e|inf)+)\n\\s*best:\\s+(?P<best_total_time>(\d|\.|\+|-|e)+)\\s+(?P<best_transfer_time>(\d|\.|\+|-|e)+)\\s+(?P<best_calc_time>(\d|\.|\+|-|e)+)\\s+(?P<best_calc_flops>(\d|\.|\+|-|e)+)\\s+(?P<best_mem_bw>(\d|\.|\+|-|e)+)\\s+(?P<best_trans_bw>(\d|\.|\+|-|e|inf)+)"
-stream_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Array\\sSize\\s+\\d+\\s+\\((?P<size>(\d|\.|\+|-|e)+)(.*\n)+Data\\sType\\s+(?P<data_type>.+)\n(.*\n)+Kernel\\sReplications\\s+(?P<replications>\d+)(.*\n)+Kernel\\sType\\s+(?P<type>.+)\n(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s+Function\\s+Best\\sRate\\sMB/s\\s+Avg\\stime\\ss\\s+Min\\stime\\s+Max\\stime\n\\s+Add\\s+(?P<add_rate>(\d|\.|\+|-|e)+)\\s+(?P<add_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<add_min_time>(\d|\.|\+|-|e)+)\\s+(?P<add_max_time>(\d|\.|\+|-|e)+)\n\\s+Copy\\s+(?P<copy_rate>(\d|\.|\+|-|e)+)\\s+(?P<copy_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<copy_min_time>(\d|\.|\+|-|e)+)\\s+(?P<copy_max_time>(\d|\.|\+|-|e)+)\n\\s+PCI\\sread\\s+(?P<pcir_rate>(\d|\.|\+|-|e)+)\\s+(?P<pcir_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<pcir_min_time>(\d|\.|\+|-|e)+)\\s+(?P<pcir_max_time>(\d|\.|\+|-|e)+)\n\\s+PCI\\swrite\\s+(?P<pciw_rate>(\d|\.|\+|-|e)+)\\s+(?P<pciw_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<pciw_min_time>(\d|\.|\+|-|e)+)\\s+(?P<pciw_max_time>(\d|\.|\+|-|e)+)\n\\s+Scale\\s+(?P<scale_rate>(\d|\.|\+|-|e)+)\\s+(?P<scale_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<scale_min_time>(\d|\.|\+|-|e)+)\\s+(?P<scale_max_time>(\d|\.|\+|-|e)+)\n\\s+Triad\\s+(?P<triad_rate>(\d|\.|\+|-|e)+)\\s+(?P<triad_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<triad_min_time>(\d|\.|\+|-|e)+)\\s+(?P<triad_max_time>(\d|\.|\+|-|e)+)"
-linpack_regex = "Version:\\s+(?P<version>.+)\n(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)(.*\n)+Device\\s+(?P<device>.+)\n(.*\n)+\\s+norm\.\\sresid\\s+resid\\s+machep.+\n\\s+(?P<error>((\d|\.|\+|-|e)+|nan))\\s+(?P<resid>((\d|\.|\+|-|e)+|nan))\\s+(?P<epsilon>(\d|\.|\+|-|e)+)(.*\n)+\\s+Method\\s+\\s+best\\s+mean\\s+GFLOPS(\\s*\n)\\s+total\\s+(?P<total_best_time>(\d|\.|\+|-|e)+)\\s+(?P<total_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<total_gflops>(\d|\.|\+|-|e)+)(\\s*\n)\\s+GEFA\\s+(?P<lu_best_time>(\d|\.|\+|-|e)+)\\s+(?P<lu_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<lu_gflops>(\d|\.|\+|-|e)+)(\\s*\n)\\s+GESL\\s+(?P<sl_best_time>(\d|\.|\+|-|e)+)\\s+(?P<sl_avg_time>(\d|\.|\+|-|e)+)\\s+(?P<sl_gflops>(\d|\.|\+|-|e)+)"
-   
+fft_regex = ("Version:\\s+(?P<version>.+)\n"
+    "(.*\n)+Batch\\sSize\\s+(?P<batch_size>\d+)\n"
+    "(.*\n)FFT\\sSize\\s+(?P<size>\d+)"
+    "(.*\n)+Device\\s+(?P<device>.+)\n"
+    "(.*\n)+\\s+res\.\\serror\\s+mach\.\\seps\n"
+    "\\s+(?P<error>(\d|\.|\+|-|e)+)\\s+(?P<epsilon>(\d|\.|\+|-|e)+)"
+    "(.*\n)+\\s+avg\\s+best\\s+\n"
+    "\\s+Time\\s+in\\s+s:\\s+(?P<avg_time>(\d|\.|\+|-|e)+)\\s+.+\\s+(?P<best_time>(\d|\.|\+|-|e)+)\\s+.+\n"
+    "\\s+GFLOPS:\\s+(?P<avg_flops>(\d|\.|\+|-|e)+)\\s+.+\\s+(?P<best_flops>(\d|\.|\+|-|e)+)\\sGFLOP")
+
+gemm_regex = ("Version:\\s+(?P<version>.+)\n"
+    "(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)"
+    "(.*\n)+Device\\s+(?P<device>.+)\n"
+    "(.*\n)+\\s+norm\.\\sresidual\\s+res\.\\serror\\s+mach\.\\seps\n"
+    "\\s+(?P<error>(\d|\.|\+|-|e)+)\\s+(?P<resid>(\d|\.|\+|-|e)+)\\s+(?P<epsilon>(\d|\.|\+|-|e)+)"
+    "(.*\n)+\\s+best\\s+mean\\s+GFLOPS\\s+\n"
+    "(?P<best_time>(\d|\.|\+|-|e)+)\\s+.+\\s+(?P<avg_time>(\d|\.|\+|-|e)+)\\s+.+\\s+(?P<gflops>(\d|\.|\+|-|e)+)\\s+GFLOP")
+
+ra_regex = ("Version:\\s+(?P<version>.+)\n"
+    "(.*\n)+Array\\sSize\\s+(?P<size>(\d|\.|\+|-|e)+)"
+    "(.*\n)+Kernel\\sReplications\\s+(?P<replications>\d+)"
+    "(.*\n)+Device\\s+(?P<device>.+)\n"
+    "(.*\n)+Error:\\s+(?P<error>(\d|\.|\+|-|e)+)"
+    "(.*\n)+best\\s+mean\\s+GUOPS\\s+\n"
+    "(?P<best_time>(\d|\.|\+|-|e)+)\\s.\\s+(?P<avg_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<gops>(\d|\.|\+|-|e)+)\\sGUOP")
+
+#TODO
+trans_regex = ("Version:\\s+(?P<version>.+)\n"
+    "(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)"
+    "(.*\n)+Device\\s+(?P<device>.+)\n"
+    "(.*\n)+\\s*Maximum\\serror:\\s+(?P<error>(\d|\.|\+|-|e)+)"
+    "(.*\n)+\\s+total\\stime\\s+transfer\\stime\\s+calc\\s+time\\s+calc\\sFLOPS\\s+Memory\\sBandwidth\\s+PCIe\\sBandwidth\\s+\n"
+    "\\s+avg:\\s+(?P<avg_total_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<avg_transfer_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<avg_calc_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<avg_calc_flops>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<avg_mem_bw>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<avg_trans_bw>(\d|\.|\+|-|e|inf)+)\\s.+\\s+\n"
+    "\\s+best:\\s+(?P<best_total_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<best_transfer_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<best_calc_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<best_calc_flops>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<best_mem_bw>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<best_trans_bw>(\d|\.|\+|-|e|inf)+)\\s.+\\s.\n")
+
+stream_regex = ("Version:\\s+(?P<version>.+)\n"
+    "(.*\n)+Array\\sSize\\s+\\d+\\s+\\((?P<size>(\d|\.|\+|-|e)+)"
+    "(.*\n)+Data\\sType\\s+(?P<data_type>.+)\n"
+    "(.*\n)+Kernel\\sReplications\\s+(?P<replications>\d+)"
+    "(.*\n)+Kernel\\sType\\s+(?P<type>.+)\n"
+    "(.*\n)+Device\\s+(?P<device>.+)\n"
+    "(.*\n)+Function\\s+Best\\sRate\\s+Avg\\stime\\s+Min\\stime\\s+Max\\stime\\s+\n"
+    "PCI_write\\s+(?P<pciw_rate>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<pciw_avg_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<pciw_min_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<pciw_max_time>(\d|\.|\+|-|e)+)\\s.+\\s+\n"
+    "PCI_read\\s+(?P<pcir_rate>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<pcir_avg_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<pcir_min_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<pcir_max_time>(\d|\.|\+|-|e)+)\\s+.+\\s+\n"
+    "Copy\\s+(?P<copy_rate>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<copy_avg_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<copy_min_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<copy_max_time>(\d|\.|\+|-|e)+)\\s+.+\\s+\n"
+    "Scale\\s+(?P<scale_rate>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<scale_avg_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<scale_min_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<scale_max_time>(\d|\.|\+|-|e)+)\\s.+\\s+\n"
+    "Add\\s+(?P<add_rate>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<add_avg_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<add_min_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<add_max_time>(\d|\.|\+|-|e)+)\\s.+\\s+\n"
+    "Triad\\s+(?P<triad_rate>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<triad_avg_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<triad_min_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<triad_max_time>(\d|\.|\+|-|e)+)\\s.+\\s+\n")
+
+linpack_regex = ("Version:\\s+(?P<version>.+)\n"
+    "(.*\n)+Matrix\\sSize\\s+(?P<size>\d+)"
+    "(.*\n)+Device\\s+(?P<device>.+)\n"
+    "(.*\n)+\\s+norm\.\\sresidual\\s+res\.\\serror\\s+mach\.\\seps\n"
+    "\\s+(?P<error>((\d|\.|\+|-|e)+|nan))\\s+(?P<resid>((\d|\.|\+|-|e)+|nan))\\s+(?P<epsilon>(\d|\.|\+|-|e)+)\n"
+    "(.*\n)+\\sMethod\\s+best\\s+mean\\s+GFLOPS\\s+\n"
+    "\\stotal\\s+(?P<total_best_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<total_avg_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<total_gflops>(\d|\.|\+|-|e)+)\\s.+\\s+\n"
+    "\\sGEFA\\s+(?P<lu_best_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<lu_avg_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<lu_gflops>(\d|\.|\+|-|e)+)\\s.+\\s+\n"
+    "\\sGESL\\s+(?P<sl_best_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<sl_avg_time>(\d|\.|\+|-|e)+)\\s.+\\s+(?P<sl_gflops>(\d|\.|\+|-|e)+)\\s.+\\s+\n")
+
 
 def parse_network(file_content):
     '''
