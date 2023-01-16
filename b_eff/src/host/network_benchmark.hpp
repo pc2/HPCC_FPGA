@@ -144,6 +144,12 @@ public:
     uint minMessageSize;
 
     /**
+     * @brief Step size for tested message sizes
+     * 
+     */
+    uint stepSize;
+
+    /**
      * @brief Offset that is used before the loop length will be reduced for higher message sizes
      * 
      */
@@ -264,12 +270,13 @@ public:
      * @param min_looplength The minimum number of iterations that should be done for a message size
      * @param max_messagesize The minimum message size
      * @param max_messagesize The maximum message size
+     * @param stepSize Step size used to generate tested message sizes
      * @param offset The used offset to scale the loop length. The higher the offset, the later the loop lenght will be decreased
      * @param decrease Number of steps the looplength will be decreased to the minimum
      * @param replications The number of kernel replications
      */
     NetworkData(unsigned int max_looplength, unsigned int min_looplength,  unsigned int min_messagesize, unsigned int max_messagesize,
-                unsigned int offset, unsigned int decrease, unsigned int replications);
+                unsigned int stepSize, unsigned int offset, unsigned int decrease, unsigned int replications);
 
 };
 
