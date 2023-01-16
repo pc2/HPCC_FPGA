@@ -39,8 +39,9 @@ namespace network::execution_types::iec {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
+   template<class TDevice, class TContext, class TProgram>
     network::ExecutionTimings
-    calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings> const& config, cl_uint messageSize, cl_uint looplength,
+    calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings, TDevice, TContext, TProgram> const& config, cl_uint messageSize, cl_uint looplength,
                 cl::vector<HOST_DATA_TYPE> &validationData) {
 
         int err;
