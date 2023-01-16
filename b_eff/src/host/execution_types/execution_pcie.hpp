@@ -92,7 +92,9 @@ namespace network::execution_types::pcie {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 for (int l = 0; l < looplength; l++) {
-                        sendQueues[i].enqueueNDRangeKernel(dummyKernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
+                        if(config.programSettings->pcie_reverse_execute_kernel) {
+                            sendQueues[i].enqueueNDRangeKernel(dummyKernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
+                        }
                         sendQueues[i].enqueueReadBuffer(dummyBuffers[i], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents[i].data());
                         sendQueues[i].finish();
 
@@ -100,7 +102,9 @@ namespace network::execution_types::pcie {
                                         dummyBufferContents[i].data(), size_in_bytes, MPI_CHAR, (current_rank - 1 + 2 * ((current_rank + i) % 2)  + current_size) % current_size, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
                         sendQueues[i].enqueueWriteBuffer(dummyBuffers[i], CL_TRUE, 0, sizeof(HOST_DATA_TYPE) * size_in_bytes, dummyBufferContents[i].data());
-                        sendQueues[i].enqueueNDRangeKernel(dummyKernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
+                        if(config.programSettings->pcie_reverse_execute_kernel) {
+                            sendQueues[i].enqueueNDRangeKernel(dummyKernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
+                        }
                         sendQueues[i].finish();
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
