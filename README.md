@@ -296,14 +296,31 @@ If you are using one of the benchmarks contained in the HPCC FPGA benchmark suit
         doi={10.1109/H2RC51942.2020.00007}
     }
 
-If the focus is on multi-FPGA execution and inter-FPGA communication, you may rather want to cite 
 
-    @misc{hpcc_multi_fpga,
-        doi = {10.48550/ARXIV.2202.13995},
-        url = {https://arxiv.org/abs/2202.13995},
-        author = {Meyer, Marius and Kenter, Tobias and Plessl, Christian},
-        title = {Multi-FPGA Designs and Scaling of HPC Challenge Benchmarks via MPI and Circuit-Switched Inter-FPGA Networks},
-        publisher = {arXiv},
+    @article{hpcc_fpga_in_depth,
+        author = {Marius Meyer and Tobias Kenter and Christian Plessl},
+        doi = {https://doi.org/10.1016/j.jpdc.2021.10.007},
+        issn = {0743-7315},
+        journal = {Journal of Parallel and Distributed Computing},
+        keywords = {FPGA, OpenCL, High level synthesis, HPC benchmarking},
+        pages = {79-89},
+        title = {In-depth FPGA accelerator performance evaluation with single node benchmarks from the HPC challenge benchmark suite for Intel and Xilinx FPGAs using OpenCL},
+        url = {https://www.sciencedirect.com/science/article/pii/S0743731521002057},
+        volume = {160},
         year = {2022}
     }
+
+
+If the focus is on multi-FPGA execution and inter-FPGA communication, you may rather want to cite 
+
+    @article{hpcc_multi_fpga, 
+        author = {Meyer, Marius and Kenter, Tobias and Plessl, Christian},
+        title = {Multi-FPGA Designs and Scaling of HPC Challenge Benchmarks via MPI and Circuit-Switched Inter-FPGA Networks}, 
+        year = {2023}, 
+        publisher = {Association for Computing Machinery}, 
+        address = {New York, NY, USA}, 
+        issn = {1936-7406}, 
+        url = {https://doi.org/10.1145/3576200}, 
+        doi = {10.1145/3576200}
+     }
 
