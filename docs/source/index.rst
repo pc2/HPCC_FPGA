@@ -70,8 +70,6 @@ Further optimized implementations that use such device-specific communication ap
    :caption: Benchmark Results:
    :glob:
    
-   ../../../*/README.md
-
    
 ----------
 References
