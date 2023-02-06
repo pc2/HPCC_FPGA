@@ -18,7 +18,7 @@ The results and the used configuration is given in :numref:`tbl_stream_2_3_resul
 
 
 .. _tbl_stream_2_3_results:
-.. csv-table:: STREAM FPGA Benchmark Results for version 2.3
+.. csv-table:: STREAM FPGA Benchmark Results
     :file: stream-2-3.csv
     :stub-columns: 1
 

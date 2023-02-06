@@ -1,3 +1,4 @@
+Version,1.4,1.0,1.0,1.0,1.0
 FPGA board,Bittware 520N,BittWare 520N,Alveo U280,Alveo U280,PAC D5005
 FPGA,Intel Stratix 10 GX2800,Intel Stratix 10 GX2800,Xilinx XCU280,Xilinx XCU280,Intel Stratix 10 SX
 Memory Type,DDR,DDR,DDR,HBM2,SVM
@@ -5,7 +6,7 @@ SDK,21.2.0,19.4.0,2019.2,2019.2,19.4.0
 BSP/Shell,20.4.0_hpc,19.2.0_hpc,2019.2.3,2019.2.3,18.1.2_svm
 CPU,AMD EPYC Milan 7763,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148
 System,`Noctua 2 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944066/Noctua+2>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,
-BLOCK_SIZE,"512 ? ",512,256,256,512
+BLOCK_SIZE,512,512,256,256,512
 GEMM_SIZE,8,8,8,8,8
 GLOBAL_MEM_UNROLL,8,16,16,16,16
 DATA_TYPE,float,float,float,float,float

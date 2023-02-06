@@ -1,3 +1,4 @@
+Version,2.6,2.3,2.3,2.3,2.3
 FPGA board,Bittware 520N,BittWare 520N,Alveo U280,Alveo U280,PAC D5005
 FPGA,Intel Stratix 10 GX2800,Intel Stratix 10 GX2800,Xilinx XCU280,Xilinx XCU280,Intel Stratix 10 SX
 Memory Type,DDR,DDR,DDR,HBM2,SVM
@@ -8,7 +9,7 @@ System,`Noctua 2 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/1
 DATA_TYPE,float,float,float,float,float
 VECTOR_COUNT,16,16,16,16,16
 GLOBAL_MEM_UNROLL,1,1,1,1,1
-DEVICE_BUFFER_SIZE,65536,4096,16384,2048,1
+DEVICE_BUFFER_SIZE,32768,4096,16384,2048,1
 NUM_REPLICATIONS,4,4,2,32,1
 LUT,178268,176396,20832,331904,103628
 LUT percent,19,25.0,1.9,20.69,12.0

@@ -1,3 +1,4 @@
+Version,2.5,2.2,2.2,2.2,2.2
 FPGA board,Bittware 520N,BittWare 520N,Alveo U280,Alveo U280,PAC D5005
 FPGA,Intel Stratix 10 GX2800,Intel Stratix 10 GX2800,Xilinx XCU280,Xilinx XCU280,Intel Stratix 10 SX
 Memory Type,DDR,DDR,DDR,HBM2,SVM
