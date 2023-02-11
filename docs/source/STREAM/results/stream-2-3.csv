@@ -1,28 +1,28 @@
-Version,2.6,2.3,2.3,2.3,2.3
-FPGA board,Bittware 520N,BittWare 520N,Alveo U280,Alveo U280,PAC D5005
-FPGA,Intel Stratix 10 GX2800,Intel Stratix 10 GX2800,Xilinx XCU280,Xilinx XCU280,Intel Stratix 10 SX
-Memory Type,DDR,DDR,DDR,HBM2,SVM
-SDK,21.2.0,19.4.0,2019.2,2019.2,19.4.0
-BSP/Shell,20.4.0_hpc,19.2.0_hpc,2019.2.3,2019.2.3,18.1.2_svm
-CPU,AMD EPYC Milan 7763,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148
-System,`Noctua 2 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944066/Noctua+2>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_
-DATA_TYPE,float,float,float,float,float
-VECTOR_COUNT,16,16,16,16,16
-GLOBAL_MEM_UNROLL,1,1,1,1,1
-DEVICE_BUFFER_SIZE,32768,4096,16384,2048,1
-NUM_REPLICATIONS,4,4,2,32,1
-LUT,178268,176396,20832,331904,103628
-LUT percent,19,25.0,1.9,20.69,12.0
-Register,297342,449231,39002,574976,244354
-Register percent,,25.0,1.39,27.24,12.0
-BRAM,3926,4029,558,1408,548
-BRAM percent,33,34.0,34.19,77.7,5.0
-DSP,128,128,160,2560,32
-DSP percent,2,2.0,1.78,28.38,1.0
-Frequency,342.23,316.67,300.0,370.0,346.0
-Copy,65.63,67.01,33.94,377.42,20.15
-Scale,65.63,67.24,33.92,365.8,20.04
-Add,67.78,68.9,34.58,374.03,15.04
-Triad,67.80,68.9,34.57,378.88,15.12
-PCIe Read,6.28,6.41,5.68,6.66,inf
-PCIe Write,5.87,6.32,5.47,6.03,inf
+Version,2.6,2.6,2.3,2.3,2.3,2.3
+FPGA board,Alveo U280,Bittware 520N,BittWare 520N,Alveo U280,Alveo U280,PAC D5005
+FPGA,Xilinx XCU280,Intel Stratix 10 GX2800,Intel Stratix 10 GX2800,Xilinx XCU280,Xilinx XCU280,Intel Stratix 10 SX
+Memory Type,DDR,DDR,DDR,DDR,HBM2,SVM
+SDK,2019.2,21.2.0,19.4.0,2019.2,2019.2,19.4.0
+BSP/Shell,2019.2.3,20.4.0_hpc,19.2.0_hpc,2019.2.3,2019.2.3,18.1.2_svm
+CPU,AMD EPYC Milan 7763,AMD EPYC Milan 7763,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148
+System,`Noctua 2 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944066/Noctua+2>`_,`Noctua 2 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944066/Noctua+2>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_
+DATA_TYPE,,float,float,float,float,float
+VECTOR_COUNT,,16,16,16,16,16
+GLOBAL_MEM_UNROLL,,1,1,1,1,1
+DEVICE_BUFFER_SIZE,,32768,4096,16384,2048,1
+NUM_REPLICATIONS,,4,4,2,32,1
+LUT,,178268,176396,20832,331904,103628
+LUT percent,,19,25.0,1.9,20.69,12.0
+Register,,297342,449231,39002,574976,244354
+Register percent,,,25.0,1.39,27.24,12.0
+BRAM,,3926,4029,558,1408,548
+BRAM percent,,33,34.0,34.19,77.7,5.0
+DSP,,128,128,160,2560,32
+DSP percent,,2,2.0,1.78,28.38,1.0
+Frequency,,342.23,316.67,300.0,370.0,346.0
+Copy (GB/s),32.98,65.63,67.01,33.94,377.42,20.15
+Scale (GB/s),32.98,65.63,67.24,33.92,365.8,20.04
+Add (GB/s),33.88,67.78,68.9,34.58,374.03,15.04
+Triad,33.89,67.80,68.9,34.57,378.88,15.12
+PCIe Read,6.35,6.28,6.41,5.68,6.66,inf
+PCIe Write,4.00,5.87,6.32,5.47,6.03,inf
