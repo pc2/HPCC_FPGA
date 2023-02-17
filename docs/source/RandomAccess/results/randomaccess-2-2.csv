@@ -8,14 +8,14 @@ CPU,AMD EPYC Milan 7763,AMD EPYC Milan 7763,Intel Xeon Gold 6148,Intel Xeon Gold
 System,`Noctua 2 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944066/Noctua+2>`_,`Noctua 2 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944066/Noctua+2>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_
 DEVICE_BUFFER_SIZE,1024,1,1,1024,1024,1024
 NUM_REPLICATIONS,2,4,4,2,32,1
-LUT,,222405,115743,7256,116096,103397
-LUT percent,,24,18.0,0.65,10.68,12.0
-Register,,434090,253578,11716,187456,225293
-Register percent,,24,18.0,0.5,8.76,12.0
-BRAM,,602,489,38,608,535
-BRAM percent,,5,4.0,2.23,33.55,5.0
-DSP,,14,14,14,224,0
-DSP percent,,< 1.0,< 1.0,0.16,2.48,0.0
+LUT,184888,222405,115743,7256,116096,103397
+LUT percent,14.19,24,18.0,0.65,10.68,12.0
+Register,288566,434090,253578,11716,187456,225293
+Register percent,11.08,24,18.0,0.5,8.76,12.0
+BRAM,349.5,602,489,38,608,535
+BRAM percent,17.34,5,4.0,2.23,33.55,5.0
+DSP,24,14,14,14,224,0
+DSP percent,0.27,< 1.0,< 1.0,0.16,2.48,0.0
 Frequency,411.015198,326.05,329.17,446.0,450.0,322.0
 MUOPs,39.7888,185.633,245.0,40.3,128.1,0.5
 Error,0.00662282,0.0689179,0.0099,0.0106,0.0106,0.0106
