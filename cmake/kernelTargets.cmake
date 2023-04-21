@@ -89,7 +89,7 @@ function(generate_kernel_targets_xilinx)
         )
         if (XILINX_GENERATE_LINK_SETTINGS)
             add_custom_command(OUTPUT ${xilinx_link_settings}
-                    COMMAND ${Python3_EXECUTABLE} ${CODE_GENERATOR} -o ${xilinx_link_settings} -p num_replications=${NUM_REPLICATIONS} --comment "\"#\"" --comment-ml-start "\"$$\"" --comment-ml-end "\"$$\"" ${gen_xilinx_link_settings}
+                    COMMAND ${Python3_EXECUTABLE} ${CODE_GENERATOR} -o ${xilinx_link_settings} -p num_replications=${NUM_REPLICATIONS} ${gen_xilinx_link_settings}
                     MAIN_DEPENDENCY ${gen_xilinx_link_settings}
                     )
         else()

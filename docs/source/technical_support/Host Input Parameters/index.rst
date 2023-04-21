@@ -1,4 +1,5 @@
 .. _execution:
+
 ========================
 Execution of a Benchmark
 ========================
@@ -27,9 +28,15 @@ Input parameters (or options) can be appended to the host execution call like th
     The number of repetitions can be given with this parameter as a positive integer. The benchmark experiment will be repeated the given number of times. The benchmark will show 
     the aggregated results for all runs, but only validate the output of the last run.
 
+``-i``:
+    Use `Intel memory interleaving <https://www.intel.com/content/www/us/en/docs/programmable/683846/22-4/disabling-burst-interleaving-of-global.html>`_.
+
 ``--platform INT``:
     Also an integer. It can be used to specify the index of the OpenCL platform that should be used for execution. By default, it is set to -1. This will make the host code ask you
     to select a platform if multiple platforms are available. This option can become handy if you want to automize the execution of your benchmark.
+
+``--platform_str arg``:
+    A string which can be used to specify the wanted platform independent of the index. The exact platform name needs to be specified. When given, the value of the platform index specified by the flag above will be ignored.
 
 ``--device INT``:
     Also an integer. It can be used to specify the index of the OpenCL device that should be used for execution. By default, it is set to -1. This will make the host code ask you

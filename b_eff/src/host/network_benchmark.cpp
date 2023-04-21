@@ -36,10 +36,10 @@ SOFTWARE.
 
 network::NetworkProgramSettings::NetworkProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
     maxLoopLength(results["u"].as<uint>()), minLoopLength(results["l"].as<uint>()), maxMessageSize(results["m"].as<uint>()), 
-    minMessageSize(results["min-size"].as<uint>()), llOffset(results["o"].as<uint>()), llDecrease(results["d"].as<uint>()),
-    pcie_reverse_write_pcie(results["pcie-read"].count()), pcie_reverse_read_pcie(results["pcie-write"].count()),
-    pcie_reverse_execute_kernel(results["kernel-latency"].count()),
-    pcie_reverse_batch(results["pcie-batch"].count())
+    minMessageSize(results["min-size"].as<uint>()), stepSize(results["step-size"].as<uint>()), llOffset(results["o"].as<uint>()), 
+    llDecrease(results["d"].as<uint>()), pcie_reverse_write_pcie(results["pcie-read"].count()), 
+    pcie_reverse_read_pcie(results["pcie-write"].count()), pcie_reverse_execute_kernel(results["kernel-latency"].count()),
+    pcie_reverse_batch(results["pcie-batch"].count()), pcie_reverse(results["pcie-reverse"].count())
 #ifdef USE_ACCL
     , accl_from_programable_logic(results["accl-pl"].count()) 
 #endif    
@@ -66,9 +66,9 @@ network::NetworkData::NetworkDataItem::NetworkDataItem(unsigned int _messageSize
                                                                             }
 
 network::NetworkData::NetworkData(unsigned int max_looplength, unsigned int min_looplength, unsigned int min_messagesize, unsigned int max_messagesize, 
-                                unsigned int offset, unsigned int decrease, unsigned int replications) {
+                                unsigned int stepsize, unsigned int offset, unsigned int decrease, unsigned int replications) {
     uint decreasePerStep = (max_looplength - min_looplength) / decrease;
-    for (uint i = min_messagesize; i <= max_messagesize; i++) {
+    for (uint i = min_messagesize; i <= max_messagesize; i += stepsize) {
         uint messageSizeDivOffset = (i > offset) ? i - offset : 0u;
         uint newLooplength = (max_looplength > messageSizeDivOffset * decreasePerStep) ? max_looplength - messageSizeDivOffset * decreasePerStep : 0u;
         uint looplength = std::max(newLooplength, min_looplength);
@@ -92,6 +92,8 @@ network::NetworkBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
         ("min-size", "Minimum Message Size", cxxopts::value<uint>()->default_value(std::to_string(0)))
         ("m", "Maximum message size",
              cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_MAX_MESSAGE_SIZE)))
+        ("step-size", "Step size to generate message sizes in the specified range",
+            cxxopts::value<uint>()->default_value(std::to_string(1)))
         ("o", "Offset used before reducing repetitions",
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_OFFSET)))
         ("d", "Number os steps the repetitions are decreased to its minimum",
@@ -102,7 +104,8 @@ network::NetworkBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
         ("pcie-read", "Use reverse PCIe experiment and measure PCIe read performance from device")
         ("pcie-write", "Use reverse PCIe experiment and measure PCIe write performance from device")
         ("kernel-latency", "Use reverse PCIe experiment and measure kernel execution latency")
-        ("pcie-batch", "Execute the reverse PCIe experiments in batch mode to make use of the queues of the schedulers");
+        ("pcie-batch", "Execute the reverse PCIe experiments in batch mode to make use of the queues of the schedulers")
+        ("pcie-reverse", "Execute the reverse PCIe experiments");
 }
 
 void
@@ -257,6 +260,7 @@ network::NetworkBenchmark::generateInputData() {
                                                                             executionSettings->programSettings->minLoopLength,
                                                                             executionSettings->programSettings->minMessageSize,
                                                                             executionSettings->programSettings->maxMessageSize,
+                                                                            executionSettings->programSettings->stepSize,
                                                                             executionSettings->programSettings->llOffset,
                                                                             executionSettings->programSettings->llDecrease,
                                                                             executionSettings->programSettings->kernelReplications));

@@ -1,7 +1,8 @@
 .. _fft:
-======
+
+====== 
 FFT
-======
+====== 
 
 This section contains all information related to the FFT benchmark.
 The benchmark executes a batched calculation of 1d FFTs on a single FPGA.
@@ -13,7 +14,6 @@ It is possible to specify the size of the FFT and the number of kernel replicati
    :glob:
 
    */index
-   ../../../FFT/README.md
 
 ------------------------
 Configuration Parameters
