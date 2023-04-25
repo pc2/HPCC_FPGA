@@ -111,7 +111,8 @@ namespace network::execution_types::accl {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-		    std::copy(recvBufferContents[r].begin(), recvBufferContents[r].begin() + validationData.size() / config.programSettings->kernelReplications, validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
+            acclRecvBuffers[r]->sync_from_device();
+		    std::copy(recvBufferContents[r].begin(), recvBufferContents[r].end(), validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
         }
         return network::ExecutionTimings{
                looplength,
