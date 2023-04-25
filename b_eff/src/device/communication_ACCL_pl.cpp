@@ -22,12 +22,35 @@ SOFTWARE.
 #include "accl_hls.h"
 
 
-void send_recv(const float *read_buffer,float *write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations, 
+void send_recv(ap_uint<64> read_buffer,ap_uint<64> write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations,
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
                 STREAM<command_word> &cmd, STREAM<command_word> &sts) {
-    accl_hls::ACCLCommand accl_cmd(cmd, sts, communicator_addr, datapath_cfg,0,0);
+#pragma HLS INTERFACE s_axilite port=read_buffer
+#pragma HLS INTERFACE s_axilite port=write_buffer
+#pragma HLS INTERFACE s_axilite port=size
+#pragma HLS INTERFACE s_axilite port=num_iterations
+#pragma HLS INTERFACE s_axilite port=neighbor_rank
+#pragma HLS INTERFACE s_axilite port=communicator_addr
+#pragma HLS INTERFACE s_axilite port=datapath_cfg
+#pragma HLS INTERFACE axis port=cmd
+#pragma HLS INTERFACE axis port=sts
+#pragma HLS INTERFACE s_axilite port=return
+    accl_hls::ACCLCommand accl(cmd, sts);
     for (int i = 0; i < num_iterations; i++) {
-        accl_cmd.send(size, 0, neighbor_rank, (ap_uint<64>)read_buffer);
-        accl_cmd.recv(size, 0, neighbor_rank, (ap_uint<64>)write_buffer);
+        #pragma HLS protocol fixed
+        accl.start_call(
+            ACCL_SEND, size, communicator_addr, neighbor_rank, 0, 0,
+                datapath_cfg, 0, 0,
+                read_buffer, 0, 0);
+        ap_wait();
+        accl.finalize_call();
+        ap_wait();
+        accl.start_call(
+            ACCL_RECV, size, communicator_addr, neighbor_rank, 0, 0,
+                datapath_cfg, 0, 0,
+                0, write_buffer, 0);
+        ap_wait();
+        accl.finalize_call();
     }
 }
+
