@@ -40,7 +40,7 @@ namespace network::execution_types::accl {
      @copydoc bm_execution::calculate()
     */
 	template<class TDevice, class TContext, class TProgram>
-    std::shared_ptr<network::ExecutionTimings>
+    network::ExecutionTimings
     calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings, TDevice, TContext, TProgram> const& config, cl_uint messageSize, cl_uint looplength,
                 cl::vector<HOST_DATA_TYPE> &validationData) {
 
@@ -111,14 +111,13 @@ namespace network::execution_types::accl {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-		std::copy(recvBufferContents[r].begin(), recvBufferContents[r].begin() + validationData.size() / config.programSettings->kernelReplications, validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
+		    std::copy(recvBufferContents[r].begin(), recvBufferContents[r].begin() + validationData.size() / config.programSettings->kernelReplications, validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
         }
-        std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
-                looplength,
+        return network::ExecutionTimings{
+               looplength,
                 messageSize,
                 calculationTimings
-        });
-        return result;
+        };
     }
 
 }  // namespace bm_execution

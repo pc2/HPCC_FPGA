@@ -47,7 +47,7 @@ namespace network::execution_types::accl_pl {
      @copydoc bm_execution::calculate()
     */
 	template<class TDevice, class TContext, class TProgram>
-    std::shared_ptr<network::ExecutionTimings>
+    network::ExecutionTimings
     calculate(hpcc_base::ExecutionSettings<network::NetworkProgramSettings, TDevice, TContext, TProgram> const& config, cl_uint messageSize, cl_uint looplength,
                 cl::vector<HOST_DATA_TYPE> &validationData) {
 
@@ -137,12 +137,11 @@ namespace network::execution_types::accl_pl {
             }
 		    std::copy(recvBufferContents[r].begin(), recvBufferContents[r].begin() + validationData.size() / config.programSettings->kernelReplications, validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
         }
-        std::shared_ptr<network::ExecutionTimings> result(new network::ExecutionTimings{
+        return network::ExecutionTimings{
                 looplength,
                 messageSize,
                 calculationTimings
-        });
-        return result;
+        };
     }
 
 }  // namespace bm_execution
