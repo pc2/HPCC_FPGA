@@ -42,7 +42,7 @@ namespace fpga_setup {
         } else {
             //TODO Use xrt::system::enumerate_devices() in "experimental/xrt_system.h" for future XRT versions
             // instead of hardcoded number of devices.
-            current_device = current_device + 1 % 3;
+            current_device = current_device % 3;
         }
         return std::unique_ptr<xrt::device>(new xrt::device(current_device));
     } 
