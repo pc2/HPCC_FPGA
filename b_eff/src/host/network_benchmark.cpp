@@ -213,11 +213,11 @@ network::NetworkBenchmark::collectResults() {
             int messageSize = timing.first;
             int num_timings = timing.second.execution_timings.size();
             // The total sent data in bytes will be:
-            // #Nodes * message_size * looplength * 2
-            // the * 2 is because we have two kernels per bitstream that will send and receive simultaneously.
+            // #Nodes * message_size * looplength * kernel_replications
+            // the * kernel_replications is because we have multiple replications per bitstream that will send and receive simultaneously.
             // This will be divided by half of the maximum of the minimum measured runtime over all ranks.
-            timing.second.maxCalcBW = static_cast<double>(num_timings * 2 * (1 << messageSize) * looplength)
-                                                                / timing.second.maxMinCalculationTime;
+            timing.second.maxCalcBW = static_cast<double>( num_timings * executionSettings->programSettings->kernelReplications
+                                                            * (1 << messageSize) * looplength) / timing.second.maxMinCalculationTime;
 
             maxBandwidths.push_back(timing.second.maxCalcBW);
 
@@ -231,7 +231,7 @@ network::NetworkBenchmark::collectResults() {
 void network::NetworkBenchmark::printResults() {
     std::cout << std::setw(ENTRY_SPACE) << "MSize" << "   "
             << std::setw(ENTRY_SPACE) << "looplength" << "   "
-            << std::setw(ENTRY_SPACE) << "transfer" << "   "
+            << std::setw(ENTRY_SPACE) << "time [s]" << "   "
             << std::setw(ENTRY_SPACE) << "B/s" << std::endl;
 
     for (const auto& timing : collected_timings) {
