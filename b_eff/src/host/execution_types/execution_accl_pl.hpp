@@ -35,7 +35,7 @@ SOFTWARE.
 
 /* Project's headers */
 
-extern void send_recv(const float *read_buffer,float *write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations, 
+extern void send_recv(ap_uint<64> read_buffer,ap_uint<64> write_buffer, ap_uint<32> size, ap_uint<32> num_iterations, 
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
                 STREAM<command_word> &cmd, STREAM<command_word > &sts);
 
@@ -54,9 +54,9 @@ namespace network::execution_types::accl_pl {
         int err;
         std::vector<cl::vector<HOST_DATA_TYPE>> dummyBufferContents;
         std::vector<cl::vector<HOST_DATA_TYPE>> recvBufferContents;
-	std::vector<std::unique_ptr<ACCL::Buffer<HOST_DATA_TYPE>>> acclSendBuffers;
-	std::vector<std::unique_ptr<ACCL::Buffer<HOST_DATA_TYPE>>> acclRecvBuffers;
-        cl_uint size_in_bytes = std::max(static_cast<int>(validationData.size()), (1 << messageSize));
+	    std::vector<std::unique_ptr<ACCL::Buffer<HOST_DATA_TYPE>>> acclSendBuffers;
+	    std::vector<std::unique_ptr<ACCL::Buffer<HOST_DATA_TYPE>>> acclRecvBuffers;
+        cl_uint size_in_bytes = (1 << messageSize);
 
         int current_rank;
         MPI_Comm_rank(MPI_COMM_WORLD, & current_rank);
@@ -77,8 +77,6 @@ namespace network::execution_types::accl_pl {
 
         std::vector<double> calculationTimings;
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
-            dummyBufferContents.clear();
-            recvBufferContents.clear();
             acclSendBuffers.clear();
             acclRecvBuffers.clear();
             int size_in_values = (size_in_bytes + 3) / 4;
@@ -86,8 +84,8 @@ namespace network::execution_types::accl_pl {
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
                 recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
-                acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
-                acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_values * 4, ACCL::dataType::float32));
+                acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32));
+                acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32));
                 acclSendBuffers.back()->sync_to_device();
                 acclRecvBuffers.back()->sync_to_device();
             }
@@ -102,12 +100,12 @@ namespace network::execution_types::accl_pl {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 if (!config.programSettings->useAcclEmulation) {
-                auto run = sendrecvKernel(*(acclSendBuffers[i]->bo()), *(acclRecvBuffers[i]->bo()), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
-                                            config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}));
+                auto run = sendrecvKernel(acclSendBuffers[i]->physical_address(), acclRecvBuffers[i]->physical_address(), size_in_bytes, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                                            config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}));
                 run.wait();
                 } else {
-                    send_recv(reinterpret_cast<float*>(acclSendBuffers[i]->buffer()), reinterpret_cast<float*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
-                                            config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::float32, ACCL::dataType::float32}),
+                    send_recv(acclSendBuffers[i]->physical_address(), acclRecvBuffers[i]->physical_address(), size_in_bytes, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                                            config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}),
                                             cmd, sts);
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
@@ -135,7 +133,11 @@ namespace network::execution_types::accl_pl {
             if (!config.programSettings->useAcclEmulation) {
                 acclRecvBuffers[r]->sync_from_device();
             }
-		    std::copy(recvBufferContents[r].begin(), recvBufferContents[r].end(), validationData.begin() + validationData.size() / config.programSettings->kernelReplications * r);
+            for (int c=0; c < size_in_bytes; c++) {
+                std::cout << int(recvBufferContents[r][c]) << ",";
+            }
+            std::cout << std::endl;
+		    std::copy(recvBufferContents[r].begin(), recvBufferContents[r].end(), &validationData.data()[size_in_bytes * r]);
         }
         return network::ExecutionTimings{
                 looplength,
