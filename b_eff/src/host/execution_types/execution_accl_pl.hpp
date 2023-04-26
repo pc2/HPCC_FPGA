@@ -131,10 +131,6 @@ namespace network::execution_types::accl_pl {
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
             acclRecvBuffers[r]->sync_from_device();
-            for (int c=0; c < size_in_bytes; c++) {
-                std::cout << int(recvBufferContents[r][c]) << ",";
-            }
-            std::cout << std::endl;
 		    std::copy(recvBufferContents[r].begin(), recvBufferContents[r].end(), &validationData.data()[size_in_bytes * r]);
         }
         return network::ExecutionTimings{
