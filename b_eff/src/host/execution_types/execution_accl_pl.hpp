@@ -65,7 +65,7 @@ namespace network::execution_types::accl_pl {
         MPI_Comm_size(MPI_COMM_WORLD, & current_size);
 
         hlslib::Stream<stream_word> cclo2krnl("cclo2krnl"), krnl2cclo("krnl2cclo");
-        hlslib::Stream<command_word> cmd, sts;
+        hlslib::Stream<command_word> cmd("cmd"), sts("sts");
 
         std::vector<unsigned int> dest = {0};
         std::unique_ptr<CCLO_BFM> cclo;
@@ -100,11 +100,11 @@ namespace network::execution_types::accl_pl {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 if (!config.programSettings->useAcclEmulation) {
-                auto run = sendrecvKernel(acclSendBuffers[i]->physical_address(), acclRecvBuffers[i]->physical_address(), size_in_bytes, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                    auto run = sendrecvKernel(acclSendBuffers[i]->physical_address(), acclRecvBuffers[i]->physical_address(), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}));
-                run.wait();
+                    run.wait();
                 } else {
-                    send_recv(acclSendBuffers[i]->physical_address(), acclRecvBuffers[i]->physical_address(), size_in_bytes, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                    send_recv(acclSendBuffers[i]->physical_address(), acclRecvBuffers[i]->physical_address(), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}),
                                             cmd, sts);
                 }
@@ -130,9 +130,7 @@ namespace network::execution_types::accl_pl {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-            if (!config.programSettings->useAcclEmulation) {
-                acclRecvBuffers[r]->sync_from_device();
-            }
+            acclRecvBuffers[r]->sync_from_device();
             for (int c=0; c < size_in_bytes; c++) {
                 std::cout << int(recvBufferContents[r][c]) << ",";
             }
