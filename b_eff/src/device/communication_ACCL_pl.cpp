@@ -48,7 +48,7 @@ void send_recv(ap_uint<64> read_buffer,ap_uint<64> write_buffer,  ap_uint<32> si
         accl.start_call(
             ACCL_RECV, size, communicator_addr, neighbor_rank, 0, 0,
                 datapath_cfg, 0, 0,
-                0, write_buffer, 0);
+                0, 0, write_buffer);
         ap_wait();
         accl.finalize_call();
     }
