@@ -68,8 +68,8 @@ namespace network::execution_types::accl {
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
                 recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
-		        acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::float32));
-		        acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::float32));
+		        acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::float32, 0));
+		        acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::float32, 1));
 		        acclSendBuffers.back()->sync_to_device();
 		        acclRecvBuffers.back()->sync_to_device();
             }
