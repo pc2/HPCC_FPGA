@@ -19,6 +19,7 @@ hpcc_base::BaseSettings::BaseSettings(cxxopts::ParseResult &results) : numRepeti
             defaultPlatform(results["platform"].as<int>()),
             defaultDevice(results["device"].as<int>()),
             kernelFileName(results["f"].as<std::string>()),
+            dumpfilePath(results["dump-json"].as<std::string>()),
 #ifdef NUM_REPLICATIONS
             kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : NUM_REPLICATIONS),
 #else
