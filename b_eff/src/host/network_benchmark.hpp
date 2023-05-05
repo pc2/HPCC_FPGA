@@ -31,7 +31,7 @@ SOFTWARE.
 #include "hpcc_benchmark.hpp"
 #include "parameters.h"
 
-#ifdef XILINX_FPGA
+#ifdef USE_DEPRECATED_HPP_HEADER
 template <typename T>
 struct aligned_allocator {
 
