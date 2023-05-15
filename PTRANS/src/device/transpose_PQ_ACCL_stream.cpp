@@ -15,6 +15,7 @@ const unsigned int block_size = BLOCK_SIZE;
 const unsigned int channel_width = CHANNEL_WIDTH;
 
 // PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_replications)]
+{% for i in range(num_replications) %}
 
 /**
  * Read blocks of matrix A and transpose them in memory.
@@ -34,7 +35,7 @@ const unsigned int channel_width = CHANNEL_WIDTH;
  * @param width_in_blocks The with of matrix A in blocks
  * @param height_in_blocks The height of matix A in blocks
  */
-void transpose_read/*PY_CODE_GEN i*/( const DEVICE_DATA_TYPE *A,
+void transpose_read{{ i }}( const DEVICE_DATA_TYPE *A,
             const unsigned int offset_a,
             const unsigned int number_of_blocks,
             const unsigned int width_in_blocks,
@@ -145,7 +146,7 @@ read_A_line:
  * @param width_in_blocks The with of matrix A in blocks
  * @param height_in_blocks The height of matix A in blocks
  */
-void transpose_write/*PY_CODE_GEN i*/(const DEVICE_DATA_TYPE *B,
+void transpose_write{{ i }}(const DEVICE_DATA_TYPE *B,
                                  DEVICE_DATA_TYPE *A_out,
             const unsigned int offset_b,
             const unsigned int number_of_blocks,
@@ -194,5 +195,5 @@ read_B_line:
     }
 }
 
-// PY_CODE_GEN block_end
+{% endfor %}
 
