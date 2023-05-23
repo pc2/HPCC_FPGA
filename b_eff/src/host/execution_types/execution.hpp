@@ -29,5 +29,5 @@ SOFTWARE.
 #endif
 #else
 #include "execution_types/execution_accl.hpp"
-#include "execution_types/execution_accl_pl.hpp"
+#include "execution_types/execution_accl_pl_stream.hpp"
 #endif
