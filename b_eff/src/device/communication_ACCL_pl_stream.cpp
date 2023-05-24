@@ -72,3 +72,19 @@ void send_recv_stream(ap_uint<64> read_buffer,ap_uint<512>* write_buffer,  ap_ui
     }
 }
 
+void loopback_reduce(STREAM<stream_word> & in0, STREAM<stream_word> & in1, STREAM<stream_word> & out) {
+#pragma HLS INTERFACE axis register both port=in0
+#pragma HLS INTERFACE axis register both port=in1
+#pragma HLS INTERFACE axis register both port=out
+#pragma HLS INTERFACE ap_ctrl_none port=return
+
+stream_word tmp;
+
+do{
+#pragma HLS PIPELINE II=1
+	tmp = in0.read();
+    tmp = in1.read();
+	out.write(tmp);
+} while(tmp.last == 0);
+
+}
