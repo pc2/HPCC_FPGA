@@ -43,7 +43,7 @@ void send_recv_stream(ap_uint<64> read_buffer,ap_uint<512>* write_buffer,  ap_ui
     // master AXI stream. There seems to be no interface pragma to do this
     // and if it isn't done, the stream is implemented as slave and throw an
     // error during synthesis.
-    if (false) {
+    if (num_iterations == 0) {
         stream_word tmp;
         data_out.write(tmp);
     }
