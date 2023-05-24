@@ -38,6 +38,17 @@ void send_recv_stream(ap_uint<64> read_buffer,ap_uint<512>* write_buffer,  ap_ui
 #pragma HLS INTERFACE axis port=cmd
 #pragma HLS INTERFACE axis port=sts
 #pragma HLS INTERFACE s_axilite port=return
+    
+    // This is just dummycode to define data_out as
+    // master AXI stream. There seems to be no interface pragma to do this
+    // and if it isn't done, the stream is implemented as slave and throw an
+    // error during synthesis.
+    if (false) {
+        stream_word tmp;
+        data_out.write(tmp);
+    }
+
+
     accl_hls::ACCLCommand accl(cmd, sts);
     for (int i = 0; i < num_iterations; i++) {
         #pragma HLS protocol fixed
