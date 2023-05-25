@@ -35,7 +35,7 @@ SOFTWARE.
 
 /* Project's headers */
 
-extern void send_recv_stream(ap_uint<64> read_buffer,ap_uint<512>* write_buffer, ap_uint<32> size, ap_uint<32> num_iterations, 
+extern void send_recv_stream(ap_uint<512>* read_buffer,ap_uint<512>* write_buffer, ap_uint<32> size, ap_uint<32> num_iterations, 
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
                 STREAM<stream_word> &data_in, STREAM<stream_word > &data_out, STREAM<command_word> &cmd, STREAM<command_word > &sts);
 
@@ -100,11 +100,11 @@ namespace network::execution_types::accl_pl {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 if (!config.programSettings->useAcclEmulation) {
-                    auto run = sendrecvKernel(acclSendBuffers[i]->physical_address(), acclRecvBuffers[i]->bo(), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                    auto run = sendrecvKernel(*acclSendBuffers[i]->bo(), *acclRecvBuffers[i]->bo(), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}));
                     run.wait();
                 } else {
-                    send_recv_stream(acclSendBuffers[i]->physical_address(), reinterpret_cast<ap_uint<512>*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                    send_recv_stream(reinterpret_cast<ap_uint<512>*>(acclSendBuffers[i]->buffer()), reinterpret_cast<ap_uint<512>*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}),
                                             cclo2krnl, krnl2cclo, cmd, sts);
                 }
@@ -130,7 +130,9 @@ namespace network::execution_types::accl_pl {
         // Read validation data from FPGA will be placed sequentially in buffer for all replications
         // The data order should not matter, because every byte should have the same value!
         for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-            acclRecvBuffers[r]->sync_from_device();
+            if (!config.programSettings->useAcclEmulation) {
+                acclRecvBuffers[r]->sync_from_device();
+            }
 		    std::copy(recvBufferContents[r].begin(), recvBufferContents[r].end(), &validationData.data()[size_in_bytes * r]);
         }
         return network::ExecutionTimings{

@@ -22,12 +22,50 @@ SOFTWARE.
 #include "accl_hls.h"
 
 
-void send_recv_stream(ap_uint<64> read_buffer,ap_uint<512>* write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations,
+void
+write_data(ap_uint<512>* read_buffer, ap_uint<32> size, STREAM<stream_word> &data_out) {
+    // receive the incoming data while send may still be in progress
+    for (int chunk = 0; chunk < (size + 15) / 16; chunk++) {
+        #pragma HLS pipeline II=1
+        stream_word word;
+        word.last = 1;
+        word.keep = -1;
+        word.dest = 0;
+        word.data = read_buffer[chunk];
+        data_out.write(word);
+    }
+}
+
+void
+read_data(ap_uint<512>* write_buffer, ap_uint<32> size, STREAM<stream_word> &data_in, ap_uint<32> neighbor_rank, 
+        ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg, STREAM<command_word> &cmd, STREAM<command_word> &sts) {
+    #pragma HLS protocol fixed
+    // Send data from stream to the remote FPGA.
+    // Remote FPGA will immediatly move data to stream.
+    // This will allow overlapping of send and recv.
+    accl_hls::ACCLCommand accl(cmd, sts);
+    accl.start_call(
+        ACCL_SEND, size, communicator_addr, neighbor_rank, 0, 0,
+            datapath_cfg, 0, 3,
+            0, 0, 0);
+    ap_wait(); 
+    // receive the incoming data while send may still be in progress
+    for (int chunk = 0; chunk < (size + 15) / 16 ; chunk++) {
+        #pragma HLS pipeline II=1
+        stream_word word = data_in.read();
+        write_buffer[chunk] = word.data;
+    }
+    ap_wait();
+    accl.finalize_call();
+}
+
+
+void send_recv_stream(ap_uint<512>* read_buffer,ap_uint<512>* write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations,
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
                 STREAM<stream_word> &data_in, STREAM<stream_word> &data_out,
                 STREAM<command_word> &cmd, STREAM<command_word> &sts) {
-#pragma HLS INTERFACE s_axilite port=read_buffer
-#pragma HLS INTERFACE m_axi port=write_buffer
+#pragma HLS INTERFACE m_axi port=read_buffer bundle=read
+#pragma HLS INTERFACE m_axi port=write_buffer bundle=write
 #pragma HLS INTERFACE s_axilite port=size
 #pragma HLS INTERFACE s_axilite port=num_iterations
 #pragma HLS INTERFACE s_axilite port=neighbor_rank
@@ -38,37 +76,13 @@ void send_recv_stream(ap_uint<64> read_buffer,ap_uint<512>* write_buffer,  ap_ui
 #pragma HLS INTERFACE axis port=cmd
 #pragma HLS INTERFACE axis port=sts
 #pragma HLS INTERFACE s_axilite port=return
-    
-    // This is just dummycode to define data_out as
-    // master AXI stream. There seems to be no interface pragma to do this
-    // and if it isn't done, the stream is implemented as slave and throw an
-    // error during synthesis.
-    if (num_iterations == 0) {
-        stream_word tmp;
-        data_out.write(tmp);
-    }
 
-
-    accl_hls::ACCLCommand accl(cmd, sts);
     for (int i = 0; i < num_iterations; i++) {
-        #pragma HLS protocol fixed
-        // Send data from global memory to the remote FPGA.
-        // Remote FPGA will immediatly move data to stream.
-        // This will allow overlapping of send and recv.
-        accl.start_call(
-            ACCL_SEND, size, communicator_addr, neighbor_rank, 0, 0,
-                datapath_cfg, 0, 2,
-                read_buffer, 0, 0);
-        ap_wait();
-        // receive the incoming data while send may still be in progress
-        for (int chunk = 0; chunk < (size + 15) / 16 ; chunk++) {
-            #pragma HLS pipeline II=1
-            stream_word word = data_in.read();
-            write_buffer[chunk] = word.data;
-        }
-        // Wait to complete send
-        accl.finalize_call();
-        ap_wait();
+        #pragma HLS dataflow
+
+        write_data(read_buffer, size, data_out);
+
+        read_data(write_buffer, size, data_in, neighbor_rank, communicator_addr, datapath_cfg, cmd, sts);
     }
 }
 
