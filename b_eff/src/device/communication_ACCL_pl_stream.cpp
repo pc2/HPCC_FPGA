@@ -64,8 +64,8 @@ void send_recv_stream(ap_uint<512>* read_buffer,ap_uint<512>* write_buffer,  ap_
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
                 STREAM<stream_word> &data_in, STREAM<stream_word> &data_out,
                 STREAM<command_word> &cmd, STREAM<command_word> &sts) {
-#pragma HLS INTERFACE m_axi port=read_buffer bundle=read
-#pragma HLS INTERFACE m_axi port=write_buffer bundle=write
+#pragma HLS INTERFACE m_axi port=read_buffer bundle=gmem_in
+#pragma HLS INTERFACE m_axi port=write_buffer bundle=gmem_out
 #pragma HLS INTERFACE s_axilite port=size
 #pragma HLS INTERFACE s_axilite port=num_iterations
 #pragma HLS INTERFACE s_axilite port=neighbor_rank
