@@ -80,19 +80,25 @@ namespace network::execution_types::accl_pl {
             acclSendBuffers.clear();
             acclRecvBuffers.clear();
             int size_in_values = (size_in_bytes + 3) / 4;
-            // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
-            for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-                dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
-                recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
-                acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, 0));
-                acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, 1));
-                acclSendBuffers.back()->sync_to_device();
-                acclRecvBuffers.back()->sync_to_device();
-            }
 
             xrt::kernel sendrecvKernel;
             if (!config.programSettings->useAcclEmulation) {
                 sendrecvKernel = xrt::kernel(*config.device, *config.program, "send_recv_stream");
+            }
+            // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
+            for (int r = 0; r < config.programSettings->kernelReplications; r++) {
+                dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
+                recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
+                if (!config.programSettings->useAcclEmulation) {
+                    acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, 0));
+                    acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, 1));
+                }
+                else {
+                    acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, sendrecvKernel.group_id(0)));
+                    acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, sendrecvKernel.group_id(1)));               
+                }
+                acclSendBuffers.back()->sync_to_device();
+                acclRecvBuffers.back()->sync_to_device();
             }
 
             double calculationTime = 0.0;

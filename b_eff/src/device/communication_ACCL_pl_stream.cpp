@@ -39,6 +39,7 @@ write_data(ap_uint<512>* read_buffer, ap_uint<32> size, STREAM<stream_word> &dat
 void
 read_data(ap_uint<512>* write_buffer, ap_uint<32> size, STREAM<stream_word> &data_in, ap_uint<32> neighbor_rank, 
         ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg, STREAM<command_word> &cmd, STREAM<command_word> &sts) {
+    issue_and_recv: {
     #pragma HLS protocol fixed
     // Send data from stream to the remote FPGA.
     // Remote FPGA will immediatly move data to stream.
@@ -57,6 +58,7 @@ read_data(ap_uint<512>* write_buffer, ap_uint<32> size, STREAM<stream_word> &dat
     }
     ap_wait();
     accl.finalize_call();
+    }
 }
 
 
@@ -71,10 +73,10 @@ void send_recv_stream(ap_uint<512>* read_buffer,ap_uint<512>* write_buffer,  ap_
 #pragma HLS INTERFACE s_axilite port=neighbor_rank
 #pragma HLS INTERFACE s_axilite port=communicator_addr
 #pragma HLS INTERFACE s_axilite port=datapath_cfg
-#pragma HLS INTERFACE axis port=data_in
-#pragma HLS INTERFACE axis port=data_out
-#pragma HLS INTERFACE axis port=cmd
-#pragma HLS INTERFACE axis port=sts
+#pragma HLS INTERFACE axis register both port=data_in
+#pragma HLS INTERFACE axis register both port=data_out
+#pragma HLS INTERFACE axis register both port=cmd
+#pragma HLS INTERFACE axis register both port=sts
 #pragma HLS INTERFACE s_axilite port=return
 
     for (int i = 0; i < num_iterations; i++) {
