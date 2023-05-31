@@ -72,12 +72,7 @@ void recv_stream(ap_uint<512>* write_buffer,  ap_uint<32> size, ap_uint<32> num_
 #pragma HLS INTERFACE m_axi port=write_buffer bundle=gmem_out
 #pragma HLS INTERFACE s_axilite port=size
 #pragma HLS INTERFACE s_axilite port=num_iterations
-#pragma HLS INTERFACE s_axilite port=neighbor_rank
-#pragma HLS INTERFACE s_axilite port=communicator_addr
-#pragma HLS INTERFACE s_axilite port=datapath_cfg
 #pragma HLS INTERFACE axis port=data_in
-#pragma HLS INTERFACE axis port=cmd
-#pragma HLS INTERFACE axis port=sts
 #pragma HLS INTERFACE axis port=notify
 #pragma HLS INTERFACE s_axilite port=return
 
@@ -113,9 +108,6 @@ void send_stream(ap_uint<512>* read_buffer,  ap_uint<32> size, ap_uint<32> num_i
 #pragma HLS INTERFACE m_axi port=read_buffer bundle=gmem_in
 #pragma HLS INTERFACE s_axilite port=size
 #pragma HLS INTERFACE s_axilite port=num_iterations
-#pragma HLS INTERFACE s_axilite port=neighbor_rank
-#pragma HLS INTERFACE s_axilite port=communicator_addr
-#pragma HLS INTERFACE s_axilite port=datapath_cfg
 #pragma HLS INTERFACE axis port=data_out
 #pragma HLS INTERFACE s_axilite port=return
 
