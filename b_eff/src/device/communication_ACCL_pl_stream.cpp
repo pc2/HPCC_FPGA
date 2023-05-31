@@ -21,6 +21,7 @@ SOFTWARE.
 */
 #include "accl_hls.h"
 
+typedef ap_axiu<1, 0, 0, 0> notify_word;
 
 void
 write_data(ap_uint<512>* read_buffer, ap_uint<32> size, STREAM<stream_word> &data_out) {
@@ -37,9 +38,20 @@ write_data(ap_uint<512>* read_buffer, ap_uint<32> size, STREAM<stream_word> &dat
 }
 
 void
-read_data(ap_uint<512>* write_buffer, ap_uint<32> size, STREAM<stream_word> &data_in, ap_uint<32> neighbor_rank, 
-        ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg, STREAM<command_word> &cmd, STREAM<command_word> &sts) {
-    issue_and_recv: {
+read_data(ap_uint<512>* write_buffer, ap_uint<32> size, STREAM<stream_word> &data_in) {
+    // receive the incoming data while send may still be in progress
+    for (int chunk = 0; chunk < (size + 15) / 16 ; chunk++) {
+        #pragma HLS pipeline II=1
+        stream_word word = data_in.read();
+        write_buffer[chunk] = word.data;
+    }
+}
+
+void
+schedule_send(ap_uint<32> size, ap_uint<32> neighbor_rank, 
+        ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg, 
+        STREAM<command_word> &cmd, STREAM<command_word> &sts) {
+    send_fixed: {
     #pragma HLS protocol fixed
     // Send data from stream to the remote FPGA.
     // Remote FPGA will immediatly move data to stream.
@@ -49,44 +61,69 @@ read_data(ap_uint<512>* write_buffer, ap_uint<32> size, STREAM<stream_word> &dat
         ACCL_SEND, size, communicator_addr, neighbor_rank, 0, 0,
             datapath_cfg, 0, 3,
             0, 0, 0);
-    ap_wait(); 
-    // receive the incoming data while send may still be in progress
-    for (int chunk = 0; chunk < (size + 15) / 16 ; chunk++) {
-        #pragma HLS pipeline II=1
-        stream_word word = data_in.read();
-        write_buffer[chunk] = word.data;
-    }
     ap_wait();
     accl.finalize_call();
     }
 }
 
-
-void send_recv_stream(ap_uint<512>* read_buffer,ap_uint<512>* write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations,
-                ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
-                STREAM<stream_word> &data_in, STREAM<stream_word> &data_out,
-                STREAM<command_word> &cmd, STREAM<command_word> &sts) {
-#pragma HLS INTERFACE m_axi port=read_buffer bundle=gmem_in
+void recv_stream(ap_uint<512>* write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations,
+                STREAM<stream_word> &data_in,
+                STREAM<notify_word> &notify) {
 #pragma HLS INTERFACE m_axi port=write_buffer bundle=gmem_out
 #pragma HLS INTERFACE s_axilite port=size
 #pragma HLS INTERFACE s_axilite port=num_iterations
 #pragma HLS INTERFACE s_axilite port=neighbor_rank
 #pragma HLS INTERFACE s_axilite port=communicator_addr
 #pragma HLS INTERFACE s_axilite port=datapath_cfg
-#pragma HLS INTERFACE axis register both port=data_in
-#pragma HLS INTERFACE axis register both port=data_out
-#pragma HLS INTERFACE axis register both port=cmd
-#pragma HLS INTERFACE axis register both port=sts
+#pragma HLS INTERFACE axis port=data_in
+#pragma HLS INTERFACE axis port=cmd
+#pragma HLS INTERFACE axis port=sts
+#pragma HLS INTERFACE axis port=notify
+#pragma HLS INTERFACE s_axilite port=return
+
+    notify_word w;
+    for (int i = 0; i < num_iterations; i++) {
+        read_data(write_buffer, size, data_in);
+        notify.write(w);
+    }
+}
+
+void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations,
+                ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
+                STREAM<command_word> &cmd, STREAM<command_word> &sts,
+                STREAM<notify_word> &notify) {
+#pragma HLS INTERFACE s_axilite port=size
+#pragma HLS INTERFACE s_axilite port=num_iterations
+#pragma HLS INTERFACE s_axilite port=neighbor_rank
+#pragma HLS INTERFACE s_axilite port=communicator_addr
+#pragma HLS INTERFACE s_axilite port=datapath_cfg
+#pragma HLS INTERFACE axis port=cmd
+#pragma HLS INTERFACE axis port=sts
+#pragma HLS INTERFACE axis port=notify        
 #pragma HLS INTERFACE s_axilite port=return
 
     for (int i = 0; i < num_iterations; i++) {
-        #pragma HLS dataflow
-
-        write_data(read_buffer, size, data_out);
-
-        read_data(write_buffer, size, data_in, neighbor_rank, communicator_addr, datapath_cfg, cmd, sts);
+        schedule_send(size, neighbor_rank, communicator_addr, datapath_cfg, cmd, sts);
+        notify_word w = notify.read();
     }
 }
+
+void send_stream(ap_uint<512>* read_buffer,  ap_uint<32> size, ap_uint<32> num_iterations,
+                STREAM<stream_word> &data_out) {
+#pragma HLS INTERFACE m_axi port=read_buffer bundle=gmem_in
+#pragma HLS INTERFACE s_axilite port=size
+#pragma HLS INTERFACE s_axilite port=num_iterations
+#pragma HLS INTERFACE s_axilite port=neighbor_rank
+#pragma HLS INTERFACE s_axilite port=communicator_addr
+#pragma HLS INTERFACE s_axilite port=datapath_cfg
+#pragma HLS INTERFACE axis port=data_out
+#pragma HLS INTERFACE s_axilite port=return
+
+    for (int i = 0; i < num_iterations; i++) {
+        write_data(read_buffer, size, data_out);
+    }
+}
+
 
 void loopback_reduce(STREAM<stream_word> & in0, STREAM<stream_word> & in1, STREAM<stream_word> & out) {
 #pragma HLS INTERFACE axis register both port=in0

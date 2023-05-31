@@ -34,10 +34,17 @@ SOFTWARE.
 #include "accl_hls.h"
 
 /* Project's headers */
+typedef ap_axiu<1, 0, 0, 0> notify_word;
 
-extern void send_recv_stream(ap_uint<512>* read_buffer,ap_uint<512>* write_buffer, ap_uint<32> size, ap_uint<32> num_iterations, 
+extern void send_stream(ap_uint<512>* read_buffer, ap_uint<32> size, ap_uint<32> num_iterations, 
+                        STREAM<stream_word > &data_out);
+
+extern void recv_stream(ap_uint<512>* write_buffer, ap_uint<32> size, ap_uint<32> num_iterations, 
+                STREAM<stream_word> &data_in, STREAM<notify_word> &notify);
+
+extern void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations, 
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
-                STREAM<stream_word> &data_in, STREAM<stream_word > &data_out, STREAM<command_word> &cmd, STREAM<command_word > &sts);
+                STREAM<command_word> &cmd, STREAM<command_word > &sts, STREAM<notify_word> &notify);
 
 namespace network::execution_types::accl_pl {
 
@@ -66,6 +73,7 @@ namespace network::execution_types::accl_pl {
 
         hlslib::Stream<stream_word> cclo2krnl("cclo2krnl"), krnl2cclo("krnl2cclo");
         hlslib::Stream<command_word> cmd("cmd"), sts("sts");
+        hlslib::Stream<notify_word> notify("notify");
 
         std::vector<unsigned int> dest = {0};
         std::unique_ptr<CCLO_BFM> cclo;
@@ -81,21 +89,25 @@ namespace network::execution_types::accl_pl {
             acclRecvBuffers.clear();
             int size_in_values = (size_in_bytes + 3) / 4;
 
-            xrt::kernel sendrecvKernel;
+            xrt::kernel sendKernel;
+            xrt::kernel recvKernel;
+            xrt::kernel scheduleKernel;
             if (!config.programSettings->useAcclEmulation) {
-                sendrecvKernel = xrt::kernel(*config.device, *config.program, "send_recv_stream");
+                sendKernel = xrt::kernel(*config.device, *config.program, "send_stream");
+                recvKernel = xrt::kernel(*config.device, *config.program, "recv_stream");
+                scheduleKernel = xrt::kernel(*config.device, *config.program, "schedule_stream");
             }
             // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
                 recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
-                if (!config.programSettings->useAcclEmulation) {
+                if (config.programSettings->useAcclEmulation) {
                     acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, 0));
                     acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, 1));
                 }
                 else {
-                    acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, sendrecvKernel.group_id(0)));
-                    acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, sendrecvKernel.group_id(1)));               
+                    acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, sendKernel.group_id(0)));
+                    acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::int32, recvKernel.group_id(0)));               
                 }
                 acclSendBuffers.back()->sync_to_device();
                 acclRecvBuffers.back()->sync_to_device();
@@ -106,13 +118,22 @@ namespace network::execution_types::accl_pl {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 if (!config.programSettings->useAcclEmulation) {
-                    auto run = sendrecvKernel(*acclSendBuffers[i]->bo(), *acclRecvBuffers[i]->bo(), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                    auto run_recv = recvKernel(*acclRecvBuffers[i]->bo(), size_in_values, looplength);
+                    auto run_send = sendKernel(*acclSendBuffers[i]->bo(), size_in_values, looplength);
+                    MPI_Barrier(MPI_COMM_WORLD);
+                    auto run_schedule = scheduleKernel(size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}));
-                    run.wait();
+                    run_send.wait();
+                    run_recv.wait();
+                    run_schedule.wait();
                 } else {
-                    send_recv_stream(reinterpret_cast<ap_uint<512>*>(acclSendBuffers[i]->buffer()), reinterpret_cast<ap_uint<512>*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                    send_stream(reinterpret_cast<ap_uint<512>*>(acclSendBuffers[i]->buffer()), size_in_values, looplength,
+                                            krnl2cclo);
+                    schedule_stream(size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}),
-                                            cclo2krnl, krnl2cclo, cmd, sts);
+                                            cmd, sts, notify);
+                    recv_stream(reinterpret_cast<ap_uint<512>*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength,
+                                            cclo2krnl, notify);
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
