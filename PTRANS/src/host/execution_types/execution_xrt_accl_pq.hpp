@@ -366,7 +366,7 @@ void accl_exchangeData(
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured
  * execution times
  */
-static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
+static std::map<std::string, std::vector<double>>  calculate(
     const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings,
                                        xrt::device, fpga_setup::ACCLContext, xrt::uuid> &config,
     transpose::TransposeData<fpga_setup::ACCLContext> &data,
@@ -586,11 +586,10 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     transferTimings.push_back(transferTime.count());
   }
 
-  std::unique_ptr<transpose::TransposeExecutionTimings> result(
-      new transpose::TransposeExecutionTimings{transferTimings,
-                                               calculationTimings});
-
-  return result;
+  std::map<std::string, std::vector<double>> timings;
+  timings["transfer"] = transferTimings;
+  timings["calculation"] = calculationTimings;
+  return timings;
 }
 
 } // namespace accl_pq

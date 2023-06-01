@@ -49,7 +49,7 @@ namespace pcie_pq {
  * execution times
  */
 template<class TContext>
-static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
+static std::map<std::string, std::vector<double>> calculate(
     const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings,
                                        xrt::device, TContext, xrt::uuid> &config,
           transpose::TransposeData<TContext> &data,
@@ -270,11 +270,11 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     transferTimings.push_back(transferTime.count());
   }
 
-  std::unique_ptr<transpose::TransposeExecutionTimings> result(
-      new transpose::TransposeExecutionTimings{transferTimings,
-                                               calculationTimings});
+  std::map<std::string, std::vector<double>> timings;
+  timings["transfer"] = transferTimings;
+  timings["calculation"] = calculationTimings;
+  return timings;
 
-  return result;
 }
 
 } // namespace pcie_pq

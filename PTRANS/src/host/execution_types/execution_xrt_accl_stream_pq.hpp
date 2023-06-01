@@ -35,7 +35,7 @@ SOFTWARE.
 #include "Simulation.h"
 #include "accl.hpp"
 
-extern void transpose_write(const DEVICE_DATA_TYPE *B,
+extern void transpose_write0(const DEVICE_DATA_TYPE *B,
                                  DEVICE_DATA_TYPE *A_out,
             const unsigned int offset_b,
             const unsigned int number_of_blocks,
@@ -43,7 +43,7 @@ extern void transpose_write(const DEVICE_DATA_TYPE *B,
             const unsigned int height_in_blocks,
             hlslib::Stream<stream_word> &cclo2krnl);
   
-extern void transpose_read( const DEVICE_DATA_TYPE *A,
+extern void transpose_read0( const DEVICE_DATA_TYPE *A,
             const unsigned int offset_a,
             const unsigned int number_of_blocks,
             const unsigned int width_in_blocks,
@@ -66,7 +66,7 @@ namespace accl_stream_pq {
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured
  * execution times
  */
-static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
+static std::map<std::string, std::vector<double>>  calculate(
     const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings,
                                        xrt::device, fpga_setup::ACCLContext, xrt::uuid> &config,
     transpose::TransposeData<fpga_setup::ACCLContext> &data,
@@ -248,7 +248,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
                 (bufferSizeList[r]) /
                 (local_matrix_width * data.blockSize * data.blockSize))));
       } else {
-        HLSLIB_DATAFLOW_FUNCTION(transpose_read,
+        HLSLIB_DATAFLOW_FUNCTION(transpose_read0,
             (config.programSettings->copyA ? data.A : data.A),
             static_cast<cl_uint>(bufferOffsetList[r]),
             static_cast<cl_uint>(blocksPerReplication[r]),
@@ -257,7 +257,7 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
                 (bufferSizeList[r]) /
                 (local_matrix_width * data.blockSize * data.blockSize)),
                 krnl2cclo);
-        HLSLIB_DATAFLOW_FUNCTION(transpose_write,
+        HLSLIB_DATAFLOW_FUNCTION(transpose_write0,
             data.B, data.result,
             static_cast<cl_uint>(bufferOffsetList[r]),
             static_cast<cl_uint>(blocksPerReplication[r]),
@@ -348,11 +348,10 @@ static std::unique_ptr<transpose::TransposeExecutionTimings> calculate(
     transferTimings.push_back(transferTime.count());
   }
 
-  std::unique_ptr<transpose::TransposeExecutionTimings> result(
-      new transpose::TransposeExecutionTimings{transferTimings,
-                                               calculationTimings});
-
-  return result;
+  std::map<std::string, std::vector<double>> timings;
+  timings["transfer"] = transferTimings;
+  timings["calculation"] = calculationTimings;
+  return timings;
 }
 
 } // namespace accl_pq
