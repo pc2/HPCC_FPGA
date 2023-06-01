@@ -78,7 +78,9 @@ void recv_stream(ap_uint<512>* write_buffer,  ap_uint<32> size, ap_uint<32> num_
 
     notify_word w;
     for (int i = 0; i < num_iterations; i++) {
+        #pragma HLS protocol fixed
         read_data(write_buffer, size, data_in);
+        ap_wait();
         notify.write(w);
     }
 }
@@ -98,7 +100,9 @@ void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations,
 #pragma HLS INTERFACE s_axilite port=return
 
     for (int i = 0; i < num_iterations; i++) {
+        #pragma HLS protocol fixed
         schedule_send(size, neighbor_rank, communicator_addr, datapath_cfg, cmd, sts);
+        ap_wait();
         notify_word w = notify.read();
     }
 }
