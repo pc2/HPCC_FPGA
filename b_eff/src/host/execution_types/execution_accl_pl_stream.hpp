@@ -26,6 +26,7 @@ SOFTWARE.
 #include <memory>
 #include <vector>
 #include <chrono>
+#include <thread>
 
 /* External library headers */
 #include "mpi.h"
@@ -127,13 +128,16 @@ namespace network::execution_types::accl_pl {
                     run_recv.wait();
                     run_schedule.wait();
                 } else {
-                    send_stream(reinterpret_cast<ap_uint<512>*>(acclSendBuffers[i]->buffer()), size_in_values, looplength,
-                                            krnl2cclo);
-                    schedule_stream(size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                    std::thread run_send(send_stream, reinterpret_cast<ap_uint<512>*>(acclSendBuffers[i]->buffer()), size_in_values, looplength,
+                                            std::ref(krnl2cclo));
+                    std::thread run_recv(recv_stream, reinterpret_cast<ap_uint<512>*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength,
+                                            std::ref(cclo2krnl), std::ref(notify));
+                    std::thread run_schedule(schedule_stream,size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}),
-                                            cmd, sts, notify);
-                    recv_stream(reinterpret_cast<ap_uint<512>*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength,
-                                            cclo2krnl, notify);
+                                            std::ref(cmd), std::ref(sts), std::ref(notify));
+                    run_send.join();
+                    run_recv.join();
+                    run_schedule.join();
                 }
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
