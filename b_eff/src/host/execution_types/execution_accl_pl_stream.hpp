@@ -88,6 +88,8 @@ namespace network::execution_types::accl_pl {
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             acclSendBuffers.clear();
             acclRecvBuffers.clear();
+            dummyBufferContents.clear();
+            recvBufferContents.clear();
             int size_in_values = (size_in_bytes + 3) / 4;
 
             xrt::kernel sendKernel;
