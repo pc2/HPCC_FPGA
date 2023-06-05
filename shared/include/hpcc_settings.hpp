@@ -120,6 +120,16 @@ public:
      * 
      */
     uint acclBufferCount;
+
+    /**
+     * @brief Memory banks used to create ACCL receive buffers
+    */
+    std::vector<int> acclRecvBufferMemBanks;
+
+    /**
+     * @brief Default bank for memory buffer created with ACCL driver
+    */
+    int acclDefaultBank;
 #endif
 
     /**

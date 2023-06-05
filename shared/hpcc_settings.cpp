@@ -30,6 +30,8 @@ hpcc_base::BaseSettings::BaseSettings(cxxopts::ParseResult &results) : numRepeti
             acclProtocol(fpga_setup::acclProtocolStringToEnum(results["accl-protocol"].as<std::string>())),
             acclBufferSize(results["accl-buffer-size"].as<uint>() * 1024),
             acclBufferCount(results["accl-buffer-count"].as<uint>()),
+            acclRecvBufferMemBanks(results["accl-recv-banks"].as<std::vector<int>>()),
+            acclDefaultBank(results["accl-default-bank"].as<int>()),
 #endif
 #ifdef COMMUNICATION_TYPE_SUPPORT_ENABLED
             communicationType(retrieveCommunicationType(results["comm-type"].as<std::string>(), results["f"].as<std::string>())),

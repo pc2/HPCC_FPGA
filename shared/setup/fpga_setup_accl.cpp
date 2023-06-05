@@ -122,11 +122,10 @@ ACCLContext fpgaSetupACCL(xrt::device &device, xrt::uuid &program,
           64 * 1024 * 1024, ACCL::dataType::int8, device, network_krnl.group_id(4)));
       configure_tcp(*accl.tx_buf_network, *accl.rx_buf_network, network_krnl, ranks, current_rank);
     }
-    std::vector<int> mem = {2, 3};
     std::cout << "Create ACCL" << std::endl;
     accl.accl = std::unique_ptr<ACCL::ACCL>(
-        new ACCL::ACCL(ranks, current_rank, device, cclo_ip, hostctrl_ip, 0, 
-            mem, programSettings.acclProtocol, programSettings.acclBufferCount, programSettings.acclBufferSize, programSettings.acclBufferSize));
+        new ACCL::ACCL(ranks, current_rank, device, cclo_ip, hostctrl_ip, programSettings.acclDefaultBank, 
+            programSettings.acclRecvBufferMemBanks, programSettings.acclProtocol, programSettings.acclBufferCount, programSettings.acclBufferSize, programSettings.acclBufferSize));
   } else {
     // TODO: Add start port here. Currenty hardcoded!
     accl.accl = std::unique_ptr<ACCL::ACCL>(
