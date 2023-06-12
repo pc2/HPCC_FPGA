@@ -57,7 +57,22 @@ hpcc_base::BaseSettings::getSettingsMap() {
     if (mpi_size > 0) {
         str_mpi_ranks = std::to_string(mpi_size);
     }
+#ifdef USE_ACCL
+    std::stringstream accl_recv_banks;
+    for (auto& b: acclRecvBufferMemBanks) {
+        accl_recv_banks << b << ",";
+    }
+#endif
     return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel Replications", std::to_string(kernelReplications)}, 
             {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}, {"Test Mode", testOnly ? "Yes" : "No"},
-            {"Communication Type", commToString(communicationType)}};
+            {"Communication Type", commToString(communicationType)}
+#ifdef USE_ACCL
+            ,{"ACCL Protocol", fpga_setup::acclEnumToProtocolString(acclProtocol)},
+            {"ACCL Recv. Banks", accl_recv_banks.str()},
+            {"ACCL Default Bank", std::to_string(acclDefaultBank)},
+            {"ACCL Buffer Size", std::to_string(acclBufferSize) + "KB"},
+            {"ACCL Buffer Count", std::to_string(acclBufferCount)},
+            {"ACCL Emulation", useAcclEmulation ? "Yes" : "No"}
+#endif
+            };
 }

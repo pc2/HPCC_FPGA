@@ -273,9 +273,9 @@ public:
                 ("accl-buffer-count", "Specify the number of ACCL buffers used within the benchmark",
                 cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ACCL_BUFFER_COUNT)))
                 ("accl-default-bank", "Default memory bank used by ACCL to create new FPGA buffers",
-                cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ACCL_BUFFER_BANK)))
+                cxxopts::value<int>()->default_value(std::to_string(DEFAULT_ACCL_BUFFER_BANK)))
                 ("accl-recv-banks", "Memory banks used by ACCL for receive buffers",
-                cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ACCL_RECV_BUFFER_BANKS)))
+                cxxopts::value<std::vector<int>>()->default_value(DEFAULT_ACCL_RECV_BUFFER_BANKS))
 #endif
                 ("skip-validation", "Skip the validation of the output data. This will speed up execution and helps when working with special data types.")
                 ("device", "Index of the device that has to be used. If not given you "\

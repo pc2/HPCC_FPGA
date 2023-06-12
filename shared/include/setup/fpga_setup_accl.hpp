@@ -50,6 +50,16 @@ static const std::map<std::string, ACCL::networkProtocol> acclProtocolMap = {
     {"TCP", ACCL::networkProtocol::TCP} 
 };
 
+static std::string acclEnumToProtocolString(ACCL::networkProtocol p) {
+    for (const auto& entry: acclProtocolMap) {
+        if (entry.second == p) {
+            return entry.first;
+        }
+    }
+    std::runtime_error("ACCL network protocol could not be parsed to string!");
+    return "";
+}
+
 static ACCL::networkProtocol acclProtocolStringToEnum(std::string string_representation) {
     if (acclProtocolMap.count(string_representation)) {
         return acclProtocolMap.at(string_representation);
