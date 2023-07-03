@@ -41,7 +41,7 @@ network::NetworkProgramSettings::NetworkProgramSettings(cxxopts::ParseResult &re
     pcie_reverse_read_pcie(results["pcie-write"].count()), pcie_reverse_execute_kernel(results["kernel-latency"].count()),
     pcie_reverse_batch(results["pcie-batch"].count()), pcie_reverse(results["pcie-reverse"].count())
 #ifdef USE_ACCL
-    , accl_from_programable_logic(results["accl-pl"].count()) 
+    , accl_from_programable_logic(results["accl-pl"].count()), accl_axi_stream(results["accl-stream"].count())  
 #endif    
 {
 
@@ -100,6 +100,7 @@ network::NetworkBenchmark::addAdditionalParseOptions(cxxopts::Options &options) 
             cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_LOOP_LENGTH_DECREASE)))
 #ifdef USE_ACCL
         ("accl-pl", "Use second ACCL command kernel to schedule sends and recevs from PL")
+        ("accl-stream", "Send and receive data to AXI streams instead of global memory")
 #endif
         ("pcie-read", "Use reverse PCIe experiment and measure PCIe read performance from device")
         ("pcie-write", "Use reverse PCIe experiment and measure PCIe write performance from device")
@@ -140,7 +141,13 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
 #endif
 #else
 	    case hpcc_base::CommunicationType::accl: if (!executionSettings->programSettings->accl_from_programable_logic) { timing = execution_types::accl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
-                                                } else { timing = execution_types::accl_pl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);} break;
+                                                } else { 
+                                                   if (!executionSettings->programSettings->accl_axi_stream) { 
+                                                    timing = execution_types::accl_pl_stream::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
+                                                } 
+                                                else {
+                                                    timing = execution_types::accl_pl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
+                                                }} break;
 #endif
 	    default: throw std::runtime_error("Selected Communication type not supported: " + hpcc_base::commToString(executionSettings->programSettings->communicationType));
         }

@@ -47,7 +47,7 @@ extern void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations,
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
                 STREAM<command_word> &cmd, STREAM<command_word > &sts, STREAM<notify_word> &notify);
 
-namespace network::execution_types::accl_pl {
+namespace network::execution_types::accl_pl_stream {
 
 
     /*

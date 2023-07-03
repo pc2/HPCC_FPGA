@@ -168,6 +168,11 @@ public:
     bool accl_from_programable_logic;
 
     /**
+     * @brief Forward data to AXI stream instead of global memory to further reduce latency
+    */
+    bool accl_axi_stream;
+
+    /**
      * @brief his is automatically set to true if one of pcie_reverse_write_pcie, pcie_reverse_read_pcie, 
      * or pcie_reverse_execute_kernel is set to true. The reverse PCIe experiment will be executed in that case.
      * 
