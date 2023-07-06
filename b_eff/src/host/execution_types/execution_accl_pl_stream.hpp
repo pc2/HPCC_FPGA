@@ -123,8 +123,8 @@ namespace network::execution_types::accl_pl_stream {
                 if (!config.programSettings->useAcclEmulation) {
                     auto run_recv = recvKernel(*acclRecvBuffers[i]->bo(), size_in_values, looplength);
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                    auto run_send = sendKernel(*acclSendBuffers[i]->bo(), size_in_values, looplength);
                     MPI_Barrier(MPI_COMM_WORLD);
+                    auto run_send = sendKernel(*acclSendBuffers[i]->bo(), size_in_values, looplength);
                     startCalculation = std::chrono::high_resolution_clock::now();
                     auto run_schedule = scheduleKernel(size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}));
