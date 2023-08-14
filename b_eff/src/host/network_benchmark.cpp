@@ -140,13 +140,18 @@ network::NetworkBenchmark::executeKernel(NetworkData &data) {
 	    case hpcc_base::CommunicationType::intel_external_channels: timing = execution_types::iec::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); break;
 #endif
 #else
-	    case hpcc_base::CommunicationType::accl: if (!executionSettings->programSettings->accl_from_programable_logic) { timing = execution_types::accl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
+	    case hpcc_base::CommunicationType::accl: if (!executionSettings->programSettings->accl_from_programable_logic) { 
+                                                    if (!executionSettings->programSettings->accl_axi_stream) { 
+                                                        timing = execution_types::accl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
+                                                    }else {
+                                                       timing = execution_types::accl_stream::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer); 
+                                                    }
                                                 } else { 
                                                    if (!executionSettings->programSettings->accl_axi_stream) { 
-                                                    timing = execution_types::accl_pl_stream::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
+                                                    timing = execution_types::accl_pl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
                                                 } 
                                                 else {
-                                                    timing = execution_types::accl_pl::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
+                                                timing = execution_types::accl_pl_stream::calculate(*executionSettings, run.messageSize, run.loopLength, run.validationBuffer);
                                                 }} break;
 #endif
 	    default: throw std::runtime_error("Selected Communication type not supported: " + hpcc_base::commToString(executionSettings->programSettings->communicationType));
