@@ -43,7 +43,7 @@ extern void send_stream(ap_uint<512>* read_buffer, ap_uint<32> size, ap_uint<32>
 extern void recv_stream(ap_uint<512>* write_buffer, ap_uint<32> size, ap_uint<32> num_iterations, 
                 STREAM<stream_word> &data_in, STREAM<notify_word> &notify);
 
-extern void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations, uint enable,
+extern void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations, int enable,
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
                 STREAM<command_word> &cmd, STREAM<command_word > &sts, STREAM<notify_word> &notify);
 
