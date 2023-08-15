@@ -77,7 +77,13 @@ namespace network::execution_types::accl_stream {
             double calculationTime = 0.0;
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 MPI_Barrier(MPI_COMM_WORLD);
+                auto run_recv = recvKernel(*acclRecvBuffers[i]->bo(), size_in_values, looplength);
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                MPI_Barrier(MPI_COMM_WORLD);
+                auto run_send = sendKernel(*acclSendBuffers[i]->bo(), size_in_values, looplength);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
+                auto run_schedule = scheduleKernel(size_in_values, looplength, 0, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                                        config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}));
                 for (int l = 0; l < looplength; l++) {
 #ifndef NDEBUG
                     std::cout << "Stream " << size_in_bytes << " bytes to " 
@@ -90,6 +96,9 @@ namespace network::execution_types::accl_stream {
                     std::cout << "Done" << std::endl;
 #endif
                 }
+                run_send.wait();
+                run_recv.wait();
+                run_schedule.wait();
                 auto endCalculation = std::chrono::high_resolution_clock::now();
                 calculationTime += std::chrono::duration_cast<std::chrono::duration<double>>(endCalculation - startCalculation).count();
                 #ifndef NDEBUG

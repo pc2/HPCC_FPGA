@@ -85,7 +85,7 @@ void recv_stream(ap_uint<512>* write_buffer,  ap_uint<32> size, ap_uint<32> num_
     }
 }
 
-void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations,
+void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations, uint enable,
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
                 STREAM<command_word> &cmd, STREAM<command_word> &sts,
                 STREAM<notify_word> &notify) {
@@ -101,7 +101,9 @@ void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations,
 
     for (int i = 0; i < num_iterations; i++) {
         #pragma HLS protocol fixed
-        schedule_send(size, neighbor_rank, communicator_addr, datapath_cfg, cmd, sts);
+        if (enable) {
+            schedule_send(size, neighbor_rank, communicator_addr, datapath_cfg, cmd, sts);
+        }
         ap_wait();
         notify_word w = notify.read();
     }
