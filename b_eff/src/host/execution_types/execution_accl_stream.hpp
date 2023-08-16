@@ -73,7 +73,12 @@ namespace network::execution_types::accl_stream {
 		        acclSendBuffers.back()->sync_to_device();
 		        acclRecvBuffers.back()->sync_to_device();
             }
-
+            xrt::kernel sendKernel;
+            xrt::kernel recvKernel;
+            xrt::kernel scheduleKernel;
+            sendKernel = xrt::kernel(*config.device, *config.program, "send_stream");
+            recvKernel = xrt::kernel(*config.device, *config.program, "recv_stream");
+            scheduleKernel = xrt::kernel(*config.device, *config.program, "schedule_stream");
             double calculationTime = 0.0;
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 MPI_Barrier(MPI_COMM_WORLD);
