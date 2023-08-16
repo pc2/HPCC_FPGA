@@ -64,21 +64,21 @@ namespace network::execution_types::accl_stream {
 	    acclSendBuffers.clear();
 	    acclRecvBuffers.clear();
 	    int size_in_values = (size_in_bytes + 3) / 4;
+        xrt::kernel sendKernel;
+        xrt::kernel recvKernel;
+        xrt::kernel scheduleKernel;
+        sendKernel = xrt::kernel(*config.device, *config.program, "send_stream");
+        recvKernel = xrt::kernel(*config.device, *config.program, "recv_stream");
+        scheduleKernel = xrt::kernel(*config.device, *config.program, "schedule_stream");
             // Create all kernels and buffers. The kernel pairs are generated twice to utilize all channels
             for (int r = 0; r < config.programSettings->kernelReplications; r++) {
                 dummyBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(messageSize & (255)));
                 recvBufferContents.emplace_back(size_in_bytes, static_cast<HOST_DATA_TYPE>(0));
-		        acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::float32, 0));
-		        acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::float32, 1));
+		        acclSendBuffers.push_back(config.context->accl->create_buffer(dummyBufferContents.back().data(), size_in_bytes, ACCL::dataType::float32, sendKernel.group_id(0)));
+		        acclRecvBuffers.push_back(config.context->accl->create_buffer(recvBufferContents.back().data(), size_in_bytes, ACCL::dataType::float32, recvKernel.group_id(0)));
 		        acclSendBuffers.back()->sync_to_device();
 		        acclRecvBuffers.back()->sync_to_device();
             }
-            xrt::kernel sendKernel;
-            xrt::kernel recvKernel;
-            xrt::kernel scheduleKernel;
-            sendKernel = xrt::kernel(*config.device, *config.program, "send_stream");
-            recvKernel = xrt::kernel(*config.device, *config.program, "recv_stream");
-            scheduleKernel = xrt::kernel(*config.device, *config.program, "schedule_stream");
             double calculationTime = 0.0;
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
                 MPI_Barrier(MPI_COMM_WORLD);
