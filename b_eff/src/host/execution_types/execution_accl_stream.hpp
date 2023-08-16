@@ -94,9 +94,9 @@ namespace network::execution_types::accl_stream {
                     std::cout << "Stream " << size_in_bytes << " bytes to " 
                                 << ((current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size) << std::endl;
 #endif
-            config.context->accl->stream_put(*acclSendBuffers[i], size_in_values, 
+            config.context->accl->stream_put(ACCL::dataType::float32, size_in_values, 
                                         (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
-                                        0, ACCL::GLOBAL_COMM, true);
+                                        0);
 #ifndef NDEBUG
                     std::cout << "Done" << std::endl;
 #endif
