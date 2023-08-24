@@ -561,9 +561,13 @@ public:
 #ifndef USE_ACCL
                 context = std::unique_ptr<bool>(new bool(false));
 #endif
+#ifdef USE_ACCL
                 if (!programSettings->useAcclEmulation) {
+#endif
                     program = fpga_setup::fpgaSetup(*usedDevice, programSettings->kernelFileName);
+#ifdef USE_ACCL
                 }
+#endif
 #endif                                                             
 #ifdef USE_OCL_HOST
                 usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,

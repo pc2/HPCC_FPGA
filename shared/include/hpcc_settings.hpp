@@ -1,10 +1,14 @@
 #ifndef HPCC_BASE_SETTINGS_H_
 #define HPCC_BASE_SETTINGS_H_
 
+#ifdef USE_OCL_HOST
 #ifdef USE_DEPRECATED_HPP_HEADER
 #include "CL/cl.hpp"
 #else
 #include OPENCL_HPP_HEADER
+#endif
+#else
+#include "xrt/xrt_device.h"
 #endif
 #include "cxxopts.hpp"
 #include "parameters.h"
