@@ -67,11 +67,13 @@ schedule_send(ap_uint<32> size, ap_uint<32> neighbor_rank,
 }
 
 void recv_stream(ap_uint<512>* write_buffer,  ap_uint<32> size, ap_uint<32> num_iterations,
+                ap_uint<32> notify_enabled,
                 STREAM<stream_word> &data_in,
                 STREAM<notify_word> &notify) {
 #pragma HLS INTERFACE m_axi port=write_buffer bundle=gmem_out
 #pragma HLS INTERFACE s_axilite port=size
 #pragma HLS INTERFACE s_axilite port=num_iterations
+#pragma HLS INTERFACE s_axilite port=notify_enabled
 #pragma HLS INTERFACE axis port=data_in
 #pragma HLS INTERFACE axis port=notify
 #pragma HLS INTERFACE s_axilite port=return
@@ -81,11 +83,13 @@ void recv_stream(ap_uint<512>* write_buffer,  ap_uint<32> size, ap_uint<32> num_
         #pragma HLS protocol fixed
         read_data(write_buffer, size, data_in);
         ap_wait();
-        notify.write(w);
+        if (notify_enabled != 0) {
+            notify.write(w);
+        }
     }
 }
 
-void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations, int enable,
+void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations,
                 ap_uint<32> neighbor_rank, ap_uint<32> communicator_addr, ap_uint<32> datapath_cfg,
                 STREAM<command_word> &cmd, STREAM<command_word> &sts,
                 STREAM<notify_word> &notify) {
@@ -101,9 +105,7 @@ void schedule_stream(ap_uint<32> size, ap_uint<32> num_iterations, int enable,
 
     for (int i = 0; i < num_iterations; i++) {
         #pragma HLS protocol fixed
-        if (enable) {
-            schedule_send(size, neighbor_rank, communicator_addr, datapath_cfg, cmd, sts);
-        }
+        schedule_send(size, neighbor_rank, communicator_addr, datapath_cfg, cmd, sts);
         ap_wait();
         notify_word w = notify.read();
     }

@@ -121,12 +121,12 @@ namespace network::execution_types::accl_pl_stream {
                 MPI_Barrier(MPI_COMM_WORLD);
                 auto startCalculation = std::chrono::high_resolution_clock::now();
                 if (!config.programSettings->useAcclEmulation) {
-                    auto run_recv = recvKernel(*acclRecvBuffers[i]->bo(), size_in_values, looplength);
+                    auto run_recv = recvKernel(*acclRecvBuffers[i]->bo(), size_in_values, looplength, 1);
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
                     MPI_Barrier(MPI_COMM_WORLD);
                     auto run_send = sendKernel(*acclSendBuffers[i]->bo(), size_in_values, looplength);
                     startCalculation = std::chrono::high_resolution_clock::now();
-                    auto run_schedule = scheduleKernel(size_in_values, looplength, 1, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                    auto run_schedule = scheduleKernel(size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}));
                     run_send.wait();
                     run_recv.wait();
@@ -134,9 +134,9 @@ namespace network::execution_types::accl_pl_stream {
                 } else {
                     std::thread run_send(send_stream, reinterpret_cast<ap_uint<512>*>(acclSendBuffers[i]->buffer()), size_in_values, looplength,
                                             std::ref(krnl2cclo));
-                    std::thread run_recv(recv_stream, reinterpret_cast<ap_uint<512>*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength,
+                    std::thread run_recv(recv_stream, reinterpret_cast<ap_uint<512>*>(acclRecvBuffers[i]->buffer()), size_in_values, looplength, 1,
                                             std::ref(cclo2krnl), std::ref(notify));
-                    std::thread run_schedule(schedule_stream,size_in_values, looplength, 1, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
+                    std::thread run_schedule(schedule_stream,size_in_values, looplength, (current_rank - 1 + 2 * ((current_rank + i) % 2) + current_size) % current_size,
                                             config.context->accl->get_communicator_addr(), config.context->accl->get_arithmetic_config_addr({ACCL::dataType::int32, ACCL::dataType::int32}),
                                             std::ref(cmd), std::ref(sts), std::ref(notify));
                     run_send.join();
