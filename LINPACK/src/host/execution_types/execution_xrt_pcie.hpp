@@ -48,7 +48,7 @@ namespace xrt_pcie {
  @copydoc bm_execution::calculate()
 */
 template<class TContext>
-std::unique_ptr<linpack::LinpackExecutionTimings> inline calculate(
+std::map<std::string, std::vector<double>> inline calculate(
     const hpcc_base::ExecutionSettings<linpack::LinpackProgramSettings,
                                        xrt::device, TContext, xrt::uuid> &config,
     linpack::LinpackData<TContext> &data) {
@@ -459,13 +459,14 @@ std::unique_ptr<linpack::LinpackExecutionTimings> inline calculate(
     Buffer_pivot.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
   }
 
-  std::unique_ptr<linpack::LinpackExecutionTimings> results(
-      new linpack::LinpackExecutionTimings{gefaExecutionTimes,
-                                           geslExecutionTimes});
+    std::map<std::string, std::vector<double>> timings;
+    
+    timings["gefa"] = gefaExecutionTimes;
+    timings["gesl"] = geslExecutionTimes;
+    
+    MPI_Barrier(MPI_COMM_WORLD);
 
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  return results;
+    return timings;
 }
 
 } // namespace xrt_pcie
