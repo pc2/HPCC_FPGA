@@ -50,8 +50,9 @@ namespace transpose
  * @param data data object that contains all required data for the execution
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
-            static std::unique_ptr<transpose::TransposeExecutionTimings>
-            calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings> &config, transpose::TransposeData &data, transpose::data_handler::TransposeDataHandler &handler)
+            template<class TDevice, class TContext, class TProgram>
+            static std::map<std::string, std::vector<double>>
+            calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, TDevice, TContext, TProgram> &config, transpose::TransposeData<TContext> &data, transpose::data_handler::TransposeDataHandler &handler)
             {
                 int err;
 
@@ -115,10 +116,10 @@ namespace transpose
                     transferTimings.push_back(transferTime.count());
                 }
 
-                std::unique_ptr<transpose::TransposeExecutionTimings> result(new transpose::TransposeExecutionTimings{
-                    transferTimings,
-                    calculationTimings});
-                return result;
+                std::map<std::string, std::vector<double>> timings;
+                timings["transfer"] = transferTimings;
+                timings["calculation"] = calculationTimings;
+                return timings;
             }
 
         } // namespace bm_execution

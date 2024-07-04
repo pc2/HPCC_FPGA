@@ -28,7 +28,7 @@ FetchContent_Declare(
 
   # unfortunately they do not use releases, so the latest commit was used
   GIT_REPOSITORY      https://github.com/definelicht/hlslib.git
-  GIT_TAG             v1.2.1)
+  GIT_TAG             master)
 
 FetchContent_GetProperties(extern_hlslib)
 if(NOT extern_hlslib_POPULATED)
@@ -54,3 +54,71 @@ if(NOT extern_cxxopts_POPULATED)
     ${extern_cxxopts_BINARY_DIR}
     EXCLUDE_FROM_ALL)
 endif()
+
+if (USE_ACCL)
+message(STATUS "ACCL was selected. Fetch ACCL dependencies")
+# -------------------------------------------------------------------------------
+# ACCL Library
+FetchContent_Declare(
+	extern_accl
+
+    GIT_REPOSITORY	https://github.com/Xilinx/ACCL.git
+	GIT_TAG		dev)
+
+FetchContent_GetProperties(extern_accl)
+if(NOT extern_accl_POPULATED)
+	message(STATUS "Fetching mandatory build dependency ACCL")
+	FetchContent_Populate(extern_accl)
+	set(extern_accl_SOURCE_DIR ${extern_accl_SOURCE_DIR} PARENT_SCOPE)
+endif()
+
+# -------------------------------------------------------------------------------
+# UDP Library
+FetchContent_Declare(
+	extern_accl_udp
+
+    GIT_REPOSITORY	https://github.com/Xilinx/xup_vitis_network_example.git
+	  GIT_TAG		master)
+
+FetchContent_GetProperties(extern_accl_udp)
+if(NOT extern_accl_udp_POPULATED)
+	message(STATUS "Fetching mandatory build dependency ACCL UDP stack")
+	FetchContent_Populate(extern_accl_udp)
+	set(extern_accl_udp_SOURCE_DIR ${extern_accl_udp_SOURCE_DIR} PARENT_SCOPE)
+endif()
+
+# -------------------------------------------------------------------------------
+# TCP Library
+FetchContent_Declare(
+	extern_accl_tcp
+
+    GIT_REPOSITORY	https://github.com/fpgasystems/Vitis_with_100Gbps_TCP-IP.git
+	  GIT_TAG		vitis_2022_1)
+
+FetchContent_GetProperties(extern_accl_tcp)
+if(NOT extern_accl_tcp_POPULATED)
+	message(STATUS "Fetching mandatory build dependency ACCL TCP stack")
+	FetchContent_Populate(extern_accl_tcp)
+	set(extern_accl_tcp_SOURCE_DIR ${extern_accl_tcp_SOURCE_DIR} PARENT_SCOPE)
+endif()
+endif()
+# ------------------------------------------------------------------------------
+# A header only library for handling json
+FetchContent_Declare(
+  extern_json
+
+  URL      https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz
+  URL_HASH SHA256=8c4b26bf4b422252e13f332bc5e388ec0ab5c3443d24399acb675e68278d341f)
+
+FetchContent_GetProperties(extern_json)
+if(NOT extern_json_POPULATED)
+  message(STATUS "Fetching mandatory build dependency json")
+  FetchContent_Populate(extern_json)
+  add_subdirectory(
+    ${extern_json_SOURCE_DIR}
+    ${extern_json_BINARY_DIR}
+    EXCLUDE_FROM_ALL)
+  set(extern_json_SOURCE_DIR ${extern_json_SOURCE_DIR} PARENT_SCOPE)
+endif()
+
+

@@ -9,7 +9,7 @@ include(${CMAKE_SOURCE_DIR}/../cmake/kernelTargets.cmake)
 
 file(GLOB custom_kernel_files
     RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
-    "*.cl"
+    "*.cl" "*.cpp"
 )
 
 set(custom_kernel_targets "")

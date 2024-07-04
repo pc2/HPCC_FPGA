@@ -33,7 +33,8 @@
 #cmakedefine USE_SVM
 #cmakedefine USE_HBM
 
-#define PROGRAM_DESCRIPTION "Implementation of the STREAM benchmark"\
+#define PROGRAM_NAME "STREAM"
+#define PROGRAM_DESCRIPTION "Implementation of the " PROGRAM_NAME " benchmark"\
                             " proposed in the HPCC benchmark suite for FPGA.\n"\
                             "Version: " VERSION "\n"
 

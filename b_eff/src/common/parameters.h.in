@@ -1,12 +1,10 @@
 #ifndef SRC_COMMON_PARAMETERS_H_
 #define SRC_COMMON_PARAMETERS_H_
 
-#define VERSION "@PROJECT_VERSION@"
+#include "base_parameters.h"
+
 #define SEND_KERNEL_NAME "@SEND_KERNEL_NAME@"
 #define RECV_KERNEL_NAME "@RECV_KERNEL_NAME@"
-#define DEFAULT_REPETITIONS @DEFAULT_REPETITIONS@
-#define DEFAULT_PLATFORM @DEFAULT_PLATFORM@
-#define DEFAULT_DEVICE @DEFAULT_DEVICE@
 #define DEFAULT_MAX_MESSAGE_SIZE @DEFAULT_MAX_MESSAGE_SIZE@
 #define DEFAULT_MAX_LOOP_LENGTH @DEFAULT_MAX_LOOP_LENGTH@
 #define DEFAULT_MIN_LOOP_LENGTH @DEFAULT_MIN_LOOP_LENGTH@
@@ -17,25 +15,16 @@
  * Kernel Parameters
  */
 #define CHANNEL_WIDTH @CHANNEL_WIDTH@
-#define NUM_REPLICATIONS @NUM_REPLICATIONS@
-
-#define HOST_DATA_TYPE @HOST_DATA_TYPE@
-#define DEVICE_DATA_TYPE @DEVICE_DATA_TYPE@
-
-#cmakedefine HOST_EMULATION_REORDER
 
 /*
 Short description of the program.
 Moreover the version and build time is also compiled into the description.
 */
 
-#define PROGRAM_DESCRIPTION "Implementation of the effective bandwidth benchmark"\
+#define PROGRAM_NAME "effective bandwidth"
+
+#define PROGRAM_DESCRIPTION "Implementation of the " PROGRAM_NAME " benchmark"\
                             " proposed in the HPCC benchmark suite for FPGA.\n"\
                             "Version: " VERSION "\n"
-
-/**
-Output separator
-*/
-#define HLINE "-------------------------------------------------------------\n"
 
 #endif // SRC_COMMON_PARAMETERS_H_

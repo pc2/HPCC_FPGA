@@ -40,7 +40,7 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::unique_ptr<random_access::RandomAccessExecutionTimings>
+    std::map<std::string, std::vector<double>>
     calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data, int mpi_rank, int mpi_size) {
         // int used to check for OpenCL errors
         int err;
@@ -204,7 +204,10 @@ namespace bm_execution {
 
         free(random_inits);
 
-        return std::unique_ptr<random_access::RandomAccessExecutionTimings>(new random_access::RandomAccessExecutionTimings{executionTimes});
-    }
+        std::map<std::string, std::vector<double>> timings;
 
+        timings["execution"] = executionTimes;
+
+        return timings;
+    }
 }  // namespace bm_execution

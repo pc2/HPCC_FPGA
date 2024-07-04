@@ -21,5 +21,15 @@ SOFTWARE.
 */
 
 #include "execution_types/execution_cpu.hpp"
+#ifndef USE_ACCL
 #include "execution_types/execution_pcie.hpp"
+#include "execution_types/execution_pcie_reverse.hpp"
+#ifdef INTEL_FPGA
 #include "execution_types/execution_iec.hpp"
+#endif
+#else
+#include "execution_types/execution_accl.hpp"
+#include "execution_types/execution_accl_stream.hpp"
+#include "execution_types/execution_accl_pl.hpp"
+#include "execution_types/execution_accl_pl_stream.hpp"
+#endif

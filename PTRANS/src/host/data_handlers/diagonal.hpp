@@ -44,7 +44,8 @@ namespace transpose {
  *         the missing data. e.g. for N ranks, the pairs will be (0, N/2), (1, N/2 + 1), ...
  * 
  */
-class DistributedDiagonalTransposeDataHandler : public TransposeDataHandler {
+template<class TDevice, class TContext, class TProgram>
+class DistributedDiagonalTransposeDataHandler : public TransposeDataHandler<TDevice, TContext, TProgram> {
 
 private:
 
@@ -68,44 +69,44 @@ public:
      * @param settings The execution settings that contain information about the data size
      * @return std::unique_ptr<TransposeData> The generated data
      */
-    std::unique_ptr<TransposeData>
-    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) override {
+    std::unique_ptr<TransposeData<TContext>>
+    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, TDevice, TContext, TProgram>& settings) override {
         MPI_Type_contiguous(settings.programSettings->blockSize * settings.programSettings->blockSize, MPI_FLOAT, &data_block);
         MPI_Type_commit(&data_block);
         
         int width_in_blocks = settings.programSettings->matrixSize / settings.programSettings->blockSize;
 
-        int avg_blocks_per_rank = (width_in_blocks * width_in_blocks) / mpi_comm_size;
+        int avg_blocks_per_rank = (width_in_blocks * width_in_blocks) / this->mpi_comm_size;
         int avg_diagonal_blocks = width_in_blocks;
         if (avg_blocks_per_rank > 0) {
             avg_diagonal_blocks = (width_in_blocks / avg_blocks_per_rank);
         }
         num_diagonal_ranks = std::max(avg_diagonal_blocks, 1);
 
-        if (num_diagonal_ranks % 2 != mpi_comm_size % 2) {
+        if (num_diagonal_ranks % 2 != this->mpi_comm_size % 2) {
         #ifndef NDEBUG
-            std::cout << "Rank " << mpi_comm_rank << ": Fail 1!" << std::endl;
+            std::cout << "Rank " << this->mpi_comm_rank << ": Fail 1!" << std::endl;
         #endif
             // Abort if there is a too high difference in the number of matrix blocks between the MPI ranks
             throw std::runtime_error("Matrix size and MPI ranks to not allow fair distribution of blocks! Increase or reduce the number of MPI ranks by 1.");
         }
-        if ((mpi_comm_size - num_diagonal_ranks) % 2 != 0 || (mpi_comm_size - num_diagonal_ranks) == 0 && width_in_blocks > 1) {
+        if ((this->mpi_comm_size - num_diagonal_ranks) % 2 != 0 || (this->mpi_comm_size - num_diagonal_ranks) == 0 && width_in_blocks > 1) {
         #ifndef NDEBUG
-            std::cout << "Rank " << mpi_comm_rank << ": Fail 2!" << std::endl;
+            std::cout << "Rank " << this->mpi_comm_rank << ": Fail 2!" << std::endl;
         #endif
             throw std::runtime_error("Not possible to create pairs of MPI ranks for lower and upper half of matrix. Increase number of MPI ranks!.");
         }
-        bool this_rank_is_diagonal = mpi_comm_rank >= (mpi_comm_size - num_diagonal_ranks);
-        int blocks_if_diagonal = width_in_blocks / num_diagonal_ranks + ( (mpi_comm_rank - (mpi_comm_size - num_diagonal_ranks)) < (width_in_blocks % num_diagonal_ranks) ? 1 : 0);
+        bool this_rank_is_diagonal = this->mpi_comm_rank >= (this->mpi_comm_size - num_diagonal_ranks);
+        int blocks_if_diagonal = width_in_blocks / num_diagonal_ranks + ( (this->mpi_comm_rank - (this->mpi_comm_size - num_diagonal_ranks)) < (width_in_blocks % num_diagonal_ranks) ? 1 : 0);
         int blocks_if_not_diagonal = 0;
-        if ((mpi_comm_size - num_diagonal_ranks) > 0 ) {
-            blocks_if_not_diagonal = (width_in_blocks * (width_in_blocks - 1)) / (mpi_comm_size - num_diagonal_ranks) + (mpi_comm_rank  < ((width_in_blocks * (width_in_blocks - 1)) % (mpi_comm_size - num_diagonal_ranks)) ? 1 : 0);
+        if ((this->mpi_comm_size - num_diagonal_ranks) > 0 ) {
+            blocks_if_not_diagonal = (width_in_blocks * (width_in_blocks - 1)) / (this->mpi_comm_size - num_diagonal_ranks) + (this->mpi_comm_rank  < ((width_in_blocks * (width_in_blocks - 1)) % (this->mpi_comm_size - num_diagonal_ranks)) ? 1 : 0);
         }
 
 
         int blocks_per_rank = (this_rank_is_diagonal) ? blocks_if_diagonal : blocks_if_not_diagonal;
 
-        if (mpi_comm_rank == 0) {
+        if (this->mpi_comm_rank == 0) {
             std::cout << "Diag. blocks per rank:              " << blocks_if_diagonal << std::endl;
             std::cout << "Blocks per rank:                    " << blocks_if_not_diagonal << std::endl;
             std::cout << "Loopback ranks for diagonal blocks: " << num_diagonal_ranks << std::endl;
@@ -114,14 +115,14 @@ public:
         int data_height_per_rank = blocks_per_rank * settings.programSettings->blockSize;
 
     #ifndef NDEBUG
-        std::cout << "Rank " << mpi_comm_rank << ": NumBlocks = " << blocks_per_rank << std::endl;
+        std::cout << "Rank " << this->mpi_comm_rank << ": NumBlocks = " << blocks_per_rank << std::endl;
     #endif
         
         // Allocate memory for a single device and all its memory banks
-        auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
+        auto d = std::unique_ptr<transpose::TransposeData<TContext>>(new transpose::TransposeData<TContext>(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
 
         // Fill the allocated memory with pseudo random values
-        std::mt19937 gen(mpi_comm_rank);
+        std::mt19937 gen(this->mpi_comm_rank);
         std::uniform_real_distribution<> dis(-100.0, 100.0);
         for (size_t i = 0; i < data_height_per_rank; i++) {
             for (size_t j = 0; j < settings.programSettings->blockSize; j++) {
@@ -141,16 +142,16 @@ public:
      *              Exchanged data will be stored in the same object.
      */
     void
-    exchangeData(TransposeData& data) override {
+    exchangeData(TransposeData<TContext>& data) override {
 
     #ifndef NDEBUG
         // std::cout << "Start data exchange " << mpi_comm_rank << std::endl;
     #endif
         // Only need to exchange data, if rank has a partner
-        if (mpi_comm_rank < mpi_comm_size - num_diagonal_ranks) {
+        if (this->mpi_comm_rank < this->mpi_comm_size - num_diagonal_ranks) {
 
-            int first_upper_half_rank = (mpi_comm_size - num_diagonal_ranks)/2;
-            int pair_rank = (mpi_comm_rank >= first_upper_half_rank) ? mpi_comm_rank - first_upper_half_rank : mpi_comm_rank + first_upper_half_rank;
+            int first_upper_half_rank = (this->mpi_comm_size - num_diagonal_ranks)/2;
+            int pair_rank = (this->mpi_comm_rank >= first_upper_half_rank) ? this->mpi_comm_rank - first_upper_half_rank : this->mpi_comm_rank + first_upper_half_rank;
 
             // To re-calculate the matrix transposition locally on this host, we need to 
             // exchange matrix A for every kernel replication
@@ -184,7 +185,7 @@ public:
     }
 
     void 
-    reference_transpose(TransposeData& data) {
+    reference_transpose(TransposeData<TContext>& data) {
         size_t block_offset = data.blockSize * data.blockSize;
         for (size_t b = 0; b < data.numBlocks; b++) {
             for (size_t i = 0; i < data.blockSize; i++) {
@@ -196,7 +197,7 @@ public:
         }
     }
 
-    DistributedDiagonalTransposeDataHandler(int mpi_rank, int mpi_size): TransposeDataHandler(mpi_rank, mpi_size) {
+    DistributedDiagonalTransposeDataHandler(int mpi_rank, int mpi_size): TransposeDataHandler<TDevice, TContext, TProgram>(mpi_rank, mpi_size) {
         if (mpi_rank >= mpi_size) {
             throw std::runtime_error("MPI rank must be smaller the MPI world size!");
         }

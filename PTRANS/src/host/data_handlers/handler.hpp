@@ -43,6 +43,7 @@ namespace data_handler {
  *          calculate the overall validation error.
  * 
  */
+template<class TDevice, class TContext, class TProgram>
 class TransposeDataHandler {
 
 protected:
@@ -67,8 +68,8 @@ public:
      * @param settings The execution settings that contain information about the data size
      * @return std::unique_ptr<TransposeData> The generated data
      */
-    virtual std::unique_ptr<TransposeData>
-    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) = 0;
+    virtual std::unique_ptr<TransposeData<TContext>>
+    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, TDevice, TContext, TProgram>& settings) = 0;
 
     /**
      * @brief Exchange the data blocks for verification
@@ -77,10 +78,10 @@ public:
      *              Exchanged data will be stored in the same object.
      */
     virtual void
-    exchangeData(TransposeData& data) = 0;
+    exchangeData(TransposeData<TContext>& data) = 0;
 
     virtual void
-    reference_transpose(TransposeData& data) = 0;
+    reference_transpose(TransposeData<TContext>& data) = 0;
 
     /**
      * @brief Construct a new Transpose Data Handler object and initialize the MPI rank and MPI size variables if MPI is used

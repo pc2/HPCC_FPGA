@@ -75,6 +75,17 @@ public:
     bool distributeBuffers;
 
     /**
+    * @brief If true, create a copy of matrix A for each kernel replication
+    *
+    */
+    bool copyA;
+
+    /**
+     * @brief Indicate, if a design is used where the user kernels are directly connected to the ACCL CCLO
+    */
+    bool useAcclStreams;
+
+    /**
      * @brief Construct a new Transpose Program Settings object
      * 
      * @param results the result map from parsing the program input parameters
@@ -94,6 +105,7 @@ public:
  * @brief Data class cotnaining the data the kernel is exeucted with
  * 
  */
+template<class TContext>
 class TransposeData {
 
 public:
@@ -138,7 +150,7 @@ public:
      * @brief The context that is used to allocate memory in SVM mode
      * 
      */
-    cl::Context context;
+    TContext context;
 
     /**
      * @brief Construct a new Transpose Data object
@@ -147,33 +159,57 @@ public:
      * @param block_size size of the quadratic blocks that are stored within this object
      * @param y_size number of blocks that are stored within this object per replication
      */
-    TransposeData(cl::Context context, uint block_size, uint size_y);
+    TransposeData(TContext &context, uint block_size, uint y_size): 
+#ifdef USE_SVM
+    context(context),
+#endif                                                                   
+    numBlocks(y_size), blockSize(block_size) {
+        if (numBlocks * blockSize > 0) {
+#ifdef USE_SVM
+            A = reinterpret_cast<HOST_DATA_TYPE*>(
+                                     clSVMAlloc(context(), 0 ,
+                                 block_size * block_size * y_size * sizeof(HOST_DATA_TYPE), 4096));
+            B = reinterpret_cast<HOST_DATA_TYPE*>(
+                                clSVMAlloc(context(), 0 ,
+                                block_size * block_size * y_size * sizeof(HOST_DATA_TYPE), 4096));
+            result = reinterpret_cast<HOST_DATA_TYPE*>(
+                                clSVMAlloc(context(), 0 ,
+                                block_size * block_size * y_size * sizeof(HOST_DATA_TYPE), 4096));
+            exchange = reinterpret_cast<HOST_DATA_TYPE*>(
+                                clSVMAlloc(context(), 0 ,
+                                block_size * block_size * y_size * sizeof(HOST_DATA_TYPE), 4096));
+#else
+            posix_memalign(reinterpret_cast<void **>(&A), 4096,
+                        sizeof(HOST_DATA_TYPE) * block_size * block_size * y_size);
+            posix_memalign(reinterpret_cast<void **>(&B), 4096,
+                        sizeof(HOST_DATA_TYPE) * block_size * block_size * y_size);
+            posix_memalign(reinterpret_cast<void **>(&result), 4096,
+                        sizeof(HOST_DATA_TYPE) * block_size * block_size * y_size);
+            posix_memalign(reinterpret_cast<void **>(&exchange), 4096,
+                        sizeof(HOST_DATA_TYPE) * block_size * block_size * y_size);
+#endif
+        }
+    }
 
     /**
      * @brief Destroy the Transpose Data object. Free the allocated memory
      * 
      */
-    ~TransposeData();
-
-};
-
-/**
- * @brief Measured execution timing from the kernel execution
- * 
- */
-class TransposeExecutionTimings {
-public:
-    /**
-     * @brief A vector containing the timings for all repetitions for the data transfer
-     * 
-     */
-    std::vector<double> transferTimings;
-
-    /**
-     * @brief A vector containing the timings for all repetitions for the calculation
-     * 
-     */
-    std::vector<double> calculationTimings;
+    ~TransposeData() {
+        if (numBlocks * blockSize > 0) {
+#ifdef USE_SVM
+            clSVMFree(context(), reinterpret_cast<void*>(A));});
+            clSVMFree(context(), reinterpret_cast<void*>(B));});
+            clSVMFree(context(), reinterpret_cast<void*>(result));});
+            clSVMFree(context(), reinterpret_cast<void*>(exchange));});
+#else
+            free(A);
+            free(B);
+            free(result);
+            free(exchange);
+#endif
+        }
+    }
 
 };
 

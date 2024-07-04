@@ -26,6 +26,7 @@ SOFTWARE.
 /* C++ standard library headers */
 #include <memory>
 #include <algorithm>
+#include <random>
 
 /* Project's headers */
 #include "handler.hpp"
@@ -52,7 +53,8 @@ static T mod(T number, T op) {
     return (result < 0 || result >= op) ? op + result : result;
 }
 
-class DistributedPQTransposeDataHandler : public TransposeDataHandler {
+template<class TDevice, class TContext, class TProgram>
+class DistributedPQTransposeDataHandler : public TransposeDataHandler<TDevice, TContext, TProgram> {
 
 private:
 
@@ -128,21 +130,29 @@ public:
         return height_per_rank;
     }
 
+    int getP() {
+        return pq_width;
+    }
+
+    int getQ() {
+        return pq_height;
+    }
+
     /**
      * @brief Generate data for transposition based on the implemented distribution scheme
      * 
      * @param settings The execution settings that contain information about the data size
      * @return std::unique_ptr<TransposeData> The generated data
      */
-    std::unique_ptr<TransposeData>
-    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& settings) override {
+    std::unique_ptr<TransposeData<TContext>>
+    generateData(hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, TDevice, TContext, TProgram>& settings) override {
         int width_in_blocks = settings.programSettings->matrixSize / settings.programSettings->blockSize;
         global_width = width_in_blocks;
 
         width_per_rank = width_in_blocks / pq_width;
         height_per_rank = width_in_blocks / pq_height;
-        pq_row = mpi_comm_rank / pq_width;
-        pq_col = mpi_comm_rank % pq_width;
+        pq_row = this->mpi_comm_rank / pq_width;
+        pq_col = this->mpi_comm_rank % pq_width;
 
         // If the torus width is not a divisor of the matrix size,
         // distribute remaining blocks to the ranks
@@ -163,10 +173,10 @@ public:
         }
         
         // Allocate memory for a single device and all its memory banks
-        auto d = std::unique_ptr<transpose::TransposeData>(new transpose::TransposeData(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
+        auto d = std::unique_ptr<transpose::TransposeData<TContext>>(new transpose::TransposeData<TContext>(*settings.context, settings.programSettings->blockSize, blocks_per_rank));
 
         // Fill the allocated memory with pseudo random values
-        std::mt19937 gen(mpi_comm_rank);
+        std::mt19937 gen(this->mpi_comm_rank);
         std::uniform_real_distribution<> dis(-100.0, 100.0);
         for (size_t i = 0; i < blocks_per_rank * settings.programSettings->blockSize; i++) {
             for (size_t j = 0; j < settings.programSettings->blockSize; j++) {
@@ -186,7 +196,7 @@ public:
      *              Exchanged data will be stored in the same object.
      */
     void
-    exchangeData(TransposeData& data) override {
+    exchangeData(TransposeData<TContext>& data) override {
 
         MPI_Status status;     
 
@@ -206,14 +216,14 @@ public:
                 // 3 2 . .
    
 
-                size_t remaining_data_size = data.numBlocks;
+                size_t remaining_data_size = data.numBlocks * data.blockSize * data.blockSize;
                 size_t offset = 0;
                 while (remaining_data_size > 0) {
                     int next_chunk = (remaining_data_size > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max(): remaining_data_size;
-                    MPI_Sendrecv(&data.A[offset], next_chunk, data_block, pair_rank, 0, &data.exchange[offset], next_chunk, data_block, pair_rank, 0, MPI_COMM_WORLD, &status);
+                    MPI_Sendrecv(&data.A[offset], next_chunk, MPI_FLOAT, pair_rank, 0, &data.exchange[offset], next_chunk, MPI_FLOAT, pair_rank, 0, MPI_COMM_WORLD, &status);
 
                     remaining_data_size -= next_chunk;
-                    offset += static_cast<size_t>(next_chunk) * static_cast<size_t>(data.blockSize * data.blockSize);
+                    offset += static_cast<size_t>(next_chunk);
                 }
 
                 // Exchange window pointers
@@ -307,7 +317,7 @@ public:
 
                     // Do actual MPI communication
 #ifndef NDEBUG
-                    std::cout << "Rank " << mpi_comm_rank << ": blocks (" << sending_size / (data.blockSize * data.blockSize) << "," << receiving_size / (data.blockSize * data.blockSize) << ") send " << send_rank << ", recv " << recv_rank << std::endl << std::flush;
+                    std::cout << "Rank " << this->mpi_comm_rank << ": blocks (" << sending_size / (data.blockSize * data.blockSize) << "," << receiving_size / (data.blockSize * data.blockSize) << ") send " << send_rank << ", recv " << recv_rank << std::endl << std::flush;
 #endif
                     MPI_Isend(send_buffers[current_parallel_execution].data(), sending_size, MPI_FLOAT, send_rank, 0, MPI_COMM_WORLD, &mpi_requests[current_parallel_execution]);
                     MPI_Irecv(recv_buffers[current_parallel_execution].data(), receiving_size, MPI_FLOAT, recv_rank, 0, MPI_COMM_WORLD, &mpi_requests[gcd + current_parallel_execution]);
@@ -369,7 +379,7 @@ public:
     }
 
     void 
-    reference_transpose(TransposeData& data) {
+    reference_transpose(TransposeData<TContext>& data) override {
         for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
             for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
                 data.A[i * height_per_rank * data.blockSize + j] -= (data.result[j * width_per_rank * data.blockSize + i] - data.B[j * width_per_rank * data.blockSize + i]);
@@ -384,7 +394,7 @@ public:
  * @param mpi_size Size of the communication world
  * @param p Width of the PQ grid the FPGAs are arranged in
  */
-    DistributedPQTransposeDataHandler(int mpi_rank, int mpi_size, int p) : TransposeDataHandler(mpi_rank, mpi_size) {
+    DistributedPQTransposeDataHandler(int mpi_rank, int mpi_size, int p) : TransposeDataHandler<TDevice, TContext, TProgram>(mpi_rank, mpi_size) {
         if (mpi_size % p != 0) {
             throw std::runtime_error("Number of MPI ranks must be multiple of P! P=" + std::to_string(p));
         }

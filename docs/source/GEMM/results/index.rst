@@ -10,7 +10,7 @@ The measurements were executed 10 times and the best result is published.
 The results and the used configuration is given in :numref:`tbl_gemm_1_0_results` and are also available as :download:`CSV <gemm-1-0.csv>`.
 
 .. _tbl_gemm_1_0_results:
-.. csv-table:: GEMM FPGA Benchmark Results for version 1.0
+.. csv-table:: GEMM FPGA Benchmark Results
     :file: gemm-1-0.csv
     :stub-columns: 1
 

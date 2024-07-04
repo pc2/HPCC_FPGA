@@ -43,8 +43,8 @@ namespace intel_pq {
  * @param data data object that contains all required data for the execution on the FPGA
  * @return std::unique_ptr<transpose::TransposeExecutionTimings> The measured execution times 
  */
-static  std::unique_ptr<transpose::TransposeExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings>& config, transpose::TransposeData& data, transpose::data_handler::DistributedPQTransposeDataHandler &handler) {
+    static std::map<std::string, std::vector<double>>
+    calculate(const hpcc_base::ExecutionSettings<transpose::TransposeProgramSettings, cl::Device, cl::Context, cl::Program>& config, transpose::TransposeData<cl::Context>& data, transpose::data_handler::DistributedPQTransposeDataHandler<cl::Device, cl::Context, cl::Program> &handler) {
         int err;
 
         if (config.programSettings->dataHandlerIdentifier != transpose::data_handler::DataHandlerType::pq) {
@@ -343,11 +343,10 @@ static  std::unique_ptr<transpose::TransposeExecutionTimings>
             transferTimings.push_back(transferTime.count());
         }
 
-        std::unique_ptr<transpose::TransposeExecutionTimings> result(new transpose::TransposeExecutionTimings{
-                transferTimings,
-                calculationTimings
-        });
-        return result;
+        std::map<std::string, std::vector<double>> timings;
+        timings["transfer"] = transferTimings;
+        timings["calculation"] = calculationTimings;
+        return timings;
     }
 
 }  // namespace transpose

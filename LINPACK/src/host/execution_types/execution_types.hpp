@@ -22,7 +22,14 @@ SOFTWARE.
 #ifndef EXECUTION_TYPES_HPP
 #define EXECUTION_TYPES_HPP
 
+#ifdef USE_OCL_HOST
 #include "execution_types/execution_pcie.hpp"
 #include "execution_types/execution_iec.hpp"
-
+#endif
+#ifdef USE_XRT_HOST
+#include "execution_types/execution_xrt_pcie.hpp"
+#ifdef USE_ACCL
+#include "execution_types/execution_accl_buffers.hpp"
+#endif
+#endif
 #endif

@@ -19,6 +19,11 @@ if (TEST_UNIFORM)
     set(TEST_HOST_FLAGS "--uniform")
 endif()
 
+if (USE_ACCL)
+    math(EXPR calculate_accl_buffer_size "(2^${LOCAL_MEM_BLOCK_LOG})^2 * 8")
+    set(ACCL_BUFFER_SIZE ${calculate_accl_buffer_size} CACHE STRING "Size of ACCL buffers in bytes")
+endif()
+
 if (TEST_EMULATION)
     set(TEST_HOST_FLAGS "--emulation")
 endif()

@@ -10,10 +10,10 @@
 
 
 struct TransposeHandlersTest : testing::Test {
-    std::unique_ptr<transpose::TransposeBenchmark> bm;
+    std::unique_ptr<transpose::TransposeBenchmark<cl::Device, cl::Context, cl::Program>> bm;
 
     TransposeHandlersTest() {
-        bm = std::unique_ptr<transpose::TransposeBenchmark>( new transpose::TransposeBenchmark(global_argc, global_argv));
+        bm = std::unique_ptr<transpose::TransposeBenchmark<cl::Device, cl::Context, cl::Program>>( new transpose::TransposeBenchmark<cl::Device, cl::Context, cl::Program>(global_argc, global_argv));
         bm->setTransposeDataHandler(transpose::data_handler::DataHandlerType::diagonal);
     }
 
@@ -29,11 +29,11 @@ struct TransposeHandlersTest : testing::Test {
  * Test DitExt class instantiation
  */
 TEST_F(TransposeHandlersTest, DistDiagCreateHandlerSuccess) {
-    EXPECT_NO_THROW(transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,1));
+    EXPECT_NO_THROW((transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,1)));
 }
 
 TEST_F(TransposeHandlersTest, DistDiagCreateHandlerFail) {
-    EXPECT_THROW(transpose::data_handler::DistributedDiagonalTransposeDataHandler(1,1), std::runtime_error);
+    EXPECT_THROW((transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(1,1)), std::runtime_error);
 }
 
 /**
@@ -48,7 +48,7 @@ TEST_F(TransposeHandlersTest, DistDiagNumberOfBlocksCorrectForMPI1Block1) {
     bm->getExecutionSettings().programSettings->matrixSize = 4* matrix_size_in_blocks;
     uint block_count = 0;
     for (int i=0; i < mpi_size; i++) {
-        auto h = transpose::data_handler::DistributedDiagonalTransposeDataHandler(i, mpi_size);
+        auto h = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(i, mpi_size);
         auto d = h.generateData(bm->getExecutionSettings());
         block_count += d->numBlocks;
     }
@@ -63,7 +63,7 @@ TEST_F(TransposeHandlersTest, DistDiagNumberOfBlocksCorrectForMPI3Block3) {
     bm->getExecutionSettings().programSettings->matrixSize = 4* matrix_size_in_blocks;
     uint block_count = 0;
     for (int i=0; i < mpi_size; i++) {
-        auto h = transpose::data_handler::DistributedDiagonalTransposeDataHandler(i, mpi_size);
+        auto h = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(i, mpi_size);
         auto d = h.generateData(bm->getExecutionSettings());
         block_count += d->numBlocks;
     }
@@ -78,7 +78,7 @@ TEST_F(TransposeHandlersTest, DistDiagNumberOfBlocksCorrectForMPI9Block3) {
     bm->getExecutionSettings().programSettings->matrixSize = 4* matrix_size_in_blocks;
     uint block_count = 0;
     for (int i=0; i < mpi_size; i++) {
-        auto h = transpose::data_handler::DistributedDiagonalTransposeDataHandler(i, mpi_size);
+        auto h = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(i, mpi_size);
         auto d = h.generateData(bm->getExecutionSettings());
         block_count += d->numBlocks;
     }
@@ -93,7 +93,7 @@ TEST_F(TransposeHandlersTest, DistDiagNumberOfBlocksCorrectForMPI5Block4) {
     bm->getExecutionSettings().programSettings->matrixSize = 4* matrix_size_in_blocks;
     uint block_count = 0;
     for (int i=0; i < mpi_size; i++) {
-        auto h = transpose::data_handler::DistributedDiagonalTransposeDataHandler(i, mpi_size);
+        auto h = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(i, mpi_size);
         auto d = h.generateData(bm->getExecutionSettings());
         block_count += d->numBlocks;
     }
@@ -105,35 +105,35 @@ TEST_F(TransposeHandlersTest, DistDiagNumberOfBlocksCorrectForMPI5Block4) {
  * 
  */
 TEST_F(TransposeHandlersTest, DataGenerationDistDiagSucceedsForMPISizeEquals1SingleBlock) {
-    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,1);
+    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,1);
     bm->getExecutionSettings().programSettings->blockSize = 4;
     bm->getExecutionSettings().programSettings->matrixSize = 4;
     EXPECT_NO_THROW(handler.generateData(bm->getExecutionSettings()));
 }
 
 TEST_F(TransposeHandlersTest, DataGenerationDistDiagSucceedsForMPISizeEquals1Blocks9) {
-    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,1);
+    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,1);
     bm->getExecutionSettings().programSettings->blockSize = 4;
     bm->getExecutionSettings().programSettings->matrixSize = 4*3;
     EXPECT_THROW(handler.generateData(bm->getExecutionSettings()), std::runtime_error);
 }
 
 TEST_F(TransposeHandlersTest, DataGenerationDistDiagSucceedsForMPISizeEquals3Blocks9) {
-    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,3);
+    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,3);
     bm->getExecutionSettings().programSettings->blockSize = 4;
     bm->getExecutionSettings().programSettings->matrixSize = 4*3;
     EXPECT_NO_THROW(handler.generateData(bm->getExecutionSettings()));
 }
 
 TEST_F(TransposeHandlersTest, DataGenerationDistDiagFailsForMPISizeEquals3Blocks1) {
-    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,3);
+    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,3);
     bm->getExecutionSettings().programSettings->blockSize = 4;
     bm->getExecutionSettings().programSettings->matrixSize = 4;
     EXPECT_NO_THROW(handler.generateData(bm->getExecutionSettings()));
 }
 
 TEST_F(TransposeHandlersTest, DataGenerationDistDiagFailsForMPISizeEquals3Blocks4) {
-    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,3);
+    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,3);
     bm->getExecutionSettings().programSettings->blockSize = 4;
     bm->getExecutionSettings().programSettings->matrixSize = 4 * 2;
     EXPECT_THROW(handler.generateData(bm->getExecutionSettings()), std::runtime_error);
@@ -142,7 +142,7 @@ TEST_F(TransposeHandlersTest, DataGenerationDistDiagFailsForMPISizeEquals3Blocks
 TEST_F(TransposeHandlersTest, DataGenerationWorksDistDiagForOneReplication) {
     bm->getExecutionSettings().programSettings->kernelReplications = 1;
     bm->getExecutionSettings().programSettings->matrixSize = bm->getExecutionSettings().programSettings->blockSize;
-    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,1);
+    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,1);
     auto data = handler.generateData(bm->getExecutionSettings());
     EXPECT_EQ(data->blockSize, bm->getExecutionSettings().programSettings->blockSize);
     EXPECT_EQ(data->numBlocks, 1);
@@ -151,7 +151,7 @@ TEST_F(TransposeHandlersTest, DataGenerationWorksDistDiagForOneReplication) {
 TEST_F(TransposeHandlersTest, DataGenerationWorksDistDiagForTwoReplications) {
     bm->getExecutionSettings().programSettings->kernelReplications = 2;
     bm->getExecutionSettings().programSettings->matrixSize = bm->getExecutionSettings().programSettings->blockSize;
-    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,1);
+    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,1);
     auto data = handler.generateData(bm->getExecutionSettings());
     EXPECT_EQ(data->blockSize, bm->getExecutionSettings().programSettings->blockSize);
     EXPECT_EQ(data->numBlocks, 1);
@@ -160,7 +160,7 @@ TEST_F(TransposeHandlersTest, DataGenerationWorksDistDiagForTwoReplications) {
 TEST_F(TransposeHandlersTest, DataGenerationWorksDistDiagReproducableA) {
     bm->getExecutionSettings().programSettings->kernelReplications = 2;
     bm->getExecutionSettings().programSettings->matrixSize = bm->getExecutionSettings().programSettings->blockSize;
-    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,1);
+    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,1);
     auto data = handler.generateData(bm->getExecutionSettings());
     auto data2 = handler.generateData(bm->getExecutionSettings());
     double aggregated_error = 0.0;
@@ -173,7 +173,7 @@ TEST_F(TransposeHandlersTest, DataGenerationWorksDistDiagReproducableA) {
 TEST_F(TransposeHandlersTest, DataGenerationWorksDistDiagReproducableB) {
     bm->getExecutionSettings().programSettings->kernelReplications = 2;
     bm->getExecutionSettings().programSettings->matrixSize = bm->getExecutionSettings().programSettings->blockSize;
-    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,1);
+    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,1);
     auto data = handler.generateData(bm->getExecutionSettings());
     auto data2 = handler.generateData(bm->getExecutionSettings());
     double aggregated_error = 0.0;
@@ -186,7 +186,7 @@ TEST_F(TransposeHandlersTest, DataGenerationWorksDistDiagReproducableB) {
 TEST_F(TransposeHandlersTest, DataGenerationWorksDistDiagExchangeWorksForSingleRank) {
     bm->getExecutionSettings().programSettings->kernelReplications = 2;
     bm->getExecutionSettings().programSettings->matrixSize = bm->getExecutionSettings().programSettings->blockSize;
-    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler(0,1);
+    auto handler = transpose::data_handler::DistributedDiagonalTransposeDataHandler<cl::Device, cl::Context, cl::Program>(0,1);
     auto data = handler.generateData(bm->getExecutionSettings());
     auto data2 = handler.generateData(bm->getExecutionSettings());
     handler.exchangeData(*data);

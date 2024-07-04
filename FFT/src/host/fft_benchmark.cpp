@@ -35,7 +35,7 @@ SOFTWARE.
 #include "parameters.h"
 
 fft::FFTProgramSettings::FFTProgramSettings(cxxopts::ParseResult &results) : hpcc_base::BaseSettings(results),
-    iterations(results["b"].as<uint>()), inverse(results.count("inverse")), kernelReplications(results["r"].as<uint>()) {
+    iterations(results["b"].as<uint>()), inverse(results.count("inverse")) {
 
 }
 
@@ -44,7 +44,7 @@ fft::FFTProgramSettings::getSettingsMap() {
         auto map = hpcc_base::BaseSettings::getSettingsMap();
         map["FFT Size"] = std::to_string(1 << LOG_FFT_SIZE);
         map["Batch Size"] = std::to_string(iterations);
-        map["Kernel Replications"] = std::to_string(kernelReplications);
+        map["Inverse"] = inverse ? "Yes" : "No";
         return map;
 }
 
@@ -86,36 +86,43 @@ fft::FFTBenchmark::addAdditionalParseOptions(cxxopts::Options &options) {
             ("inverse", "If set, the inverse FFT is calculated instead");
 }
 
-std::unique_ptr<fft::FFTExecutionTimings>
+void
 fft::FFTBenchmark::executeKernel(FFTData &data) {
-    return bm_execution::calculate(*executionSettings, data.data, data.data_out, executionSettings->programSettings->iterations,
+    timings = bm_execution::calculate(*executionSettings, data.data, data.data_out, executionSettings->programSettings->iterations,
                                          executionSettings->programSettings->inverse);
 }
 
 void
-fft::FFTBenchmark::collectAndPrintResults(const fft::FFTExecutionTimings &output) {
+fft::FFTBenchmark::collectResults() {
     double gflop = static_cast<double>(5 * (1 << LOG_FFT_SIZE) * LOG_FFT_SIZE) * executionSettings->programSettings->iterations * 1.0e-9 * mpi_comm_size;
 
-    uint number_measurements = output.timings.size();
+    uint number_measurements = timings["execution"].size();
     std::vector<double> avg_measures(number_measurements);
 #ifdef _USE_MPI_
     // Copy the object variable to a local variable to make it accessible to the lambda function
     int mpi_size = mpi_comm_size;
-    MPI_Reduce(output.timings.data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(timings.data(), avg_measures.data(), number_measurements, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     std::for_each(avg_measures.begin(),avg_measures.end(), [mpi_size](double& x) {x /= mpi_size;});
 #else
-    std::copy(output.timings.begin(), output.timings.end(), avg_measures.begin());
+    std::copy(timings["execution"].begin(), timings["execution"].end(), avg_measures.begin());
 #endif
     if (mpi_comm_rank == 0) {
         double minTime = *min_element(avg_measures.begin(), avg_measures.end());
         double avgTime = accumulate(avg_measures.begin(), avg_measures.end(), 0.0) / avg_measures.size();
+        results.emplace("t_min", hpcc_base::HpccResult(minTime / (executionSettings->programSettings->iterations * executionSettings->programSettings->kernelReplications), "s"));
+        results.emplace("t_avg", hpcc_base::HpccResult(avgTime / (executionSettings->programSettings->iterations * executionSettings->programSettings->kernelReplications), "s"));
+        results.emplace("gflops_min", hpcc_base::HpccResult(gflop / minTime, "GFLOP/s"));
+        results.emplace("gflops_avg", hpcc_base::HpccResult(gflop / avgTime, "GFLOP/s"));
+    }
+}
 
-        std::cout << std::setw(ENTRY_SPACE) << " " << std::setw(ENTRY_SPACE) << "avg"
-                << std::setw(ENTRY_SPACE) << "best" << std::endl;
-        std::cout << std::setw(ENTRY_SPACE) << "Time in s:" << std::setw(ENTRY_SPACE) << avgTime / (executionSettings->programSettings->iterations * executionSettings->programSettings->kernelReplications)
-                    << std::setw(ENTRY_SPACE) << minTime / (executionSettings->programSettings->iterations * executionSettings->programSettings->kernelReplications) << std::endl;
-        std::cout << std::setw(ENTRY_SPACE) << "GFLOPS:" << std::setw(ENTRY_SPACE) << gflop / avgTime
-                    << std::setw(ENTRY_SPACE) << gflop / minTime << std::endl;
+void
+fft::FFTBenchmark::printResults() {
+    if (mpi_comm_rank == 0) {
+        std::cout << std::setw(ENTRY_SPACE) << " " << std::left << std::setw(ENTRY_SPACE) << " avg"
+                << std::setw(ENTRY_SPACE) << " best" << std::right << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << "Time in s: " << results.at("t_avg") << results.at("t_min") << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << "GFLOPS: " << results.at("gflops_avg") << results.at("gflops_min") << std::endl;
     }
 }
 
@@ -134,7 +141,7 @@ fft::FFTBenchmark::generateInputData() {
 }
 
 bool  
-fft::FFTBenchmark::validateOutputAndPrintError(fft::FFTData &data) {
+fft::FFTBenchmark::validateOutput(fft::FFTData &data) {
     double residual_max = 0;
     for (int i = 0; i < executionSettings->programSettings->iterations; i++) {
         // we have to bit reverse the output data of the FPGA kernel, since it will be provided in bit-reversed order.
@@ -152,15 +159,22 @@ fft::FFTBenchmark::validateOutputAndPrintError(fft::FFTData &data) {
             residual_max = residual_max > tmp_error ? residual_max : tmp_error;
         }
     }
+    // Calculate residual according to paper considering also the used iterations
     double error = residual_max /
                    (std::numeric_limits<HOST_DATA_TYPE>::epsilon() * LOG_FFT_SIZE);
+    
+    errors.emplace("residual", error);
+    errors.emplace("epsilon", std::numeric_limits<HOST_DATA_TYPE>::epsilon());
 
-    std::cout << std::setw(ENTRY_SPACE) << "res. error" << std::setw(ENTRY_SPACE) << "mach. eps" << std::endl;
-    std::cout << std::setw(ENTRY_SPACE) << error << std::setw(ENTRY_SPACE)
-              << std::numeric_limits<HOST_DATA_TYPE>::epsilon() << std::endl << std::endl;
-
-    // Calculate residual according to paper considering also the used iterations
     return error < 1.0;
+}
+
+void fft::FFTBenchmark::printError() {
+    if (mpi_comm_rank == 0) {
+        std::cout << std::setw(ENTRY_SPACE) << "res. error" << std::setw(ENTRY_SPACE) << "mach. eps" << std::endl;
+        std::cout << std::setw(ENTRY_SPACE) << errors.at("residual") << std::setw(ENTRY_SPACE) << errors.at("epsilon") << std::endl << std::endl;
+    }
+
 }
 
 void 
