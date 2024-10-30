@@ -7,7 +7,6 @@ set(DEFAULT_ACCL_BUFFER_SIZE 8192 CACHE STRING "Size of ACCL buffers in KB")
 set(DEFAULT_ACCL_BUFFER_COUNT 16 CACHE STRING "Number of ACCL buffers")
 set(DEFAULT_ACCL_BUFFER_BANK 0 CACHE STRING "Default memory bank for ACCL buffers")
 set(DEFAULT_ACCL_RECV_BUFFER_BANKS 1 CACHE STRING "Memory banks to allocate recevie buffers (can be comma-separated list)")
-set(ACCL_HARDWARE_DIR ${extern_accl_SOURCE_DIR}/test/hardware)
 set(ACCL_CCLO_ADDITIONAL_BUILD_ARGS "" CACHE STRING "Add additional build arguments that will be passed to the CCLO makefile")
 set(ACCL_CCLO_BUILD_ARGS ${ACCL_CCLO_ADDITIONAL_BUILD_ARGS})
 # UDP related definitions
@@ -31,14 +30,14 @@ foreach(i RANGE ${loopend})
     add_custom_command(
         OUTPUT ${CURRENT_MAC_XO}
         COMMAND make -C ${ACCL_VNX_DIR}/Ethernet DEVICE=${FPGA_BOARD_NAME} INTERFACE=${i} all
-        WORKING_DIRECTORY ${ACCL_HARDWARE_DIR}) 
+        WORKING_DIRECTORY ${extern_accl_udp_SOURCE_DIR}) 
     list(APPEND ACCL_UDP_MAC_XOS ${CURRENT_MAC_XO})
 endforeach()
 
 add_custom_command(
     OUTPUT ${ACCL_UDP_NET_XO}
     COMMAND make -C ${ACCL_VNX_DIR}/NetLayers DEVICE=${FPGA_BOARD_NAME} all
-    WORKING_DIRECTORY ${ACCL_HARDWARE_DIR}) 
+    WORKING_DIRECTORY ${extern_accl_udp_SOURCE_DIR}) 
 
 add_custom_target(
     accl_udp_stack
