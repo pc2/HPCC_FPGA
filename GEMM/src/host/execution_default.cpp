@@ -43,7 +43,7 @@ namespace bm_execution {
  @copydoc bm_execution::calculate()
 */
 std::map<std::string, std::vector<double>>
-calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings> const& config, HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c, HOST_DATA_TYPE* c_out,
+calculate(hpcc_base::ExecutionSettings<gemm::GEMMProgramSettings, cl::Device, cl::Context, cl::Program> const& config, HOST_DATA_TYPE* a, HOST_DATA_TYPE* b, HOST_DATA_TYPE* c, HOST_DATA_TYPE* c_out,
         HOST_DATA_TYPE alpha, HOST_DATA_TYPE beta) {
 
     int err;

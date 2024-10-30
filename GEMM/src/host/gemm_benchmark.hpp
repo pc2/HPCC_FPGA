@@ -168,7 +168,7 @@ public:
  * @brief Implementation of the GEMM benchmark
  * 
  */
-class GEMMBenchmark : public hpcc_base::HpccFpgaBenchmark<GEMMProgramSettings, GEMMData> {
+class GEMMBenchmark : public hpcc_base::HpccFpgaBenchmark<GEMMProgramSettings, cl::Device, cl::Context, cl::Program, GEMMData> {
 
 protected:
 
