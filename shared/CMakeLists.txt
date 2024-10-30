@@ -15,7 +15,7 @@ endif()
 list(APPEND HPCC_BASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup.cpp ${CMAKE_CURRENT_SOURCE_DIR}/hpcc_settings.cpp)
 add_library(hpcc_fpga_base STATIC ${HPCC_BASE_SOURCES})
 if (USE_ACCL)
-    add_subdirectory(${extern_accl_SOURCE_DIR}/test/hardware/xup_vitis_network_example/xrt_host_api
+    add_subdirectory(${extern_accl_udp_SOURCE_DIR}/xrt_host_api
        ${CMAKE_BINARY_DIR}/lib/xrt_host_api)
     target_include_directories(hpcc_fpga_base PUBLIC ${VNX_INCLUDE_PATH} ${ACCL_INCLUDE_PATH} ${extern_accl_SOURCE_DIR}/test/model/bfm ${extern_accl_SOURCE_DIR}/driver/hls ${extern_hlslib_SOURCE_DIR}/include/hlslib/xilinx)
     target_link_libraries(hpcc_fpga_base accl vnx)
