@@ -41,7 +41,7 @@ namespace bm_execution {
  * @return std::unique_ptr<random_access::RandomAccessExecutionTimings> The measured runtimes of the kernel
  */
 std::map<std::string, std::vector<double>>
-calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data, int mpi_rank, int mpi_size);
+calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings, cl::Device, cl::Context, cl::Program> const& config, HOST_DATA_TYPE * data, int mpi_rank, int mpi_size);
 
 }  // namespace bm_execution
 

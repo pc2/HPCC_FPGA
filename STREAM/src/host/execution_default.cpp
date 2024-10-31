@@ -38,11 +38,11 @@ SOFTWARE.
 
 namespace bm_execution {
 
-    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config, unsigned int data_per_kernel,
+    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config, unsigned int data_per_kernel,
                             std::vector<cl::Buffer> &Buffers_A, std::vector<cl::Buffer> &Buffers_B,
                             std::vector<cl::Buffer> &Buffers_C);
 
-    bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -51,7 +51,7 @@ namespace bm_execution {
                                        std::vector<cl::Kernel> &triad_kernels,
                                        std::vector<cl::CommandQueue> &command_queues);
 
-    bool initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -68,7 +68,7 @@ namespace bm_execution {
      @copydoc bm_execution::calculate()
     */
     std::map<std::string, std::vector<double>>
-    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings>& config,
+    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program>& config,
             HOST_DATA_TYPE* A,
             HOST_DATA_TYPE* B,
             HOST_DATA_TYPE* C) {
@@ -334,7 +334,7 @@ namespace bm_execution {
         return timingMap;
     }
 
-    bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -415,7 +415,7 @@ namespace bm_execution {
         return true;
     }
 
-    bool initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -594,7 +594,7 @@ namespace bm_execution {
         return true;
     }
 
-    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config, unsigned int data_per_kernel,
+    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config, unsigned int data_per_kernel,
                             std::vector<cl::Buffer> &Buffers_A, std::vector<cl::Buffer> &Buffers_B,
                             std::vector<cl::Buffer> &Buffers_C) {
         unsigned mem_bits = CL_MEM_READ_WRITE;

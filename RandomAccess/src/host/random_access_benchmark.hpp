@@ -112,7 +112,7 @@ public:
  * @brief Implementation of the random access benchmark
  * 
  */
-class RandomAccessBenchmark : public hpcc_base::HpccFpgaBenchmark<RandomAccessProgramSettings, RandomAccessData> {
+class RandomAccessBenchmark : public hpcc_base::HpccFpgaBenchmark<RandomAccessProgramSettings, cl::Device, cl::Context, cl::Program, RandomAccessData> {
 
 protected:
 

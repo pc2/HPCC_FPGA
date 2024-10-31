@@ -125,7 +125,7 @@ public:
  * @brief Implementation of the Sream benchmark
  * 
  */
-class StreamBenchmark : public hpcc_base::HpccFpgaBenchmark<StreamProgramSettings, StreamData> {
+class StreamBenchmark : public hpcc_base::HpccFpgaBenchmark<StreamProgramSettings, cl::Device, cl::Context, cl::Program, StreamData> {
 
 protected:
 

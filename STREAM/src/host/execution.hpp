@@ -65,7 +65,7 @@ namespace bm_execution {
      * @return std::unique_ptr<stream::StreamExecutionTimings> The measured timings for all stream operations
      */
     std::map<std::string, std::vector<double>>
-    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings>& config,
+    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program>& config,
               HOST_DATA_TYPE* A,
               HOST_DATA_TYPE* B,
               HOST_DATA_TYPE* C);
