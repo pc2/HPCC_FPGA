@@ -14,6 +14,10 @@ default:
     - module load fpga devel toolchain lang intel/opencl_sdk/21.4.0 bittware/520n/20.4.0_max foss/2024a CMake/3.29.3-GCCcore-13.3.0 Python/3.12.3-GCCcore-13.3.0
     - python -m pip install -r scripts/evaluation/requirements.txt
     - python -m pip install -r scripts/code_generator/requirements.txt
+  id_tokens:
+    CI_JOB_JWT:
+      aud: https://git.uni-paderborn.de
+
 
 ###
 #
