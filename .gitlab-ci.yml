@@ -4,13 +4,14 @@ stages:
   - test
 
 variables:
-  SCHEDULER_PARAMETERS: "-A pc2-mitarbeiter -p normal -q cont -t 00:30:00 -n 2 -N 1"
+  SCHEDULER_PARAMETERS: "-A hpc-prf-cifi -p normal -t 00:30:00 -n 2 -N 1"
 
 default:
   tags:
-    - jacamar
+    - slurm
   before_script:
-    - module load fpga/intel/opencl_sdk/21.2.0 fpga/bittware/520n/20.4.0_max toolchain/foss/2021a devel/CMake/3.20.1-GCCcore-10.3.0 lang/Python/3.9.5-GCCcore-10.3.0
+    - module reset
+    - module load fpga devel toolchain lang intel/opencl_sdk/21.4.0 bittware/520n/20.4.0_max foss/2024a CMake/3.29.3-GCCcore-13.3.0 Python/3.12.3-GCCcore-13.3.0
     - python -m pip install -r scripts/evaluation/requirements.txt
     - python -m pip install -r scripts/code_generator/requirements.txt
 
