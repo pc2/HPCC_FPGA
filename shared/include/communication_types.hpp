@@ -76,6 +76,7 @@ static const std::map<const std::string, CommunicationType> comm_to_str_map{
     {"PCIE", CommunicationType::pcie_mpi},
     {"ACCL", CommunicationType::accl},
     {"CPU", CommunicationType::cpu_only},
+    {"UNSUPPORTED", CommunicationType::unsupported},
     {"AUTO", CommunicationType::automatic}
     };
     
