@@ -1,94 +1,50 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Implementation Details &mdash; HPCC FPGA Documentation  documentation</title>
-  
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=53b48696" />
 
   
-  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../../_static/css/custom.css" type="text/css" />
-
-  
-  
-  
-  
-
-  
-  <!--[if lt IE 9]>
-    <script src="../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/underscore.js"></script>
-        <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-    <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
-    
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="b_eff" href="../../b_eff/index.html" />
     <link rel="prev" title="LINPACK" href="../index.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
 
           
-            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
           
-
-          
+          <a href="../../index.html" class="icon icon-home">
+            HPCC FPGA Documentation
           </a>
-
-          
-            
-            
-              <div class="version">
-                0.4
-              </div>
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
-              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Benchmark Descriptions:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../STREAM/index.html">STREAM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../RandomAccess/index.html">RandomAccess</a></li>
@@ -106,14 +62,15 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../b_eff/index.html">b_eff</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Technical Support:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Technical Support:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Host Input Parameters/index.html">Execution of a Benchmark</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Project Structure/index.html">Structure of the Benchmark Suite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Basic%20Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Host%20Input%20Parameters/index.html">Execution of a Benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Project%20Structure/index.html">Structure of the Benchmark Suite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../technical_support/json_output/index.html">JSON Output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Benchmark Results:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
@@ -121,91 +78,55 @@
 <li class="toctree-l1"><a class="reference internal" href="../../STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../../index.html">HPCC FPGA Documentation</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
-      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
-        
-          <li><a href="../index.html">LINPACK</a> &raquo;</li>
-        
-      <li>Implementation Details</li>
-    
-    
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">LINPACK</a></li>
+      <li class="breadcrumb-item active">Implementation Details</li>
       <li class="wy-breadcrumbs-aside">
-        
-            
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
 
            <div itemprop="articleBody">
-            
-  <div class="section" id="implementation-details">
-<h1>Implementation Details<a class="headerlink" href="#implementation-details" title="Permalink to this headline">¶</a></h1>
+             
+  <section id="implementation-details">
+<h1>Implementation Details<a class="headerlink" href="#implementation-details" title="Link to this heading"></a></h1>
 <p>The FPGA design for the LINPACK kernel supports the calculation of a large equation system over mutliple FPGAs. The FPGAs need to be connected via a 2D-torus
 network with bi-directional links but is also possible to use the implementation with only a single FPGA. Every FPGA will use the same design consisting of multiple
 kernels for the calculation. It is the task of the CPU to create a custom execution plan for every FPGA depending on their position in the 2D-torus before the actual
 execution. Before we look into the execution of the design in a inter-FPGA network, we will discuss the execution on a single FPGA and the general kernel design with focus
 on the LU factorization since this is the most compute-intensive part of LINPACK.</p>
 <p>A important restriction of the design is that the LU factorization requires a diagnonally dominant matrix because pivoting is not implemented in any form.</p>
-<div class="section" id="kernel-design-for-lu-factorization">
-<h2>Kernel Design for LU Factorization<a class="headerlink" href="#kernel-design-for-lu-factorization" title="Permalink to this headline">¶</a></h2>
+<section id="kernel-design-for-lu-factorization">
+<h2>Kernel Design for LU Factorization<a class="headerlink" href="#kernel-design-for-lu-factorization" title="Link to this heading"></a></h2>
 <p>The implementation uses a blocked, right-looking variant for the LU factorization as it is described in <a class="reference internal" href="#dhw98" id="id1"><span>[DHW98]</span></a>.
-For the update of a single row and column of blocks, we need to perform three different operations which are shown as colors in <a class="reference internal" href="#lu-operations"><span class="std std-numref">Fig. 8</span></a>.
+For the update of a single row and column of blocks, we need to perform three different operations which are shown as colors in <a class="reference internal" href="#lu-operations"><span class="std std-numref">Fig. 7</span></a>.
 In every iteration, the LU factorization for a block in the diagonal of the matrix is calculated which is marked green in the visualization.
 All grey-colored blocks on the left and top of this block are already updated and will require no further processing.
 The resulting lower matrix <span class="math notranslate nohighlight">\(L\)</span> is used to update all blocks on the right of the LU block. Since they are the top-most blocks which still require an update, they are in the following called _top-<a href="#id8"><span class="problematic" id="id9">blocks_</span></a>.
 The upper matrix <span class="math notranslate nohighlight">\(U\)</span> is used to update all blocks below the current LU-block. These are the left-most blocks which require an update so they are called _left-<a href="#id10"><span class="problematic" id="id11">blocks_</span></a> in the following.
 All other blocks are updated using the results of the left- and top-blocks and matrix multiplication.</p>
-<div class="figure align-center" id="id2">
-<span id="lu-operations"></span><a class="reference internal image-reference" href="../../_images/lu_iteration.drawio.png"><img alt="Visualization of the operations performed on different blocks of the matrix in a single iteration is missing!" src="../../_images/lu_iteration.drawio.png" style="width: 360px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 8 </span><span class="caption-text">Visualization of the operations performed on different blocks of the matrix in a single iteration. The grey blocks will not be updated in the iteration.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
-</div>
+<figure class="align-center" id="id2">
+<span id="lu-operations"></span><a class="reference internal image-reference" href="../../_images/lu_iteration.drawio.png"><img alt="Visualization of the operations performed on different blocks of the matrix in a single iteration is missing!" src="../../_images/lu_iteration.drawio.png" style="width: 360px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 7 </span><span class="caption-text">Visualization of the operations performed on different blocks of the matrix in a single iteration. The grey blocks will not be updated in the iteration.</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
+</figcaption>
+</figure>
 <p>The decribed operations are implemented in four separate kernel types with additional kernels for the network communication.
 To make the best use of the hardware, three of the kernels kernels are executed simultaneoulsy and data is streamed through the kernels using a row-wise exchange-and-update-approach.
 Data is forwarded using channels and the required routing of data is handled by the network kernels.
@@ -217,11 +138,14 @@ The block size for the second level can be specified with <code class="docutils 
 This parameter takes effect on the amount of calculations that will be done in parallel.
 The pipeline will issue the update of one second level block per clock cycle.</p>
 <p>The execution of the kernels is divided into two steps which are repeated for every row in the block: The <em>exchange</em> and the <em>update</em> phase.</p>
-<div class="figure align-center" id="id3">
-<span id="kernel-exchange"></span><a class="reference internal image-reference" href="../../_images/kernel_exchange_step.drawio.png"><img alt="../../_images/kernel_exchange_step.drawio.png" src="../../_images/kernel_exchange_step.drawio.png" style="width: 480px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 9 </span><span class="caption-text">Visualization of the kernel communication and the matrix blocks during the exchange phase. Every kernel will have a matrix block in a local memory buffer. These blocks are divided into smaller sub-blocks for the computation. The illustration shows a block divided into three sub-blocks in each dimension. The sub-blocks have a width that matches the width of the communication interface (i.e. 256bit). Only single rows and columns are exchanged between the kernels. Note, that for the LU kernel only a part of the row and column are exchanged depending on the sub-block size.</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
-</div>
-<p>A visualization of the exchange phase is given in <a class="reference internal" href="#kernel-exchange"><span class="std std-numref">Fig. 9</span></a>.
+<figure class="align-center" id="id3">
+<span id="kernel-exchange"></span><a class="reference internal image-reference" href="../../_images/kernel_exchange_step.drawio.png"><img alt="../../_images/kernel_exchange_step.drawio.png" src="../../_images/kernel_exchange_step.drawio.png" style="width: 480px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 8 </span><span class="caption-text">Visualization of the kernel communication and the matrix blocks during the exchange phase. Every kernel will have a matrix block in a local memory buffer. These blocks are divided into smaller sub-blocks for the computation. The illustration shows a block divided into three sub-blocks in each dimension. The sub-blocks have a width that matches the width of the communication interface (i.e. 256bit). Only single rows and columns are exchanged between the kernels. Note, that for the LU kernel only a part of the row and column are exchanged depending on the sub-block size.</span><a class="headerlink" href="#id3" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>A visualization of the exchange phase is given in <a class="reference internal" href="#kernel-exchange"><span class="std std-numref">Fig. 8</span></a>.
 All kernels will load a block of the matrix into the local memory buffer. The update will be executed row- or column-wise – depending on the kernel.
 The LU kernel sends the current, already updated row and column to the kernels working on the top and left block.
 They will use the data to update their current row or column and forward it to the inner kernel.
@@ -237,13 +161,16 @@ The inner-kernel will only receive the row and column from the other kernels and
 </ul>
 </dd>
 </dl>
-<div class="figure align-center" id="id4">
-<span id="kernel-update"></span><a class="reference internal image-reference" href="../../_images/kernel_update_step.drawio.png"><img alt="../../_images/kernel_update_step.drawio.png" src="../../_images/kernel_update_step.drawio.png" style="width: 480px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 10 </span><span class="caption-text">Visualization of the update step. Every kernel updates the sub-blocks that are colored grey with the data received in the previous exchange step.</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
-</div>
-<p>During the update step, which can be seen in <a class="reference internal" href="#kernel-update"><span class="std std-numref">Fig. 10</span></a>, the kernels do not communicate at all, but use the previously received data to update their block in local memory.
+<figure class="align-center" id="id4">
+<span id="kernel-update"></span><a class="reference internal image-reference" href="../../_images/kernel_update_step.drawio.png"><img alt="../../_images/kernel_update_step.drawio.png" src="../../_images/kernel_update_step.drawio.png" style="width: 480px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 9 </span><span class="caption-text">Visualization of the update step. Every kernel updates the sub-blocks that are colored grey with the data received in the previous exchange step.</span><a class="headerlink" href="#id4" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>During the update step, which can be seen in <a class="reference internal" href="#kernel-update"><span class="std std-numref">Fig. 9</span></a>, the kernels do not communicate at all, but use the previously received data to update their block in local memory.
 This is done in the granularity of sub-blocks, so the LU, left and top kernel will only need to update a part of the block, depending on the current row.</p>
-<p>The steps in which the blocks are updated can be seen in <a class="reference internal" href="#lu-operations-steps"><span class="std std-numref">Fig. 11</span></a>.
+<p>The steps in which the blocks are updated can be seen in <a class="reference internal" href="#lu-operations-steps"><span class="std std-numref">Fig. 10</span></a>.
 After the first execution of all four kernels, four blocks of the matrix will be completely updated for the current iteration.
 These blocks are labelled with _1_ in the figure.
 Still, if the matrix consists of more than four blocks, additional updates are necessary.
@@ -256,10 +183,13 @@ In step two and three, only the top, left and inner kernel will be executed and 
 <li><p>The inner-kernel receives the current row and column and stores them in global memory buffers</p></li>
 </ul>
 <p>The update phase will stay the same.</p>
-<div class="figure align-center" id="id5">
-<span id="lu-operations-steps"></span><a class="reference internal image-reference" href="../../_images/lu_iteration_block1.drawio.png"><img alt="../../_images/lu_iteration_block1.drawio.png" src="../../_images/lu_iteration_block1.drawio.png" style="width: 360px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 11 </span><span class="caption-text">Required steps to update the whole top row and left column. The colored blocks will be updated after this phase. Blocks with the same number will be updated in the same step. The white blocks remain unmodified for now.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
-</div>
+<figure class="align-center" id="id5">
+<span id="lu-operations-steps"></span><a class="reference internal image-reference" href="../../_images/lu_iteration_block1.drawio.png"><img alt="../../_images/lu_iteration_block1.drawio.png" src="../../_images/lu_iteration_block1.drawio.png" style="width: 360px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 10 </span><span class="caption-text">Required steps to update the whole top row and left column. The colored blocks will be updated after this phase. Blocks with the same number will be updated in the same step. The white blocks remain unmodified for now.</span><a class="headerlink" href="#id5" title="Link to this image"></a></p>
+</figcaption>
+</figure>
 <p>After three executions of the kernels, only inner blocks are left to be updated.
 This will be the majority of blocks for large matrices because the number of inner blocks increases quadratically with the matrix size.
 To speed up the update of the remaining blocks, an additional kernel is used.
@@ -269,9 +199,9 @@ Now they are used as input to update the inner blocks which also means that the 
 The performance of the design can be further improved by adding more kernel replications of the matrix multiplication kernel using the parameter <code class="docutils literal notranslate"><span class="pre">NUM_REPLICATIONS</span></code>.
 A replication of the streaming kernels does not bring much benefit because the data dependencies in the LU kernel do not allow arbitrary parallelization.
 This step can be seen as a higher-level <em>update</em> phase.</p>
-</div>
-<div class="section" id="performance-model-for-lu-factorization-on-single-fpga">
-<h2>Performance Model for LU factorization on single FPGA<a class="headerlink" href="#performance-model-for-lu-factorization-on-single-fpga" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="performance-model-for-lu-factorization-on-single-fpga">
+<h2>Performance Model for LU factorization on single FPGA<a class="headerlink" href="#performance-model-for-lu-factorization-on-single-fpga" title="Link to this heading"></a></h2>
 <p>As discussed in the implementation, the execution time is mainly depending on the inner update using matrix multiplication.
 The LU, left and top kernel in the data streaming phase will run nearly simultaneoulsy, so only the LU kernel has to be considered.</p>
 <p>To create a model, we use the following parameters derived from the kernel configuration parameters described in the implementation section:</p>
@@ -314,14 +244,17 @@ The sum goes over every block in one dimension of the matrix minus one. The last
 <li><p>Memory interleaving is used in global memory, which might lead to slightly increased performance for loading a single block.</p></li>
 <li><p>Performance bottlenecks introduced by the host side are not considered (i.e. large command queues)</p></li>
 </ul>
-</div>
-<div class="section" id="multi-fpga-implementation">
-<h2>Multi-FPGA Implementation<a class="headerlink" href="#multi-fpga-implementation" title="Permalink to this headline">¶</a></h2>
-<div class="figure align-center" id="id6">
-<span id="fpga-2d-torus-data"></span><a class="reference internal image-reference" href="../../_images/torus_data_forward.drawio.png"><img alt="../../_images/torus_data_forward.drawio.png" src="../../_images/torus_data_forward.drawio.png" style="width: 480px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 12 </span><span class="caption-text">Communication between the FPGAs in a 2D torus for a single iteration of the algorithm where every FPGA needs to update multiple blocks. The FPGA in the top left will calculate the LU block. The colors of the arrows show the type of the data that is forwarded in the torus and the colored blocks in the FPGAs show the active kernels.</span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
-</div>
-<p>In <a class="reference internal" href="#fpga-2d-torus-data"><span class="std std-numref">Fig. 12</span></a>, the data which is forwarded in the exchange phases as well as the active kernels are shown.
+</section>
+<section id="multi-fpga-implementation">
+<h2>Multi-FPGA Implementation<a class="headerlink" href="#multi-fpga-implementation" title="Link to this heading"></a></h2>
+<figure class="align-center" id="id6">
+<span id="fpga-2d-torus-data"></span><a class="reference internal image-reference" href="../../_images/torus_data_forward.drawio.png"><img alt="../../_images/torus_data_forward.drawio.png" src="../../_images/torus_data_forward.drawio.png" style="width: 480px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 11 </span><span class="caption-text">Communication between the FPGAs in a 2D torus for a single iteration of the algorithm where every FPGA needs to update multiple blocks. The FPGA in the top left will calculate the LU block. The colors of the arrows show the type of the data that is forwarded in the torus and the colored blocks in the FPGAs show the active kernels.</span><a class="headerlink" href="#id6" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>In <a class="reference internal" href="#fpga-2d-torus-data"><span class="std std-numref">Fig. 11</span></a>, the data which is forwarded in the exchange phases as well as the active kernels are shown.
 The matrix is distributed between the FPGAs using a PQ grid to balance the workload between the FPGAs.
 The FPGA in the top left will use all four streaming kernels (LU, left, top, inner) and forward the LU row and column as well as the row and column of the updated left and top block.
 The FPGAs at the top will execute the top and inner kernel, the FPGAs on the left the left and inner kernel. All remaining FPGAs will only execute the inner kernel.
@@ -330,78 +263,57 @@ and the simultaneous data exchange of all kernels.
 Also, the LU row and column are forwarded internally within the top-left FPGA. This is why it is not necessary to forward it from the FPGA below or at the right.
 The internal forwarding is used to remove circular data dependencies in the torus which otherwise would lead to increased stalls in the network kernel.</p>
 <p>In the next iteration, the FPGA in the center will take the role of the LU update because it will own the next diagonal block of the matrix. This means in every iteration the roles will shift one step to the bottom-right.
-The usage of the different external channels by the four streaming kernels is shown in <a class="reference internal" href="#fpga-external-channels"><span class="std std-numref">Fig. 13</span></a>.
+The usage of the different external channels by the four streaming kernels is shown in <a class="reference internal" href="#fpga-external-channels"><span class="std std-numref">Fig. 12</span></a>.
 Every channel is used by exactly two kernels. However, these kernels will never conflict in the channel access, because data will be forwarded internally if both kernels are active.</p>
-<div class="figure align-center" id="id7">
-<span id="fpga-external-channels"></span><a class="reference internal image-reference" href="../../_images/external_channel_usage.drawio.png"><img alt="../../_images/external_channel_usage.drawio.png" src="../../_images/external_channel_usage.drawio.png" style="width: 360px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 13 </span><span class="caption-text">Every FPGA is connected to four other FPGAs over the bidirectional external channels. Every channel direction takes over a certain role and does only forward a single type of data. This means that multiple kernels need to read and write to each external channel.</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
+<figure class="align-center" id="id7">
+<span id="fpga-external-channels"></span><a class="reference internal image-reference" href="../../_images/external_channel_usage.drawio.png"><img alt="../../_images/external_channel_usage.drawio.png" src="../../_images/external_channel_usage.drawio.png" style="width: 360px;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 12 </span><span class="caption-text">Every FPGA is connected to four other FPGAs over the bidirectional external channels. Every channel direction takes over a certain role and does only forward a single type of data. This means that multiple kernels need to read and write to each external channel.</span><a class="headerlink" href="#id7" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<div role="list" class="citation-list">
+<div class="citation" id="dhw98" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">DHW98</a><span class="fn-bracket">]</span></span>
+<p>Dongarra, J. J., Hammarling, S., &amp; Walker, D. W. (1998). Key concepts for parallel out-of-core LU factorization. Computers &amp; Mathematics with Applications, 35(7), 13-31.</p>
 </div>
-<dl class="citation">
-<dt class="label" id="dhw98"><span class="brackets"><a class="fn-backref" href="#id1">DHW98</a></span></dt>
-<dd><p>Dongarra, J. J., Hammarling, S., &amp; Walker, D. W. (1998). Key concepts for parallel out-of-core LU factorization. Computers &amp; Mathematics with Applications, 35(7), 13-31.</p>
-</dd>
-</dl>
 </div>
-</div>
+</section>
+</section>
 
 
            </div>
-           
           </div>
     <a href="https://github.com/pc2/hpcc_fpga">
         <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub">
     </a>
 
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="../../b_eff/index.html" class="btn btn-neutral float-right" title="b_eff" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="../index.html" class="btn btn-neutral float-left" title="LINPACK" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="LINPACK" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../../b_eff/index.html" class="btn btn-neutral float-right" title="b_eff" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        
-        &copy; Copyright 2020, Marius Meyer
-
-    </p>
+    <p>&#169; Copyright 2020, Marius Meyer.</p>
   </div>
-    
-    
-    
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
-    
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
-
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

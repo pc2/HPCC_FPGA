@@ -1,94 +1,49 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Basic Build Setup &mdash; HPCC FPGA Documentation  documentation</title>
-  
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=53b48696" />
 
   
-  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../../_static/css/custom.css" type="text/css" />
-
-  
-  
-  
-  
-
-  
-  <!--[if lt IE 9]>
-    <script src="../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/underscore.js"></script>
-        <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-    <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
-    
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Execution of a Benchmark" href="../Host Input Parameters/index.html" />
+    <link rel="next" title="Execution of a Benchmark" href="../Host%20Input%20Parameters/index.html" />
     <link rel="prev" title="b_eff" href="../../b_eff/index.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
 
           
-            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
           
-
-          
+          <a href="../../index.html" class="icon icon-home">
+            HPCC FPGA Documentation
           </a>
-
-          
-            
-            
-              <div class="version">
-                0.4
-              </div>
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
-              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Benchmark Descriptions:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../STREAM/index.html">STREAM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../RandomAccess/index.html">RandomAccess</a></li>
@@ -98,7 +53,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../LINPACK/index.html">LINPACK</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../b_eff/index.html">b_eff</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Technical Support:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Technical Support:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Basic Build Setup</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#general-benchmark-configuration">General Benchmark Configuration</a></li>
@@ -107,11 +62,12 @@
 <li class="toctree-l2"><a class="reference internal" href="#using-pre-defined-configurations">Using pre-defined Configurations</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../Host Input Parameters/index.html">Execution of a Benchmark</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Project Structure/index.html">Structure of the Benchmark Suite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Host%20Input%20Parameters/index.html">Execution of a Benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Project%20Structure/index.html">Structure of the Benchmark Suite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json_output/index.html">JSON Output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Benchmark Results:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
@@ -119,80 +75,42 @@
 <li class="toctree-l1"><a class="reference internal" href="../../STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../../index.html">HPCC FPGA Documentation</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
-      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
-        
-      <li>Basic Build Setup</li>
-    
-    
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Basic Build Setup</li>
       <li class="wy-breadcrumbs-aside">
-        
-            
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
 
            <div itemprop="articleBody">
-            
-  <div class="section" id="basic-build-setup">
-<h1>Basic Build Setup<a class="headerlink" href="#basic-build-setup" title="Permalink to this headline">¶</a></h1>
+             
+  <section id="basic-build-setup">
+<h1>Basic Build Setup<a class="headerlink" href="#basic-build-setup" title="Link to this heading"></a></h1>
 <p>The HPCChallenge Benchmark for FPGA is fully configurable over CMake when a new build directory is created.
 Although it is possible, it is highly recommended to use a different directory for the build than the source directory.
 In the following, we will configure the STREAM benchmark for the use with a fictional FPGA to show the basic configuration and build process.</p>
-<div class="section" id="general-benchmark-configuration">
-<h2>General Benchmark Configuration<a class="headerlink" href="#general-benchmark-configuration" title="Permalink to this headline">¶</a></h2>
+<section id="general-benchmark-configuration">
+<h2>General Benchmark Configuration<a class="headerlink" href="#general-benchmark-configuration" title="Link to this heading"></a></h2>
 <p>The <strong>configuration options</strong> are implemented as CMake build parameters and can be set when creating a new CMake build directory.
 We recommend to create a new build directory for a benchmark in a folder <cite>build</cite> in the root directory of the project.
 You may want to create a folder hierarchy in there e.g. to build the STREAM benchmark create a folder <cite>build/STREAM</cite> and change into that new folder.
 Initialize a new CMake build directory by calling</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake PATH_TO_SOURCE_DIR
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>PATH_TO_SOURCE_DIR
 </pre></div>
 </div>
 <p>where <cite>PATH_TO_SOURCE_DIR</cite> would be <cite>../../STREAM</cite> in case of STREAM (the relative path to the source directory of the target benchmark).
@@ -200,12 +118,12 @@ Some of the configuration options are the same for each benchmark and are given 
 Especially the <code class="docutils literal notranslate"><span class="pre">FPGA_BOARD_NAME</span></code> is important to set, since it will specify the target board.
 The <code class="docutils literal notranslate"><span class="pre">DEFAULT_*</span></code> options are used by the host code and can also be changed later at runtime.
 The given default values will be set if no other values are given during configuration.</p>
-<table class="colwidths-given docutils align-default" id="id1">
-<caption><span class="caption-number">Table 13 </span><span class="caption-text">General Configuration Options</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-number">Table 13 </span><span class="caption-text">General Configuration Options</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 50%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+<col style="width: 50.0%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Name</p></th>
@@ -234,12 +152,12 @@ The given default values will be set if no other values are given during configu
 </table>
 <p>Additionally, the compile options for the Intel or Xilinx compiler have to be specified.
 For the Intel compiler these are:</p>
-<table class="colwidths-given docutils align-default" id="id2">
-<caption><span class="caption-number">Table 14 </span><span class="caption-text">Intel Specific Configuration Options</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<table class="docutils align-default" id="id2">
+<caption><span class="caption-number">Table 14 </span><span class="caption-text">Intel Specific Configuration Options</span><a class="headerlink" href="#id2" title="Link to this table"></a></caption>
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 50%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+<col style="width: 50.0%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Name</p></th>
@@ -260,12 +178,12 @@ For the Intel compiler these are:</p>
 </table>
 <p>For the Xilinx compiler it is also necessary to set settings files for the compile and link step of the compiler.
 The available options are given in the following table:</p>
-<table class="colwidths-given docutils align-default" id="id3">
-<caption><span class="caption-number">Table 15 </span><span class="caption-text">Xilinx Vitis Specific Configuration Options</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<table class="docutils align-default" id="id3">
+<caption><span class="caption-number">Table 15 </span><span class="caption-text">Xilinx Vitis Specific Configuration Options</span><a class="headerlink" href="#id3" title="Link to this table"></a></caption>
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 50%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+<col style="width: 50.0%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Name</p></th>
@@ -303,32 +221,32 @@ The settings files follow the name convention:</p>
 <p>where <cite>KERNEL_NAME</cite> is the name of the target OpenCL kernel file.
 <cite>hbm</cite> or <cite>ddr</cite> is the type of used global memory.</p>
 <p>All the given options can be given to CMake over the <cite>-D</cite> flag.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake ../../RandomAccess -DFPGA_BOARD_NAME<span class="o">=</span>my_board -D...
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>../../RandomAccess<span class="w"> </span>-DFPGA_BOARD_NAME<span class="o">=</span>my_board<span class="w"> </span>-D...
 </pre></div>
 </div>
 <p>or after configuration using the UI with</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ccmake ../../RandomAccess
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ccmake<span class="w"> </span>../../RandomAccess
 </pre></div>
 </div>
 <p>After configuration, there are different build targets available to proceed with the build or development.
 They are shortly explained in the following.</p>
-</div>
-<div class="section" id="general-build-targets">
-<h2>General Build Targets<a class="headerlink" href="#general-build-targets" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="general-build-targets">
+<h2>General Build Targets<a class="headerlink" href="#general-build-targets" title="Link to this heading"></a></h2>
 <p>In general, all benchmarks offer similar build targets.
 In the following they are separated into targets for the host code and for the kernels.</p>
 <p>The host code can be build with the targets described in the table below.
 <cite>VENDOR</cite> is either <cite>intel</cite> or <cite>xilinx</cite> depending if the Intel SDK or Xilinx Vitis should be used.
 <cite>BENCHMARK</cite> is the host code name that is specific to the used benchmark.
 You can always get an overview of the available targets by executing the following command in the build directory:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make <span class="nb">help</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span><span class="nb">help</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default" id="id4">
-<caption><span class="caption-number">Table 16 </span><span class="caption-text">Host code build targets</span><a class="headerlink" href="#id4" title="Permalink to this table">¶</a></caption>
+<table class="docutils align-default" id="id4">
+<caption><span class="caption-number">Table 16 </span><span class="caption-text">Host code build targets</span><a class="headerlink" href="#id4" title="Link to this table"></a></caption>
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 75%" />
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Target</p></th>
@@ -344,13 +262,13 @@ You can always get an overview of the available targets by executing the followi
 </tr>
 </tbody>
 </table>
-<p>Moreover, there are additional targets to generate kernel reports and bitstreams.
-The kernel targets are:</p>
-<table class="colwidths-given docutils align-default" id="id5">
-<caption><span class="caption-number">Table 17 </span><span class="caption-text">Device code build targets</span><a class="headerlink" href="#id5" title="Permalink to this table">¶</a></caption>
+<p>Moreover, there are additional targets to generate device reports and bitstreams.</p>
+<p>The kernel targets are:</p>
+<table class="docutils align-default" id="id5">
+<caption><span class="caption-number">Table 17 </span><span class="caption-text">Device code build targets</span><a class="headerlink" href="#id5" title="Link to this table"></a></caption>
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 75%" />
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Target</p></th>
@@ -358,39 +276,40 @@ The kernel targets are:</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>BENCHMARK_VENDOR</p></td>
-<td><p>Synthesizes the kernel (takes several hours!)</p></td>
+<tr class="row-even"><td><p>BASENAME_{<a href="#id6"><span class="problematic" id="id7">COMM_</span></a>}VENDOR</p></td>
+<td><p>Synthesizes the device kernels (takes several hours!)</p></td>
 </tr>
-<tr class="row-odd"><td><p>BENCHMARK_report_VENDOR</p></td>
-<td><p>Just compile the kernel and create logs and reports</p></td>
+<tr class="row-odd"><td><p>BASENAME_{<a href="#id8"><span class="problematic" id="id9">COMM_</span></a>}report_VENDOR</p></td>
+<td><p>Just compile the kernels and create logs and reports</p></td>
 </tr>
-<tr class="row-even"><td><p>BENCHMARK_emulate_VENDOR</p></td>
-<td><p>Create an emulation kernel</p></td>
+<tr class="row-even"><td><p>BASENAME_{<a href="#id10"><span class="problematic" id="id11">COMM_</span></a>}emulate_VENDOR</p></td>
+<td><p>Creates the emulation kernels</p></td>
 </tr>
 </tbody>
 </table>
 <p><cite>VENDOR</cite> is either <cite>intel</cite> or <cite>xilinx</cite> depending if the Intel SDK or Xilinx Vitis should be used.
-<cite>BENCHMARK</cite> is the kernel name.
-A benchmark can provide multiple kernels and thus, these targets will be generated for every kernel file.</p>
-</div>
-<div class="section" id="configure-and-build-stream-for-a-fictional-xilinx-fpga">
-<h2>Configure and Build STREAM for a fictional Xilinx FPGA<a class="headerlink" href="#configure-and-build-stream-for-a-fictional-xilinx-fpga" title="Permalink to this headline">¶</a></h2>
+<cite>BASENAME</cite> is the name of the file containing the device code.
+A benchmark can provide multiple kernel implementations and thus, these targets will be generated for every file containing kernel code.
+For all benchmarks using communication between FPGAs the different communcation types are encoded into the device code file name and therefore part of target name. These are b_eff, PTRANS and LINPACK.</p>
+</section>
+<section id="configure-and-build-stream-for-a-fictional-xilinx-fpga">
+<h2>Configure and Build STREAM for a fictional Xilinx FPGA<a class="headerlink" href="#configure-and-build-stream-for-a-fictional-xilinx-fpga" title="Link to this heading"></a></h2>
 <p>We assume the code base is already checked out and we have opened a terminal in the root directory of the project.
 Also, all needed dependencies are installed on the system.
 To start the configuration, we first have to create a new build directory.
 We want to build the STREAM benchmark, so we create a new folder <cite>build/STREAM</cite> and change into this directory by calling:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir -p build/STREAM
-<span class="nb">cd</span> build/STREAM
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>-p<span class="w"> </span>build/STREAM
+<span class="nb">cd</span><span class="w"> </span>build/STREAM
 </pre></div>
 </div>
 <p>In the next step we can already configure the build.
 Therefore, we call CMake with the configuration parameters we explicitly want to set.
 A call could look like this:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake ../../STREAM -DNUM_REPLICATIONS<span class="o">=</span><span class="m">4</span> <span class="se">\</span>
-                    -DFPGA_BOARD_NAME<span class="o">=</span>fictional_fpga <span class="se">\</span>
-                    -DVECTOR_COUNT<span class="o">=</span><span class="m">16</span> -DGLOBAL_MEM_UNROLL<span class="o">=</span><span class="m">1</span> -DDATA_TYPE<span class="o">=</span>float <span class="se">\</span>
-                    -DXILINX_COMPILE_SETTINGS_FILE<span class="o">=</span>../../STREAM/settings/settings.compile.ini
-                    -DXILINX_LINK_SETTINGS_FILE<span class="o">=</span>../../STREAM/settings/settings.link.generator.ini
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>../../STREAM<span class="w"> </span>-DNUM_REPLICATIONS<span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<span class="w">                    </span>-DFPGA_BOARD_NAME<span class="o">=</span>fictional_fpga<span class="w"> </span><span class="se">\</span>
+<span class="w">                    </span>-DVECTOR_COUNT<span class="o">=</span><span class="m">16</span><span class="w"> </span>-DGLOBAL_MEM_UNROLL<span class="o">=</span><span class="m">1</span><span class="w"> </span>-DDATA_TYPE<span class="o">=</span>float<span class="w"> </span><span class="se">\</span>
+<span class="w">                    </span>-DXILINX_COMPILE_SETTINGS_FILE<span class="o">=</span>../../STREAM/settings/settings.compile.ini
+<span class="w">                    </span>-DXILINX_LINK_SETTINGS_FILE<span class="o">=</span>../../STREAM/settings/settings.link.generator.ini
 </pre></div>
 </div>
 <p>The number of kernel replications should be set to match the number of memory banks of the FPGA.
@@ -412,85 +331,60 @@ This allows to create a single link settings file for an arbitrary number of ker
 <p>After executing the command above, the actual build files will be created.
 Usually this will be Makefiles on Unix systems.
 You can then start building the host code, create a report for the kernel code with the current configuration or even synthesize the kernel by using the matching build targets that are explained in the README.</p>
-</div>
-<div class="section" id="using-pre-defined-configurations">
-<h2>Using pre-defined Configurations<a class="headerlink" href="#using-pre-defined-configurations" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="using-pre-defined-configurations">
+<h2>Using pre-defined Configurations<a class="headerlink" href="#using-pre-defined-configurations" title="Link to this heading"></a></h2>
 <p>Some benchmarks do also provide pre-defined configurations for a selection of FPGAs in the <cite>configs</cite> folder within their sources.
 The configurations are <cite>*.cmake</cite> files that overwrite the default configuration options.
 They can be used with CMake and the configuration option <cite>HPCC_FPGA_CONFIG</cite>.
 As an example:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake ../../STREAM -DHPCC_FPGA_CONFIG<span class="o">=</span>../../STREAM/configs/Nallatech_520N_SP.cmake
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>../../STREAM<span class="w"> </span>-DHPCC_FPGA_CONFIG<span class="o">=</span>../../STREAM/configs/Nallatech_520N_SP.cmake
 </pre></div>
 </div>
 <p>Will use the pre-defined configuration for a Nallatech 520N board.
 These configurations can also be used to document best practices in how to configure the benchmark for specific devices or architectures.
 Note, that this option will overwrite all other options that may be given during CMake configuration!
 To make changes on the configuration you need to unset the <cite>HPCC_FPGA_CONFIG</cite> variable by executing CMake as follows:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake ../../STREAM -UHPCC_FPGA_CONFIG
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>../../STREAM<span class="w"> </span>-UHPCC_FPGA_CONFIG
 </pre></div>
 </div>
 <p>After that, you can make additional changes to the build configuration.</p>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>
-           
           </div>
     <a href="https://github.com/pc2/hpcc_fpga">
         <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub">
     </a>
 
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="../Host Input Parameters/index.html" class="btn btn-neutral float-right" title="Execution of a Benchmark" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="../../b_eff/index.html" class="btn btn-neutral float-left" title="b_eff" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../../b_eff/index.html" class="btn btn-neutral float-left" title="b_eff" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../Host%20Input%20Parameters/index.html" class="btn btn-neutral float-right" title="Execution of a Benchmark" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        
-        &copy; Copyright 2020, Marius Meyer
-
-    </p>
+    <p>&#169; Copyright 2020, Marius Meyer.</p>
   </div>
-    
-    
-    
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
-    
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
-
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

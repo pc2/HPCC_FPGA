@@ -1,94 +1,49 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FFT FPGA Benchmark Results &mdash; HPCC FPGA Documentation  documentation</title>
-  
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=53b48696" />
 
   
-  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../../_static/css/custom.css" type="text/css" />
-
-  
-  
-  
-  
-
-  
-  <!--[if lt IE 9]>
-    <script src="../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/underscore.js"></script>
-        <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-    <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
-    
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="GEMM" href="../../GEMM/index.html" />
     <link rel="prev" title="FFT" href="../index.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
 
           
-            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
           
-
-          
+          <a href="../../index.html" class="icon icon-home">
+            HPCC FPGA Documentation
           </a>
-
-          
-            
-            
-              <div class="version">
-                0.4
-              </div>
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
-              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Benchmark Descriptions:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../STREAM/index.html">STREAM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../RandomAccess/index.html">RandomAccess</a></li>
@@ -98,14 +53,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../../LINPACK/index.html">LINPACK</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../b_eff/index.html">b_eff</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Technical Support:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Technical Support:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Basic Setup/index.html">Basic Build Setup</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Host Input Parameters/index.html">Execution of a Benchmark</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Project Structure/index.html">Structure of the Benchmark Suite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Basic%20Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Host%20Input%20Parameters/index.html">Execution of a Benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../technical_support/Project%20Structure/index.html">Structure of the Benchmark Suite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../technical_support/json_output/index.html">JSON Output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../technical_support/multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Benchmark Results:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">FFT FPGA Benchmark Results</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
@@ -113,207 +69,189 @@
 <li class="toctree-l1"><a class="reference internal" href="../../STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../../index.html">HPCC FPGA Documentation</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
-      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
-        
-          <li><a href="../index.html">FFT</a> &raquo;</li>
-        
-      <li>FFT FPGA Benchmark Results</li>
-    
-    
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">FFT</a></li>
+      <li class="breadcrumb-item active">FFT FPGA Benchmark Results</li>
       <li class="wy-breadcrumbs-aside">
-        
-            
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
 
            <div itemprop="articleBody">
-            
-  <div class="section" id="fft-fpga-benchmark-results">
-<h1>FFT FPGA Benchmark Results<a class="headerlink" href="#fft-fpga-benchmark-results" title="Permalink to this headline">¶</a></h1>
+             
+  <section id="fft-fpga-benchmark-results">
+<h1>FFT FPGA Benchmark Results<a class="headerlink" href="#fft-fpga-benchmark-results" title="Link to this heading"></a></h1>
 <p>The benchmark results are given divided by the used version of the benchmark, since internal changes in the benchmark code might lead to different performance results.
 All measurements were done with a data array of 2GB size.
 The measurements were executed 10 times and the best result is published.</p>
 <p>The results and the used configuration is given in <a class="reference internal" href="#tbl-fft-1-1-results"><span class="std std-numref">Table 6</span></a> and are also available as <a class="reference download internal" download="" href="../../_downloads/f0954410fafdc7564dbf55124bdd9dcc/fft-1-1.csv"><code class="xref download docutils literal notranslate"><span class="pre">CSV</span></code></a>.</p>
-<span id="tbl-fft-1-1-results"></span><table class="docutils align-default" id="id1">
-<caption><span class="caption-number">Table 6 </span><span class="caption-text">FFT FPGA Benchmark Results for version 1.1</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
-<colgroup>
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-</colgroup>
+<span id="tbl-fft-1-1-results"></span><table class="docutils align-default" id="id4">
+<caption><span class="caption-number">Table 6 </span><span class="caption-text">FFT FPGA Benchmark Results</span><a class="headerlink" href="#id4" title="Link to this table"></a></caption>
 <tbody>
-<tr class="row-odd"><th class="stub"><p>FPGA board</p></th>
+<tr class="row-odd"><th class="stub"><p>Version</p></th>
+<td><p>1.4</p></td>
+<td><p>1.1</p></td>
+<td><p>1.1</p></td>
+<td><p>1.1</p></td>
+<td><p>1.1</p></td>
+</tr>
+<tr class="row-even"><th class="stub"><p>FPGA board</p></th>
+<td><p>BittWare 520N</p></td>
 <td><p>BittWare 520N</p></td>
 <td><p>Alveo U280</p></td>
 <td><p>Alveo U280</p></td>
 <td><p>PAC D5005</p></td>
 </tr>
-<tr class="row-even"><th class="stub"><p>FPGA</p></th>
+<tr class="row-odd"><th class="stub"><p>FPGA</p></th>
+<td><p>Intel Stratix 10 GX2800</p></td>
 <td><p>Intel Stratix 10 GX2800</p></td>
 <td><p>Xilinx XCU280</p></td>
 <td><p>Xilinx XCU280</p></td>
 <td><p>Intel Stratix 10 SX</p></td>
 </tr>
-<tr class="row-odd"><th class="stub"><p>Memory Type</p></th>
+<tr class="row-even"><th class="stub"><p>Memory Type</p></th>
+<td><p>DDR</p></td>
 <td><p>DDR</p></td>
 <td><p>DDR</p></td>
 <td><p>HBM2</p></td>
 <td><p>SVM</p></td>
 </tr>
-<tr class="row-even"><th class="stub"><p>SDK</p></th>
+<tr class="row-odd"><th class="stub"><p>SDK</p></th>
+<td><p>21.2.0</p></td>
 <td><p>19.4.0</p></td>
 <td><p>2019.2</p></td>
 <td><p>2019.2</p></td>
 <td><p>19.4.0</p></td>
 </tr>
-<tr class="row-odd"><th class="stub"><p>BSP/Shell</p></th>
+<tr class="row-even"><th class="stub"><p>BSP/Shell</p></th>
+<td><p>20.4.0</p></td>
 <td><p>19.2.0_hpc</p></td>
 <td><p>2019.2.3</p></td>
 <td><p>2019.2.3</p></td>
 <td><p>18.1.2_svm</p></td>
 </tr>
-<tr class="row-even"><th class="stub"><p>CPU</p></th>
+<tr class="row-odd"><th class="stub"><p>CPU</p></th>
+<td><p>AMD EPYC Milan 7763</p></td>
 <td><p>Intel Xeon Gold 6148</p></td>
 <td><p>Intel Xeon Gold 6148</p></td>
 <td><p>Intel Xeon Gold 6148</p></td>
 <td><p>Intel Xeon Gold 6148</p></td>
 </tr>
-<tr class="row-odd"><th class="stub"><p>System</p></th>
-<td><p><a class="reference external" href="https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/">Noctua</a></p></td>
-<td></td>
-<td></td>
-<td></td>
+<tr class="row-even"><th class="stub"><p>System</p></th>
+<td><p><a class="reference external" href="https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944066/Noctua+2">Noctua 2</a></p></td>
+<td><p><a class="reference external" href="https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1">Noctua 1</a></p></td>
+<td><p><a class="reference external" href="https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1">Noctua 1</a></p></td>
+<td><p><a class="reference external" href="https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1">Noctua 1</a></p></td>
+<td><p><a class="reference external" href="https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1">Noctua 1</a></p></td>
 </tr>
-<tr class="row-even"><th class="stub"><p>LOG_FFT_SIZE</p></th>
+<tr class="row-odd"><th class="stub"><p>LOG_FFT_SIZE</p></th>
+<td><p>12</p></td>
 <td><p>17</p></td>
 <td><p>9</p></td>
 <td><p>5</p></td>
 <td><p>17</p></td>
 </tr>
-<tr class="row-odd"><th class="stub"><p>NUM_REPLICATIONS</p></th>
+<tr class="row-even"><th class="stub"><p>NUM_REPLICATIONS</p></th>
+<td><p>2</p></td>
 <td><p>2</p></td>
 <td><p>1</p></td>
 <td><p>15</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><th class="stub"><p>LUT</p></th>
+<tr class="row-odd"><th class="stub"><p>LUT</p></th>
+<td><p>280105</p></td>
 <td><p>276676</p></td>
 <td><p>83494</p></td>
 <td><p>602125</p></td>
 <td><p>192189</p></td>
 </tr>
-<tr class="row-odd"><th class="stub"><p>LUT percent</p></th>
+<tr class="row-even"><th class="stub"><p>LUT percent</p></th>
+<td><p>30</p></td>
 <td><p>36.0</p></td>
 <td><p>7.39</p></td>
 <td><p>54.13</p></td>
 <td><p>22.0</p></td>
 </tr>
-<tr class="row-even"><th class="stub"><p>Register</p></th>
+<tr class="row-odd"><th class="stub"><p>Register</p></th>
+<td><p>611446</p></td>
 <td><p>724790</p></td>
 <td><p>168150</p></td>
 <td><p>941404</p></td>
 <td><p>480285</p></td>
 </tr>
-<tr class="row-odd"><th class="stub"><p>Register percent</p></th>
+<tr class="row-even"><th class="stub"><p>Register percent</p></th>
+<td></td>
 <td><p>36.0</p></td>
 <td><p>7.19</p></td>
 <td><p>42.18</p></td>
 <td><p>22.0</p></td>
 </tr>
-<tr class="row-even"><th class="stub"><p>BRAM</p></th>
+<tr class="row-odd"><th class="stub"><p>BRAM</p></th>
+<td><p>1811</p></td>
 <td><p>4177</p></td>
 <td><p>39</p></td>
 <td><p>405</p></td>
 <td><p>2147</p></td>
 </tr>
-<tr class="row-odd"><th class="stub"><p>BRAM percent</p></th>
+<tr class="row-even"><th class="stub"><p>BRAM percent</p></th>
+<td><p>15</p></td>
 <td><p>36.0</p></td>
 <td><p>2.28</p></td>
 <td><p>22.35</p></td>
 <td><p>18.0</p></td>
 </tr>
-<tr class="row-even"><th class="stub"><p>DSP</p></th>
+<tr class="row-odd"><th class="stub"><p>DSP</p></th>
+<td><p>1560</p></td>
 <td><p>1414</p></td>
 <td><p>672</p></td>
 <td><p>5280</p></td>
 <td><p>707</p></td>
 </tr>
-<tr class="row-odd"><th class="stub"><p>DSP percent</p></th>
+<tr class="row-even"><th class="stub"><p>DSP percent</p></th>
+<td><p>27</p></td>
 <td><p>25.0</p></td>
 <td><p>7.46</p></td>
 <td><p>58.58</p></td>
 <td><p>12.0</p></td>
 </tr>
-<tr class="row-even"><th class="stub"><p>Frequency</p></th>
+<tr class="row-odd"><th class="stub"><p>Frequency</p></th>
+<td><p>402.41</p></td>
 <td><p>413.34</p></td>
 <td><p>248.00</p></td>
 <td><p>254.00</p></td>
 <td><p>348.00</p></td>
 </tr>
-<tr class="row-odd"><th class="stub"><p>GFLOPs</p></th>
+<tr class="row-even"><th class="stub"><p>GFLOPs</p></th>
+<td><p>239.598</p></td>
 <td><p>349.45</p></td>
 <td><p>78.26</p></td>
 <td><p>576.00</p></td>
 <td><p>119.66</p></td>
 </tr>
-<tr class="row-even"><th class="stub"><p>GBs</p></th>
+<tr class="row-odd"><th class="stub"><p>GBs</p></th>
+<td></td>
 <td><p>65.78</p></td>
 <td><p>27.83</p></td>
 <td><p>368.77</p></td>
 <td><p>22.54</p></td>
 </tr>
-<tr class="row-odd"><th class="stub"><p>Error</p></th>
+<tr class="row-even"><th class="stub"><p>Error</p></th>
+<td><p>3.00463e-1</p></td>
 <td><p>7.1e-1</p></td>
 <td><p>3.9e-1</p></td>
 <td><p>5.4e-1</p></td>
@@ -321,66 +259,41 @@ The measurements were executed 10 times and the best result is published.</p>
 </tr>
 </tbody>
 </table>
-</div>
+</section>
 
 
            </div>
-           
           </div>
     <a href="https://github.com/pc2/hpcc_fpga">
         <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub">
     </a>
 
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="../../GEMM/index.html" class="btn btn-neutral float-right" title="GEMM" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="../index.html" class="btn btn-neutral float-left" title="FFT" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="FFT" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../../GEMM/index.html" class="btn btn-neutral float-right" title="GEMM" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        
-        &copy; Copyright 2020, Marius Meyer
-
-    </p>
+    <p>&#169; Copyright 2020, Marius Meyer.</p>
   </div>
-    
-    
-    
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
-    
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
-
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

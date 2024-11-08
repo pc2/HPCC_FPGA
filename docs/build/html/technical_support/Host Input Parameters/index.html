@@ -1,94 +1,49 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Execution of a Benchmark &mdash; HPCC FPGA Documentation  documentation</title>
-  
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=53b48696" />
 
   
-  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../../_static/css/custom.css" type="text/css" />
-
-  
-  
-  
-  
-
-  
-  <!--[if lt IE 9]>
-    <script src="../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/underscore.js"></script>
-        <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-    <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
-    
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Structure of the Benchmark Suite" href="../Project Structure/index.html" />
-    <link rel="prev" title="Basic Build Setup" href="../Basic Setup/index.html" /> 
+    <link rel="next" title="Structure of the Benchmark Suite" href="../Project%20Structure/index.html" />
+    <link rel="prev" title="Basic Build Setup" href="../Basic%20Setup/index.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
 
           
-            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> HPCC FPGA Documentation
           
-
-          
+          <a href="../../index.html" class="icon icon-home">
+            HPCC FPGA Documentation
           </a>
-
-          
-            
-            
-              <div class="version">
-                0.4
-              </div>
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
-              <p class="caption"><span class="caption-text">Benchmark Descriptions:</span></p>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Benchmark Descriptions:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../STREAM/index.html">STREAM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../RandomAccess/index.html">RandomAccess</a></li>
@@ -98,14 +53,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../../LINPACK/index.html">LINPACK</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../b_eff/index.html">b_eff</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Technical Support:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Technical Support:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../Basic Setup/index.html">Basic Build Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Basic%20Setup/index.html">Basic Build Setup</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Execution of a Benchmark</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Project Structure/index.html">Structure of the Benchmark Suite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Project%20Structure/index.html">Structure of the Benchmark Suite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json_output/index.html">JSON Output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../multi_fpga/index.html">Multi-FPGA Benchmarking</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Benchmark Results:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Benchmark Results:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../FFT/results/index.html">FFT FPGA Benchmark Results</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../GEMM/results/index.html">GEMM FPGA Benchmark Results</a></li>
@@ -113,75 +69,37 @@
 <li class="toctree-l1"><a class="reference internal" href="../../STREAM/results/index.html">STREAM FPGA Benchmark Results</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../../index.html">HPCC FPGA Documentation</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
-      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
-        
-      <li>Execution of a Benchmark</li>
-    
-    
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Execution of a Benchmark</li>
       <li class="wy-breadcrumbs-aside">
-        
-            
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
 
            <div itemprop="articleBody">
-            
-  <div class="section" id="execution-of-a-benchmark">
-<h1>Execution of a Benchmark<a class="headerlink" href="#execution-of-a-benchmark" title="Permalink to this headline">¶</a></h1>
+             
+  <section id="execution-of-a-benchmark">
+<span id="execution"></span><h1>Execution of a Benchmark<a class="headerlink" href="#execution-of-a-benchmark" title="Link to this heading"></a></h1>
 <p>The host applications provided for every benchmark share the same code base. Thus, many input parameters are also shared between the benchmarks, which leads to a
 very similar handling.
 In this section, the input parameters that are shared between all benchmarks are explained in more detail.
 Input parameters (or options) can be appended to the host execution call like this:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>STREAM_FPGA_intel -f PATH <span class="o">[</span>...<span class="o">]</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>STREAM_FPGA_intel<span class="w"> </span>-f<span class="w"> </span>PATH<span class="w"> </span><span class="o">[</span>...<span class="o">]</span>
 </pre></div>
 </div>
 <dl class="simple">
@@ -197,8 +115,12 @@ be given explicitly. Otherwise, the host application will abort.</p>
 <dt><code class="docutils literal notranslate"><span class="pre">-n</span> <span class="pre">INT</span></code>:</dt><dd><p>The number of repetitions can be given with this parameter as a positive integer. The benchmark experiment will be repeated the given number of times. The benchmark will show
 the aggregated results for all runs, but only validate the output of the last run.</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">-i</span></code>:</dt><dd><p>Use <a class="reference external" href="https://www.intel.com/content/www/us/en/docs/programmable/683846/22-4/disabling-burst-interleaving-of-global.html">Intel memory interleaving</a>.</p>
+</dd>
 <dt><code class="docutils literal notranslate"><span class="pre">--platform</span> <span class="pre">INT</span></code>:</dt><dd><p>Also an integer. It can be used to specify the index of the OpenCL platform that should be used for execution. By default, it is set to -1. This will make the host code ask you
 to select a platform if multiple platforms are available. This option can become handy if you want to automize the execution of your benchmark.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--platform_str</span> <span class="pre">arg</span></code>:</dt><dd><p>A string which can be used to specify the wanted platform independent of the index. The exact platform name needs to be specified. When given, the value of the platform index specified by the flag above will be ignored.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">--device</span> <span class="pre">INT</span></code>:</dt><dd><p>Also an integer. It can be used to specify the index of the OpenCL device that should be used for execution. By default, it is set to -1. This will make the host code ask you
 to select a device if multiple devices are available. This option can become handy if you want to automize the execution of your benchmark.</p>
@@ -210,72 +132,51 @@ or different bitstreams with a varying number of kernel replications with the sa
 Please note, that the benchmark will always fail with this option since it assumes the validation failed, so it will return a non-zero exit code! For reported measurements, the validation has to be enabled and the host should return
 with an exit code 0.</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--comm-type</span> <span class="pre">COMM</span></code>:</dt><dd><p>This parameter chooses the communication strategy which will be used. Current Options are “IEC” for using the Intel External Channel, “PCIE” for using the host-to-host communicationa and “CPU” for calculating on the CPU.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--dump-json</span> <span class="pre">PATH</span></code>:</dt><dd><p>This parameters enables the dumping of the benchmark configuration, settings, timings and results in machine-readable json-format. The parameter describes the path of the json file, where the dump will go. If no parameter is given no dump will be created.</p>
+</dd>
 <dt><code class="docutils literal notranslate"><span class="pre">--test</span></code>:</dt><dd><p>This option will also skip the execution of the benchmark. It can be used to test different data generation schemes or the benchmark summary before the actual execution. Please note, that the
 host will exit with a non-zero exit code, because it will not be able to validate the output.</p>
 </dd>
 </dl>
 <p>Additionally, every benchmark will have several options to define the size and type of the used input data.
 These options vary between the benchmarks. An easy way to find out more about these options is to use the <code class="docutils literal notranslate"><span class="pre">-h</span></code> option with the host.</p>
-</div>
+</section>
 
 
            </div>
-           
           </div>
     <a href="https://github.com/pc2/hpcc_fpga">
         <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub">
     </a>
 
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="../Project Structure/index.html" class="btn btn-neutral float-right" title="Structure of the Benchmark Suite" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="../Basic Setup/index.html" class="btn btn-neutral float-left" title="Basic Build Setup" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../Basic%20Setup/index.html" class="btn btn-neutral float-left" title="Basic Build Setup" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../Project%20Structure/index.html" class="btn btn-neutral float-right" title="Structure of the Benchmark Suite" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        
-        &copy; Copyright 2020, Marius Meyer
-
-    </p>
+    <p>&#169; Copyright 2020, Marius Meyer.</p>
   </div>
-    
-    
-    
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
-    
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
-
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

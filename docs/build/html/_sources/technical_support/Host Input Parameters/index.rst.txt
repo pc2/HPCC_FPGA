@@ -1,3 +1,5 @@
+.. _execution:
+
 ========================
 Execution of a Benchmark
 ========================
@@ -26,9 +28,15 @@ Input parameters (or options) can be appended to the host execution call like th
     The number of repetitions can be given with this parameter as a positive integer. The benchmark experiment will be repeated the given number of times. The benchmark will show 
     the aggregated results for all runs, but only validate the output of the last run.
 
+``-i``:
+    Use `Intel memory interleaving <https://www.intel.com/content/www/us/en/docs/programmable/683846/22-4/disabling-burst-interleaving-of-global.html>`_.
+
 ``--platform INT``:
     Also an integer. It can be used to specify the index of the OpenCL platform that should be used for execution. By default, it is set to -1. This will make the host code ask you
     to select a platform if multiple platforms are available. This option can become handy if you want to automize the execution of your benchmark.
+
+``--platform_str arg``:
+    A string which can be used to specify the wanted platform independent of the index. The exact platform name needs to be specified. When given, the value of the platform index specified by the flag above will be ignored.
 
 ``--device INT``:
     Also an integer. It can be used to specify the index of the OpenCL device that should be used for execution. By default, it is set to -1. This will make the host code ask you
@@ -42,6 +50,12 @@ Input parameters (or options) can be appended to the host execution call like th
     In some cases, it may not be necessary to validate the result of the benchmark. For example, if different input parameters are tested, the input data is huge and validation takes a lot of time.
     Please note, that the benchmark will always fail with this option since it assumes the validation failed, so it will return a non-zero exit code! For reported measurements, the validation has to be enabled and the host should return
     with an exit code 0.
+
+``--comm-type COMM``:
+    This parameter chooses the communication strategy which will be used. Current Options are "IEC" for using the Intel External Channel, "PCIE" for using the host-to-host communicationa and "CPU" for calculating on the CPU.
+
+``--dump-json PATH``:
+    This parameters enables the dumping of the benchmark configuration, settings, timings and results in machine-readable json-format. The parameter describes the path of the json file, where the dump will go. If no parameter is given no dump will be created.
 
 ``--test``:
     This option will also skip the execution of the benchmark. It can be used to test different data generation schemes or the benchmark summary before the actual execution. Please note, that the 

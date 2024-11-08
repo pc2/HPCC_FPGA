@@ -1,7 +1,8 @@
 .. _fft:
-======
+
+====== 
 FFT
-======
+====== 
 
 This section contains all information related to the FFT benchmark.
 The benchmark executes a batched calculation of 1d FFTs on a single FPGA.

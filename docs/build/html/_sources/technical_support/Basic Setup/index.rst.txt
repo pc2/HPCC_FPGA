@@ -103,20 +103,22 @@ You can always get an overview of the available targets by executing the followi
     BENCHMARK_VENDOR, "Builds the host application "
     BENCHMARK_test_VENDOR, "Compile the tests and its dependencies "
 
-Moreover, there are additional targets to generate kernel reports and bitstreams.
+Moreover, there are additional targets to generate device reports and bitstreams.
+
 The kernel targets are:
  
 .. csv-table:: Device code build targets
    :header: "Target","Description"  
    :widths: 10, 30  
 
-    BENCHMARK_VENDOR            , Synthesizes the kernel (takes several hours!)  
-    BENCHMARK_report_VENDOR        , Just compile the kernel and create logs and reports 
-    BENCHMARK_emulate_VENDOR       , Create an emulation kernel                    
+    BASENAME_{COMM_}VENDOR            , Synthesizes the device kernels (takes several hours!)
+    BASENAME_{COMM_}report_VENDOR        , Just compile the kernels and create logs and reports
+    BASENAME_{COMM_}emulate_VENDOR       , Creates the emulation kernels
   
 `VENDOR` is either `intel` or `xilinx` depending if the Intel SDK or Xilinx Vitis should be used.
-`BENCHMARK` is the kernel name.
-A benchmark can provide multiple kernels and thus, these targets will be generated for every kernel file.
+`BASENAME` is the name of the file containing the device code.
+A benchmark can provide multiple kernel implementations and thus, these targets will be generated for every file containing kernel code.
+For all benchmarks using communication between FPGAs the different communcation types are encoded into the device code file name and therefore part of target name. These are b_eff, PTRANS and LINPACK.
 
 ------------------------------------------------------
 Configure and Build STREAM for a fictional Xilinx FPGA

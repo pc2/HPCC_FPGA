@@ -9,7 +9,7 @@ The measurements were executed 10 times and the best result is published.
 The results and the used configuration is given in :numref:`tbl_randomaccess_2_2_results` and are also available as :download:`CSV <randomaccess-2-2.csv>`.
 
 .. _tbl_randomaccess_2_2_results:
-.. csv-table:: RandomAccess FPGA Benchmark Results for version 2.2
+.. csv-table:: RandomAccess FPGA Benchmark Results
     :file: randomaccess-2-2.csv
     :stub-columns: 1
 
