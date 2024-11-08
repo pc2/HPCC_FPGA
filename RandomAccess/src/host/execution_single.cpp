@@ -30,8 +30,6 @@ SOFTWARE.
 #include <vector>
 
 /* External library headers */
-#include "CL/cl.hpp"
-
 #ifdef INTEL_FPGA
 #include "CL/cl_ext_intelfpga.h"
 #endif
@@ -42,8 +40,8 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::unique_ptr<random_access::RandomAccessExecutionTimings>
-    calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data, int mpi_rank, int mpi_size) {
+    std::map<std::string, std::vector<double>>
+    calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings, cl::Device, cl::Context, cl::Program> const& config, HOST_DATA_TYPE * data, int mpi_rank, int mpi_size) {
         // int used to check for OpenCL errors
         int err;
 
@@ -170,7 +168,7 @@ namespace bm_execution {
 #pragma omp barrier
 #pragma omp for nowait
                 for (int r = 0; r < config.programSettings->kernelReplications; r++) {
-                    compute_queue[r].enqueueTask(accesskernel[r]);
+                    compute_queue[r].enqueueNDRangeKernel(accesskernel[r], cl::NullRange, cl::NDRange(1));
                 }
 #pragma omp for
                 for (int r = 0; r < config.programSettings->kernelReplications; r++) {
@@ -206,7 +204,10 @@ namespace bm_execution {
 
         free(random_inits);
 
-        return std::unique_ptr<random_access::RandomAccessExecutionTimings>(new random_access::RandomAccessExecutionTimings{executionTimes});
-    }
+        std::map<std::string, std::vector<double>> timings;
 
+        timings["execution"] = executionTimes;
+
+        return timings;
+    }
 }  // namespace bm_execution

@@ -11,14 +11,20 @@ set(DEFAULT_LOOP_LENGTH_OFFSET 11 CACHE STRING "Offset that is used for the mess
 set(DEFAULT_LOOP_LENGTH_DECREASE 7 CACHE STRING "Number of steps that are used to decrease the number of repetitions to its minimum")
 set(NUM_REPLICATIONS 2 CACHE STRING "")
 
+set(HOST_EMULATION_REORDER No CACHE BOOL "Reorder the scheduling of FPGA kernels for Intel fast emulator since channels are only read once!")
+
+
 set(USE_MPI Yes)
 set(USE_DEPRECATED_HPP_HEADER No)
+
+set(COMMUNICATION_TYPE_SUPPORT_ENABLED Yes)
+
+if (USE_ACCL)
+    math(EXPR calculate_accl_buffer_size "2 ^ ${DEFAULT_MAX_MESSAGE_SIZE} * 4")
+    set(ACCL_BUFFER_SIZE ${calculate_accl_buffer_size} CACHE STRING "Size of ACCL buffers in bytes")
+endif()
 
 set(DATA_TYPE char)
 include(${CMAKE_SOURCE_DIR}/../cmake/general_benchmark_build_setup.cmake)
 unset(DATA_TYPE CACHE)
 find_package(MPI REQUIRED)
-
-if (NOT INTELFPGAOPENCL_FOUND)
-    message(ERROR "Benchmark does only support the Intel OpenCL SDK")
-endif()

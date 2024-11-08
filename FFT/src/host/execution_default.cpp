@@ -29,7 +29,6 @@ SOFTWARE.
 #include <chrono>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #ifdef INTEL_FPGA
 #ifdef USE_HBM
 // CL_HETEROGENEOUS_INTELFPGA is defined here 
@@ -45,7 +44,7 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::unique_ptr<fft::FFTExecutionTimings>
+    std::map<std::string, std::vector<double>>
     calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const&  config,
             std::complex<HOST_DATA_TYPE>* data,
             std::complex<HOST_DATA_TYPE>* data_out,
@@ -177,10 +176,10 @@ namespace bm_execution {
         for (uint r =0; r < config.programSettings->numRepetitions; r++) {
             auto startCalculation = std::chrono::high_resolution_clock::now();
             for (int r=0; r < config.programSettings->kernelReplications; r++) {
-                fetchQueues[r].enqueueTask(fetchKernels[r]);
-                fftQueues[r].enqueueTask(fftKernels[r]);
+                fetchQueues[r].enqueueNDRangeKernel(fetchKernels[r], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
+                fftQueues[r].enqueueNDRangeKernel(fftKernels[r], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
         #ifdef XILINX_FPGA
-                storeQueues[r].enqueueTask(storeKernels[r]);
+                storeQueues[r].enqueueNDRangeKernel(storeKernels[r], cl::NullRange, cl::NDRange(1), cl::NDRange(1));
         #endif
             }
             for (int r=0; r < config.programSettings->kernelReplications; r++) {
@@ -211,10 +210,11 @@ namespace bm_execution {
                 ASSERT_CL(err)
 #endif
         }
-        std::unique_ptr<fft::FFTExecutionTimings> result(new fft::FFTExecutionTimings{
-                calculationTimings
-        });
-        return result;
+        std::map<std::string, std::vector<double>> timings;
+
+        timings["execution"] = calculationTimings;
+
+        return timings;
     }
 
 }  // namespace bm_execution

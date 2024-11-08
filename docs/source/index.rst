@@ -25,6 +25,17 @@ The pages collected under **Benchmark Descriptions** contain information about t
 **Technical Support** tackles selected topics of configuration, build, and execution of the benchmarks.
 **Benchmark Results** for the base implementations of the benchmarks are listed at the bottom of this page. They are reported together with the used CPU and other relevant infrastructure, as well as the configuration and resource utilization of the bitstreams.
 
+The scalability and performance of applications executed over multiple FPGAs is not least dependent on the communication capabilities of these devices. The benchmark suite supports the implementation of different communication strategies to compare their impact on the overall benchmark performance. This is only available to the benchmarks which rely on communication: b_eff, PTRANS and LINPACK.
+
+The first and most obvious strategy is host-to-host communication using PCIe and MPI. This strategy requires, in most cases, no additional hardware or software and only relies on moving data between the host and FPGA.
+The data is then exchanged via the existing CPU network, which makes it broadly appliable in the HPC context.
+As a consequence, this approach is used for the base implementations in this benchmark suite.
+For comparison, the suite can be extended with different communication types. 
+Intel is providing external channels for direct communication between the FPGAs. 
+This approach is based on point-to-point connections between FPGA and requires manual routing of data through the network.
+
+Further optimized implementations that use such device-specific communication approaches will be added in the future to the suite.
+
 
 
 .. toctree::
@@ -53,7 +64,12 @@ The pages collected under **Benchmark Descriptions** contain information about t
    :glob:
 
    */results/index
-
+   
+.. toctree::
+   :maxdepth: 1
+   :caption: Benchmark Results:
+   :glob:
+   
    
 ----------
 References

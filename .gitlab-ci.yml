@@ -1,6 +1,99 @@
 stages:
-    - build
-    - test
+  - check
+  - build
+  - test
+
+variables:
+  SCHEDULER_PARAMETERS: "-A pc2-mitarbeiter -p normal -q cont -t 00:30:00 -n 2 -N 1"
+
+default:
+  tags:
+    - jacamar
+  before_script:
+    - module load fpga/intel/opencl_sdk/21.2.0 fpga/bittware/520n/20.4.0_max toolchain/foss/2021a devel/CMake/3.20.1-GCCcore-10.3.0 lang/Python/3.9.5-GCCcore-10.3.0
+    - python -m pip install -r scripts/evaluation/requirements.txt
+    - python -m pip install -r scripts/code_generator/requirements.txt
+
+###
+#
+# Build documentation
+#
+###
+
+build:docs:
+  stage: build
+  script:
+    - python -m pip install -r docs/requirements.txt
+    - module load devel/Doxygen/1.9.1-GCCcore-10.3.0
+    - cd docs
+    - make html
+    - doxygen doxy.config
+  only:
+    changes:
+      - docs/**/*
+      - .gitlab-ci.yml
+  artifacts:
+    paths:
+      - docs/build
+      - docs/xml
+
+###
+#
+# Check formatting of all benchmarks
+#
+###
+
+.check: &check
+  stage: check
+  script:
+    - module load compiler/Clang/13.0.1-GCCcore-11.2.0
+    - find $BENCHMARK_FOLDER -regex '.*\.\(cpp\|hpp\|cc\|cxx\|h\)' -exec clang-format -style=file -i {} \;
+    - git diff | cat
+    ## do not test for real yet
+    #- test -z "$(git status --porcelain)"
+
+  only:
+    changes:
+      - $BENCHMARK_FOLDER/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+
+check:STREAM:
+  <<: *check
+  variables:
+    BENCHMARK_FOLDER: STREAM
+
+check:RandomAccess:
+  <<: *check
+  variables:
+    BENCHMARK_FOLDER: RandomAccess
+
+check:PTRANS:
+  <<: *check
+  variables:
+    BENCHMARK_FOLDER: PTRANS
+
+check:LINPACK:
+  <<: *check
+  variables:
+    BENCHMARK_FOLDER: LINPACK
+
+check:GEMM:
+  <<: *check
+  variables:
+    BENCHMARK_FOLDER: GEMM
+
+check:FFT:
+  <<: *check
+  variables:
+    BENCHMARK_FOLDER: FFT
+
+check:b_eff:
+  <<: *check
+  variables:
+    BENCHMARK_FOLDER: b_eff
 
 ###
 #
@@ -8,191 +101,139 @@ stages:
 #
 ###
 
-build:STREAM:
+.build: &build
   stage: build
   script:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - cmake ../$BENCHMARK_FOLDER -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 $BENCHMARK_OPTIONS
     - make -j 40 all
   artifacts:
     paths:
-      - build/bin/stream_kernels_single_emulate.aocx
-      - build/bin/stream_kernels_emulate.aocx
-      - build/bin/STREAM_FPGA_intel
-      - build/bin/STREAM_FPGA_test_intel
+      - build/bin/*
   only:
     changes:
-      - STREAM/**/*
+      - $BENCHMARK_FOLDER/**/*
       - shared/**/*
       - scripts/**/*
       - cmake/**/*
-      
-      
-build:RandomAccess:
-  stage: build
-  script:
-    - rm -rf build
-    - mkdir -p build
-    - cd build
-    - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make -j 40 all
-  artifacts:
-    paths:
-      - build/bin/random_access_kernels_single_emulate.aocx
-      - build/bin/RandomAccess_intel
-      - build/bin/RandomAccess_test_intel
-  only:
-    changes:
-      - RandomAccess/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
+      - .gitlab-ci.yml
 
+build:STREAM:
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: STREAM
+  dependencies:
+    - check:STREAM
+  needs: ["check:STREAM"]
+
+build:STREAM_HP:
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: STREAM
+    BENCHMARK_OPTIONS: -DDATA_TYPE=half -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=32
+  dependencies:
+    - check:STREAM
+  needs: ["check:STREAM"]
+
+build:STREAM_DP:
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: STREAM
+    BENCHMARK_OPTIONS: -DDATA_TYPE=double -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=8
+  dependencies:
+    - check:STREAM
+  needs: ["check:STREAM"]
+
+build:RandomAccess:
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: RandomAccess
+  dependencies:
+    - check:RandomAccess
+  needs: ["check:RandomAccess"]
 
 build:PTRANS:
-  stage: build
-  script:
-    - rm -rf build
-    - mkdir -p build
-    - cd build
-    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make -j 40 all
-  artifacts:
-    paths:
-      - build/bin/transpose_diagonal_emulate.aocx
-      - build/bin/transpose_diagonal_c2_emulate.aocx
-      - build/bin/Transpose_intel
-      - build/bin/Transpose_test_intel
-  only:
-    changes:
-      - PTRANS/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: PTRANS
+    BENCHMARK_OPTIONS: -DHOST_EMULATION_REORDER=Yes
+  dependencies:
+    - check:PTRANS
+  needs: ["check:PTRANS"]
 
 build:LINPACK:
-  stage: build
-  script:
-    - rm -rf build
-    - mkdir -p build
-    - cd build
-    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
-    - make -j 40 all
-  artifacts:
-    paths:
-      - build/bin/hpl_torus_emulate.aocx
-      - build/bin/Linpack_intel
-      - build/bin/Linpack_test_intel
-  only:
-    changes:
-      - LINPACK/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: LINPACK
+    BENCHMARK_OPTIONS: -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
+  dependencies:
+    - check:LINPACK
+  needs: ["check:LINPACK"]
+
+build:LINPACK_DP:
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: LINPACK
+    BENCHMARK_OPTIONS: -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3 -DDATA_TYPE=double
+  dependencies:
+    - check:LINPACK
+  needs: ["check:LINPACK"]
 
 build:GEMM:
-  stage: build
-  script:
-    - rm -rf build
-    - mkdir -p build
-    - cd build
-    - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
-    - make -j 40 all
-  artifacts:
-    paths:
-      - build/bin/gemm_base_emulate.aocx
-      - build/bin/GEMM_intel
-      - build/bin/GEMM_test_intel
-  only:
-    changes:
-      - GEMM/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: GEMM
+    BENCHMARK_OPTIONS: -DBLOCK_SIZE=32
+  dependencies:
+    - check:GEMM
+  needs: ["check:GEMM"]
 
 build:GEMM_HP_REP2:
-  stage: build
-  script:
-    - rm -rf build
-    - mkdir -p build
-    - cd build
-    - cmake ../GEMM -DDATA_TYPE=half -DNUM_REPLICATIONS=2 -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
-    - make -j 40 all
-  artifacts:
-    paths:
-      - build/bin/gemm_base_emulate.aocx
-      - build/bin/GEMM_intel
-      - build/bin/GEMM_test_intel
-  only:
-    changes:
-      - GEMM/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: GEMM
+    BENCHMARK_OPTIONS: -DDATA_TYPE=half -DNUM_REPLICATIONS=2 -DBLOCK_SIZE=32
+  dependencies:
+    - check:GEMM
+  needs: ["check:GEMM"]
+  allow_failure: true
+
+build:GEMM_DP_REP2:
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: GEMM
+    BENCHMARK_OPTIONS: -DDATA_TYPE=double -DNUM_REPLICATIONS=2 -DBLOCK_SIZE=32
+  dependencies:
+    - check:GEMM
+  needs: ["check:GEMM"]
 
 build:FFT:
-  stage: build
-  script:
-    - rm -rf build
-    - mkdir -p build
-    - cd build
-    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make -j 40 all
-  artifacts:
-    paths:
-      - build/bin/fft1d_float_8_emulate.aocx
-      - build/bin/FFT_intel
-      - build/bin/FFT_test_intel
-  only:
-    changes:
-      - FFT/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: FFT
+  dependencies:
+    - check:FFT
+  needs: ["check:FFT"]
 
 build:FFT_small:
-  stage: build
-  script:
-    - rm -rf build
-    - mkdir -p build
-    - cd build
-    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
-    - make -j 40 all
-  artifacts:
-    paths:
-      - build/bin/fft1d_float_8_emulate.aocx
-      - build/bin/FFT_intel
-      - build/bin/FFT_test_intel
-  only:
-    changes:
-      - FFT/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: FFT
+    BENCHMARK_OPTIONS: -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
+  dependencies:
+    - check:FFT
+  needs: ["check:FFT"]
 
 build:b_eff:
-  stage: build
-  script:
-    - rm -rf build
-    - mkdir -p build
-    - cd build
-    - cmake ../b_eff -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make -j 40 all
-  artifacts:
-    paths:
-      - build/bin/communication_bw520n_emulate.aocx
-      - build/bin/communication_bw520n_combined_loops_emulate.aocx
-      - build/bin/communication_bw520n_disable_pipelining_emulate.aocx
-      - build/bin/Network_intel
-      - build/bin/Network_test_intel
-  only:
-    changes:
-      - b_eff/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
+  <<: *build
+  variables:
+    BENCHMARK_FOLDER: b_eff
+    BENCHMARK_OPTIONS: -DHOST_EMULATION_REORDER=Yes
+  dependencies:
+    - check:b_eff
+  needs: ["check:b_eff"]
 
 ###
 #
@@ -200,204 +241,141 @@ build:b_eff:
 #
 ###
 
-test:STREAM:
+.test: &test
   stage: test
   script:
+    - mkdir -p build
     - cd build
-    - cmake ../STREAM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+    - cmake ../$BENCHMARK_FOLDER $BENCHMARK_OPTIONS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
+    - make all -j41
+    - $PREPARE_SCRIPT
+    - make CTEST_OUTPUT_ON_FAILURE=1 test
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/Temporary/LastTest.log
+  only:
+    changes:
+      - $BENCHMARK_FOLDER/**/*
+      - shared/**/*
+      - scripts/**/*
+      - cmake/**/*
+      - .gitlab-ci.yml
+
+test:STREAM:
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: STREAM
   dependencies:
     - build:STREAM
-  artifacts:
-    when: on_failure
-    paths:
-      - build/Testing/Temporary/LastTest.log
-  only:
-    changes:
-      - STREAM/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
   needs: ["build:STREAM"]
-    
+
+test:STREAM_HP:
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: STREAM
+    BENCHMARK_OPTIONS: -DDATA_TYPE=half -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=32
+  dependencies:
+    - build:STREAM_HP
+  needs: ["build:STREAM_HP"]
+  allow_failure: true
+
+test:STREAM_DP:
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: STREAM
+    BENCHMARK_OPTIONS: -DDATA_TYPE=double -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=8
+  dependencies:
+    - build:STREAM_DP
+  needs: ["build:STREAM_DP"]
+
 test:RandomAccess:
-  stage: test
-  script:
-    - cd build
-    - cmake ../RandomAccess -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: RandomAccess
   dependencies:
     - build:RandomAccess
-  artifacts:
-    when: on_failure
-    paths:
-      - build/Testing/Temporary/LastTest.log
-  only:
-    changes:
-      - RandomAccess/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
   needs: ["build:RandomAccess"]
 
 test:PTRANS:
-  stage: test
-  script:
-    - cd build
-    - cmake ../PTRANS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - cd bin
-    - touch kernel_output_ch0
-    - touch kernel_output_ch1
-    - touch kernel_output_ch2
-    - touch kernel_output_ch3
-    - ln -s kernel_output_ch0 kernel_input_ch1
-    - ln -s kernel_output_ch2 kernel_input_ch3
-    - ln -s kernel_output_ch1 kernel_input_ch0
-    - ln -s kernel_output_ch3 kernel_input_ch2
-    - cd ..
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: PTRANS
+    BENCHMARK_OPTIONS: -DHOST_EMULATION_REORDER=Yes
+    PREPARE_SCRIPT: ../$BENCHMARK_FOLDER/scripts/prepare_tests.sh ./bin
   dependencies:
     - build:PTRANS
-  artifacts:
-    when: on_failure
-    paths:
-      - build/Testing/Temporary/LastTest.log
-  only:
-    changes:
-      - PTRANS/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
   needs: ["build:PTRANS"]
 
 test:LINPACK:
-  stage: test
-  script:
-    - cd build
-    - cmake ../LINPACK -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0  -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: LINPACK
+    BENCHMARK_OPTIONS: -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
   dependencies:
     - build:LINPACK
-  artifacts:
-    when: on_failure
-    paths:
-      - build/Testing/Temporary/LastTest.log
-  only:
-    changes:
-      - LINPACK/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
   needs: ["build:LINPACK"]
 
+test:LINPACK_DP:
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: LINPACK
+    BENCHMARK_OPTIONS: -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3 -DDATA_TYPE=double
+  dependencies:
+    - build:LINPACK_DP
+  needs: ["build:LINPACK_DP"]
+
 test:GEMM:
-  stage: test
-  script:
-    - cd build
-    - cmake ../GEMM -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: GEMM
+    BENCHMARK_OPTIONS: -DBLOCK_SIZE=32
   dependencies:
     - build:GEMM
-  artifacts:
-    when: on_failure
-    paths:
-      - build/Testing/Temporary/LastTest.log
-  only:
-    changes:
-      - GEMM/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
   needs: ["build:GEMM"]
 
 test:GEMM_HP_REP2:
-  stage: test
-  script:
-    - cd build
-    - cmake ../GEMM -DNUM_REPLICATIONS=2 -DATA_TYPE=half -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DBLOCK_SIZE=32
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: GEMM
+    BENCHMARK_OPTIONS: -DDATA_TYPE=half -DNUM_REPLICATIONS=2 -DBLOCK_SIZE=32
   dependencies:
     - build:GEMM_HP_REP2
-  artifacts:
-    when: on_failure
-    paths:
-      - build/Testing/Temporary/LastTest.log
-  only:
-    changes:
-      - GEMM/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
   needs: ["build:GEMM_HP_REP2"]
+  allow_failure: true
+
+test:GEMM_DP_REP2:
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: GEMM
+    BENCHMARK_OPTIONS: -DDATA_TYPE=double -DNUM_REPLICATIONS=2 -DBLOCK_SIZE=32
+  dependencies:
+    - build:GEMM_DP_REP2
+  needs: ["build:GEMM_DP_REP2"]
 
 test:FFT:
-  stage: test
-  script:
-    - cd build
-    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: FFT
   dependencies:
     - build:FFT
-  artifacts:
-    when: on_failure
-    paths:
-      - build/Testing/Temporary/LastTest.log
-  only:
-    changes:
-      - FFT/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
   needs: ["build:FFT"]
 
 test:FFT_small:
-  stage: test
-  script:
-    - cd build
-    - cmake ../FFT -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: FFT
+    BENCHMARK_OPTIONS: -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
   dependencies:
     - build:FFT_small
-  artifacts:
-    when: on_failure
-    paths:
-      - build/Testing/Temporary/LastTest.log
-  only:
-    changes:
-      - FFT/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
   needs: ["build:FFT_small"]
 
 test:b_eff:
-  stage: test
-  script:
-    - cd build
-    - cmake ../b_eff -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - cd bin
-    - touch kernel_output_ch0
-    - touch kernel_output_ch1
-    - touch kernel_output_ch2
-    - touch kernel_output_ch3
-    - ln -s kernel_output_ch0 kernel_input_ch1
-    - ln -s kernel_output_ch2 kernel_input_ch3
-    - ln -s kernel_output_ch1 kernel_input_ch0
-    - ln -s kernel_output_ch3 kernel_input_ch2
-    - cd ..
-    - make CL_CONTEXT_EMULATOR_DEVICE_INTELFPGA=1 CTEST_OUTPUT_ON_FAILURE=1 test
+  <<: *test
+  variables:
+    BENCHMARK_FOLDER: b_eff
+    BENCHMARK_OPTIONS: -DHOST_EMULATION_REORDER=Yes
+    PREPARE_SCRIPT: ../$BENCHMARK_FOLDER/scripts/prepare_tests.sh ./bin
   dependencies:
     - build:b_eff
-  artifacts:
-    when: on_failure
-    paths:
-      - build/Testing/Temporary/LastTest.log
-  only:
-    changes:
-      - b_eff/**/*
-      - shared/**/*
-      - scripts/**/*
-      - cmake/**/*
   needs: ["build:b_eff"]
-
-

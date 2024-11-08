@@ -51,12 +51,6 @@ public:
     size_t dataSize;
 
     /**
-     * @brief The number of used kernel replications
-     * 
-     */
-    uint kernelReplications;
-
-    /**
      * @brief Number of random number generators that are used per kernel replication
      * 
      */
@@ -115,24 +109,10 @@ public:
 };
 
 /**
- * @brief Measured execution timing from the kernel execution
- * 
- */
-class RandomAccessExecutionTimings {
-public:
-    /**
-     * @brief A vector containing the timings for all repetitions
-     * 
-     */
-    std::vector<double> times;
-
-};
-
-/**
  * @brief Implementation of the random access benchmark
  * 
  */
-class RandomAccessBenchmark : public hpcc_base::HpccFpgaBenchmark<RandomAccessProgramSettings, RandomAccessData, RandomAccessExecutionTimings> {
+class RandomAccessBenchmark : public hpcc_base::HpccFpgaBenchmark<RandomAccessProgramSettings, cl::Device, cl::Context, cl::Program, RandomAccessData> {
 
 protected:
 
@@ -158,9 +138,8 @@ public:
      * @brief RandomAccess specific implementation of the kernel execution
      * 
      * @param data The benchmark input and output data
-     * @return std::unique_ptr<RandomAccessExecutionTimings> 
      */
-    std::unique_ptr<RandomAccessExecutionTimings>
+    void
     executeKernel(RandomAccessData &data) override;
 
     /**
@@ -171,7 +150,14 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(RandomAccessData &data) override;
+    validateOutput(RandomAccessData &data) override;
+
+    /**
+     * @brief RandomAccess specific implementation of the error printing
+     *
+     */
+    void
+    printError() override;
 
     /**
      * @brief RandomAccess specific implementation of printing the execution results
@@ -179,7 +165,10 @@ public:
      * @param output The measurement values that are generated yb the kernel execution
      */
     void
-    collectAndPrintResults(const RandomAccessExecutionTimings &output) override;
+    collectResults() override;
+
+    void
+    printResults() override;
 
     /**
      * @brief Check the given bencmark configuration and its validity

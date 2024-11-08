@@ -23,11 +23,7 @@ SOFTWARE.
 #define SHARED_HPCC_BENCHMARK_HPP_
 
 #include <memory>
-
-/* Project's headers */
-#include "setup/fpga_setup.hpp"
-#include "cxxopts.hpp"
-#include "parameters.h"
+#include <iostream>
 
 /* External library headers */
 #ifdef USE_DEPRECATED_HPP_HEADER
@@ -35,16 +31,32 @@ SOFTWARE.
 #else
 #include OPENCL_HPP_HEADER
 #endif
-
 #ifdef _USE_MPI_
 #include "mpi.h"
 #endif
 
+/* Project's headers */
+#ifdef USE_ACCL
+#include "setup/fpga_setup_accl.hpp"
+#endif
+#ifdef USE_XRT_HOST
+#include "setup/fpga_setup_xrt.hpp"
+#endif
+#include "setup/fpga_setup.hpp"
+#include "cxxopts.hpp"
+#include "nlohmann/json.hpp"
+#include "parameters.h"
+#include "communication_types.hpp"
+#include "hpcc_settings.hpp"
 
 #define STR_EXPAND(tok) #tok
 #define STR(tok) STR_EXPAND(tok)
 
-#define ENTRY_SPACE 15
+#define VALUE_SPACE 11
+#define UNIT_SPACE 8
+#define ENTRY_SPACE (VALUE_SPACE + UNIT_SPACE + 1)
+
+using json = nlohmann::json;
 
 /**
  * @brief Contains all classes and functions that are used as basis
@@ -53,171 +65,24 @@ SOFTWARE.
  */
 namespace hpcc_base {
 
-/**
- * @brief This class should be derived and extended for every benchmark.
- *          It is a pure data object containing the benchmark settings that are
- *          used to execute the benchmark kernel.
- *       
- */
-class BaseSettings {
-
+class HpccResult {
 public:
+    double value;
+    std::string unit;
 
-    /**
-     * @brief Number of times the kernel execution will be repeated
-     * 
-     */
-    uint numRepetitions;
-
-    /**
-     * @brief Boolean showing if memory interleaving is used that is 
-     *          triggered from the host side (Intel specific)
-     * 
-     */
-    bool useMemoryInterleaving;
-
-    /**
-     * @brief Boolean showing if the output data of the benchmark kernel
-     *          should be validated or not
-     * 
-     */
-    bool skipValidation;
-
-    /**
-     * @brief The default platform that should be used for execution. 
-     *          A number representing the index in the list of available platforms
-     * 
-     */
-    int defaultPlatform;
-
-    /**
-     * @brief The default device that should be used for execution. 
-     *          A number representing the index in the list of available devices
-     * 
-     */
-    int defaultDevice;
-
-    /**
-     * @brief Path to the kernel file that is used for execution
-     * 
-     */
-    std::string kernelFileName;
-
-    /**
-     * @brief Number of times the kernel is replicated
-     * 
-     */
-    uint kernelReplications;
-
-    /**
-     * @brief Only test the given configuration. Do not execute the benchmarks
-     * 
-     */
-    bool testOnly;
-
-    /**
-     * @brief Construct a new Base Settings object
-     * 
-     * @param results The resulting map from parsing the program input parameters
-     */
-    BaseSettings(cxxopts::ParseResult &results) : numRepetitions(results["n"].as<uint>()),
-#ifdef INTEL_FPGA
-            useMemoryInterleaving(static_cast<bool>(results.count("i"))), 
-#else
-            useMemoryInterleaving(true),
-#endif
-            skipValidation(static_cast<bool>(results.count("skip-validation"))), 
-            defaultPlatform(results["platform"].as<int>()),
-            defaultDevice(results["device"].as<int>()),
-            kernelFileName(results["f"].as<std::string>()),
-#ifdef NUM_REPLICATIONS
-            kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : NUM_REPLICATIONS),
-#else
-            kernelReplications(results.count("r") > 0 ? results["r"].as<uint>() : 1),
-#endif
-            testOnly(static_cast<bool>(results.count("test"))) {}
-
-    /**
-     * @brief Get a map of the settings. This map will be used to print the final configuration.
-     *          Derived classes should override it to add additional configuration options
-     * 
-     * @return std::map<std::string,std::string> 
-     */
-    virtual std::map<std::string,std::string> getSettingsMap() {
-    int mpi_size = 0;
-#ifdef _USE_MPI_
-     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-#endif
-    std::string str_mpi_ranks = "None";
-    if (mpi_size > 0) {
-        str_mpi_ranks = std::to_string(mpi_size);
-    }
-        return {{"Repetitions", std::to_string(numRepetitions)}, {"Kernel Replications", std::to_string(kernelReplications)}, 
-                {"Kernel File", kernelFileName}, {"MPI Ranks", str_mpi_ranks}, {"Test Mode", std::to_string(testOnly)}};
+    HpccResult(double value, std::string unit): value(value), unit(unit) {}
+    
+    friend std::ostream &operator<<(std::ostream &os, const HpccResult &result) {
+        os << std::setw(VALUE_SPACE) << result.value << " " << std::left << std::setw(UNIT_SPACE) << result.unit << std::right;
+        return os;
     }
 
-};
-
-
-/**
- * @brief Settings class that is containing the program settings together with
- *          additional information about the OpenCL runtime
- * 
- * @tparam TSettings The program settings class that should be used (Must derive from BaseSettings)
- */
-template <class TSettings>
-class ExecutionSettings {
-public:
-
-    /**
-     * @brief Pointer to the additional program settings
-     * 
-     */
-    std::unique_ptr<TSettings> programSettings;
-
-    /**
-     * @brief The OpenCL device that should be used for execution
-     * 
-     */
-    std::unique_ptr<cl::Device> device;
-
-    /**
-     * @brief The OpenCL context that should be used for execution
-     * 
-     */
-    std::unique_ptr<cl::Context> context;
-
-    /**
-     * @brief The OpenCL program that contains the benchmark kernel
-     * 
-     */
-    std::unique_ptr<cl::Program> program;
-
-    /**
-     * @brief Construct a new Execution Settings object
-     * 
-     * @param programSettings_ Pointer to an existing program settings object that is derived from BaseSettings
-     * @param device_ Used OpenCL device
-     * @param context_ Used OpenCL context
-     * @param program_ Used OpenCL program
-     */
-    ExecutionSettings(std::unique_ptr<TSettings> programSettings_, std::unique_ptr<cl::Device> device_, 
-                        std::unique_ptr<cl::Context> context_, std::unique_ptr<cl::Program> program_): 
-                                    programSettings(std::move(programSettings_)), device(std::move(device_)), 
-                                    context(std::move(context_)), program(std::move(program_)) {}
-
-    /**
-     * @brief Destroy the Execution Settings object. Used to specify the order the contained objects are destroyed 
-     *         to prevent segmentation faults during exit.
-     * 
-     */
-    ~ExecutionSettings() {
-        program = nullptr;
-        context = nullptr;
-        device = nullptr;
-        programSettings = nullptr;
+    std::string to_string() const {
+        std::ostringstream oss;
+        oss << *this;
+        return oss.str();
     }
-
+    // TODO: to_json function
 };
 
 /**
@@ -227,7 +92,8 @@ public:
  * @tparam TData Class used to represent the benchmark input and output data
  * @tparam TOutput Class representing the measurements like timings etc
  */
-template <class TSettings, class TData, class TOutput>
+template <typename TSettings, class TDevice, class TContext, class TProgram, class TData, typename =
+typename std::enable_if<std::is_base_of<BaseSettings, TSettings>::value>::type>
 class HpccFpgaBenchmark {
 
 private:
@@ -247,7 +113,7 @@ protected:
      *        It should be laos used by all other methods to read the current benchmark settings.
      * 
      */
-    std::unique_ptr<ExecutionSettings<TSettings>> executionSettings;
+    std::unique_ptr<ExecutionSettings<TSettings, TDevice, TContext, TProgram>> executionSettings;
 
     /**
      * @brief Add additional options to the program parameter parser
@@ -276,6 +142,34 @@ protected:
      * 
      */
     bool mpi_external_init = true;
+    
+    /**
+     *
+     * @brief map containing the benchmark timings
+     *
+     */
+    std::map<std::string, std::vector<double>> timings;
+
+    /**
+     *
+     * @brief map containing the benchmark results
+     *
+     */
+    std::map<std::string, HpccResult> results;
+    
+    /**
+     *
+     * @brief map containing the errors of the benchmark
+     *
+     */
+    std::map<std::string, double> errors;
+
+    /**
+     * @brief This flag indicates whether the validation was successful
+     *
+     */
+    bool validated = false;
+
 
 public:
 
@@ -293,7 +187,7 @@ public:
      * @param data The initialized data for the kernel. It will be replaced by the kernel output for validation
      * @return std::unique_ptr<TOutput> A data class containing the measurement results of the execution
      */
-    virtual std::unique_ptr<TOutput>
+    virtual void
     executeKernel(TData &data) = 0;
 
     /**
@@ -304,7 +198,13 @@ public:
      * @return false If the validation failed
      */
     virtual bool
-    validateOutputAndPrintError(TData &data) = 0;
+    validateOutput(TData &data) = 0;
+    
+    /**
+     * @brief Print the error after validating output
+    */
+    virtual void
+    printError() = 0;
 
     /**
      * @brief Collects the measurment results from all MPI ranks and 
@@ -313,7 +213,10 @@ public:
      * @param output  The measurement data of the kernel execution
      */
     virtual void
-    collectAndPrintResults(const TOutput &output) = 0;
+    collectResults() = 0;
+    
+    virtual void
+    printResults() = 0;
 
     /**
      * @brief Method that can be overwritten by inheriting classes to check the validity of input parameters.
@@ -361,6 +264,19 @@ public:
 #ifdef INTEL_FPGA
                 ("i", "Use memory Interleaving")
 #endif
+#ifdef USE_ACCL
+                ("accl-emulation", "Use the accl emulation instead of hardware execution")
+                ("accl-protocol", "Specify the network protocol that should be used with ACCL.",
+                cxxopts::value<std::string>()->default_value(ACCL_STACK_TYPE))
+                ("accl-buffer-size", "Specify the size of the ACCL buffers in KB",
+                cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ACCL_BUFFER_SIZE)))
+                ("accl-buffer-count", "Specify the number of ACCL buffers used within the benchmark",
+                cxxopts::value<uint>()->default_value(std::to_string(DEFAULT_ACCL_BUFFER_COUNT)))
+                ("accl-default-bank", "Default memory bank used by ACCL to create new FPGA buffers",
+                cxxopts::value<int>()->default_value(std::to_string(DEFAULT_ACCL_BUFFER_BANK)))
+                ("accl-recv-banks", "Memory banks used by ACCL for receive buffers",
+                cxxopts::value<std::vector<int>>()->default_value(DEFAULT_ACCL_RECV_BUFFER_BANKS))
+#endif
                 ("skip-validation", "Skip the validation of the output data. This will speed up execution and helps when working with special data types.")
                 ("device", "Index of the device that has to be used. If not given you "\
             "will be asked which device to use if there are multiple devices "\
@@ -369,10 +285,16 @@ public:
             "you will be asked which platform to use if there are multiple "\
             "platforms available.",
                 cxxopts::value<int>()->default_value(std::to_string(DEFAULT_PLATFORM)))
+                ("platform_str", "Name of the platform that has to be used", cxxopts::value<std::string>()->default_value(std::string()))
 #ifdef NUM_REPLICATIONS
                 ("r", "Number of used kernel replications",
                 cxxopts::value<cl_uint>()->default_value(std::to_string(NUM_REPLICATIONS)))
 #endif
+#ifdef COMMUNICATION_TYPE_SUPPORT_ENABLED
+                ("comm-type", "Used communication type for inter-FPGA communication",
+                cxxopts::value<std::string>()->default_value(DEFAULT_COMM_TYPE))
+#endif
+                ("dump-json", "dump benchmark configuration and results to this file in json format", cxxopts::value<std::string>()->default_value(std::string("")))
                 ("test", "Only test given configuration and skip execution and validation")
                 ("h,help", "Print this help");
 
@@ -391,10 +313,7 @@ public:
 
             // Check parsed options and handle special cases
             if (result.count("f") <= 0) {
-                // Path to the kernel file is mandatory - exit if not given!
-                std::cerr << "Kernel file must be given! Aborting" << std::endl;
-                std::cout << options.help() << std::endl;
-                throw fpga_setup::FpgaSetupException("Mandatory option is missing");
+                throw fpga_setup::FpgaSetupException("Mandatory option is missing! Use -h to show all available options. ERROR: Kernel file must be given with option -f!");
             }
 
             // Create program settings from program arguments
@@ -403,9 +322,7 @@ public:
             return sharedSettings;
         }
         catch (const cxxopts::OptionException& e) {
-            std::cerr << "Error while parsing input parameters: "<< e.what() << std::endl;
-            std::cout << options.help() << std::endl;
-            throw fpga_setup::FpgaSetupException("Input parameters could not be parsed");
+            throw fpga_setup::FpgaSetupException("Input parameters could not be parsed! Use -h to show all available options. ERROR: " + std::string(e.what()));
         }
 
     }
@@ -429,6 +346,178 @@ public:
         std::cout << std::endl;
         std::cout << "Summary:" << std::endl;
         std::cout << *executionSettings << std::endl;
+    }
+    
+    /*
+     * @brief Returns the map of the timings
+     *
+     * @return The timings map
+     */
+    std::map<std::string, std::vector<double>>
+    getTimingsMap() {
+        return timings;
+    }
+    
+    /*
+     * @brief adds a timing to the timings map
+     *
+     * @param key The key
+     */
+    void
+    addTimings(std::string key, std::vector<double> value) {
+        timings.emplace(key, value);
+    }
+    
+    /*
+     * @brief Returns the timings map as json
+     *
+     * @return The json object
+     *
+     * It should be overwritten for benchmarks with special timings format, like b_eff
+     */
+    virtual json getTimingsJson() {
+        json j;
+        for (auto const &key: timings) {
+            std::vector<json> timings_list;
+            for (auto const &timing: key.second) {
+                json j;
+                j["unit"] = "s";
+                j["value"] = timing;
+                timings_list.push_back(j);
+            }
+            j[key.first] = timings_list;
+        }
+        return j;
+    }
+
+    /**
+     * @brief Returns the results map as json
+     *
+     * @return The return object
+     *
+     */
+    std::map<std::string, json> getResultsJson() {
+        std::map<std::string, json> results_string;
+        for (auto const &result: results) {
+            json j;
+            j["unit"] = result.second.unit;
+            j["value"] = result.second.value;
+            results_string[result.first] = j;
+        }
+        return results_string;
+    }
+
+    /**
+     * @brief Returns the map of the dumped environment variables
+     *
+     * @param The environment map
+     *
+     * Can be extended as needed
+     */
+    std::map<std::string, std::string>
+    getEnvironmentMap() {
+        std::map<std::string, std::string> env; 
+        env["LD_LIBRARY_PATH"] = std::string(std::getenv("LD_LIBRARY_PATH"));
+        return env;
+    }
+    /**
+     * @brief Format the FPGA Torus setting string
+     *
+     * @param The setting string
+     *
+     * @return The parsed json object
+     *
+     */
+    json
+    parseFPGATorusString(std::string str) {
+        json j; 
+        size_t space = str.find(" "); 
+        std::string p_str = str.substr(0, space);
+        std::string q_str = str.substr(space, str.size());
+        j["P"] = stoi(p_str.substr(p_str.find("=") + 1, p_str.find(",")));
+        j["Q"] = stoi(q_str.substr(q_str.find("=") + 1, q_str.size()));
+        return j;
+    }
+    
+    /**
+     * @brief Get current time as string
+     *
+     * @return The time string
+     *
+     * Has the same format as CONFIG_TIME
+     */
+    std::string
+    getCurrentTime() {
+        time_t time = std::time(0);
+        const tm *utc_time = std::gmtime(&time);
+        std::ostringstream oss;
+        oss << std::put_time(utc_time, "%a %b %d %T UTC %Y");
+        return oss.str();
+    }
+
+    /**
+     * @brief Convert the settings map to json
+     *
+     * @param settings_map The settings map
+     *
+     * @return the json object
+     *
+     * This function checks for settings which are not strings and converts them
+     */
+    std::map<std::string, json>
+    jsonifySettingsMap(std::map<std::string, std::string> settings_map) {
+        json j;
+        for (const auto& item: settings_map) {
+            std::string key = item.first;
+            std::string value = item.second;
+            try {
+                int value_int = stoi(value); 
+                j[key] = value_int;
+            } catch (std::invalid_argument const &ex) {
+                if (key == "FPGA Torus") {
+                    j[key] = parseFPGATorusString(value);
+                } else if (key == "Emulate" || key == "Test Mode" || key == "Memory Interleaving" || key == "Replicate Inputs" || key == "Inverse" || key == "Diagonally Dominant" || "Dist. Buffers") {
+                    j[key] = value == "Yes";
+                } else {
+                    j[key] = value; 
+                }
+            }     
+        }
+        return j;
+    }
+
+    /**
+     * @brief Dumps the benchmark configuration and results to a json file
+     *
+     * @param file_path Path where the json will be saved
+     *
+     */
+    void
+    dumpConfigurationAndResults(std::string file_path) {
+        std::fstream fs;
+        fs.open(file_path, std::ios_base::out);
+        if (!fs.is_open()) {
+            std::cout << "Unable to open file for dumping configuration and results" << std::endl;
+        } else {
+            json dump;
+            dump["name"] = PROGRAM_NAME;
+#ifdef _USE_MPI_
+            dump["mpi"] ={{"version", MPI_VERSION}, {"subversion", MPI_SUBVERSION}};
+#endif
+            dump["config_time"] = CONFIG_TIME;
+            dump["execution_time"] = getCurrentTime();
+            dump["git_commit"] = GIT_COMMIT_HASH;
+            dump["version"] = VERSION;
+            dump["device"] = executionSettings->getDeviceName();
+            dump["settings"] = jsonifySettingsMap(executionSettings->programSettings->getSettingsMap());
+            dump["timings"] = getTimingsJson();
+            dump["results"] = getResultsJson();
+            dump["errors"] = errors;
+            dump["validated"] = validated;
+            dump["environment"] = getEnvironmentMap();
+
+            fs << dump;
+        }
     }
 
     /**
@@ -462,16 +551,47 @@ public:
 
             std::unique_ptr<TSettings> programSettings = parseProgramParameters(tmp_argc, tmp_argv);
 
-            auto usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
-                                                                programSettings->defaultDevice);
+            std::unique_ptr<TContext> context;
+            std::unique_ptr<TProgram> program;
+            std::unique_ptr<TDevice> usedDevice;
 
-            auto context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
-            auto program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
-                                                                &programSettings->kernelFileName);
+            if (!programSettings->testOnly) {
+#ifdef USE_XRT_HOST
+                usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultDevice);
+#ifndef USE_ACCL
+                context = std::unique_ptr<bool>(new bool(false));
+#endif
+#ifdef USE_ACCL
+                if (!programSettings->useAcclEmulation) {
+#endif
+                    program = fpga_setup::fpgaSetup(*usedDevice, programSettings->kernelFileName);
+#ifdef USE_ACCL
+                }
+#endif
+#endif                                                             
+#ifdef USE_OCL_HOST
+                usedDevice = fpga_setup::selectFPGADevice(programSettings->defaultPlatform,
+                                                                    programSettings->defaultDevice,
+                                                                    programSettings->platformString);
 
-            executionSettings = std::unique_ptr<ExecutionSettings<TSettings>>(new ExecutionSettings<TSettings>(std::move(programSettings), std::move(usedDevice), 
-                                                                std::move(context), std::move(program)));
+                context = std::unique_ptr<cl::Context>(new cl::Context(*usedDevice));
+                program = fpga_setup::fpgaSetup(context.get(), {*usedDevice},
+                                                                    &programSettings->kernelFileName);
+#endif
+#ifdef USE_ACCL
+                if (programSettings->communicationType == CommunicationType::accl) {
+                    context = std::unique_ptr<fpga_setup::ACCLContext>(new fpga_setup::ACCLContext(
+                                    fpga_setup::fpgaSetupACCL(*usedDevice, *program, *programSettings)));
+                }
+                else {
+                    context = std::unique_ptr<fpga_setup::ACCLContext>(new fpga_setup::ACCLContext());
+                }
+#endif
+            }
 
+            executionSettings = std::unique_ptr<ExecutionSettings<TSettings, TDevice, TContext, TProgram>>(new ExecutionSettings<TSettings, TDevice, TContext, TProgram>(std::move(programSettings), std::move(usedDevice), 
+                                                                    std::move(context), std::move(program)
+                                                                    ));
             if (mpi_comm_rank == 0) {
                 if (!checkInputParameters()) {
                     std::cerr << "ERROR: Input parameter check failed!" << std::endl;
@@ -508,8 +628,15 @@ public:
     executeBenchmark() {
 
         if (!benchmark_setup_succeeded) {
-            std::cerr << "Benchmark execution started without running the benchmark setup!" << std::endl;
+            std::cerr << "Benchmark execution started without successfully running the benchmark setup!" << std::endl;
             return false;
+        }
+        if (executionSettings->programSettings->testOnly) {
+            if (mpi_comm_rank == 0) {
+                std::cout << "TEST MODE ENABLED: SKIP DATA GENERATION, EXECUTION, AND VALIDATION!" << std::endl;
+                std::cout << "SUCCESSFULLY parsed input parameters!" << std::endl;
+            }
+            return benchmark_setup_succeeded;
         }
         if (mpi_comm_rank == 0) {
             std::cout << HLINE << "Start benchmark using the given configuration. Generating data..." << std::endl
@@ -530,49 +657,52 @@ public:
                         << HLINE;
             }
 
-            bool validateSuccess = false;
-            if (!executionSettings->programSettings->testOnly) {
-                auto exe_start = std::chrono::high_resolution_clock::now();
-                std::unique_ptr<TOutput> output =  executeKernel(*data);
+            auto exe_start = std::chrono::high_resolution_clock::now();
+            executeKernel(*data);
 
 #ifdef _USE_MPI_
-            MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-                std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
+            std::chrono::duration<double> exe_time = std::chrono::high_resolution_clock::now() - exe_start;
 
-                if (mpi_comm_rank == 0) {
-                    std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
-                    std::cout << HLINE << "Validate output..." << std::endl
-                            << HLINE;
-                }
-
-                if (!executionSettings->programSettings->skipValidation) {
-                    auto eval_start = std::chrono::high_resolution_clock::now();
-                    validateSuccess = validateOutputAndPrintError(*data);
-                    std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
-
-                    if (mpi_comm_rank == 0) {
-                        std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
-                    }
-                }
-                collectAndPrintResults(*output);
-
-                if (mpi_comm_rank == 0) {
-                    if (!validateSuccess) {
-                        std::cerr << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
-                    }
-                    else {
-                        std::cout << "Validation: SUCCESS!" << std::endl;
-                    }
-                }
-
-            }
-            else {
-                std::cout << "TEST MODE ENABLED: SKIP EXECUTION AND VALIDATION!" << std::endl;
+            if (mpi_comm_rank == 0) {
+                std::cout << "Execution Time: " << exe_time.count() << " s"  << std::endl;
+                std::cout << HLINE << "Validate output..." << std::endl
+                        << HLINE;
             }
 
-            return validateSuccess;
+            if (!executionSettings->programSettings->skipValidation) {
+                auto eval_start = std::chrono::high_resolution_clock::now();
+                validated = validateOutput(*data);
+                if (mpi_comm_rank == 0) {
+                    printError();
+                }
+                std::chrono::duration<double> eval_time = std::chrono::high_resolution_clock::now() - eval_start;
+
+                if (mpi_comm_rank == 0) {
+                    std::cout << "Validation Time: " << eval_time.count() << " s" << std::endl;
+                }
+            }
+            std::cout << HLINE << "Collect results..." << std::endl << HLINE;
+            collectResults();
+            
+            if (mpi_comm_rank == 0) {
+                if (executionSettings->programSettings->dumpfilePath.size() > 0) {
+                    dumpConfigurationAndResults(executionSettings->programSettings->dumpfilePath);
+                }
+            
+                printResults();
+
+                if (!validated) {
+                    std::cerr << HLINE << "ERROR: VALIDATION OF OUTPUT DATA FAILED!" << std::endl;
+                }
+                else {
+                    std::cout << HLINE << "Validation: SUCCESS!" << std::endl;
+                }
+            }
+
+            return validated;
        }
        catch (const std::exception& e) {
             std::cerr << "An error occured while executing the benchmark: " << std::endl;
@@ -586,7 +716,7 @@ public:
      * 
      * @return ExecutionSettings& The execution settings object
      */
-    ExecutionSettings<TSettings>& getExecutionSettings() {
+    ExecutionSettings<TSettings, TDevice, TContext, TProgram>& getExecutionSettings() {
         return *executionSettings;
     }
 
@@ -633,6 +763,7 @@ public:
 
 };
 
+
 /**
  * @brief Prints the execution settings to an output stream
  * 
@@ -641,11 +772,10 @@ public:
  * @param printedExecutionSettings The execution settings that have to be printed to the stream
  * @return std::ostream& The output stream after the execution settings are piped in
  */
-template <class TSettings>
-std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings> const& printedExecutionSettings){
-        std::string device_name;
+template <class TSettings, class TDevice, class TContext, class TProgram>
+std::ostream& operator<<(std::ostream& os, ExecutionSettings<TSettings, TDevice, TContext, TProgram> const& printedExecutionSettings){
+        std::string device_name = printedExecutionSettings.getDeviceName();
         os << std::left;
-        printedExecutionSettings.device->getInfo(CL_DEVICE_NAME, &device_name);
         for (auto k : printedExecutionSettings.programSettings->getSettingsMap()) {
             os   << std::setw(2 * ENTRY_SPACE) << k.first << k.second << std::endl;
         }

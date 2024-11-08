@@ -7,6 +7,7 @@
 #include "gemm_benchmark.hpp"
 #include "parameters.h"
 #include "test_program_settings.h"
+#include "nlohmann/json.hpp"
 
 void
 ref_matmul(HOST_DATA_TYPE* A, HOST_DATA_TYPE* B, HOST_DATA_TYPE* C, int size) {
@@ -40,8 +41,8 @@ struct GEMMKernelTest : testing::Test, testing::WithParamInterface<unsigned> {
  */
 TEST_P(GEMMKernelTest, FPGACorrectNumberOfRepetitionsIs1) {
     bm->getExecutionSettings().programSettings->numRepetitions = 1;
-    auto result = bm->executeKernel(*data);
-    EXPECT_EQ(result->timings.size(), 1);
+    bm->executeKernel(*data);
+    EXPECT_EQ(bm->getTimingsMap().at("execution").size(), 1);
 }
 
 /**
@@ -49,8 +50,8 @@ TEST_P(GEMMKernelTest, FPGACorrectNumberOfRepetitionsIs1) {
  */
 TEST_P(GEMMKernelTest, FPGACorrectNumberOfRepetitionsIs3) {
     bm->getExecutionSettings().programSettings->numRepetitions = 3;
-    auto result = bm->executeKernel(*data);
-    EXPECT_EQ(result->timings.size(), 3);
+    bm->executeKernel(*data);
+    EXPECT_EQ(bm->getTimingsMap().at("execution").size(), 3);
 }
 
 /**
@@ -64,7 +65,7 @@ TEST_P(GEMMKernelTest, FPGACorrectCtimesBeta) {
             data->C[i * matrix_size + j] = OPTIONAL_CAST(1.0);
         }
     }
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             EXPECT_NEAR(data->C_out[i * matrix_size + j], 2.0 * data->C[i * matrix_size + j], std::numeric_limits<HOST_DATA_TYPE>::epsilon());
@@ -85,7 +86,7 @@ TEST_P(GEMMKernelTest, FPGACorrectAtimesAlpha) {
     data->alpha = 2.0;
     data->beta = 0.0;
 
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             EXPECT_NEAR(data->C_out[i * matrix_size + j], 2.0 * data->A[i * matrix_size + j], std::numeric_limits<HOST_DATA_TYPE>::epsilon());
@@ -105,7 +106,7 @@ TEST_P(GEMMKernelTest, FPGACorrectBtimesAlpha) {
     }
     data->alpha = 2.0;
     data->beta = 0.0;
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             EXPECT_NEAR(data->C_out[i * matrix_size + j], 2.0 * data->B[i * matrix_size + j], std::numeric_limits<HOST_DATA_TYPE>::epsilon());
@@ -126,7 +127,7 @@ TEST_P(GEMMKernelTest, FPGACorrectAmulB) {
     }
     data->alpha = 1.0;
     data->beta = 1.0;
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
 
     HOST_DATA_TYPE c_ref_out[matrix_size * matrix_size];
     ref_matmul(data->A,data->B,c_ref_out,matrix_size);
@@ -150,7 +151,7 @@ TEST_P(GEMMKernelTest, FPGACorrectCplusA) {
     data->alpha = 1.0;
     data->beta = 1.0;
 
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             EXPECT_FLOAT_EQ(data->C_out[i * matrix_size + j], data->A[i * matrix_size + j] + data->C[i * matrix_size + j]);
@@ -165,7 +166,7 @@ TEST_P(GEMMKernelTest, FPGACorrectCplusA) {
 
 TEST_P(GEMMKernelTest, FPGACorrectbetaCplusalphaAB) {
     HOST_DATA_TYPE c_ref_out[matrix_size * matrix_size];
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
            c_ref_out[i * matrix_size + j] = data->C[i * matrix_size + j];
@@ -175,6 +176,29 @@ TEST_P(GEMMKernelTest, FPGACorrectbetaCplusalphaAB) {
     for (int i = 0; i < matrix_size; i++) {
         for (int j = 0; j < matrix_size; j++) {
             EXPECT_NEAR(data->C_out[i * matrix_size + j], c_ref_out[i * matrix_size + j], std::numeric_limits<HOST_DATA_TYPE>::epsilon() * matrix_size * matrix_size);
+        }
+    }
+}
+
+using json = nlohmann::json;
+
+TEST_P(GEMMKernelTest, JsonDump) {
+    bm->executeKernel(*data);
+    bm->collectResults();
+    bm->dumpConfigurationAndResults("gemm.json");
+    std::FILE *f = std::fopen("gemm.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        json j = json::parse(f);
+        EXPECT_TRUE(j.contains("timings"));
+        if (j.contains("timings")) {
+            EXPECT_TRUE(j["timings"].contains("execution"));
+        }
+        EXPECT_TRUE(j.contains("results"));
+        if (j.contains("results")) {
+            EXPECT_TRUE(j["results"].contains("gflops"));
+            EXPECT_TRUE(j["results"].contains("t_mean"));
+            EXPECT_TRUE(j["results"].contains("t_min"));
         }
     }
 }

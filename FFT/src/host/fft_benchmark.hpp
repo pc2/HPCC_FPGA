@@ -56,12 +56,6 @@ public:
     bool inverse;
 
     /**
-     * @brief The number of used kernel replications
-     * 
-     */
-    uint kernelReplications;
-
-    /**
      * @brief Construct a new FFT Program Settings object
      * 
      * @param results the result map from parsing the program input parameters
@@ -137,7 +131,7 @@ public:
  * @brief Implementation of the FFT benchmark
  * 
  */
-class FFTBenchmark : public hpcc_base::HpccFpgaBenchmark<FFTProgramSettings, FFTData, FFTExecutionTimings> {
+class FFTBenchmark : public hpcc_base::HpccFpgaBenchmark<FFTProgramSettings, cl::Device, cl::Context, cl::Program, FFTData> {
 
 protected:
 
@@ -165,7 +159,7 @@ public:
      * @param data The input and output data of the benchmark
      * @return std::unique_ptr<FFTExecutionTimings> Measured runtimes of the kernel execution
      */
-    std::unique_ptr<FFTExecutionTimings>
+    void
     executeKernel(FFTData &data) override;
 
     /**
@@ -176,7 +170,14 @@ public:
      * @return false otherwise
      */
     bool
-    validateOutputAndPrintError(FFTData &data) override;
+    validateOutput(FFTData &data) override;
+    
+    /**
+     * @brief FFT specifig implementation of the error printing
+     * 
+     */
+    void
+    printError() override;
 
     /**
      * @brief FFT specific implementation of printing the execution results
@@ -184,7 +185,10 @@ public:
      * @param output Measured runtimes of the kernel execution
      */
     void
-    collectAndPrintResults(const FFTExecutionTimings &output) override;
+    collectResults() override;
+    
+    void
+    printResults() override;
 
     /**
      * @brief Construct a new FFT Benchmark object

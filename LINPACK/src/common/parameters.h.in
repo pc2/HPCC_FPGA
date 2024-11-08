@@ -1,25 +1,27 @@
 #ifndef SRC_COMMON_PARAMETERS_H_
 #define SRC_COMMON_PARAMETERS_H_
 
+#include "base_parameters.h"
+
 /**
  * Host specific parameters
  */
-#define VERSION "@PROJECT_VERSION@"
-#define DEFAULT_REPETITIONS @DEFAULT_REPETITIONS@
-#define DEFAULT_PLATFORM @DEFAULT_PLATFORM@
-#define DEFAULT_DEVICE @DEFAULT_DEVICE@
-#define HOST_DATA_TYPE @HOST_DATA_TYPE@
 #define DEFAULT_MATRIX_SIZE @DEFAULT_MATRIX_SIZE@
-#cmakedefine _DP @_DP@
+#define DEFAULT_P_VALUE @DEFAULT_P_VALUE@
+#cmakedefine _DP
+
+#ifdef _DP
+#define MPI_DATA_TYPE MPI_DOUBLE
+#else
+#define MPI_DATA_TYPE MPI_FLOAT
+#endif
 
 /**
  * Device specific parameters
  */
-#define DEVICE_DATA_TYPE @DEVICE_DATA_TYPE@
-#define GLOBAL_MEM_UNROLL @GLOBAL_MEM_UNROLL@
 #define LOCAL_MEM_BLOCK_LOG @LOCAL_MEM_BLOCK_LOG@
 #define REGISTER_BLOCK_LOG @REGISTER_BLOCK_LOG@
-#define NUM_REPLICATIONS @NUM_REPLICATIONS@
+#define REGISTER_BLOCK_MM_LOG @REGISTER_BLOCK_MM_LOG@
 
 #cmakedefine USE_SVM
 #cmakedefine DISTRIBUTED_VALIDATION
@@ -27,14 +29,10 @@
 /*
 Short description of the program
 */
-#define PROGRAM_DESCRIPTION "Implementation of the LINPACK benchmark"\
+#define PROGRAM_NAME "LINPACK"
+#define PROGRAM_DESCRIPTION "Implementation of the " PROGRAM_NAME " benchmark"\
                             " proposed in the HPCC benchmark suite for FPGA.\n"\
                             "Version: " VERSION "\n"
-
-/**
-Output separator
-*/
-#define HLINE "-------------------------------------------------------------\n"
 
 #define LEFT_BLOCK (1 << 1)
 #define TOP_BLOCK (1 << 2)

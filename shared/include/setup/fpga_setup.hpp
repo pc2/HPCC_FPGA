@@ -30,13 +30,14 @@ SOFTWARE.
 #include <fstream>
 #include <memory>
 
+#ifdef USE_OCL_HOST
 /* External libraries */
 #ifdef USE_DEPRECATED_HPP_HEADER
 #include "CL/cl.hpp"
 #else
 #include OPENCL_HPP_HEADER
 #endif
-
+#endif
 
 /**
 Makro to convert the error integer representation to its string representation
@@ -74,6 +75,7 @@ class FpgaSetupException : public std::exception
     std::string error_message;
 };
 
+#ifdef USE_OCL_HOST
 /**
  * @brief Exception that is thrown if the ASSERT_CL failed
  * 
@@ -134,13 +136,6 @@ Sets up the given FPGA with the kernel in the provided file.
     fpgaSetup(const cl::Context *context, std::vector<cl::Device> deviceList,
               const std::string *usedKernelFile);
 
-/**
-Sets up the C++ environment by configuring std::cout and checking the clock
-granularity using bm_helper::checktick()
-*/
-    void
-    setupEnvironmentAndClocks();
-
 
 /**
 Searches an selects an FPGA device using the CL library functions.
@@ -157,7 +152,16 @@ choose a device.
 @return A list containing a single selected device
 */
     std::unique_ptr<cl::Device>
-    selectFPGADevice(int defaultPlatform, int defaultDevice);
+    selectFPGADevice(int defaultPlatform, int defaultDevice, std::string platformString);
+
+
+#endif
+/**
+Sets up the C++ environment by configuring std::cout and checking the clock
+granularity using bm_helper::checktick()
+*/
+    void
+    setupEnvironmentAndClocks();
 
 }  // namespace fpga_setup
 #endif  // SRC_HOST_FPGA_SETUP_H_

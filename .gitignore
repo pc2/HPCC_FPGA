@@ -9,6 +9,9 @@
 # Python virtual environments
 .venv
 
+#YCM config
+.ycm_extra_conf.py
+
 # CMake build directories should be created in the following folder
 *._*
 build/*

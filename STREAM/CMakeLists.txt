@@ -11,8 +11,10 @@ set(INNER_LOOP_BUFFERS ON CACHE BOOL "Put the local memory buffers inside the ou
 
 mark_as_advanced(INNER_LOOP_BUFFERS)
 
-# Set the data type since optional vector types are used
-set(DATA_TYPE float)
+# Set the data type if not defined before to set up vector types
+if (NOT DEFINED DATA_TYPE) 
+    set(DATA_TYPE float)
+endif()
 set(HOST_DATA_TYPE cl_${DATA_TYPE})
 if (VECTOR_COUNT GREATER 1)
     set(DEVICE_DATA_TYPE ${DATA_TYPE}${VECTOR_COUNT})

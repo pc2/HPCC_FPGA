@@ -29,7 +29,6 @@ SOFTWARE.
 #include <chrono>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #include "CL/opencl.h"
 
 #ifdef INTEL_FPGA
@@ -39,11 +38,11 @@ SOFTWARE.
 
 namespace bm_execution {
 
-    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config, unsigned int data_per_kernel,
+    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config, unsigned int data_per_kernel,
                             std::vector<cl::Buffer> &Buffers_A, std::vector<cl::Buffer> &Buffers_B,
                             std::vector<cl::Buffer> &Buffers_C);
 
-    bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -52,7 +51,7 @@ namespace bm_execution {
                                        std::vector<cl::Kernel> &triad_kernels,
                                        std::vector<cl::CommandQueue> &command_queues);
 
-    bool initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -68,8 +67,8 @@ namespace bm_execution {
     Implementation for the single kernel.
      @copydoc bm_execution::calculate()
     */
-    std::unique_ptr<stream::StreamExecutionTimings>
-    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings>& config,
+    std::map<std::string, std::vector<double>>
+    calculate(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program>& config,
             HOST_DATA_TYPE* A,
             HOST_DATA_TYPE* B,
             HOST_DATA_TYPE* C) {
@@ -106,7 +105,7 @@ namespace bm_execution {
                                           add_kernels, triad_kernels, command_queues);
         }
         if (!success) {
-            return std::unique_ptr<stream::StreamExecutionTimings>(nullptr);
+            return std::map<std::string, std::vector<double>>();
         }
 
         //
@@ -143,7 +142,7 @@ namespace bm_execution {
         }
         startExecution = std::chrono::high_resolution_clock::now();
         for (int i=0; i<config.programSettings->kernelReplications; i++) {
-            ASSERT_CL(command_queues[i].enqueueTask(test_kernels[i]));
+            ASSERT_CL(command_queues[i].enqueueNDRangeKernel(test_kernels[i], cl::NullRange, cl::NDRange(1)));
         }
         for (int i=0; i<config.programSettings->kernelReplications; i++) {
             ASSERT_CL(command_queues[i].finish());
@@ -229,7 +228,7 @@ namespace bm_execution {
             std::vector<cl::Event> copy_start_events({copy_user_event});
             std::vector<cl::Event> copy_events(config.programSettings->kernelReplications);
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                command_queues[i].enqueueTask(copy_kernels[i], &copy_start_events, &copy_events[i]);
+                command_queues[i].enqueueNDRangeKernel(copy_kernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1), &copy_start_events, &copy_events[i]);
             }
 
             cl::UserEvent scale_user_event(*config.context, &err);
@@ -237,7 +236,7 @@ namespace bm_execution {
             std::vector<cl::Event> scale_start_events({scale_user_event});
             std::vector<cl::Event> scale_events(config.programSettings->kernelReplications);
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                command_queues[i].enqueueTask(scale_kernels[i], &scale_start_events, &scale_events[i]);
+                command_queues[i].enqueueNDRangeKernel(scale_kernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1), &scale_start_events, &scale_events[i]);
             }
 
             cl::UserEvent add_user_event(*config.context, &err);
@@ -245,7 +244,7 @@ namespace bm_execution {
             std::vector<cl::Event> add_start_events({add_user_event});
             std::vector<cl::Event> add_events(config.programSettings->kernelReplications);
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                command_queues[i].enqueueTask(add_kernels[i], &add_start_events, &add_events[i]);
+                command_queues[i].enqueueNDRangeKernel(add_kernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1), &add_start_events, &add_events[i]);
             }
 
             cl::UserEvent triad_user_event(*config.context, &err);
@@ -253,7 +252,7 @@ namespace bm_execution {
             std::vector<cl::Event> triad_start_events({triad_user_event});
             std::vector<cl::Event> triad_events(config.programSettings->kernelReplications);
             for (int i = 0; i < config.programSettings->kernelReplications; i++) {
-                command_queues[i].enqueueTask(triad_kernels[i], &triad_start_events, &triad_events[i]);
+                command_queues[i].enqueueNDRangeKernel(triad_kernels[i], cl::NullRange, cl::NDRange(1), cl::NDRange(1), &triad_start_events, &triad_events[i]);
             }
 
             startExecution = std::chrono::high_resolution_clock::now();
@@ -332,14 +331,10 @@ namespace bm_execution {
 
         }
 
-        std::unique_ptr<stream::StreamExecutionTimings> result(new stream::StreamExecutionTimings{
-                timingMap,
-                config.programSettings->streamArraySize
-        });
-        return result;
+        return timingMap;
     }
 
-    bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -420,7 +415,7 @@ namespace bm_execution {
         return true;
     }
 
-    bool initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config,
+    bool initialize_queues_and_kernels_single(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config,
                                        unsigned int data_per_kernel, const std::vector<cl::Buffer> &Buffers_A,
                                        const std::vector<cl::Buffer> &Buffers_B,
                                        const std::vector<cl::Buffer> &Buffers_C,
@@ -599,7 +594,7 @@ namespace bm_execution {
         return true;
     }
 
-    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings> &config, unsigned int data_per_kernel,
+    void initialize_buffers(const hpcc_base::ExecutionSettings<stream::StreamProgramSettings, cl::Device, cl::Context, cl::Program> &config, unsigned int data_per_kernel,
                             std::vector<cl::Buffer> &Buffers_A, std::vector<cl::Buffer> &Buffers_B,
                             std::vector<cl::Buffer> &Buffers_C) {
         unsigned mem_bits = CL_MEM_READ_WRITE;

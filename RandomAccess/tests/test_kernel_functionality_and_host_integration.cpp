@@ -5,7 +5,7 @@
 #include "parameters.h"
 #include "random_access_benchmark.hpp"
 #include "test_program_settings.h"
-
+#include "nlohmann/json.hpp"
 
 struct RandomAccessKernelTest : testing::Test {
     std::unique_ptr<random_access::RandomAccessData> data;
@@ -28,8 +28,8 @@ struct RandomAccessKernelTest : testing::Test {
  * Check if the number of measurements from the calculation matches the number of repetitions
  */
 TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements1Rep) {
-    auto result = bm->executeKernel( *data);
-    EXPECT_EQ(result->times.size(), 1);
+    bm->executeKernel( *data);
+    EXPECT_EQ(bm->getTimingsMap().at("execution").size(), 1);
 }
 
 /**
@@ -37,15 +37,38 @@ TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements1Rep) {
  */
 TEST_F(RandomAccessKernelTest, FPGACorrectNumberOfMeasurements3Rep) {
     bm->getExecutionSettings().programSettings->numRepetitions = 3;
-    auto result = bm->executeKernel(*data);
-    EXPECT_EQ(result->times.size(), 3);
+    bm->executeKernel(*data);
+    EXPECT_EQ(bm->getTimingsMap().at("execution").size(), 3);
 }
 
 /**
  * Execution returns correct results for a single repetition
  */
 TEST_F(RandomAccessKernelTest, FPGAErrorBelow1Percent) {
-    auto result = bm->executeKernel(*data);
-    bool success = bm->validateOutputAndPrintError(*data);
-    EXPECT_TRUE(success);
+    bm->executeKernel(*data);
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError();
+}
+
+using json = nlohmann::json;
+
+TEST_F(RandomAccessKernelTest, JsonDump) {
+    bm->executeKernel(*data);
+    bm->collectResults();
+    bm->dumpConfigurationAndResults("fft.json");
+    std::FILE *f = std::fopen("fft.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        json j = json::parse(f);
+        EXPECT_TRUE(j.contains("timings"));
+        if (j.contains("timings")) {
+            EXPECT_TRUE(j["timings"].contains("execution"));
+        }
+        EXPECT_TRUE(j.contains("results"));
+        if (j.contains("results")) {
+            EXPECT_TRUE(j["results"].contains("guops"));
+            EXPECT_TRUE(j["results"].contains("t_mean"));
+            EXPECT_TRUE(j["results"].contains("t_min"));
+        }
+    }
 }

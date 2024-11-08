@@ -22,7 +22,7 @@ You can find more information on how to build the benchmarks in the appropriate 
 - [b_eff](b_eff): Ths application sends messages of varying sizes of the inter-FPGA network and measures the achieved bandwidth.
 - [FFT](FFT): Executes multiple 1d-FFT of configurable size.
 - [GEMM](GEMM): Multiplies two quadratic matrices similar to the GEMM routine implemented in BLAS.
-- [LINPACK](LINPACK): Implementation of the [LINPACK benchmark](https://www.netlib.org/benchmark/hpl/) for FPGA. (WIP and currently only does a LU factorization with block-wise pivoting)
+- [LINPACK](LINPACK): Implementation of the [LINPACK benchmark](https://www.netlib.org/benchmark/hpl/) for FPGA without pivoting.
 - [PTRANS](PTRANS): Transposes a quadratic matrix.
 - [RandomAccess](RandomAccess): Executes updates on a data array following a pseudo-random number scheme.
 - [STREAM](STREAM): Implementation of the [STREAM benchmark](https://www.cs.virginia.edu/stream/) for FPGA.
@@ -41,15 +41,17 @@ All benchmarks come with the following build dependencies:
 - CMake >= 3.13
 - C++ compiler with C++11 and <regex> support (GCC 4.9.0+)
 - Intel OpenCL FPGA SDK or Xilinx Vitis
-- Python 3 for code generation and with [pandas](https://pandas.pydata.org) installed for the evaluation scripts
+- Python 3 with [jinja2](https://jinja.palletsprojects.com) for code generation and [pandas](https://pandas.pydata.org) for the evaluation scripts.
 
 Moreover, additional libraries are fetched by the build system during configuration:
 
 - [cxxopts](https://github.com/jarro2783/cxxopts) for option parsing
 - [hlslib](https://github.com/definelicht/hlslib) for CMake FindPackages
 - [Googletest](https://github.com/google/googletest) for unit testing
+- [json](https://github.com/nlohmann/json) for json output
 
 These dependencies will be downloaded automatically when configuring a benchmark for the first time.
+The exact version that are used can be found in the `CMakeLists.txt`located in the `extern` directory where all extern dependencies are defined.
 Besides that, some benchmarks might need additional dependencies.
 More information on that can be found in the README located in the subfolder for each benchmark.
 One key feature of all benchmarks of this suite is that they come with individual **configuration options**.
@@ -226,8 +228,10 @@ The most common memory types that this overview is focusing on are:
 This allows higher memory bandwidths during kernel execution.
 - *High Bandwidth Memory (HBM)*: The FPGA fabric itself is equipped with memory banks that can be accessed by the host to copy data. Compared to DDR, this memory type consists of more, but smaller memory banks so that the host needs to split the data between all memory banks to achieve the best performance. Still, the total achievable memory bandwidth is much higher compared to DDR.
 
+The benchmarks LINPACK, PTRANS, and b_eff that stress inter-FPGA communication use MPI and PCIe for communication over the host to ensure compatibility to multi-FPGA systems without special requirements on the used communication interfaces.
+
 The following three tables contain an overview of the compatibility of all benchmarks that use global memory with the three mentioned memory types.
-b_eff is not included since it does not use global memory.
+b_eff does use global memory only for validation. Still, the support for different memory types needs to be implemented on the host side.
 Full support of the benchmark is indicated with a **Yes**, functionally correct behavior but performance limitations are indicated with **(Yes)**, no support is indicated with **No**.
 For Xilinx, all benchmarks need a compatible compile- and link-settings-file to map the kernel memory ports to the available memory banks.
 LINPACK, PTRANS and b_eff are currently not working with Xilinx FPGAs because the implementations lack support for inter-FPGA communication on these devices.
@@ -239,11 +243,13 @@ Support will be added subsequently.
 |--------------|------------|--------------|
 | STREAM       | Yes        |  Yes         |            
 | RandomAccess | Yes        |  Yes         |      
-| PTRANS       | Yes        |  No          |      
-| LINPACK      | Yes        |  No          |           
+| PTRANS       | Yes        |  Yes         |      
+| LINPACK      | Yes        |  Yes         |           
 | GEMM         | Yes        |  Yes         |      
-| FFT          | Yes        |  Yes         |       
+| FFT          | Yes        |  Yes*         | 
+| b_eff        | Yes        |  Yes         |       
 
+*only with XRT <=2.8 because of OpenCL pipe support
 
 #### HBM
 
@@ -257,6 +263,7 @@ Support will be added subsequently.
 | LINPACK      | No         |   No         |           
 | GEMM         | Yes         |  Yes        |      
 | FFT          | Yes         |  Yes        | 
+| b_eff        | No         |  No          | 
 
 #### SVM
 
@@ -270,6 +277,7 @@ SVM could not be tested with Xilinx-based boards, yet. Thus, they are considered
 | LINPACK      | No         |  No          |           
 | GEMM         | Yes        |  No          |      
 | FFT          | Yes        |  No          | 
+| b_eff        | No         |  No          | 
 
 ## Publications
 
@@ -287,4 +295,32 @@ If you are using one of the benchmarks contained in the HPCC FPGA benchmark suit
         organization={IEEE},
         doi={10.1109/H2RC51942.2020.00007}
     }
+
+
+    @article{hpcc_fpga_in_depth,
+        author = {Marius Meyer and Tobias Kenter and Christian Plessl},
+        doi = {https://doi.org/10.1016/j.jpdc.2021.10.007},
+        issn = {0743-7315},
+        journal = {Journal of Parallel and Distributed Computing},
+        keywords = {FPGA, OpenCL, High level synthesis, HPC benchmarking},
+        pages = {79-89},
+        title = {In-depth FPGA accelerator performance evaluation with single node benchmarks from the HPC challenge benchmark suite for Intel and Xilinx FPGAs using OpenCL},
+        url = {https://www.sciencedirect.com/science/article/pii/S0743731521002057},
+        volume = {160},
+        year = {2022}
+    }
+
+
+If the focus is on multi-FPGA execution and inter-FPGA communication, you may rather want to cite 
+
+    @article{hpcc_multi_fpga, 
+        author = {Meyer, Marius and Kenter, Tobias and Plessl, Christian},
+        title = {Multi-FPGA Designs and Scaling of HPC Challenge Benchmarks via MPI and Circuit-Switched Inter-FPGA Networks}, 
+        year = {2023}, 
+        publisher = {Association for Computing Machinery}, 
+        address = {New York, NY, USA}, 
+        issn = {1936-7406}, 
+        url = {https://doi.org/10.1145/3576200}, 
+        doi = {10.1145/3576200}
+     }
 

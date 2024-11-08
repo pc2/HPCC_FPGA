@@ -51,13 +51,11 @@
 // code generation expects an array of maps of size num_replications with the keys "in" and "out".
 // The value of the keys have to be strings containing the attributes that
 // have to be assigned to input and output buffers in global memory
-/* PY_CODE_GEN 
-try:
-    kernel_param_attributes = generate_attributes(num_replications)
-except:
-    kernel_param_attributes = [{"in": "", "out": ""} for i in range(num_replications)]
-*/
-
+{% if generate_attributes is defined %}
+    {% set kernel_param_attributes = generate_attributes(num_replications) %}
+{% else %}
+    {% set kernel_param_attributes = create_list({"in": "", "out": ""}, num_replications) %}
+{% endif %}
 
 #define min(a,b) (a<b?a:b)
 
@@ -69,19 +67,19 @@ except:
 // Need some depth to our channels to accommodate their bursty filling.
 #ifdef INTEL_FPGA
 #pragma OPENCL EXTENSION cl_intel_channels : enable
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
-channel float2 chanin/*PY_CODE_GEN i*/[POINTS] __attribute__((depth(POINTS)));
-// PY_CODE_GEN block_end
+{% for i in range(num_total_replications) %}
+channel float2 chanin{{ i }}[POINTS] __attribute__((depth(POINTS)));
+{% endfor %}
 #endif
 #ifdef XILINX_FPGA
 #define XILINX_PIPE_DEPTH 16
 //#define XILINX_PIPE_DEPTH ((1 << (LOGN - LOGPOINTS) < 16) ? 16 : (1 << (LOGN - LOGPOINTS)))
 
 // Compiler states, that the pipe depth needs at least to be 16
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
-pipe float2x8 chanin/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(XILINX_PIPE_DEPTH)));
-pipe float2x8 chanout/*PY_CODE_GEN i*/ __attribute__((xcl_reqd_pipe_depth(XILINX_PIPE_DEPTH)));
-// PY_CODE_GEN block_end
+{% for i in range(num_total_replications) %}
+pipe float2x8 chanin{{ i }} __attribute__((xcl_reqd_pipe_depth(XILINX_PIPE_DEPTH)));
+pipe float2x8 chanout{{ i }} __attribute__((xcl_reqd_pipe_depth(XILINX_PIPE_DEPTH)));
+{% endfor %}
 #endif
 
 uint bit_reversed(uint x, uint bits) {
@@ -96,11 +94,11 @@ __attribute__((opencl_unroll_hint()))
   return y;
 }
 
-// PY_CODE_GEN block_start [replace(local_variables=locals()) for i in range(num_total_replications)]
+{% for i in range(num_total_replications) %}
 
 __kernel
 __attribute__ ((max_global_work_dim(0), reqd_work_group_size(1,1,1)))
-void fetch/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["in"]*/ float2 * restrict src, int iter) {
+void fetch{{ i }}(__global {{ kernel_param_attributes[i]["in"] }} float2 * restrict src, int iter) {
 
   const int N = (1 << LOGN);
 
@@ -109,29 +107,37 @@ void fetch/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["i
 
   // for iter iterations and one additional iteration to empty the last buffer
   for(unsigned k = 0; k < (iter + 1) * (N / POINTS); k++){ 
+  
+#ifdef INTEL_FPGA
+    // Only use this condition for Intel FPGAs because it will destroy the memory bursts for Xilinx
+    // For Intel, the emulation will fail without this statement because of 
+    if (k < iter * ( N / POINTS)) {
+#endif
 
-    float2 read_chunk[POINTS];
+      float2 read_chunk[POINTS];
 
-    // Read the next 8 values from global memory
-    // in the last iteration just read garbage, but the data will not be forwarded over the pipes.
-    // This allows the use of memory bursts here.
-    // Also the data is shifted  every N/POINTS/POINTS iterations
-    __attribute__((opencl_unroll_hint(POINTS)))
-    for(int j = 0; j < POINTS; j++){
-      // Shift the data depending on the total FFT size
-      // Shifts every new chunk by one. If N/POINTS is a multiple of POINTS, the shifting is reduced to prevent mappings to the same bank.
-      unsigned shift = ((LOGN - LOGPOINTS - LOGPOINTS > 0) ? (k & (N/POINTS - 1)) >> (LOGN - LOGPOINTS - LOGPOINTS) : (k & (N/POINTS - 1)));
-      unsigned final_buffer_pos = (j + shift) & (POINTS - 1);
-      read_chunk[final_buffer_pos] = src[(k << LOGPOINTS) + j];
+      // Read the next 8 values from global memory
+      // in the last iteration just read garbage, but the data will not be forwarded over the pipes.
+      // This allows the use of memory bursts here.
+      // Also the data is shifted  every N/POINTS/POINTS iterations
+      __attribute__((opencl_unroll_hint(POINTS)))
+      for(int j = 0; j < POINTS; j++){
+        // Shift the data depending on the total FFT size
+        // Shifts every new chunk by one. If N/POINTS is a multiple of POINTS, the shifting is reduced to prevent mappings to the same bank.
+        unsigned shift = ((LOGN - LOGPOINTS - LOGPOINTS > 0) ? (k & (N/POINTS - 1)) >> (LOGN - LOGPOINTS - LOGPOINTS) : (k & (N/POINTS - 1)));
+        unsigned final_buffer_pos = (j + shift) & (POINTS - 1);
+        read_chunk[final_buffer_pos] = src[(k << LOGPOINTS) + j];
+      }
+
+      // Write the shifted data into the memory buffer
+      __attribute__((opencl_unroll_hint(POINTS)))
+      for(int j = 0; j < POINTS; j++){
+        unsigned local_i = k & (2 * N/POINTS - 1);
+        buf[local_i][j] = read_chunk[j];
+      }
+#ifdef INTEL_FPGA
     }
-
-    // Write the shifted data into the memory buffer
-    __attribute__((opencl_unroll_hint(POINTS)))
-    for(int j = 0; j < POINTS; j++){
-      unsigned local_i = k & (2 * N/POINTS - 1);
-      buf[local_i][j] = read_chunk[j];
-    }
-
+#endif
     if (k >= ( N / POINTS)) {
       float2x8 buf2x8;
 
@@ -146,27 +152,27 @@ void fetch/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["i
         write_chunk[bit_reversed(j, LOGPOINTS)] = buf[offset + (current_index >> LOGPOINTS)][(current_index + shift) & (POINTS - 1)];
       }
 #ifdef XILINX_FPGA
-      buf2x8.i0 = write_chunk[0];          
-      buf2x8.i1 = write_chunk[1];  
-      buf2x8.i2 = write_chunk[2];  
-      buf2x8.i3 = write_chunk[3]; 
-      buf2x8.i4 = write_chunk[4]; 
+      buf2x8.i0 = write_chunk[0];
+      buf2x8.i1 = write_chunk[1];
+      buf2x8.i2 = write_chunk[2];
+      buf2x8.i3 = write_chunk[3];
+      buf2x8.i4 = write_chunk[4];
       buf2x8.i5 = write_chunk[5];
       buf2x8.i6 = write_chunk[6];
       buf2x8.i7 = write_chunk[7];
 
       // Start in the second iteration to forward the buffered data over the pipe
-      write_pipe_block(chanin/*PY_CODE_GEN i*/, &buf2x8);
+      write_pipe_block(chanin{{ i }}, &buf2x8);
 #endif
 #ifdef INTEL_FPGA
-        write_channel_intel(chanin/*PY_CODE_GEN i*/[0], write_chunk[0]); 
-        write_channel_intel(chanin/*PY_CODE_GEN i*/[1], write_chunk[1]);  
-        write_channel_intel(chanin/*PY_CODE_GEN i*/[2], write_chunk[2]);  
-        write_channel_intel(chanin/*PY_CODE_GEN i*/[3], write_chunk[3]);  
-        write_channel_intel(chanin/*PY_CODE_GEN i*/[4], write_chunk[4]);  
-        write_channel_intel(chanin/*PY_CODE_GEN i*/[5], write_chunk[5]); 
-        write_channel_intel(chanin/*PY_CODE_GEN i*/[6], write_chunk[6]);  
-        write_channel_intel(chanin/*PY_CODE_GEN i*/[7], write_chunk[7]);  
+        write_channel_intel(chanin{{ i }}[0], write_chunk[0]);
+        write_channel_intel(chanin{{ i }}[1], write_chunk[1]);
+        write_channel_intel(chanin{{ i }}[2], write_chunk[2]);
+        write_channel_intel(chanin{{ i }}[3], write_chunk[3]);
+        write_channel_intel(chanin{{ i }}[4], write_chunk[4]);
+        write_channel_intel(chanin{{ i }}[5], write_chunk[5]);
+        write_channel_intel(chanin{{ i }}[6], write_chunk[6]);
+        write_channel_intel(chanin{{ i }}[7], write_chunk[7]);
 #endif
     }
   }
@@ -185,10 +191,10 @@ void fetch/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["i
 
 __attribute__ ((max_global_work_dim(0)))
 __attribute__((reqd_work_group_size(1,1,1)))
-kernel void fft1d/*PY_CODE_GEN i*/(
+kernel void fft1d{{ i }}(
 #ifdef INTEL_FPGA
                 // Intel does not need a store kernel and directly writes back the result to global memory
-                __global /*PY_CODE_GEN kernel_param_attributes[i]["out"]*/ float2 * restrict dest,
+                __global {{ kernel_param_attributes[i]["out"] }} float2 * restrict dest,
 #endif
                 int count, int inverse) {
 
@@ -227,17 +233,17 @@ kernel void fft1d/*PY_CODE_GEN i*/(
     // Perform memory transfers only when reading data in range
     if (i < count * (N / POINTS)) {
 #ifdef INTEL_FPGA
-      data.i0 = read_channel_intel(chanin/*PY_CODE_GEN i*/[0]);
-      data.i1 = read_channel_intel(chanin/*PY_CODE_GEN i*/[1]);
-      data.i2 = read_channel_intel(chanin/*PY_CODE_GEN i*/[2]);
-      data.i3 = read_channel_intel(chanin/*PY_CODE_GEN i*/[3]);
-      data.i4 = read_channel_intel(chanin/*PY_CODE_GEN i*/[4]);
-      data.i5 = read_channel_intel(chanin/*PY_CODE_GEN i*/[5]);
-      data.i6 = read_channel_intel(chanin/*PY_CODE_GEN i*/[6]);
-      data.i7 = read_channel_intel(chanin/*PY_CODE_GEN i*/[7]);
+      data.i0 = read_channel_intel(chanin{{ i }}[0]);
+      data.i1 = read_channel_intel(chanin{{ i }}[1]);
+      data.i2 = read_channel_intel(chanin{{ i }}[2]);
+      data.i3 = read_channel_intel(chanin{{ i }}[3]);
+      data.i4 = read_channel_intel(chanin{{ i }}[4]);
+      data.i5 = read_channel_intel(chanin{{ i }}[5]);
+      data.i6 = read_channel_intel(chanin{{ i }}[6]);
+      data.i7 = read_channel_intel(chanin{{ i }}[7]);
 #endif
 #ifdef XILINX_FPGA
-      read_pipe_block(chanin/*PY_CODE_GEN i*/, &data);
+      read_pipe_block(chanin{{ i }}, &data);
 #endif
     } else {
       data.i0 = data.i1 = data.i2 = data.i3 = 
@@ -266,7 +272,7 @@ kernel void fft1d/*PY_CODE_GEN i*/(
 #endif
 #ifdef XILINX_FPGA
     // For Xilinx send the data to the store kernel to enable memory bursts
-      write_pipe_block(chanout/*PY_CODE_GEN i*/, &data);
+      write_pipe_block(chanout{{ i }}, &data);
 #endif
     }
   }
@@ -279,14 +285,14 @@ This kernel works without conditional branches which enables memory bursts.
  */
 __kernel
 __attribute__ ((max_global_work_dim(0), reqd_work_group_size(1,1,1)))
-void store/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["out"]*/ float2 * restrict dest, int iter) {
+void store{{ i }}(__global {{ kernel_param_attributes[i]["out"] }} float2 * restrict dest, int iter) {
 
   const int N = (1 << LOGN);
 
   // write the data back to global memory using memory bursts
   for(unsigned k = 0; k < iter * (N / POINTS); k++){ 
       float2x8 buf2x8;
-      read_pipe_block(chanout/*PY_CODE_GEN i*/, &buf2x8);
+      read_pipe_block(chanout{{ i }}, &buf2x8);
 
       dest[(k << LOGPOINTS)]     = buf2x8.i0;    
       dest[(k << LOGPOINTS) + 1] = buf2x8.i1; 
@@ -300,4 +306,4 @@ void store/*PY_CODE_GEN i*/(__global /*PY_CODE_GEN kernel_param_attributes[i]["o
 }
 #endif
 
-//PY_CODE_GEN block_end
+{% endfor %}

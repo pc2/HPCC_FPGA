@@ -1,10 +1,7 @@
 cmake_policy(VERSION 3.13)
 INCLUDE (CheckTypeSize)
 
-set (CMAKE_CXX_STANDARD 11)
-
-# Download build dependencies
-add_subdirectory(${CMAKE_SOURCE_DIR}/../extern ${CMAKE_BINARY_DIR}/extern)
+set (CMAKE_CXX_STANDARD 14)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     enable_testing()
@@ -13,7 +10,13 @@ endif()
 if(DEFINED USE_DEPRECATED_HPP_HEADER)
     set(header_default ${USE_DEPRECATED_HPP_HEADER})
 else()
-    set(header_default Yes)
+    set(header_default No)
+endif()
+
+if(DEFINED COMMUNICATION_TYPE_SUPPORT_ENABLED)
+    set(comm_support_default ${COMMUNICATION_TYPE_SUPPORT_ENABLED})
+else()
+    set(comm_support_default No)
 endif()
 
 # Host code specific options
@@ -24,22 +27,32 @@ set(USE_OPENMP ${USE_OPENMP} CACHE BOOL "Use OpenMP in the host code")
 set(USE_MPI ${USE_MPI} CACHE BOOL "Compile the host code with MPI support. This has to be supported by the host code.")
 set(USE_SVM No CACHE BOOL "Use SVM pointers instead of creating buffers on the board and transferring the data there before execution.")
 set(USE_HBM No CACHE BOOL "Use host code specific to HBM FPGAs")
+set(USE_ACCL No CACHE BOOL "Use ACCL for communication")
+set(USE_OCL_HOST Yes CACHE BOOL "Use OpenCL host code implementation")
 set(USE_CUSTOM_KERNEL_TARGETS No CACHE BOOL "Enable build targets for custom kernels")
 set(USE_DEPRECATED_HPP_HEADER ${header_default} CACHE BOOL "Flag that indicates if the old C++ wrapper header should be used (cl.hpp) or the newer version (cl2.hpp or opencl.hpp)")
 set(HPCC_FPGA_CONFIG ${HPCC_FPGA_CONFIG} CACHE FILEPATH "Configuration file that is used to overwrite the default configuration")
 set(NUM_REPLICATIONS 4 CACHE STRING "Number of times the kernels will be replicated")
 set(KERNEL_REPLICATION_ENABLED Yes CACHE INTERNAL "Enables kernel replication for the OpenCL kernel targets")
+set(COMMUNICATION_TYPE_SUPPORT_ENABLED ${comm_support_default} CACHE INTERNAL "Enables the support for the selection of the communication type which has to be implemented by the specific benchmark")
 
-mark_as_advanced(KERNEL_REPLICATION_ENABLED)
+mark_as_advanced(KERNEL_REPLICATION_ENABLED COMMUNICATION_TYPE_SUPPORT_ENABLED)
 if (NOT KERNEL_REPLICATION_ENABLED)
 # Only define NUM_REPLICATIONS if kernel replications is enabled
  unset(NUM_REPLICATIONS)
 endif()
 
-
 if (HPCC_FPGA_CONFIG)
     message(STATUS "HPCC FPGA configuration defined. Overwrite default values with configuration: ${HPCC_FPGA_CONFIG}")
     include(${HPCC_FPGA_CONFIG})
+endif()
+
+# Download build dependencies
+add_subdirectory(${CMAKE_SOURCE_DIR}/../extern ${CMAKE_BINARY_DIR}/extern)
+
+# Enable ACCL if required
+if (USE_ACCL)
+   include(${CMAKE_SOURCE_DIR}/../cmake/accl.cmake)
 endif()
 
 # Set the used data type
@@ -52,6 +65,12 @@ endif()
 if (NOT HOST_DATA_TYPE OR NOT DEVICE_DATA_TYPE)
     set(HOST_DATA_TYPE cl_${DATA_TYPE})
     set(DEVICE_DATA_TYPE ${DATA_TYPE})
+endif()
+
+if (DATA_TYPE STREQUAL "double")
+    set(_DP Yes CACHE BOOL "Use double-precision specific code for host and device.")
+    message(STATUS "Set DP flag since data type seems to be double precision")
+    mark_as_advanced(_DP)
 endif()
 
 # check configuration sanity
@@ -72,6 +91,15 @@ if (USE_MPI)
     add_definitions(-D_USE_MPI_)
     include_directories(${MPI_CXX_INCLUDE_PATH})
     link_libraries(${MPI_LIBRARIES})
+endif()
+if (USE_ACCL)
+    add_definitions(-DUSE_ACCL)
+endif()
+if (USE_XRT_HOST)
+    add_definitions(-DUSE_XRT_HOST)
+endif()
+if (USE_OCL_HOST)
+    add_definitions(-DUSE_OCL_HOST)
 endif()
 
 # Add configuration time to build
@@ -119,6 +147,11 @@ if (USE_DEPRECATED_HPP_HEADER)
     add_definitions(-DUSE_DEPRECATED_HPP_HEADER)
 endif()
 
+# set the communication type flag if required
+if (COMMUNICATION_TYPE_SUPPORT_ENABLED)
+    add_definitions(-DCOMMUNICATION_TYPE_SUPPORT_ENABLED)
+endif()
+
 # Set OpenCL version that should be used
 set(HPCC_FPGA_OPENCL_VERSION 200 CACHE STRING "OpenCL version that should be used for the host code compilation")
 mark_as_advanced(HPCC_FPGA_OPENCL_VERSION)
@@ -131,6 +164,10 @@ list(APPEND CMAKE_EXTRA_INCLUDE_FILES "CL/opencl.h")
 check_type_size("${HOST_DATA_TYPE}" DATA_TYPE_SIZE)
 
 # Configure the header file with definitions used by the host code
+configure_file(
+        "${CMAKE_SOURCE_DIR}/../shared/include/base_parameters.h.in"
+        "${CMAKE_BINARY_DIR}/src/common/base_parameters.h"
+)
 configure_file(
         "${CMAKE_SOURCE_DIR}/src/common/parameters.h.in"
         "${CMAKE_BINARY_DIR}/src/common/parameters.h"

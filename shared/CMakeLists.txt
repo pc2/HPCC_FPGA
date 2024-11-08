@@ -1,6 +1,29 @@
 project(HPCCBaseLibrary VERSION 1.0.1)
 
-add_library(hpcc_fpga_base STATIC ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup.cpp)
+set(HPCC_BASE_SOURCES "")
+
+if (USE_ACCL)
+    add_subdirectory(${extern_accl_SOURCE_DIR}/driver/xrt ${CMAKE_BINARY_DIR}/lib/accl)
+    list(APPEND HPCC_BASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup_accl.cpp ${extern_accl_SOURCE_DIR}/test/model/bfm/cclo_bfm.cpp)
+    if (CMAKE_BUILD_TYPE EQUAL "Debug")
+        set(ACCL_DEBUG Yes)
+    endif()
+endif()
+if (USE_XRT_HOST)
+    list(APPEND HPCC_BASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup_xrt.cpp)
+endif()
+list(APPEND HPCC_BASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/setup/fpga_setup.cpp ${CMAKE_CURRENT_SOURCE_DIR}/hpcc_settings.cpp)
+add_library(hpcc_fpga_base STATIC ${HPCC_BASE_SOURCES})
+if (USE_ACCL)
+    add_subdirectory(${extern_accl_udp_SOURCE_DIR}/xrt_host_api
+       ${CMAKE_BINARY_DIR}/lib/xrt_host_api)
+    target_include_directories(hpcc_fpga_base PUBLIC ${VNX_INCLUDE_PATH} ${ACCL_INCLUDE_PATH} ${extern_accl_SOURCE_DIR}/test/model/bfm ${extern_accl_SOURCE_DIR}/driver/hls ${extern_hlslib_SOURCE_DIR}/include/hlslib/xilinx)
+    target_link_libraries(hpcc_fpga_base accl vnx)
+endif()
+if (USE_XRT_HOST)
+    target_link_directories(hpcc_fpga_base PUBLIC ${XRT_SEARCH_PATH})
+    target_link_libraries(hpcc_fpga_base xrt_coreutil xrt_core)
+endif()
 
 find_package(OpenCL QUIET)
 
@@ -15,6 +38,6 @@ else()
 endif()
 
 target_include_directories(hpcc_fpga_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(hpcc_fpga_base cxxopts)
+target_link_libraries(hpcc_fpga_base cxxopts nlohmann_json::nlohmann_json)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)

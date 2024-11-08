@@ -3,17 +3,16 @@
 //
 #include "gtest/gtest.h"
 #include "parameters.h"
-#include "CL/cl.hpp"
 #include "test_program_settings.h"
 #include "gmock/gmock-matchers.h"
 #include "transpose_benchmark.hpp"
 
 
 struct TransposeHostTest : testing::Test {
-    std::unique_ptr<transpose::TransposeBenchmark> bm;
+    std::unique_ptr<transpose::TransposeBenchmark<cl::Device, cl::Context, cl::Program>> bm;
 
     TransposeHostTest() {
-        bm = std::unique_ptr<transpose::TransposeBenchmark>( new transpose::TransposeBenchmark(global_argc, global_argv));
+        bm = std::unique_ptr<transpose::TransposeBenchmark<cl::Device, cl::Context, cl::Program>>( new transpose::TransposeBenchmark<cl::Device, cl::Context, cl::Program>(global_argc, global_argv));
     }
 };
 
@@ -25,22 +24,22 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatHeader) {
     std::vector<double> calculateTimings;
     transferTimings.push_back(1.0);
     calculateTimings.push_back(1.0);
-    std::shared_ptr<transpose::TransposeExecutionTimings> results(
-            new transpose::TransposeExecutionTimings{transferTimings, calculateTimings});
-
+    bm->addTimings("transfer", transferTimings);
+    bm->addTimings("calculation", calculateTimings);
 
     // Redirect stout buffer to local buffer to make checks possible
     std::stringstream newStdOutBuffer;
     std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
     std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
-    bm->collectAndPrintResults(*results);
+    bm->collectResults();
+    bm->printResults();
 
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);
 
     EXPECT_THAT(newStdOutBuffer.str(),
-                ::testing::MatchesRegex("(\\s+)calc(\\s+)calc\\sFLOPS(\\s+)Net\\s\\[B/s\\](\\s+)Mem\\s\\[B/s\\]\n.*"));
+                ::testing::MatchesRegex("(\\s+)total\\stime(\\s+)transfer\\stime(\\s+)calc\\s+time(\\s+)calc\\sFLOPS(\\s+)Memory\\sBandwidth(\\s+)PCIe\\sBandwidth(\\s+)\n.*"));
 }
 
 /**
@@ -51,8 +50,8 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
     std::vector<double> calculateTimings;
     transferTimings.push_back(1.0);
     calculateTimings.push_back(1.0);
-    std::shared_ptr<transpose::TransposeExecutionTimings> results(
-            new transpose::TransposeExecutionTimings{transferTimings, calculateTimings});
+    bm->addTimings("transfer", transferTimings);
+    bm->addTimings("calculation", calculateTimings);
 
 
     // Redirect stout buffer to local buffer to make checks possible
@@ -60,13 +59,14 @@ TEST_F(TransposeHostTest, OutputsCorrectFormatValues) {
     std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
     std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
-    bm->collectAndPrintResults(*results);
+    bm->collectResults();
+    bm->printResults();
 
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);
 
     EXPECT_THAT(newStdOutBuffer.str(),
-                ::testing::MatchesRegex(".*\navg:\\s+1\\.00000e\\+00.*\n.*\n"));
+                ::testing::MatchesRegex(".*\n\\s+avg:\\s+2\\.00000e\\+00\\s+s\\s+1\\.00000e\\+00\\s+s\\s+1\\.00000e\\+00\\s+s.*\n.*\n"));
 }
 
 /**
@@ -90,7 +90,8 @@ TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
     std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
     std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
-    bool success = bm->validateOutputAndPrintError(*data);
+    bool success = bm->validateOutput(*data);
+    bm->printError();
 
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);
@@ -128,7 +129,8 @@ TEST_F(TransposeHostTest, ValidationIsSuccess) {
     std::streambuf *oldStdOutBuffer = std::cout.rdbuf();
     std::cout.rdbuf(newStdOutBuffer.rdbuf());
 
-    bool success = bm->validateOutputAndPrintError(*data);
+    bool success = bm->validateOutput(*data);
+    bm->printError();
 
     // Redirect stdout to old buffer
     std::cout.rdbuf(oldStdOutBuffer);

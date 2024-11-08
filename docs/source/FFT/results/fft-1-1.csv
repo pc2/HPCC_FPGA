@@ -1,21 +1,22 @@
-FPGA board,BittWare 520N,Alveo U280,Alveo U280,PAC D5005
-FPGA,Intel Stratix 10 GX2800,Xilinx XCU280,Xilinx XCU280,Intel Stratix 10 SX
-Memory Type,DDR,DDR,HBM2,SVM
-SDK,19.4.0,2019.2,2019.2,19.4.0
-BSP/Shell,19.2.0_hpc,2019.2.3,2019.2.3,18.1.2_svm
-CPU,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148
-System,`Noctua <https://pc2.uni-paderborn.de/hpc-services/available-systems/noctua/>`_,,,
-LOG_FFT_SIZE,17,9,5,17
-NUM_REPLICATIONS,2,1,15,1
-LUT,276676,83494,602125,192189
-LUT percent,36.0,7.39,54.13,22.0
-Register,724790,168150,941404,480285
-Register percent,36.0,7.19,42.18,22.0
-BRAM,4177,39,405,2147
-BRAM percent,36.0,2.28,22.35,18.0
-DSP,1414,672,5280,707
-DSP percent,25.0,7.46,58.58,12.0
-Frequency,413.34,248.00,254.00,348.00
-GFLOPs,349.45,78.26,576.00,119.66
-GBs,65.78,27.83,368.77,22.54
-Error,7.1e-1,3.9e-1,5.4e-1,7.1e-1
+Version,1.4,1.1,1.1,1.1,1.1
+FPGA board,BittWare 520N,BittWare 520N,Alveo U280,Alveo U280,PAC D5005
+FPGA,Intel Stratix 10 GX2800,Intel Stratix 10 GX2800,Xilinx XCU280,Xilinx XCU280,Intel Stratix 10 SX
+Memory Type,DDR,DDR,DDR,HBM2,SVM
+SDK,21.2.0,19.4.0,2019.2,2019.2,19.4.0
+BSP/Shell,20.4.0,19.2.0_hpc,2019.2.3,2019.2.3,18.1.2_svm
+CPU,AMD EPYC Milan 7763,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148,Intel Xeon Gold 6148
+System,`Noctua 2 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944066/Noctua+2>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_,`Noctua 1 <https://uni-paderborn.atlassian.net/wiki/spaces/PC2DOK/pages/12944490/Noctua+1>`_
+LOG_FFT_SIZE,12,17,9,5,17
+NUM_REPLICATIONS,2,2,1,15,1
+LUT,280105,276676,83494,602125,192189
+LUT percent,30,36.0,7.39,54.13,22.0
+Register,611446,724790,168150,941404,480285
+Register percent,,36.0,7.19,42.18,22.0
+BRAM,1811,4177,39,405,2147
+BRAM percent,15,36.0,2.28,22.35,18.0
+DSP,1560,1414,672,5280,707
+DSP percent,27,25.0,7.46,58.58,12.0
+Frequency,402.41,413.34,248.00,254.00,348.00
+GFLOPs,239.598,349.45,78.26,576.00,119.66
+GBs,,65.78,27.83,368.77,22.54
+Error,3.00463e-1,7.1e-1,3.9e-1,5.4e-1,7.1e-1

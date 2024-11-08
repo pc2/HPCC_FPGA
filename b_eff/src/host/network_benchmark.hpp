@@ -31,6 +31,33 @@ SOFTWARE.
 #include "hpcc_benchmark.hpp"
 #include "parameters.h"
 
+#ifdef USE_DEPRECATED_HPP_HEADER
+template <typename T>
+struct aligned_allocator {
+
+   //    typedefs
+          typedef T value_type;
+          typedef value_type* pointer;
+          typedef const value_type* const_pointer;
+
+	   pointer allocate(size_t pCount, const_pointer = 0){ 
+	    	T* mem = 0;
+	    	if (posix_memalign(reinterpret_cast<void**>(&mem), 4096, sizeof(T) * pCount) != 0) {
+	    		throw std::bad_alloc();
+	        }
+		return mem; 
+	   }
+
+	   void deallocate(pointer pPtr, size_t pCount) { 
+	       free(pPtr);
+	   }
+};
+	   
+namespace cl {
+    template <class T> using vector = std::vector<T,aligned_allocator<T>>; 
+}
+#endif
+
 /**
  * @brief Contains all classes and methods needed by the Network benchmark
  * 
@@ -64,11 +91,26 @@ namespace network {
         std::vector<double> calculationTimings;
     };
 
+    struct ExecutionResult {
+        std::vector<ExecutionTimings> execution_timings;
+        /**
+         * @brief maximum of minimum calculation time, filled by collectResults
+         * 
+         */
+        double maxMinCalculationTime;
+    
+        /**
+         * @brief maximum of calculated bandwidths, filled by collectResults
+         * 
+         */
+        double maxCalcBW;
+    };
+
     /**
      * @brief The data structure used to store all measurement results
      * 
      */
-    typedef std::map<int, std::shared_ptr<std::vector<std::shared_ptr<ExecutionTimings>>>> CollectedResultMap;
+    typedef std::map<int, ExecutionResult> CollectedTimingsMap;
 
 /**
  * @brief The Network benchmark specific program settings
@@ -102,6 +144,12 @@ public:
     uint minMessageSize;
 
     /**
+     * @brief Step size for tested message sizes
+     * 
+     */
+    uint stepSize;
+
+    /**
      * @brief Offset that is used before the loop length will be reduced for higher message sizes
      * 
      */
@@ -112,6 +160,51 @@ public:
      * 
      */
     uint llDecrease;
+
+    /**
+    * @brief Use the second command kernel to schedule sends and receives directly from PL
+    *
+    */
+    bool accl_from_programable_logic;
+
+    /**
+     * @brief Forward data to AXI stream instead of global memory to further reduce latency
+    */
+    bool accl_axi_stream;
+
+    /**
+     * @brief his is automatically set to true if one of pcie_reverse_write_pcie, pcie_reverse_read_pcie, 
+     * or pcie_reverse_execute_kernel is set to true. The reverse PCIe experiment will be executed in that case.
+     * 
+     */
+    bool pcie_reverse;
+
+    /**
+     * @brief If true, the benchmark will execute the reverse PCIe benchmark instead. It will write data to the FPGA. 
+     * The other pcie_reverse flags can be set to do additional operations within the measurement.
+     * 
+     */
+    bool pcie_reverse_write_pcie;
+
+    /**
+     * @brief If true, the benchmark will execute the reverse PCIe benchmark instead. It will execute an empty kernel. 
+     * The other pcie_reverse flags can be set to do additional operations within the measurement.
+     * 
+     */
+    bool pcie_reverse_execute_kernel;
+
+    /**
+     * @brief If true, the benchmark will execute the reverse PCIe benchmark instead. It will read data from the FPGA. 
+     * The other pcie_reverse flags can be set to do additional operations within the measurement.
+     * 
+     */
+    bool pcie_reverse_read_pcie;
+
+    /**
+     * @brief If true, the reverse experiments are executed in batch mode per looplength to make use of the scheduling queues
+     * 
+     */
+    bool pcie_reverse_batch;
 
     /**
      * @brief Construct a new Network Program Settings object
@@ -169,8 +262,9 @@ public:
          * 
          * @param messageSize The message size in bytes
          * @param loopLength The number of repetitions in the kernel
+         * @param replications The number of kernel replications
          */
-        NetworkDataItem(unsigned int messageSize, unsigned int loopLength);
+        NetworkDataItem(unsigned int messageSize, unsigned int loopLength, unsigned int replications);
     };
 
 
@@ -187,25 +281,13 @@ public:
      * @param min_looplength The minimum number of iterations that should be done for a message size
      * @param max_messagesize The minimum message size
      * @param max_messagesize The maximum message size
+     * @param stepSize Step size used to generate tested message sizes
      * @param offset The used offset to scale the loop length. The higher the offset, the later the loop lenght will be decreased
      * @param decrease Number of steps the looplength will be decreased to the minimum
+     * @param replications The number of kernel replications
      */
-    NetworkData(unsigned int max_looplength, unsigned int min_looplength,  unsigned int min_messagesize, unsigned int max_messagesize, unsigned int offset, unsigned int decrease);
-
-};
-
-/**
- * @brief Measured execution timing from the kernel execution
- * 
- */
-class NetworkExecutionTimings {
-public:
-
-    /**
-     * @brief A vector containing the timings for all repetitions for the kernel execution
-     * 
-     */
-    CollectedResultMap timings;
+    NetworkData(unsigned int max_looplength, unsigned int min_looplength,  unsigned int min_messagesize, unsigned int max_messagesize,
+                unsigned int stepSize, unsigned int offset, unsigned int decrease, unsigned int replications);
 
 };
 
@@ -213,9 +295,25 @@ public:
  * @brief Implementation of the Network benchmark
  * 
  */
-class NetworkBenchmark : public hpcc_base::HpccFpgaBenchmark<NetworkProgramSettings, NetworkData, NetworkExecutionTimings> {
+class NetworkBenchmark : 
+#ifdef USE_OCL_HOST
+    public hpcc_base::HpccFpgaBenchmark<network::NetworkProgramSettings, cl::Device, cl::Context, cl::Program, network::NetworkData> 
+#endif
+#ifdef USE_XRT_HOST
+#ifdef USE_ACCL
+    public hpcc_base::HpccFpgaBenchmark<network::NetworkProgramSettings, xrt::device, fpga_setup::ACCLContext, xrt::uuid, network::NetworkData> 
+#else
+    public hpcc_base::HpccFpgaBenchmark<network::NetworkProgramSettings, xrt::device, bool, xrt::uuid, network::NetworkData> 
+#endif
+#endif
+   {
+    protected:
 
-protected:
+    /**
+     * @brief Data structure used to store the number of errors for each message size
+     * 
+     */
+    std::map<std::string, int> errors;
 
     /**
      * @brief Additional input parameters of the Network benchmark
@@ -226,6 +324,38 @@ protected:
     addAdditionalParseOptions(cxxopts::Options &options) override;
 
 public:
+
+    CollectedTimingsMap collected_timings;
+    
+    json
+    getTimingsJson() override
+    {
+        json j;
+        for (const auto& timing: collected_timings) {
+            json timing_json;
+            timing_json["maxMinCalculationTime"] = timing.second.maxMinCalculationTime;
+            timing_json["maxCalcBW"] = timing.second.maxCalcBW;
+            std::vector<json> timings_json;
+            for (const auto& execution_timing: timing.second.execution_timings) {
+                json single_timing_json;
+                single_timing_json["looplength"] = execution_timing.looplength;
+                single_timing_json["messageSize"] = execution_timing.messageSize;
+                std::vector<json> calculation_timings;
+                for (const auto& timing: execution_timing.calculationTimings) {
+                    json j;
+                    j["unit"] = "s";
+                    j["value"] = timing;
+                    calculation_timings.push_back(j);
+                }
+                single_timing_json["timings"] = calculation_timings;
+                timings_json.push_back(single_timing_json);
+            }
+            timing_json["timings"] = timings_json;
+            
+            j[std::to_string(timing.first)] = timing_json;
+        }
+        return j;
+    }
 
     /**
      * @brief Network specific implementation of the data generation
@@ -241,8 +371,8 @@ public:
      * @param data The input and output data of the benchmark
      * @return std::unique_ptr<NetworkExecutionTimings> Measured runtimes of the kernel execution
      */
-    std::unique_ptr<NetworkExecutionTimings>
-    executeKernel(NetworkData &data) override;
+    void
+    executeKernel(network::NetworkData &data) override;
 
     /**
      * @brief Network specific implementation of the execution validation
@@ -251,15 +381,29 @@ public:
      * @return true always, since no checks are done
      */
     bool
-    validateOutputAndPrintError(NetworkData &data) override;
+    validateOutput(network::NetworkData &data) override;
 
     /**
-     * @brief Network specific implementation of printing the execution results
+     * @brief Network specific implementation of the error printing
+     *
+     */
+    void
+    printError() override;
+
+    /**
+     * @brief Network specific implementation of collecting the execution results
      * 
      * @param output Measured runtimes of the kernel execution
      */
     void
-    collectAndPrintResults(const NetworkExecutionTimings &output) override;
+    collectResults() override;
+
+    /**
+     * @brief Network specifig implementation of the printing the execution results
+     *
+     */
+    void
+    printResults() override;
 
     /**
      * @brief Construct a new Network Benchmark object. This construtor will directly setup

@@ -8,6 +8,7 @@
 #include "test_program_settings.h"
 #include "gmock/gmock.h"
 #include "hpcc_benchmark.hpp"
+#include "nlohmann/json.hpp"
 
 
 // Dirty GoogleTest and static library hack
@@ -16,7 +17,8 @@
 // and enable the included tests
 void use_hpcc_base_lib() {}
 
-class MinimalBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int, int> {
+template<class T>
+class MinimalBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, typename std::tuple_element<0, T>::type, typename std::tuple_element<1, T>::type, typename std::tuple_element<2, T>::type, int> {
 
 protected:
 
@@ -35,24 +37,30 @@ public:
     std::unique_ptr<int>
     generateInputData() override { return returnInputData ? std::unique_ptr<int>(new int) : std::unique_ptr<int>(nullptr);}
 
-    std::unique_ptr<int>
-    executeKernel(int &data) override { return returnExecuteKernel ? std::unique_ptr<int>(new int) : std::unique_ptr<int>(nullptr);}
+    void
+    executeKernel(int &data) override { return;}
 
     bool
-    validateOutputAndPrintError(int &data) override { return returnValidate;}
+    validateOutput(int &data) override { return returnValidate;}
+    
+    void
+    printError() override {}
 
     bool
     checkInputParameters() override { return configurationCheckSucceeds;}
 
     void
-    collectAndPrintResults(const int &output) override {}
+    collectResults() override {}
 
-    MinimalBenchmark() : HpccFpgaBenchmark(0, { nullptr}) {}
+    void
+    printResults() override {}
+
+    MinimalBenchmark() : hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, typename std::tuple_element<0, T>::type, typename std::tuple_element<1, T>::type, typename std::tuple_element<2, T>::type, int>(0, { nullptr}) {}
 
 };
 
-
-class SuccessBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, int, int> {
+template<class TDevice, class TContext, class TProgram>
+class SuccessBenchmark : public hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, TDevice, TContext, TProgram, int> {
 
 protected:
 
@@ -66,6 +74,7 @@ public:
     bool returnInputData = true;  
     bool returnExecuteKernel = true; 
     bool returnValidate = true;
+    bool forceSetupFail = false;
 
     uint executeKernelcalled = 0;
     uint generateInputDatacalled = 0;
@@ -79,129 +88,210 @@ public:
         generateInputDatacalled++;
         return std::unique_ptr<int>(new int);}
 
-    std::unique_ptr<int>
+    void
     executeKernel(int &data) override { 
         if (!returnExecuteKernel) {
             throw fpga_setup::FpgaSetupException("Test execute kernel failed");
         }
         executeKernelcalled++;
-        return std::unique_ptr<int>(new int);}
+        return;}
 
     bool
-    validateOutputAndPrintError(int &data) override { 
+    validateOutput(int &data) override { 
         validateOutputcalled++;
         return returnValidate;}
+    
+    void
+    printError() override {}
 
     void
-    collectAndPrintResults(const int &output) override {}
+    collectResults() override {}
 
-    SuccessBenchmark() : HpccFpgaBenchmark(0, { nullptr}) {}
+    void
+    printResults() override {}
+
+    bool
+    checkInputParameters() override {
+        if (forceSetupFail) {
+            return false;
+        }
+        else {
+            return hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, TDevice, TContext, TProgram, int>::checkInputParameters();
+        }
+    }
+
+    SuccessBenchmark() : hpcc_base::HpccFpgaBenchmark<hpcc_base::BaseSettings, TDevice, TContext, TProgram, int>(0, { nullptr}) {}
 
 };
 
+template<class T>
 class BaseHpccBenchmarkTest :public  ::testing::Test {
 
+using TDevice = typename std::tuple_element<0,T>::type;
+using TContext = typename std::tuple_element<1,T>::type;
+using TProgram = typename std::tuple_element<2,T>::type;
+
 public:
-    std::unique_ptr<SuccessBenchmark> bm;
+    std::unique_ptr<SuccessBenchmark<TDevice, TContext, TProgram>> bm;
 
     BaseHpccBenchmarkTest() {
-        bm = std::unique_ptr<SuccessBenchmark>(new SuccessBenchmark());
-        bool success = bm->setupBenchmark(global_argc, global_argv);
-        EXPECT_TRUE(success);
+        bm = std::unique_ptr<SuccessBenchmark<TDevice, TContext, TProgram>>(new SuccessBenchmark<TDevice, TContext, TProgram>());
+        bm->setupBenchmark(global_argc, global_argv);
     }
 
 };
+
+template<class T>
+class SetupTest : public ::testing::Test {};
+
+#ifdef USE_OCL_HOST
+typedef ::testing::Types<std::tuple<cl::Device, cl::Context, cl::Program>> cl_types;
+TYPED_TEST_SUITE(
+        BaseHpccBenchmarkTest,
+        cl_types);
+TYPED_TEST_SUITE(
+        SetupTest,
+        cl_types);
+#endif
+#ifdef USE_XRT_HOST
+#ifndef USE_ACCL
+typedef ::testing::Types<std::tuple<xrt::device, bool, xrt::uuid>> xrt_types;
+TYPED_TEST_SUITE(
+        BaseHpccBenchmarkTest,
+        xrt_types);
+TYPED_TEST_SUITE(
+        SetupTest,
+        xrt_types);
+#else
+typedef ::testing::Types<std::tuple<xrt::device, fpga_setup::ACCLContext, xrt::uuid>> accl_types;
+TYPED_TEST_SUITE(
+        BaseHpccBenchmarkTest,
+        accl_types);
+TYPED_TEST_SUITE(
+        SetupTest,
+        accl_types);
+#endif
+#endif
+
+
+TYPED_TEST(BaseHpccBenchmarkTest, SetupSucceedsForBenchmarkTest) {
+        bool success = this->bm->setupBenchmark(global_argc, global_argv);
+        EXPECT_TRUE(success);
+}
 
 
 /**
  * Checks if the testing flag works as expected
  */
-TEST_F(BaseHpccBenchmarkTest, AllExecutedWhenNotTestOnly) {
-    bm->getExecutionSettings().programSettings->testOnly = false;
-    bm->executeBenchmark();
-    EXPECT_EQ(bm->validateOutputcalled, 1);
-    EXPECT_EQ(bm->executeKernelcalled, 1);
-    EXPECT_EQ(bm->generateInputDatacalled, 1);
+TYPED_TEST(BaseHpccBenchmarkTest, AllExecutedWhenNotTestOnly) {
+    this->bm->getExecutionSettings().programSettings->testOnly = false;
+    this->bm->executeBenchmark();
+    EXPECT_EQ(this->bm->validateOutputcalled, 1);
+    EXPECT_EQ(this->bm->executeKernelcalled, 1);
+    EXPECT_EQ(this->bm->generateInputDatacalled, 1);
+}
+
+TYPED_TEST(BaseHpccBenchmarkTest, NothingExecutedWhenTestOnly) {
+    this->bm->getExecutionSettings().programSettings->testOnly = true;
+    this->bm->executeBenchmark();
+    EXPECT_EQ(this->bm->validateOutputcalled, 0);
+    EXPECT_EQ(this->bm->executeKernelcalled, 0);
+    EXPECT_EQ(this->bm->generateInputDatacalled, 0);
+}
+
+TYPED_TEST(BaseHpccBenchmarkTest, ExecutionSuccessWhenNotTestOnly) {
+    this->bm->getExecutionSettings().programSettings->testOnly = false;
+    EXPECT_TRUE(this->bm->executeBenchmark());
 
 }
 
-TEST_F(BaseHpccBenchmarkTest, GenerateInputExecutedWhenTestOnly) {
-    bm->getExecutionSettings().programSettings->testOnly = true;
-    bm->executeBenchmark();
-    EXPECT_EQ(bm->validateOutputcalled, 0);
-    EXPECT_EQ(bm->executeKernelcalled, 0);
-    EXPECT_EQ(bm->generateInputDatacalled, 1);
+TYPED_TEST(BaseHpccBenchmarkTest, ExecutionFailsWhenTestOnlyAndSetupFails) {
+    this->bm->getExecutionSettings().programSettings->testOnly = true;
+    this->bm->forceSetupFail = true;
+    this->bm->setupBenchmark(global_argc, global_argv);
+    EXPECT_FALSE(this->bm->executeBenchmark());
 }
 
-TEST_F(BaseHpccBenchmarkTest, ExecutionSuccessWhenNotTestOnly) {
-    bm->getExecutionSettings().programSettings->testOnly = false;
-    EXPECT_TRUE(bm->executeBenchmark());
-
-}
-
-TEST_F(BaseHpccBenchmarkTest, ExecutionFailsWhenTestOnly) {
-    bm->getExecutionSettings().programSettings->testOnly = true;
-    EXPECT_FALSE(bm->executeBenchmark());
-}
-
-
-/**
- * Checks if using default platform and device is successful
- */
-TEST_F(BaseHpccBenchmarkTest, SuccessUseDefaultPlatform) {
-    EXPECT_NE(fpga_setup::selectFPGADevice(bm->getExecutionSettings().programSettings->defaultPlatform, bm->getExecutionSettings().programSettings->defaultDevice).get(), nullptr);
-}
-
-/**
- * Checks if non existing platform leads to an error
- */
-TEST_F(BaseHpccBenchmarkTest, FindNonExistingPlatform) {
-    ASSERT_THROW(fpga_setup::selectFPGADevice(100, bm->getExecutionSettings().programSettings->defaultDevice).get(), fpga_setup::FpgaSetupException);
+TYPED_TEST(BaseHpccBenchmarkTest, ExecutionSuccessWhenTestOnlyAndSetupSuccess) {
+    this->bm->getExecutionSettings().programSettings->testOnly = true;
+    EXPECT_TRUE(this->bm->executeBenchmark());
 }
 
 /**
  * Checks if non existing device leads to an error
  */
-TEST_F(BaseHpccBenchmarkTest, FindNonExistingDevice) {
-    ASSERT_THROW(fpga_setup::selectFPGADevice(bm->getExecutionSettings().programSettings->defaultPlatform, 100).get(), fpga_setup::FpgaSetupException);
+TYPED_TEST(BaseHpccBenchmarkTest, FindNonExistingDevice) {
+#ifdef USE_OCL_HOST
+    ASSERT_THROW(fpga_setup::selectFPGADevice(this->bm->getExecutionSettings().programSettings->defaultPlatform, 100, this->bm->getExecutionSettings().programSettings->platformString).get(), fpga_setup::FpgaSetupException);
+#else
+    ASSERT_THROW(fpga_setup::selectFPGADevice(100).get(), fpga_setup::FpgaSetupException);
+#endif
 }
+
+/**
+ * Checks if using default platform and device is successful
+ */
+TYPED_TEST(BaseHpccBenchmarkTest, SuccessUseDefaultPlatformandDevice) {
+#ifdef USE_OCL_HOST
+    EXPECT_NE(fpga_setup::selectFPGADevice(this->bm->getExecutionSettings().programSettings->defaultPlatform, this->bm->getExecutionSettings().programSettings->defaultDevice, this->bm->getExecutionSettings().programSettings->platformString).get(), nullptr);
+#else
+    EXPECT_NE(fpga_setup::selectFPGADevice(this->bm->getExecutionSettings().programSettings->defaultDevice).get(), nullptr);
+#endif
+}
+
+#ifdef USE_OCL_HOST
+/**
+ * Checks if non existing platform leads to an error
+ */
+TYPED_TEST(BaseHpccBenchmarkTest, FindNonExistingPlatform) {
+    ASSERT_THROW(fpga_setup::selectFPGADevice(100, this->bm->getExecutionSettings().programSettings->defaultDevice, this->bm->getExecutionSettings().programSettings->platformString).get(), fpga_setup::FpgaSetupException);
+}
+
+/*
+ * Check if wrong platform string leads to an error
+ */
+TYPED_TEST(BaseHpccBenchmarkTest, FindNonExistingPlatformString) {
+    ASSERT_THROW(fpga_setup::selectFPGADevice(this->bm->getExecutionSettings().programSettings->defaultPlatform, this->bm->getExecutionSettings().programSettings->defaultDevice, "This is not a platform").get(), fpga_setup::FpgaSetupException);
+}
+
+#endif
 
 /**
  * Execute kernel and validation is success
  */
-TEST_F(BaseHpccBenchmarkTest, SuccessfulExeAndVal) {
-    EXPECT_TRUE(bm->executeBenchmark());
+TYPED_TEST(BaseHpccBenchmarkTest, SuccessfulExeAndVal) {
+    EXPECT_TRUE(this->bm->executeBenchmark());
 }
 
 /**
  * Execute kernel is success, but validation fails
  */
-TEST_F(BaseHpccBenchmarkTest, SuccessfulExeFailedVal) {
-    bm->returnValidate = false;
-    EXPECT_FALSE(bm->executeBenchmark());
+TYPED_TEST(BaseHpccBenchmarkTest, SuccessfulExeFailedVal) {
+    this->bm->returnValidate = false;
+    EXPECT_FALSE(this->bm->executeBenchmark());
 }
 
 /**
  * Execute kernel fails
  */
-TEST_F(BaseHpccBenchmarkTest, FailedExe) {
-    bm->returnExecuteKernel = false;
-    EXPECT_FALSE(bm->executeBenchmark());
+TYPED_TEST(BaseHpccBenchmarkTest, FailedExe) {
+    this->bm->returnExecuteKernel = false;
+    EXPECT_FALSE(this->bm->executeBenchmark());
 }
 
 /**
  * Benchmark Setup is successful with default data
  */
-TEST(SetupTest, BenchmarkSetupIsSuccessful) {
-    std::unique_ptr<MinimalBenchmark> bm = std::unique_ptr<MinimalBenchmark>(new MinimalBenchmark());
+TYPED_TEST(SetupTest, BenchmarkSetupIsSuccessful) {
+    std::unique_ptr<MinimalBenchmark<TypeParam>> bm = std::unique_ptr<MinimalBenchmark<TypeParam>>(new MinimalBenchmark<TypeParam>());
     EXPECT_TRUE(bm->setupBenchmark(global_argc, global_argv));
 }
 
 /**
  * Benchmark Setup fails because of failing configuration check
  */
-TEST(SetupTest, BenchmarkConfigurationFailsSetup) {
-    std::unique_ptr<MinimalBenchmark> bm = std::unique_ptr<MinimalBenchmark>(new MinimalBenchmark());
+TYPED_TEST(SetupTest, BenchmarkConfigurationFailsSetup) {
+    std::unique_ptr<MinimalBenchmark<TypeParam>> bm = std::unique_ptr<MinimalBenchmark<TypeParam>>(new MinimalBenchmark<TypeParam>());
     bm->configurationCheckSucceeds = false;
     EXPECT_FALSE(bm->setupBenchmark(global_argc, global_argv));
 }
@@ -209,8 +299,8 @@ TEST(SetupTest, BenchmarkConfigurationFailsSetup) {
 /**
  * Benchmark Execution fails if configuration check failed
  */
-TEST(SetupTest, BenchmarkConfigurationFailsExecution) {
-    std::unique_ptr<MinimalBenchmark> bm = std::unique_ptr<MinimalBenchmark>(new MinimalBenchmark());
+TYPED_TEST(SetupTest, BenchmarkConfigurationFailsExecution) {
+    std::unique_ptr<MinimalBenchmark<TypeParam>> bm = std::unique_ptr<MinimalBenchmark<TypeParam>>(new MinimalBenchmark<TypeParam>());
     bm->configurationCheckSucceeds = false;
     bm->setupBenchmark(global_argc, global_argv);
     EXPECT_FALSE(bm->executeBenchmark());
@@ -219,8 +309,8 @@ TEST(SetupTest, BenchmarkConfigurationFailsExecution) {
 /**
  * Benchmark Setup fails with empty data
  */
-TEST(SetupTest, BenchmarkSetupFails) {
-    std::unique_ptr<MinimalBenchmark> bm = std::unique_ptr<MinimalBenchmark>(new MinimalBenchmark());
+TYPED_TEST(SetupTest, BenchmarkSetupFails) {
+    std::unique_ptr<MinimalBenchmark<TypeParam>> bm = std::unique_ptr<MinimalBenchmark<TypeParam>>(new MinimalBenchmark<TypeParam>());
     char** tmp_argv = new char*[2];
     char* name_str = new char[5];
     strcpy(name_str, "name");
@@ -230,3 +320,32 @@ TEST(SetupTest, BenchmarkSetupFails) {
     delete [] tmp_argv;
     delete [] name_str;
 }
+
+using json = nlohmann::json;
+
+/**
+ *
+ * Check if dump-json flag produces valid json output
+ */
+TYPED_TEST(SetupTest, BenchmarkJsonDump) {
+    std::unique_ptr<MinimalBenchmark<TypeParam>> bm = std::unique_ptr<MinimalBenchmark<TypeParam>>(new MinimalBenchmark<TypeParam>());
+    bm->setupBenchmark(global_argc, global_argv);
+    bm->getExecutionSettings().programSettings->dumpfilePath = "out.json";
+    bm->executeBenchmark();
+    std::FILE *f = std::fopen("out.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        // json::parse will panic if f is nullptr
+        json j = json::parse(f);
+        // check if the expected keys are there
+        EXPECT_TRUE(j.contains("config_time"));
+        EXPECT_TRUE(j.contains("device"));
+        EXPECT_TRUE(j.contains("environment"));
+        EXPECT_TRUE(j.contains("git_commit"));
+        EXPECT_TRUE(j.contains("results"));
+        EXPECT_TRUE(j.contains("settings"));
+        EXPECT_TRUE(j.contains("timings"));
+        EXPECT_TRUE(j.contains("version"));
+    }
+}
+

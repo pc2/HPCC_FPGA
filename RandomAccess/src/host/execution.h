@@ -27,8 +27,6 @@ SOFTWARE.
 #include <vector>
 
 /* External library headers */
-#include "CL/cl.hpp"
-
 #include "parameters.h"
 #include "random_access_benchmark.hpp"
 
@@ -42,8 +40,8 @@ namespace bm_execution {
  * @param data The data that is used as input and output of the random accesses
  * @return std::unique_ptr<random_access::RandomAccessExecutionTimings> The measured runtimes of the kernel
  */
-std::unique_ptr<random_access::RandomAccessExecutionTimings>
-calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings> const& config, HOST_DATA_TYPE * data, int mpi_rank, int mpi_size);
+std::map<std::string, std::vector<double>>
+calculate(hpcc_base::ExecutionSettings<random_access::RandomAccessProgramSettings, cl::Device, cl::Context, cl::Program> const& config, HOST_DATA_TYPE * data, int mpi_rank, int mpi_size);
 
 }  // namespace bm_execution
 

@@ -2,11 +2,30 @@
 
 This file contains all changes made to the source code for each release.
 
+## 2.6
+
+#### Added:
+- Support for FPGA grid sizes with P != Q for baseline and IEC implementation
+
+## 2.5
+
+#### Added:
+- MPI + PCIe base implementations compatible with Xilinx and Intel FPGAs
+## 2.4
+#### Added:
+- Support for double-precision floating-point
+
+## 2.3
+#### Changed:
+- Refactored the code to support different execution kernels and data distributions
+#### Added:
+- FPGA kernel with communication via PCIe and MPI 
+
 ## 2.2
 
 #### Added:
 - LU facotrization kernel w/o pivoting in quadratic torus
-- Distributed calculation of GEL on CPU nodes and validation
+- Distributed calculation of GESL on CPU nodes and validation
 
 ## 2.1
 

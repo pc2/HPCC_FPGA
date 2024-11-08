@@ -28,6 +28,9 @@ FpgaSetupException::what() const noexcept
     return error_message.c_str();
 }
 
+
+#ifdef USE_OCL_HOST
+
 OpenClException::OpenClException(std::string error_name)
     : FpgaSetupException("An OpenCL error occured: " + error_name) {}
 
@@ -101,7 +104,7 @@ Converts the reveived OpenCL error to a string
             CL_ERR_TO_STR(CL_INVALID_DEVICE_PARTITION_COUNT);
 
             default:
-                return "UNKNOWN ERROR CODE";
+                return "UNKNOWN ERROR CODE: " + std::to_string(err);
         }
     }
 
@@ -135,7 +138,6 @@ Sets up the given FPGA with the kernel in the provided file.
 #ifdef _USE_MPI_
         MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 #endif
-
         if (world_rank == 0) {
             std::cout << HLINE;
             std::cout << "FPGA Setup:" << usedKernelFile->c_str() << std::endl;
@@ -166,6 +168,10 @@ Sets up the given FPGA with the kernel in the provided file.
         // Create the Program from the AOCX file.
         cl::Program program(*context, deviceList, mybinaries, NULL, &err);
         ASSERT_CL(err)
+
+        // Build the program (required for fast emulation on Intel)
+        ASSERT_CL(program.build());
+        
         if (world_rank == 0) {
             std::cout << "Prepared FPGA successfully for global Execution!" <<
                       std::endl;
@@ -173,37 +179,6 @@ Sets up the given FPGA with the kernel in the provided file.
         }
         return std::unique_ptr<cl::Program>(new cl::Program(program));
     }
-
-/**
-Sets up the C++ environment by configuring std::cout and checking the clock
-granularity using bm_helper::checktick()
-*/
-    void
-    setupEnvironmentAndClocks() {
-        std::cout << std::setprecision(5) << std::scientific;
-
-        int world_rank = 0;
-
-#ifdef _USE_MPI_
-        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-#endif
-
-        if (world_rank == 0) {
-            std::cout << HLINE;
-            std::cout << "General setup:" << std::endl;
-
-            // Check clock granularity and output result
-            std::cout << "C++ high resolution clock is used." << std::endl;
-            std::cout << "The clock precision seems to be "
-                    << static_cast<double>
-                        (std::chrono::high_resolution_clock::period::num) /
-                        std::chrono::high_resolution_clock::period::den * 10e9
-                    << "ns" << std::endl;
-
-            std::cout << HLINE;
-        }
-    }
-
 
 /**
 Searches an selects an FPGA device using the CL library functions.
@@ -216,11 +191,14 @@ choose a device.
 @param defaultDevice The index of the device that has to be used. If a
                         value < 0 is given, the device can be chosen
                         interactively
+@param platformString The platform string which should be chosen.
+                        If it is empty, it will be ignored. If it is not empty,
+                        but the string is not found an exception is thrown.
 
 @return A list containing a single selected device
 */
     std::unique_ptr<cl::Device>
-    selectFPGADevice(int defaultPlatform, int defaultDevice) {
+    selectFPGADevice(int defaultPlatform, int defaultDevice, std::string platformString) {
         // Integer used to store return codes of OpenCL library calls
         int err;
 
@@ -238,7 +216,22 @@ choose a device.
 
         // Choose the target platform
         long unsigned int chosenPlatformId = 0;
-        if (defaultPlatform >= 0) {
+        if (platformString.size() > 0) {
+            // Platform string has highest priority
+            bool found = false;
+            for (int i = 0; i < platformList.size(); i++) {
+                if (platformList[i].getInfo<CL_PLATFORM_NAME>() == platformString) {
+                    chosenPlatformId = i;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                throw FpgaSetupException("Invalid platform string specified: " + platformString);
+            }
+        } 
+        else if (defaultPlatform >= 0) {
+            // Otherwise, select platform by index
             if (defaultPlatform < static_cast<int>(platformList.size())) {
                 chosenPlatformId = defaultPlatform;
             } else {
@@ -298,6 +291,10 @@ choose a device.
             } else {
                 chosenDeviceId = static_cast<long unsigned int>(world_rank % deviceList.size());
             }
+        } else if (deviceList.size() == 1) {
+            chosenDeviceId = 0;
+        } else {
+            throw std::runtime_error("No devices found for selected Platform!");
         }
 
         if (world_rank == 0) {
@@ -312,6 +309,38 @@ choose a device.
         }
 
         return std::unique_ptr<cl::Device>(new cl::Device(deviceList[chosenDeviceId]));
+    }
+
+
+#endif
+/**
+Sets up the C++ environment by configuring std::cout and checking the clock
+granularity using bm_helper::checktick()
+*/
+    void
+    setupEnvironmentAndClocks() {
+        std::cout << std::setprecision(5) << std::scientific;
+
+        int world_rank = 0;
+
+#ifdef _USE_MPI_
+        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+#endif
+
+        if (world_rank == 0) {
+            std::cout << HLINE;
+            std::cout << "General setup:" << std::endl;
+
+            // Check clock granularity and output result
+            std::cout << "C++ high resolution clock is used." << std::endl;
+            std::cout << "The clock precision seems to be "
+                    << static_cast<double>
+                        (std::chrono::high_resolution_clock::period::num) /
+                        std::chrono::high_resolution_clock::period::den * 10e9
+                    << "ns" << std::endl;
+
+            std::cout << HLINE;
+        }
     }
 
 }  // namespace fpga_setup

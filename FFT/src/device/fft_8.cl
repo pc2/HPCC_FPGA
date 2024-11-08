@@ -264,6 +264,7 @@ float2x8 complex_rotate(float2x8 data, int index, int stage, int size) {
 // 'logN' should be a COMPILE TIME constant evaluating log(N) - the constant is 
 //        propagated throughout the code to achieve efficient hardware
 //
+__attribute__((always_inline))
 float2x8 fft_step(float2x8 data, int step, float2 fft_delay_elements[(1 << LOG_FFT_SIZE) + 8 * (LOG_FFT_SIZE - 2)], 
                   bool inverse, const int logN) {
 
@@ -327,7 +328,7 @@ float2x8 fft_step(float2x8 data, int step, float2 fft_delay_elements[(1 << LOG_F
     // shifting the entire contents in parallel if the loop is unrolled. More
     // important, when unrolling this loop each transfer maps to a trivial 
     // loop-carried dependency
-#pragma unroll
+__attribute__((opencl_unroll_hint()))
     for (int ii = 0; ii < size + 8 * (logN - 2) - 1; ii++) {
         fft_delay_elements[ii] = fft_delay_elements[ii + 1];
     }

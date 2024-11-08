@@ -28,7 +28,6 @@ SOFTWARE.
 #include <vector>
 
 /* External library headers */
-#include "CL/cl.hpp"
 #include "parameters.h"
 #include "fft_benchmark.hpp"
 
@@ -46,7 +45,7 @@ simple exchange of the different calculation methods.
 
 @return The resulting matrix
 */
-    std::unique_ptr<fft::FFTExecutionTimings>
+    std::map<std::string, std::vector<double>>
     calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const& config, std::complex<HOST_DATA_TYPE>* data, std::complex<HOST_DATA_TYPE>* data_out, unsigned iterations, bool inverse);
 
 }  // namespace bm_execution

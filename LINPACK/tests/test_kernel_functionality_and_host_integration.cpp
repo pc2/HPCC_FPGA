@@ -5,6 +5,7 @@
 #include "parameters.h"
 #include "test_program_settings.h"
 #include "linpack_benchmark.hpp"
+#include "nlohmann/json.hpp"
 
 #ifdef _LAPACK_
 #ifdef _DP
@@ -16,13 +17,13 @@ extern "C" void sgesv_(int* size, int* lrhs, float* A, int* size2, int* ipvt, fl
 
 struct LinpackKernelTest : testing::TestWithParam<uint> {
     
-    std::unique_ptr<linpack::LinpackBenchmark> bm;
-    std::unique_ptr<linpack::LinpackData> data;
+    std::unique_ptr<linpack::LinpackBenchmark<cl::Device, cl::Context, cl::Program>> bm;
+    std::unique_ptr<linpack::LinpackData<cl::Context>> data;
     uint array_size = 0;
 
     void SetUp() override {
         uint matrix_blocks = GetParam();
-        bm = std::unique_ptr<linpack::LinpackBenchmark>(new linpack::LinpackBenchmark(global_argc, global_argv));
+        bm = std::unique_ptr<linpack::LinpackBenchmark<cl::Device, cl::Context, cl::Program>>(new linpack::LinpackBenchmark<cl::Device, cl::Context, cl::Program>(global_argc, global_argv));
         bm->getExecutionSettings().programSettings->matrixSize = matrix_blocks * (1 << LOCAL_MEM_BLOCK_LOG);
         data = bm->generateInputData();
         array_size = bm->getExecutionSettings().programSettings->matrixSize;
@@ -40,7 +41,7 @@ struct LinpackKernelTest : testing::TestWithParam<uint> {
  * Execution returns correct results for a single repetition
  */
 TEST_P(LinpackKernelTest, FPGACorrectResultsOneRepetition) {
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     for (int i = 0; i < array_size; i++) {
         EXPECT_NEAR(data->b[i], 1.0, 1.0e-3);
     }
@@ -50,7 +51,7 @@ TEST_P(LinpackKernelTest, FPGACorrectResultsOneRepetition) {
  * GEFA Execution returns correct results for a single repetition
  */
 TEST_P(LinpackKernelTest, DISABLED_FPGACorrectResultsGEFA) {
-    auto result = bm->executeKernel(*data);
+    bm->executeKernel(*data);
     auto data2 = bm->generateInputData();
     if (bm->getExecutionSettings().programSettings->isDiagonallyDominant) {
         linpack::gefa_ref_nopvt(data2->A, array_size, array_size);
@@ -87,12 +88,42 @@ TEST_P(LinpackKernelTest, DISABLED_ValidationWorksForMKL) {
 #else
         dgesv_(&s, &lrhs, data_cpu->A, &s, data_cpu->ipvt, data_cpu->b, &s, &info);
 #endif
-    bool success = bm->validateOutputAndPrintError(*data_cpu);
-    EXPECT_TRUE(success);
+    EXPECT_TRUE(bm->validateOutput(*data));
+    bm->printError(); 
 }
 
 
 #endif
+
+using json = nlohmann::json;
+
+TEST_P(LinpackKernelTest, JsonDump) {
+    bm->executeKernel(*data);
+    bm->collectResults();
+    bm->dumpConfigurationAndResults("linpack.json");
+    std::FILE *f = std::fopen("linpack.json", "r");
+    EXPECT_NE(f, nullptr);
+    if (f != nullptr) {
+        json j = json::parse(f);
+        EXPECT_TRUE(j.contains("timings"));
+        if (j.contains("timings")) {
+            EXPECT_TRUE(j["timings"].contains("gefa"));
+            EXPECT_TRUE(j["timings"].contains("gesl"));
+        }
+        EXPECT_TRUE(j.contains("results"));
+        if (j.contains("results")) {
+            EXPECT_TRUE(j["results"].contains("gflops"));
+            EXPECT_TRUE(j["results"].contains("gflops_lu"));
+            EXPECT_TRUE(j["results"].contains("gflops_sl"));
+            EXPECT_TRUE(j["results"].contains("t_mean"));
+            EXPECT_TRUE(j["results"].contains("t_min"));
+            EXPECT_TRUE(j["results"].contains("tlu_mean"));
+            EXPECT_TRUE(j["results"].contains("tlu_min"));
+            EXPECT_TRUE(j["results"].contains("tsl_mean"));
+            EXPECT_TRUE(j["results"].contains("tsl_min"));
+        }
+    }
+}
 
 INSTANTIATE_TEST_CASE_P(
         LinpackKernelParametrizedTests,
