@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 Marius Meyer
+Copyright (c) 2022 Marius Meyer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,20 +19,40 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#ifndef SRC_HOST_FPGA_SETUP_UDP_H_
+#define SRC_HOST_FPGA_SETUP_UDP_H_
 
-#include "execution_types/execution_cpu.hpp"
-#ifndef USE_XRT_HOST
-#include "execution_types/execution_pcie.hpp"
-#include "execution_types/execution_pcie_reverse.hpp"
-#ifdef INTEL_FPGA
-#include "execution_types/execution_iec.hpp"
-#endif
-#else
-#include "execution_types/execution_udp.hpp"
-#ifdef USE_ACCL
-#include "execution_types/execution_accl.hpp"
-#include "execution_types/execution_accl_pl.hpp"
-#include "execution_types/execution_accl_pl_stream.hpp"
-#include "execution_types/execution_accl_stream.hpp"
-#endif
-#endif
+#include <chrono>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+
+/* External libraries */
+#include "hpcc_settings.hpp"
+#include "xrt/xrt_device.h"
+#include <vnx/cmac.hpp>
+#include <vnx/networklayer.hpp>
+
+namespace fpga_setup
+{
+
+struct VNXContext {
+    std::vector<vnx::Networklayer> udps;
+    std::vector<vnx::CMAC> cmacs;
+};
+
+/**
+Sets up the given FPGA with the kernel in the provided file.
+
+@param device The device used for the program
+@param program The program used to find the ACCL kernels for hardware execution
+@param programSettings Pass current program settings to configure ACCL according to user specification
+*/
+std::unique_ptr<VNXContext> fpgaSetupUDP(xrt::device &device, xrt::uuid &program,
+                                         hpcc_base::BaseSettings &programSettings);
+
+} // namespace fpga_setup
+#endif // SRC_HOST_FPGA_SETUP_H_

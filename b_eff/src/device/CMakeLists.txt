@@ -16,7 +16,7 @@ if (INTELFPGAOPENCL_FOUND)
 endif()
 
 if (Vitis_FOUND)
-        generate_kernel_targets_xilinx(communication_PCIE)
+        generate_kernel_targets_xilinx(communication_PCIE communication_UDP)
         if (USE_ACCL)
                 generate_kernel_targets_xilinx(communication_ACCL communication_ACCL_pl
                     communication_ACCL_pl_stream)

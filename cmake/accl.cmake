@@ -10,7 +10,7 @@ set(DEFAULT_ACCL_RECV_BUFFER_BANKS 1 CACHE STRING "Memory banks to allocate rece
 set(ACCL_CCLO_ADDITIONAL_BUILD_ARGS "" CACHE STRING "Add additional build arguments that will be passed to the CCLO makefile")
 set(ACCL_CCLO_BUILD_ARGS ${ACCL_CCLO_ADDITIONAL_BUILD_ARGS})
 # UDP related definitions
-set(ACCL_VNX_DIR ${extern_accl_udp_SOURCE_DIR})
+set(ACCL_VNX_DIR ${extern_vnx_udp_SOURCE_DIR})
 set(ACCL_NETLAYER_HLS ${ACCL_VNX_DIR}/NetLayers/100G-fpga-network-stack-core)
 set(ACCL_UDP_NET_XO ${ACCL_VNX_DIR}/NetLayers/_x.${FPGA_BOARD_NAME}/networklayer.xo)
 set(ACCL_HLS_IP_FOLDER ${ACCL_NETLAYER_HLS}/synthesis_results_HBM)
@@ -30,14 +30,14 @@ foreach(i RANGE ${loopend})
     add_custom_command(
         OUTPUT ${CURRENT_MAC_XO}
         COMMAND make -C ${ACCL_VNX_DIR}/Ethernet DEVICE=${FPGA_BOARD_NAME} INTERFACE=${i} all
-        WORKING_DIRECTORY ${extern_accl_udp_SOURCE_DIR}) 
+        WORKING_DIRECTORY ${extern_vnx_udp_SOURCE_DIR}) 
     list(APPEND ACCL_UDP_MAC_XOS ${CURRENT_MAC_XO})
 endforeach()
 
 add_custom_command(
     OUTPUT ${ACCL_UDP_NET_XO}
     COMMAND make -C ${ACCL_VNX_DIR}/NetLayers DEVICE=${FPGA_BOARD_NAME} all
-    WORKING_DIRECTORY ${extern_accl_udp_SOURCE_DIR}) 
+    WORKING_DIRECTORY ${extern_vnx_udp_SOURCE_DIR}) 
 
 add_custom_target(
     accl_udp_stack

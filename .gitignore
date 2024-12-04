@@ -15,7 +15,9 @@
 # CMake build directories should be created in the following folder
 *._*
 build/*
-
+**/build
+**/build_xrt
+**/build_pcie
 # Generated documentation, just include source folder
 docs/build
 docs/html
