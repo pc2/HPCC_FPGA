@@ -55,6 +55,10 @@ if (USE_ACCL)
    include(${CMAKE_SOURCE_DIR}/../cmake/accl.cmake)
 endif()
 
+if (USE_UDP)
+    include(${CMAKE_SOURCE_DIR}/../cmake/vnx.cmake)
+endif()
+
 # Set the used data type
 if (NOT DATA_TYPE)
     set(DATA_TYPE float CACHE STRING "Data type used for calculation")

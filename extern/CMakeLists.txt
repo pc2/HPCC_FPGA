@@ -73,21 +73,6 @@ if(NOT extern_accl_POPULATED)
 endif()
 
 # -------------------------------------------------------------------------------
-# UDP Library
-FetchContent_Declare(
-	extern_accl_udp
-
-    GIT_REPOSITORY	https://github.com/Xilinx/xup_vitis_network_example.git
-	  GIT_TAG		master)
-
-FetchContent_GetProperties(extern_accl_udp)
-if(NOT extern_accl_udp_POPULATED)
-	message(STATUS "Fetching mandatory build dependency ACCL UDP stack")
-	FetchContent_Populate(extern_accl_udp)
-	set(extern_accl_udp_SOURCE_DIR ${extern_accl_udp_SOURCE_DIR} PARENT_SCOPE)
-endif()
-
-# -------------------------------------------------------------------------------
 # TCP Library
 FetchContent_Declare(
 	extern_accl_tcp
@@ -100,6 +85,23 @@ if(NOT extern_accl_tcp_POPULATED)
 	message(STATUS "Fetching mandatory build dependency ACCL TCP stack")
 	FetchContent_Populate(extern_accl_tcp)
 	set(extern_accl_tcp_SOURCE_DIR ${extern_accl_tcp_SOURCE_DIR} PARENT_SCOPE)
+endif()
+endif()
+
+if (USE_ACCL OR USE_UDP)
+# -------------------------------------------------------------------------------
+# UDP Library
+FetchContent_Declare(
+	extern_vnx_udp
+
+    GIT_REPOSITORY	https://github.com/Xilinx/xup_vitis_network_example.git
+	  GIT_TAG		master)
+
+FetchContent_GetProperties(extern_vnx_udp)
+if(NOT extern_vnx_udp_POPULATED)
+	message(STATUS "Fetching mandatory build dependency VNx UDP stack")
+	FetchContent_Populate(extern_vnx_udp)
+	set(extern_vnx_udp_SOURCE_DIR ${extern_vnx_udp_SOURCE_DIR} PARENT_SCOPE)
 endif()
 endif()
 # ------------------------------------------------------------------------------

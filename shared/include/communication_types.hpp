@@ -58,6 +58,16 @@ typedef enum _CommunicationType {
     cpu_only,
 
     /**
+     * @brief Use a pure UDP stack from the VNx project for communication
+     */
+    udp,
+
+    /**
+     * @brief Use the Aurora HLS library for communication
+     */
+    aurora,
+
+    /**
      * @brief Indicates, that the use of the communication type is disabled
      * 
      */
@@ -76,6 +86,9 @@ static const std::map<const std::string, CommunicationType> comm_to_str_map{
     {"PCIE", CommunicationType::pcie_mpi},
     {"ACCL", CommunicationType::accl},
     {"CPU", CommunicationType::cpu_only},
+    {"UNSUPPORTED", CommunicationType::unsupported},
+    {"UDP", CommunicationType::udp},
+    {"AURORA", CommunicationType::aurora},
     {"AUTO", CommunicationType::automatic}
     };
     
