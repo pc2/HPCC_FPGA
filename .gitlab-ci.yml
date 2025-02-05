@@ -12,8 +12,8 @@ default:
   before_script:
     - module reset
     - module load fpga devel toolchain lang intel/opencl_sdk/21.4.0 bittware/520n/20.4.0_max foss/2024a CMake/3.29.3-GCCcore-13.3.0 Python/3.12.3-GCCcore-13.3.0
-    - python -m pip install -r scripts/evaluation/requirements.txt
-    - python -m pip install -r scripts/code_generator/requirements.txt
+    - python -m venv .venv
+    - source .venv/bin/activate
   id_tokens:
     CI_JOB_JWT:
       aud: https://git.uni-paderborn.de
@@ -29,7 +29,7 @@ build:docs:
   stage: build
   script:
     - python -m pip install -r docs/requirements.txt
-    - module load devel/Doxygen/1.9.1-GCCcore-10.3.0
+    - module load devel/Doxygen/1.11.0-GCCcore-13.3.0
     - cd docs
     - make html
     - doxygen doxy.config
@@ -109,6 +109,7 @@ check:b_eff:
 .build: &build
   stage: build
   script:
+    - python -m pip install -r scripts/code_generator/requirements.txt
     - rm -rf build
     - mkdir -p build
     - cd build
@@ -249,6 +250,7 @@ build:b_eff:
 .test: &test
   stage: test
   script:
+    - python -m pip install -r scripts/evaluation/requirements.txt
     - mkdir -p build
     - cd build
     - cmake ../$BENCHMARK_FOLDER $BENCHMARK_OPTIONS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
