@@ -113,7 +113,7 @@ check:b_eff:
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../$BENCHMARK_FOLDER -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 $BENCHMARK_OPTIONS
+    - cmake ../$BENCHMARK_FOLDER -DDEFAULT_PLATFORM=1 -DDEFAULT_DEVICE=0 $BENCHMARK_OPTIONS
     - make -j 40 all
   artifacts:
     paths:
@@ -250,6 +250,7 @@ build:b_eff:
 .test: &test
   stage: test
   script:
+    - python -m pip install -r scripts/code_generator/requirements.txt
     - python -m pip install -r scripts/evaluation/requirements.txt
     - mkdir -p build
     - cd build

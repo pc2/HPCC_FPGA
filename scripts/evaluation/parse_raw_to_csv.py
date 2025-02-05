@@ -99,7 +99,7 @@ def parse_by_regex(file_content, regex, bm_name):
     if res is not None:
         d = res.groupdict()
         df_tmp = pd.DataFrame(d, index=[bm_name])
-        df = df.append(df_tmp)
+        df = pd.concat([df, df_tmp], ignore_index=True)
     else:
         return None
     return df
@@ -145,11 +145,11 @@ def parse_file_or_folder(file_name, used_parse_functions):
     if os.path.isdir(file_name):
         files_in_dir = os.listdir(file_name)
         for f in files_in_dir:
-            df = df.append(parse_file_or_folder(f, used_parse_functions))
+            df = pd.concat([df, parse_file_or_folder(f, used_parse_functions)], ignore_index=True)
     else:
         tmp = parse_single_file(file_name, used_parse_functions)
         if not tmp is None:
-            df = df.append(tmp)
+            df = pd.concat([df, tmp], ignore_index=True)
     return df
         
 def parse_raw_inputs(input_paths, recursive=True, parse_functions=parse_map):
@@ -160,9 +160,9 @@ def parse_raw_inputs(input_paths, recursive=True, parse_functions=parse_map):
     df = pd.DataFrame()
     for ifile in input_paths:
         if recursive:
-            df = df.append(parse_file_or_folder(ifile, parse_functions))
+            df = pd.concat([df, parse_file_or_folder(ifile, parse_functions)], ignore_index=True)
         elif not os.path.isdir(ifile):
-            df = df.append(parse_single_file(ifile, parse_functions))
+            df = pd.concat([df, parse_file_or_folder(ifile, parse_functions)], ignore_index=True)
         else:
             print("Directory was specified, but no recursive execution", file=sys.stderr)
     return df

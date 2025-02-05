@@ -46,7 +46,7 @@ simple exchange of the different calculation methods.
 @return The resulting matrix
 */
     std::map<std::string, std::vector<double>>
-    calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const& config, std::complex<HOST_DATA_TYPE>* data, std::complex<HOST_DATA_TYPE>* data_out, unsigned iterations, bool inverse);
+    calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings, cl::Device, cl::Context, cl::Program> const& config, std::complex<HOST_DATA_TYPE>* data, std::complex<HOST_DATA_TYPE>* data_out, unsigned iterations, bool inverse);
 
 }  // namespace bm_execution
 

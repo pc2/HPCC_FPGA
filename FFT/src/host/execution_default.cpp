@@ -45,7 +45,7 @@ namespace bm_execution {
      @copydoc bm_execution::calculate()
     */
     std::map<std::string, std::vector<double>>
-    calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings> const&  config,
+    calculate(hpcc_base::ExecutionSettings<fft::FFTProgramSettings, cl::Device, cl::Context, cl::Program> const&  config,
             std::complex<HOST_DATA_TYPE>* data,
             std::complex<HOST_DATA_TYPE>* data_out,
             unsigned iterations,
