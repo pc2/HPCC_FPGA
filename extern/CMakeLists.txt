@@ -49,6 +49,7 @@ FetchContent_GetProperties(extern_cxxopts)
 if(NOT extern_cxxopts_POPULATED)
   message(STATUS "Fetching mandatory build dependency cxxopts")
   FetchContent_Populate(extern_cxxopts)
+  set(CXXOPTS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
   add_subdirectory(
     ${extern_cxxopts_SOURCE_DIR}
     ${extern_cxxopts_BINARY_DIR}
