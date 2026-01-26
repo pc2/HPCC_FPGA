@@ -50,6 +50,8 @@ build:docs:
 
 .check: &check
   stage: check
+  tags:
+    - shell
   script:
     - module load compiler/Clang/13.0.1-GCCcore-11.2.0
     - find $BENCHMARK_FOLDER -regex '.*\.\(cpp\|hpp\|cc\|cxx\|h\)' -exec clang-format -style=file -i {} \;
