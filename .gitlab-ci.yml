@@ -28,6 +28,7 @@ prepare:venv:
   stage: prepare
   tags:
     - shell
+  before_script: []
   script:
     - python -m venv .venv
     - source .venv/bin/activate
@@ -51,6 +52,7 @@ build:docs:
   tags:
     - shell
   script:
+    - source .venv/bin/activate
     - python -m pip install -r docs/requirements.txt
     - module load devel/Doxygen/1.11.0-GCCcore-13.3.0
     - cd docs
@@ -60,6 +62,9 @@ build:docs:
     changes:
       - docs/**/*
       - .gitlab-ci.yml
+  dependencies:
+    - prepare:venv
+  needs: ["prepare:venv"]
   artifacts:
     paths:
       - docs/build
@@ -75,6 +80,7 @@ build:docs:
   stage: check
   tags:
     - shell
+  before_script: []
   script:
     - module load compiler/Clang/13.0.1-GCCcore-11.2.0
     - find $BENCHMARK_FOLDER -regex '.*\.\(cpp\|hpp\|cc\|cxx\|h\)' -exec clang-format -style=file -i {} \;
