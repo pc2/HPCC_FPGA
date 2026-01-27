@@ -1,4 +1,5 @@
 stages:
+  - prepare
   - check
   - build
   - test
@@ -12,11 +13,31 @@ default:
   before_script:
     - module reset
     - module load fpga devel toolchain lang intel/opencl_sdk/21.4.0 bittware/520n/20.4.0_max foss/2024a CMake/3.29.3-GCCcore-13.3.0 Python/3.12.3-GCCcore-13.3.0
-    - python -m venv .venv
     - source .venv/bin/activate
   id_tokens:
     CI_JOB_JWT:
       aud: https://git.uni-paderborn.de
+
+###
+#
+# Prepare Python virtual environment
+#
+###
+
+prepare:venv:
+  stage: prepare
+  tags:
+    - shell
+  script:
+    - python -m venv .venv
+    - source .venv/bin/activate
+    - python -m pip install --upgrade pip
+    - python -m pip install -r scripts/code_generator/requirements.txt
+    - python -m pip install -r scripts/evaluation/requirements.txt
+  artifacts:
+    paths:
+      - .venv/
+    expire_in: 1 day
 
 
 ###
@@ -27,6 +48,8 @@ default:
 
 build:docs:
   stage: build
+  tags:
+    - shell
   script:
     - python -m pip install -r docs/requirements.txt
     - module load devel/Doxygen/1.11.0-GCCcore-13.3.0
@@ -111,15 +134,15 @@ check:b_eff:
 .build: &build
   stage: build
   script:
-    - python -m pip install -r scripts/code_generator/requirements.txt
     - rm -rf build
     - mkdir -p build
     - cd build
-    - cmake ../$BENCHMARK_FOLDER -DDEFAULT_PLATFORM=1 -DDEFAULT_DEVICE=0 $BENCHMARK_OPTIONS
+    - cmake ../$BENCHMARK_FOLDER -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0 $BENCHMARK_OPTIONS
     - make -j 40 all
   artifacts:
     paths:
-      - build/bin/*
+      - build/
+    expire_in: 1 day
   only:
     changes:
       - $BENCHMARK_FOLDER/**/*
@@ -133,8 +156,9 @@ build:STREAM:
   variables:
     BENCHMARK_FOLDER: STREAM
   dependencies:
+    - prepare:venv
     - check:STREAM
-  needs: ["check:STREAM"]
+  needs: ["prepare:venv", "check:STREAM"]
 
 build:STREAM_HP:
   <<: *build
@@ -142,8 +166,9 @@ build:STREAM_HP:
     BENCHMARK_FOLDER: STREAM
     BENCHMARK_OPTIONS: -DDATA_TYPE=half -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=32
   dependencies:
+    - prepare:venv
     - check:STREAM
-  needs: ["check:STREAM"]
+  needs: ["prepare:venv", "check:STREAM"]
 
 build:STREAM_DP:
   <<: *build
@@ -151,16 +176,18 @@ build:STREAM_DP:
     BENCHMARK_FOLDER: STREAM
     BENCHMARK_OPTIONS: -DDATA_TYPE=double -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=8
   dependencies:
+    - prepare:venv
     - check:STREAM
-  needs: ["check:STREAM"]
+  needs: ["prepare:venv", "check:STREAM"]
 
 build:RandomAccess:
   <<: *build
   variables:
     BENCHMARK_FOLDER: RandomAccess
   dependencies:
+    - prepare:venv
     - check:RandomAccess
-  needs: ["check:RandomAccess"]
+  needs: ["prepare:venv", "check:RandomAccess"]
 
 build:PTRANS:
   <<: *build
@@ -168,8 +195,9 @@ build:PTRANS:
     BENCHMARK_FOLDER: PTRANS
     BENCHMARK_OPTIONS: -DHOST_EMULATION_REORDER=Yes
   dependencies:
+    - prepare:venv
     - check:PTRANS
-  needs: ["check:PTRANS"]
+  needs: ["prepare:venv", "check:PTRANS"]
 
 build:LINPACK:
   <<: *build
@@ -177,8 +205,9 @@ build:LINPACK:
     BENCHMARK_FOLDER: LINPACK
     BENCHMARK_OPTIONS: -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
   dependencies:
+    - prepare:venv
     - check:LINPACK
-  needs: ["check:LINPACK"]
+  needs: ["prepare:venv", "check:LINPACK"]
 
 build:LINPACK_DP:
   <<: *build
@@ -186,8 +215,9 @@ build:LINPACK_DP:
     BENCHMARK_FOLDER: LINPACK
     BENCHMARK_OPTIONS: -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3 -DDATA_TYPE=double
   dependencies:
+    - prepare:venv
     - check:LINPACK
-  needs: ["check:LINPACK"]
+  needs: ["prepare:venv", "check:LINPACK"]
 
 build:GEMM:
   <<: *build
@@ -195,8 +225,9 @@ build:GEMM:
     BENCHMARK_FOLDER: GEMM
     BENCHMARK_OPTIONS: -DBLOCK_SIZE=32
   dependencies:
+    - prepare:venv
     - check:GEMM
-  needs: ["check:GEMM"]
+  needs: ["prepare:venv", "check:GEMM"]
 
 build:GEMM_HP_REP2:
   <<: *build
@@ -204,8 +235,9 @@ build:GEMM_HP_REP2:
     BENCHMARK_FOLDER: GEMM
     BENCHMARK_OPTIONS: -DDATA_TYPE=half -DNUM_REPLICATIONS=2 -DBLOCK_SIZE=32
   dependencies:
+    - prepare:venv
     - check:GEMM
-  needs: ["check:GEMM"]
+  needs: ["prepare:venv", "check:GEMM"]
   allow_failure: true
 
 build:GEMM_DP_REP2:
@@ -214,16 +246,18 @@ build:GEMM_DP_REP2:
     BENCHMARK_FOLDER: GEMM
     BENCHMARK_OPTIONS: -DDATA_TYPE=double -DNUM_REPLICATIONS=2 -DBLOCK_SIZE=32
   dependencies:
+    - prepare:venv
     - check:GEMM
-  needs: ["check:GEMM"]
+  needs: ["prepare:venv", "check:GEMM"]
 
 build:FFT:
   <<: *build
   variables:
     BENCHMARK_FOLDER: FFT
   dependencies:
+    - prepare:venv
     - check:FFT
-  needs: ["check:FFT"]
+  needs: ["prepare:venv", "check:FFT"]
 
 build:FFT_small:
   <<: *build
@@ -231,8 +265,9 @@ build:FFT_small:
     BENCHMARK_FOLDER: FFT
     BENCHMARK_OPTIONS: -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
   dependencies:
+    - prepare:venv
     - check:FFT
-  needs: ["check:FFT"]
+  needs: ["prepare:venv", "check:FFT"]
 
 build:b_eff:
   <<: *build
@@ -240,8 +275,9 @@ build:b_eff:
     BENCHMARK_FOLDER: b_eff
     BENCHMARK_OPTIONS: -DHOST_EMULATION_REORDER=Yes
   dependencies:
+    - prepare:venv
     - check:b_eff
-  needs: ["check:b_eff"]
+  needs: ["prepare:venv", "check:b_eff"]
 
 ###
 #
@@ -252,12 +288,7 @@ build:b_eff:
 .test: &test
   stage: test
   script:
-    - python -m pip install -r scripts/code_generator/requirements.txt
-    - python -m pip install -r scripts/evaluation/requirements.txt
-    - mkdir -p build
     - cd build
-    - cmake ../$BENCHMARK_FOLDER $BENCHMARK_OPTIONS -DDEFAULT_PLATFORM=0 -DDEFAULT_DEVICE=0
-    - make all -j41
     - $PREPARE_SCRIPT
     - make CTEST_OUTPUT_ON_FAILURE=1 test
   artifacts:
@@ -277,8 +308,9 @@ test:STREAM:
   variables:
     BENCHMARK_FOLDER: STREAM
   dependencies:
+    - prepare:venv
     - build:STREAM
-  needs: ["build:STREAM"]
+  needs: ["prepare:venv", "build:STREAM"]
 
 test:STREAM_HP:
   <<: *test
@@ -286,8 +318,9 @@ test:STREAM_HP:
     BENCHMARK_FOLDER: STREAM
     BENCHMARK_OPTIONS: -DDATA_TYPE=half -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=32
   dependencies:
+    - prepare:venv
     - build:STREAM_HP
-  needs: ["build:STREAM_HP"]
+  needs: ["prepare:venv", "build:STREAM_HP"]
   allow_failure: true
 
 test:STREAM_DP:
@@ -296,16 +329,18 @@ test:STREAM_DP:
     BENCHMARK_FOLDER: STREAM
     BENCHMARK_OPTIONS: -DDATA_TYPE=double -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=8
   dependencies:
+    - prepare:venv
     - build:STREAM_DP
-  needs: ["build:STREAM_DP"]
+  needs: ["prepare:venv", "build:STREAM_DP"]
 
 test:RandomAccess:
   <<: *test
   variables:
     BENCHMARK_FOLDER: RandomAccess
   dependencies:
+    - prepare:venv
     - build:RandomAccess
-  needs: ["build:RandomAccess"]
+  needs: ["prepare:venv", "build:RandomAccess"]
 
 test:PTRANS:
   <<: *test
@@ -314,8 +349,9 @@ test:PTRANS:
     BENCHMARK_OPTIONS: -DHOST_EMULATION_REORDER=Yes
     PREPARE_SCRIPT: ../$BENCHMARK_FOLDER/scripts/prepare_tests.sh ./bin
   dependencies:
+    - prepare:venv
     - build:PTRANS
-  needs: ["build:PTRANS"]
+  needs: ["prepare:venv", "build:PTRANS"]
 
 test:LINPACK:
   <<: *test
@@ -323,8 +359,9 @@ test:LINPACK:
     BENCHMARK_FOLDER: LINPACK
     BENCHMARK_OPTIONS: -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
   dependencies:
+    - prepare:venv
     - build:LINPACK
-  needs: ["build:LINPACK"]
+  needs: ["prepare:venv", "build:LINPACK"]
 
 test:LINPACK_DP:
   <<: *test
@@ -332,8 +369,9 @@ test:LINPACK_DP:
     BENCHMARK_FOLDER: LINPACK
     BENCHMARK_OPTIONS: -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3 -DDATA_TYPE=double
   dependencies:
+    - prepare:venv
     - build:LINPACK_DP
-  needs: ["build:LINPACK_DP"]
+  needs: ["prepare:venv", "build:LINPACK_DP"]
 
 test:GEMM:
   <<: *test
@@ -341,8 +379,9 @@ test:GEMM:
     BENCHMARK_FOLDER: GEMM
     BENCHMARK_OPTIONS: -DBLOCK_SIZE=32
   dependencies:
+    - prepare:venv
     - build:GEMM
-  needs: ["build:GEMM"]
+  needs: ["prepare:venv", "build:GEMM"]
 
 test:GEMM_HP_REP2:
   <<: *test
@@ -350,8 +389,9 @@ test:GEMM_HP_REP2:
     BENCHMARK_FOLDER: GEMM
     BENCHMARK_OPTIONS: -DDATA_TYPE=half -DNUM_REPLICATIONS=2 -DBLOCK_SIZE=32
   dependencies:
+    - prepare:venv
     - build:GEMM_HP_REP2
-  needs: ["build:GEMM_HP_REP2"]
+  needs: ["prepare:venv", "build:GEMM_HP_REP2"]
   allow_failure: true
 
 test:GEMM_DP_REP2:
@@ -360,16 +400,18 @@ test:GEMM_DP_REP2:
     BENCHMARK_FOLDER: GEMM
     BENCHMARK_OPTIONS: -DDATA_TYPE=double -DNUM_REPLICATIONS=2 -DBLOCK_SIZE=32
   dependencies:
+    - prepare:venv
     - build:GEMM_DP_REP2
-  needs: ["build:GEMM_DP_REP2"]
+  needs: ["prepare:venv", "build:GEMM_DP_REP2"]
 
 test:FFT:
   <<: *test
   variables:
     BENCHMARK_FOLDER: FFT
   dependencies:
+    - prepare:venv
     - build:FFT
-  needs: ["build:FFT"]
+  needs: ["prepare:venv", "build:FFT"]
 
 test:FFT_small:
   <<: *test
@@ -377,8 +419,9 @@ test:FFT_small:
     BENCHMARK_FOLDER: FFT
     BENCHMARK_OPTIONS: -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
   dependencies:
+    - prepare:venv
     - build:FFT_small
-  needs: ["build:FFT_small"]
+  needs: ["prepare:venv", "build:FFT_small"]
 
 test:b_eff:
   <<: *test
@@ -387,5 +430,6 @@ test:b_eff:
     BENCHMARK_OPTIONS: -DHOST_EMULATION_REORDER=Yes
     PREPARE_SCRIPT: ../$BENCHMARK_FOLDER/scripts/prepare_tests.sh ./bin
   dependencies:
+    - prepare:venv
     - build:b_eff
-  needs: ["build:b_eff"]
+  needs: ["prepare:venv", "build:b_eff"]
