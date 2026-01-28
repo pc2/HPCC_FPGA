@@ -85,6 +85,7 @@ endif()
 # Setup CMake environment
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${extern_hlslib_SOURCE_DIR}/cmake)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set(TEST_WORKING_DIRECTORY bin)  # Relative path for CTest (avoids hardcoded absolute paths in artifacts)
 
 # Search for general dependencies
 if (USE_OPENMP)

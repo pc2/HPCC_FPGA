@@ -5,11 +5,11 @@ math(EXPR test_size "2 * ${DEVICE_BUFFER_SIZE} * ${NUM_REPLICATIONS} * ${GLOBAL_
 foreach (target ${custom_kernel_targets})
     if (INTELFPGAOPENCL_FOUND)
         add_test(NAME test_${target}_emulation_intel COMMAND STREAM_FPGA_intel -f ${target}_emulate.aocx -n 1 -s ${test_size}
-                WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+                WORKING_DIRECTORY ${TEST_WORKING_DIRECTORY})
     endif()
 
     if (Vitis_FOUND)
         add_test(NAME test_${target}_emulation_xilinx COMMAND STREAM_FPGA_xilinx -f ${target}_emulate.xclbin -n 1 -s ${test_size}
-                WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+                WORKING_DIRECTORY ${TEST_WORKING_DIRECTORY})
     endif()
 endforeach(target)
