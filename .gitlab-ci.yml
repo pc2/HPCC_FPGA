@@ -51,20 +51,21 @@ build:docs:
   stage: build
   tags:
     - shell
+  before_script: []
   script:
-    - source .venv/bin/activate
-    - python -m pip install -r docs/requirements.txt
-    - module load devel/Doxygen/1.11.0-GCCcore-13.3.0
+    - source env.sh
     - cd docs
+    - python -m venv .venv
+    - source .venv/bin/activate
+    - python -m pip install --upgrade pip
+    - python -m pip install -r requirements.txt
     - make html
+    - module load devel/Doxygen/1.11.0-GCCcore-13.3.0
     - doxygen doxy.config
   only:
     changes:
       - docs/**/*
       - .gitlab-ci.yml
-  dependencies:
-    - prepare:venv
-  needs: ["prepare:venv"]
   artifacts:
     paths:
       - docs/build
