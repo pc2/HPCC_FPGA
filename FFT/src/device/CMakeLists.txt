@@ -6,7 +6,7 @@ if (INTELFPGAOPENCL_FOUND)
     generate_kernel_targets_intel(fft1d_float_8)
     add_test(NAME test_emulation_intel COMMAND ./FFT_intel -f fft1d_float_8_emulate.aocx -b ${NUM_REPLICATIONS} -n 1
         WORKING_DIRECTORY ${TEST_WORKING_DIRECTORY})
-    add_test(NAME test_output_parsing_intel COMMAND ${CMAKE_SOURCE_DIR}/../scripts/evaluation/execute_and_parse.sh ./FFT_intel -f fft1d_float_8_emulate.aocx -b ${NUM_REPLICATIONS} -n 1
+    add_test(NAME test_output_parsing_intel COMMAND ${TEST_SCRIPTS_DIRECTORY}/evaluation/execute_and_parse.sh ./FFT_intel -f fft1d_float_8_emulate.aocx -b ${NUM_REPLICATIONS} -n 1
         WORKING_DIRECTORY ${TEST_WORKING_DIRECTORY})
 endif()
 
@@ -14,6 +14,6 @@ if (Vitis_FOUND)
     generate_kernel_targets_xilinx(fft1d_float_8)
     add_test(NAME test_emulation_xilinx COMMAND ./FFT_xilinx -f fft1d_float_8_emulate.xclbin -b ${NUM_REPLICATIONS} -n 1
         WORKING_DIRECTORY ${TEST_WORKING_DIRECTORY})
-    add_test(NAME test_output_parsing_xilinx COMMAND ${CMAKE_SOURCE_DIR}/../scripts/evaluation/execute_and_parse.sh ./FFT_xilinx -f fft1d_float_8_emulate.xclbin -b ${NUM_REPLICATIONS} -n 1
+    add_test(NAME test_output_parsing_xilinx COMMAND ${TEST_SCRIPTS_DIRECTORY}/evaluation/execute_and_parse.sh ./FFT_xilinx -f fft1d_float_8_emulate.xclbin -b ${NUM_REPLICATIONS} -n 1
         WORKING_DIRECTORY ${TEST_WORKING_DIRECTORY})
 endif()
