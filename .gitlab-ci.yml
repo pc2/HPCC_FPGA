@@ -12,7 +12,8 @@ default:
     - slurm
   before_script:
     - source env.sh
-    - source .venv/bin/activate
+    # Set PATH directly instead of using activate (venvs aren't portable across different workspace paths)
+    - export PATH="$PWD/.venv/bin:$PATH"
   id_tokens:
     CI_JOB_JWT:
       aud: https://git.uni-paderborn.de
