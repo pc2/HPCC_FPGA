@@ -11,8 +11,7 @@ default:
   tags:
     - slurm
   before_script:
-    - module reset
-    - module load fpga devel toolchain lang intel/opencl_sdk/21.4.0 bittware/520n/20.4.0_max foss/2024a CMake/3.29.3-GCCcore-13.3.0 Python/3.12.3-GCCcore-13.3.0
+    - source env.sh
     - source .venv/bin/activate
   id_tokens:
     CI_JOB_JWT:
@@ -28,7 +27,8 @@ prepare:venv:
   stage: prepare
   tags:
     - shell
-  before_script: []
+  before_script:
+    - source env.sh
   script:
     - python -m venv .venv
     - source .venv/bin/activate
