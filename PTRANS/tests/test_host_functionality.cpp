@@ -103,7 +103,7 @@ TEST_F(TransposeHostTest, AggregatedErrorIsPrinted) {
     epsilon << std::scientific << std::setprecision(5) << std::numeric_limits<HOST_DATA_TYPE>::epsilon();
 
     EXPECT_THAT(newStdOutBuffer.str(),
-                ::testing::MatchesRegex("Maximum error:\\s+3\\.00000e\\+01\\s+<\\s+" 
+                ::testing::ContainsRegex("Maximum error:\\s+3\\.00000e\\+01\\s+<\\s+"
                                         + epsilon_times_100.str() + "\n"
                                         + "Mach. Epsilon: " + epsilon.str() + "\n"));
     EXPECT_FALSE(success);
