@@ -1,5 +1,6 @@
 # HPCC FPGA
 
+[![pipeline status](https://git.uni-paderborn.de/pc2-ci/fpga/HPCC_FPGA/badges/master/pipeline.svg)](https://git.uni-paderborn.de/pc2-ci/fpga/HPCC_FPGA/-/commits/master) 
 [![GitHub license](https://img.shields.io/github/license/pc2/HPCC_FPGA.svg)](https://github.com/pc2/HPCC_FPGA/blob/master/LICENSE)
 [![DOI:10.1109/H2RC51942.2020.00007](https://zenodo.org/badge/DOI/10.1109/H2RC51942.2020.00007.svg)](https://doi.org/10.1109/H2RC51942.2020.00007)
 [![Open Source Love svg2](https://badges.frapsoft.com/os/v2/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
