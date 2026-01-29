@@ -196,37 +196,36 @@ public:
         }
 
 #ifndef NDEBUG
-        long height_per_rank = reinterpret_cast<data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>*>(this->dataHandler.get())->getHeightforRank();
-        long width_per_rank = reinterpret_cast<data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>*>(this->dataHandler.get())->getWidthforRank();
-        if (error_count > 0) {
-            if ( this->mpi_comm_rank == 0) {
-                std::cout << "A:" << std::endl;
-                for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
-                    for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
-                        std::cout << oldA[j * width_per_rank * data.blockSize + i] << ", ";
-                    }
-                    std::cout << std::endl;
-                }
-                std::cout << std::endl;
-                std::cout << "B:" << std::endl;
-                for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
-                    for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
-                        std::cout << data.B[j * width_per_rank * data.blockSize + i] << ", ";
-                    }
-                    std::cout << std::endl;
-                }
-                std::cout << std::endl;
-                std::cout << "Transposed A:" << std::endl;
-                for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
-                    for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
-                        std::cout << data.A[j * width_per_rank * data.blockSize + i] << ", ";
-                    }
-                    std::cout << std::endl;
+        // Only print debug info for PQ handlers (diagonal handlers don't have getHeightforRank/getWidthforRank)
+        auto* pq_handler = dynamic_cast<data_handler::DistributedPQTransposeDataHandler<TDevice, TContext, TProgram>*>(this->dataHandler.get());
+        if (pq_handler != nullptr && error_count > 0 && this->mpi_comm_rank == 0) {
+            long height_per_rank = pq_handler->getHeightforRank();
+            long width_per_rank = pq_handler->getWidthforRank();
+            std::cout << "A:" << std::endl;
+            for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
+                for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+                    std::cout << oldA[j * width_per_rank * data.blockSize + i] << ", ";
                 }
                 std::cout << std::endl;
             }
+            std::cout << std::endl;
+            std::cout << "B:" << std::endl;
+            for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
+                for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+                    std::cout << data.B[j * width_per_rank * data.blockSize + i] << ", ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+            std::cout << "Transposed A:" << std::endl;
+            for (size_t j = 0; j < height_per_rank * data.blockSize; j++) {
+                for (size_t i = 0; i < width_per_rank * data.blockSize; i++) {
+                    std::cout << data.A[j * width_per_rank * data.blockSize + i] << ", ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
         }
-
 #endif
 
         double global_max_error = 0;
