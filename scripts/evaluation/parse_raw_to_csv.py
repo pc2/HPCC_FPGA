@@ -76,11 +76,11 @@ def parse_network(file_content):
     file_content: Content of the file is parsed
     '''
     df = pd.DataFrame()
-    regex = "(?P<data>\\s+MSize\\s+looplength\\s+transfer\\s+B/s\n(.+\n)+)"
+    regex = r"(?P<data>\s+MSize\s+looplength\s+time \[s\]\s+B/s\n(.+\n)+)"
     res = re.search(regex, file_content)
     if res is not None:
         d = res.groupdict()
-        df = pd.read_csv(io.StringIO(d["data"]), sep="\\s+")
+        df = pd.read_csv(io.StringIO(d["data"]), sep=r"\s{2,}")
     else:
         return None
     return df
@@ -136,6 +136,7 @@ def parse_single_file(file_name, used_parse_functions):
             break
     if df is None:
         print("File content could not be parsed: %s" % file_name, file=sys.stderr)
+        return None
     df['filename'] = file_name
     return df
 
