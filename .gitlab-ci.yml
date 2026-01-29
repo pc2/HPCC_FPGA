@@ -324,7 +324,6 @@ test:STREAM_HP:
   <<: *test
   variables:
     BENCHMARK_FOLDER: STREAM
-    BENCHMARK_OPTIONS: -DDATA_TYPE=half -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=32
   dependencies:
     - prepare:venv
     - build:STREAM_HP
@@ -335,7 +334,6 @@ test:STREAM_DP:
   <<: *test
   variables:
     BENCHMARK_FOLDER: STREAM
-    BENCHMARK_OPTIONS: -DDATA_TYPE=double -DVECTOR_COUNT=1 -DGLOBAL_MEM_UNROLL=8
   dependencies:
     - prepare:venv
     - build:STREAM_DP
@@ -354,7 +352,6 @@ test:PTRANS:
   <<: *test
   variables:
     BENCHMARK_FOLDER: PTRANS
-    BENCHMARK_OPTIONS: -DHOST_EMULATION_REORDER=Yes
     PREPARE_SCRIPT: ../$BENCHMARK_FOLDER/scripts/prepare_tests.sh ./bin
   dependencies:
     - prepare:venv
@@ -365,7 +362,6 @@ test:LINPACK:
   <<: *test
   variables:
     BENCHMARK_FOLDER: LINPACK
-    BENCHMARK_OPTIONS: -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3
   dependencies:
     - prepare:venv
     - build:LINPACK
@@ -375,7 +371,6 @@ test:LINPACK_DP:
   <<: *test
   variables:
     BENCHMARK_FOLDER: LINPACK
-    BENCHMARK_OPTIONS: -DLOCAL_MEM_BLOCK_LOG=4 -DREGISTER_BLOCK_LOG=3 -DNUM_REPLICATIONS=3 -DDATA_TYPE=double
   dependencies:
     - prepare:venv
     - build:LINPACK_DP
@@ -385,7 +380,6 @@ test:GEMM:
   <<: *test
   variables:
     BENCHMARK_FOLDER: GEMM
-    BENCHMARK_OPTIONS: -DBLOCK_SIZE=32
   dependencies:
     - prepare:venv
     - build:GEMM
@@ -395,7 +389,6 @@ test:GEMM_HP_REP2:
   <<: *test
   variables:
     BENCHMARK_FOLDER: GEMM
-    BENCHMARK_OPTIONS: -DDATA_TYPE=half -DNUM_REPLICATIONS=2 -DBLOCK_SIZE=32
   dependencies:
     - prepare:venv
     - build:GEMM_HP_REP2
@@ -406,7 +399,6 @@ test:GEMM_DP_REP2:
   <<: *test
   variables:
     BENCHMARK_FOLDER: GEMM
-    BENCHMARK_OPTIONS: -DDATA_TYPE=double -DNUM_REPLICATIONS=2 -DBLOCK_SIZE=32
   dependencies:
     - prepare:venv
     - build:GEMM_DP_REP2
@@ -425,7 +417,6 @@ test:FFT_small:
   <<: *test
   variables:
     BENCHMARK_FOLDER: FFT
-    BENCHMARK_OPTIONS: -DLOG_FFT_SIZE=4 -DNUM_REPLICATIONS=2
   dependencies:
     - prepare:venv
     - build:FFT_small
@@ -435,7 +426,6 @@ test:b_eff:
   <<: *test
   variables:
     BENCHMARK_FOLDER: b_eff
-    BENCHMARK_OPTIONS: -DHOST_EMULATION_REORDER=Yes
     PREPARE_SCRIPT: ../$BENCHMARK_FOLDER/scripts/prepare_tests.sh ./bin
   dependencies:
     - prepare:venv
