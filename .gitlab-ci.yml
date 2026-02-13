@@ -31,6 +31,7 @@ prepare:venv:
   before_script:
     - source env.sh
   script:
+    - echo "This is a test"
     - python -m venv .venv
     - source .venv/bin/activate
     - python -m pip install --upgrade pip
