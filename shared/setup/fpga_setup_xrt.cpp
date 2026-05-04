@@ -33,17 +33,29 @@ std::unique_ptr<xrt::uuid> fpgaSetup(xrt::device &device, const std::string &ker
     return std::unique_ptr<xrt::uuid>(new xrt::uuid(device.load_xclbin(kernelFileName)));
 }
 
+std::string bdf_map(uint32_t device_id)
+{
+    if (device_id == 0) {
+        return "0000:a1:00.1";
+    } else if (device_id == 1) {
+        return "0000:81:00.1";
+    } else if (device_id == 2) {
+        return "0000:01:00.1";
+    } else {
+        throw std::invalid_argument("Invalid device id");
+    }
+}
+
 std::unique_ptr<xrt::device> selectFPGADevice(int defaultDevice)
 {
     int current_device;
     MPI_Comm_rank(MPI_COMM_WORLD, &current_device);
-    if (defaultDevice >= 0) {
-        current_device = defaultDevice;
-    } else {
-        // TODO Use xrt::system::enumerate_devices() in "experimental/xrt_system.h" for future XRT versions
-        //  instead of hardcoded number of devices.
-        current_device = current_device % 3;
+    if (defaultDevice < 0) {
+        defaultDevice = 0;
     }
-    return std::unique_ptr<xrt::device>(new xrt::device(current_device));
+    // use user passed defaultDevice as offset for device selection
+    // default to zero offset
+    current_device = (current_device + defaultDevice) % 3;
+    return std::unique_ptr<xrt::device>(new xrt::device(bdf_map(current_device)));
 }
 } // namespace fpga_setup
